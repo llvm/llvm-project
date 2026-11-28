@@ -2126,17 +2126,18 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
 /// to determine the value of a PredefinedExpr. This can be either a
 /// block, lambda, captured statement, function, otherwise a nullptr.
 static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
-  auto LSI = S.FunctionScopes.rbegin();
-
-  auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
+  auto tryAdjustLambdaContext = [&S](DeclContext *&DC) {
     if (isLambdaCallOperator(DC)) {
-      auto E = S.FunctionScopes.rend();
-      while (LSI != E && !isa<LambdaScopeInfo>(*LSI))
-        ++LSI;
-      assert(LSI != E && "Should be in a lambda scope info");
-      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
-        DC = DC->getParent();
-      ++LSI;
+      for (auto FS : llvm::reverse(S.FunctionScopes)) {
+        if (auto *LSI = dyn_cast<LambdaScopeInfo>(FS); LSI != nullptr) {
+          assert(LSI->CallOperator != nullptr &&
+                 "A LambdaScopeInfo should have the call operator");
+          if (LSI->CallOperator == DC && LSI->BeforeCompoundStatement) {
+            DC = DC->getParent();
+            return;
+          }
+        }
+      }
     }
   };
 
