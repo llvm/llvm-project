@@ -317,7 +317,7 @@ bool APINotesManager::loadCurrentModuleAPINotes(
   for (auto File : APINotes) {
     CurrentModuleReaders[NumReaders++] = loadAPINotes(File).release();
     if (!getCurrentModuleReaders().empty())
-      M->APINotesFile = File.getName().str();
+      M->setAPINotesFile(File.getName());
   }
 
   if (NumReaders > 0)

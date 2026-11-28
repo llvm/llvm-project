@@ -945,7 +945,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
               AST->getLangOpts().CurrentModule, SourceLocation(),
               /*AllowSearch*/ false);
       assert(ASTModule && "module file does not define its own module");
-      Input = FrontendInputFile(ASTModule->PresumedModuleMapFile, Kind);
+      Input = FrontendInputFile(ASTModule->getPresumedModuleMapFile(), Kind);
     } else {
       auto &OldSM = AST->getSourceManager();
       FileID ID = OldSM.getMainFileID();
@@ -1192,7 +1192,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (!CurrentModule)
       return false;
 
-    CurrentModule->PresumedModuleMapFile = PresumedModuleMapFile;
+    CurrentModule->setPresumedModuleMapFile(PresumedModuleMapFile);
 
     if (OffsetToContents)
       // If the module contents are in the same file, skip to them.

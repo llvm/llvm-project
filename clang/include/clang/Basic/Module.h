@@ -394,19 +394,6 @@ public:
   /// are found.
   OptionalDirectoryEntryRef Directory;
 
-  /// The presumed file name for the module map defining this module.
-  /// Only non-empty when building from preprocessed source.
-  std::string PresumedModuleMapFile;
-
-  /// Directories this module depends on the listing of.
-  std::vector<std::string> DirectoryDependencies;
-
-  /// The module signature.
-  ASTFileSignature Signature;
-
-  /// For the debug info, the path to this module's .apinotes file, if any.
-  std::string APINotesFile;
-
   /// Does this Module is a named module of a standard named module?
   bool isNamedModule() const {
     switch (Kind) {
@@ -444,11 +431,6 @@ private:
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
   llvm::StringMap<unsigned> SubModuleIndex;
-
-  /// The AST file name and key if this is a top-level module which has a
-  /// corresponding serialized AST file, or null otherwise.
-  std::optional<ModuleFileName> ASTFileName;
-  std::optional<ModuleFileKey> ASTFileKey;
 
   /// top-level header filenames that aren't resolved to FileEntries yet.
   std::vector<std::string> TopHeaderNames;
@@ -666,10 +648,6 @@ public:
   /// Autolinking uses the framework name for linking purposes
   /// when this is false and the export_as name otherwise.
   bool UseExportAsModuleLinkName = false;
-
-  /// The set of "configuration macros", which are macros that
-  /// (intentionally) change how this module is built.
-  std::vector<std::string> ConfigMacros;
 
   /// An unresolved conflict with another module.
   struct UnresolvedConflict {
@@ -958,6 +936,85 @@ public:
   }
   void clearConflicts() { Cold.clear(&ColdMembers::Conflicts); }
 
+private:
+  /// Members that are only set on top-level modules, kept out of line because
+  /// the vast majority of modules are submodules.
+  struct TopLevelMembers {
+    /// The presumed file name for the module map defining this module.
+    /// Only non-empty when building from preprocessed source.
+    std::string PresumedModuleMapFile;
+
+    /// Directories this module depends on the listing of.
+    std::vector<std::string> DirectoryDependencies;
+
+    /// The AST file name and key if this is a top-level module which has a
+    /// corresponding serialized AST file, or null otherwise.
+    std::optional<ModuleFileName> ASTFileName;
+    std::optional<ModuleFileKey> ASTFileKey;
+
+    /// The signature of the AST file this module was deserialized from.
+    ASTFileSignature Signature;
+
+    /// For the debug info, the path to this module's .apinotes file, if any.
+    std::string APINotesFile;
+
+    /// The set of "configuration macros", which are macros that
+    /// (intentionally) change how this module is built.
+    std::vector<std::string> ConfigMacros;
+  };
+
+  LazyMembers<TopLevelMembers> TopLevelOnly;
+
+public:
+  /// The presumed file name for the module map defining this module.
+  /// Only non-empty when building from preprocessed source.
+  StringRef getPresumedModuleMapFile() const {
+    return TopLevelOnly.get().PresumedModuleMapFile;
+  }
+  void setPresumedModuleMapFile(StringRef File) {
+    TopLevelOnly.set(&TopLevelMembers::PresumedModuleMapFile, File);
+  }
+
+  /// For the debug info, the path to this module's .apinotes file, if any.
+  StringRef getAPINotesFile() const { return TopLevelOnly.get().APINotesFile; }
+  void setAPINotesFile(StringRef File) {
+    TopLevelOnly.set(&TopLevelMembers::APINotesFile, File);
+  }
+
+  /// The set of "configuration macros", which are macros that
+  /// (intentionally) change how this module is built. Only top-level modules
+  /// can declare them.
+  ArrayRef<std::string> getConfigMacros() const {
+    return TopLevelOnly.get().ConfigMacros;
+  }
+  void addConfigMacro(StringRef Macro) {
+    TopLevelOnly.getOrCreate().ConfigMacros.push_back(Macro.str());
+  }
+  void addConfigMacros(ArrayRef<StringRef> Macros) {
+    if (!Macros.empty())
+      llvm::append_range(TopLevelOnly.getOrCreate().ConfigMacros, Macros);
+  }
+  void clearConfigMacros() {
+    TopLevelOnly.clear(&TopLevelMembers::ConfigMacros);
+  }
+
+  /// The signature of the AST file this module was deserialized from, or a
+  /// null signature if it wasn't deserialized from an AST file.
+  ///
+  /// All submodules are deserialized from the same AST file as their top-level
+  /// module, so the signature is only stored on the top-level module.
+  ASTFileSignature getSignature() const {
+    if (!IsFromModuleFile)
+      return ASTFileSignature();
+    return getTopLevelModule()->TopLevelOnly.get().Signature;
+  }
+
+  /// Set the signature of the AST file the top-level module of this module was
+  /// deserialized from.
+  void setSignature(ASTFileSignature NewSignature) {
+    getTopLevelModule()->TopLevelOnly.getOrCreate().Signature = NewSignature;
+  }
+
   /// Construct a new module or submodule.
   Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
          Module *Parent, bool IsFramework, bool IsExplicit,
@@ -1159,14 +1216,14 @@ public:
 
   /// The serialized AST file name for this module, if one was created.
   const ModuleFileName *getASTFileName() const {
-    const Module *TopLevel = getTopLevelModule();
-    return TopLevel->ASTFileName ? &*TopLevel->ASTFileName : nullptr;
+    const auto &Name = getTopLevelModule()->TopLevelOnly.get().ASTFileName;
+    return Name ? &*Name : nullptr;
   }
 
   /// The serialized AST file key for this module, if one was created.
   const ModuleFileKey *getASTFileKey() const {
-    const Module *TopLevel = getTopLevelModule();
-    return TopLevel->ASTFileKey ? &*TopLevel->ASTFileKey : nullptr;
+    const auto &Key = getTopLevelModule()->TopLevelOnly.get().ASTFileKey;
+    return Key ? &*Key : nullptr;
   }
 
   /// Set the serialized module file for the top-level module of this module.
@@ -1174,9 +1231,9 @@ public:
     assert(((!getASTFileName() && !getASTFileKey()) ||
             *getASTFileKey() == NewKey) &&
            "file path changed");
-    Module *TopLevel = getTopLevelModule();
-    TopLevel->ASTFileName = NewName;
-    TopLevel->ASTFileKey = NewKey;
+    TopLevelMembers &Data = getTopLevelModule()->TopLevelOnly.getOrCreate();
+    Data.ASTFileName = std::move(NewName);
+    Data.ASTFileKey = std::move(NewKey);
   }
 
   /// Retrieve the umbrella directory as written.
@@ -1208,7 +1265,7 @@ public:
   void addDirectoryDependency(StringRef Path);
 
   ArrayRef<std::string> getDirectoryDependencies() const {
-    return DirectoryDependencies;
+    return TopLevelOnly.get().DirectoryDependencies;
   }
 
   /// Add a top-level header associated with this module.
