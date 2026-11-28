@@ -327,6 +327,11 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Improved {doc}`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` to recognize inclusive bounds
+  such as `i <= N - 1` and `N - 1 >= i` when iterating over an array of
+  `N` elements.
+
 - Fixed false positive in {doc}`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
   or deleted destructor.

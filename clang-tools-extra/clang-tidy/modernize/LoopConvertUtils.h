@@ -284,7 +284,8 @@ public:
   ForLoopIndexUseVisitor(ASTContext *Context, const VarDecl *IndexVar,
                          const VarDecl *EndVar, const Expr *ContainerExpr,
                          const Expr *ArrayBoundExpr,
-                         bool ContainerNeedsDereference);
+                         bool ContainerNeedsDereference,
+                         bool ArrayBoundIsInclusive);
 
   /// Finds all uses of IndexVar in Body, placing all usages in Usages,
   /// and returns true if IndexVar was only used in a way consistent with a
@@ -366,6 +367,7 @@ private:
   /// The Expr which refers to the terminating condition for array-based loops.
   const Expr *ArrayBoundExpr;
   bool ContainerNeedsDereference;
+  bool ArrayBoundIsInclusive;
 
   // Output member variables:
   /// A container which holds all usages of IndexVar as the index of
