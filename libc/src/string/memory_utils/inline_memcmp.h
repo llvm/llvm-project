@@ -21,6 +21,9 @@
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_x86
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "src/string/memory_utils/arm/inline_memcmp.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_arm
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_aarch64_dispatch
