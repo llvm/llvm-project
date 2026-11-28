@@ -1024,6 +1024,9 @@ libc_support_library(
     name = "cbrt",
     hdrs = ["cbrt.h"],
     deps = [
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:math_macros",
+        "//libc/src/__support:common",
         "//libc/src/__support:integer_literals",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:dyadic_float",
@@ -1033,6 +1036,7 @@ libc_support_library(
         "//libc/src/__support/FPUtil:polyeval",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 

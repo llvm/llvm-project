@@ -6683,6 +6683,8 @@ add_fp_unittest(
   SRCS
     cbrt_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.math.cbrt
 )
 
