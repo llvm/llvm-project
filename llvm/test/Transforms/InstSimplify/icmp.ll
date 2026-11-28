@@ -186,6 +186,131 @@ define i1 @shl_div_cmp_greater(i8 %x) {
   ret i1 %cmp
 }
 
+define i1 @add_div_cmp_smaller(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_smaller(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 4
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: 3>=3
+define i1 @add_div_cmp_equal(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_equal(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[ADD]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 3
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: 3>2
+define i1 @add_div_cmp_greater(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_greater(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[ADD]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+define i1 @add_div_cmp_ugt(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_ugt(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 4
+  %cmp = icmp ugt i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong predicate
+define i1 @add_div_cmp_uge(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_uge(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[ADD]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 4
+  %cmp = icmp uge i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong predicate
+define i1 @add_div_cmp_ult(i8 %x) {
+; CHECK-LABEL: @add_div_cmp_ult(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[ADD]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 4
+  %cmp = icmp ult i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong icmp operand
+define i1 @add_div_cmp_wrong_operand(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_div_cmp_wrong_operand(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[ADD]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 3
+  %div = udiv i8 %add, 4
+  %cmp = icmp ule i8 %div, %y
+  ret i1 %cmp
+}
+
+define i1 @add_lshr_cmp_smaller(i8 %x) {
+; CHECK-LABEL: @add_lshr_cmp_smaller(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add i8 %x, 3
+  %div = lshr i8 %add, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @add_lshr_cmp_equal(i8 %x) {
+; CHECK-LABEL: @add_lshr_cmp_equal(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i8 [[ADD]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 4
+  %div = lshr i8 %add, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @add_lshr_cmp_greater(i8 %x) {
+; CHECK-LABEL: @add_lshr_cmp_greater(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i8 [[ADD]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 5
+  %div = lshr i8 %add, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
 ; Don't crash matching recurrences/invertible ops.
 
 define void @PR50191(i32 %x) {

@@ -3320,6 +3320,29 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
     }
   }
 
+  // (x+C1)/C2 <= x for C1 < C2.
+  // This holds even if the addition overflows. Assume arithmetic modulo
+  // M, then when overflow occurs the numerator is `x+C1-M` or equivalently
+  // `C1-(M-x)`. Because `x < M`, we have that `C1-(M-x) < C1 < C2`. Hence the
+  // result of the division on overflow is always 0, and `0 <= x`.
+  //
+  // If the addition does not overflow, the unrounded result of the division
+  // is the sum of x/C2 (at most x) and C1/C2 (less than one because C1<C2).
+  // Their sum is therefore strictly less than x+1, and rounding down to
+  // an integer gives a value of at most x.
+  //
+  // Additionally, the division might be represented as a shift.
+  const APInt *C1, *C2;
+  if ((match(LBO, m_UDiv(m_Add(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
+       C1->ult(*C2)) ||
+      (match(LBO, m_LShr(m_Add(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
+       C1->ult(APInt(C2->getBitWidth(), 1) << *C2))) {
+    if (Pred == ICmpInst::ICMP_UGT)
+      return getFalse(ITy);
+    if (Pred == ICmpInst::ICMP_ULE)
+      return getTrue(ITy);
+  }
+
   // (x*C1)/C2 <= x for C1 <= C2.
   // This holds even if the multiplication overflows: Assume that x != 0 and
   // arithmetic is modulo M. For overflow to occur we must have C1 >= M/x and
@@ -3329,7 +3352,6 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
   // as shifts:
   // (x*C1)>>C2 <= x for C1 < 2**C2.
   // (x<<C1)/C2 <= x for 2**C1 < C2.
-  const APInt *C1, *C2;
   if ((match(LBO, m_UDiv(m_Mul(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
        C1->ule(*C2)) ||
       (match(LBO, m_LShr(m_Mul(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
