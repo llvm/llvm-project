@@ -171,3 +171,31 @@ void g3() {
 } // namespace Eight
 
 #endif
+
+namespace gh217883 {
+template <typename> struct Q {};
+
+const Q<int> (&r1)[] = {};
+Q<int> (&&r2)[] = {};
+const Q<int> (&r3)[][2] = {};
+
+void call(void (*f)(const Q<int> (&)[])) { f({}); }
+void call_rvalue(void (*f)(Q<int> (&&)[])) { f({}); }
+void call_nested(void (*f)(const Q<int> (&)[][2])) { f({}); }
+
+#if __cplusplus >= 202002
+static_assert(requires(void f(const Q<int> (&)[])) { f({}); });
+#endif
+
+template <typename> struct DeletedDtor { ~DeletedDtor() = delete; }; // expected-note {{marked deleted here}}
+void call_deleted(void (*f)(const DeletedDtor<int> (&)[])) {
+  f({}); // expected-error {{attempt to use a deleted function}}
+}
+
+struct Incomplete; // expected-note 3 {{forward declaration of 'gh217883::Incomplete'}}
+const Incomplete (&r4)[] = {}; // expected-error {{initialization of incomplete type 'const Incomplete'}}
+const Incomplete (&r5)[][2] = {}; // expected-error {{initialization of incomplete type 'const Incomplete'}}
+void call_incomplete(void (*f)(const Incomplete (&)[])) {
+  f({}); // expected-error {{initialization of incomplete type 'const Incomplete'}}
+}
+} // namespace gh217883
