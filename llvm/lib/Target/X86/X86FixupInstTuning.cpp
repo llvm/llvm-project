@@ -394,7 +394,43 @@ bool X86FixupInstTuningImpl::processInstruction(
     return true;
   };
 
+  // `mov r32, 0` -> `xor r32, r32` when EFLAGS is dead.
+  // Rematerialization emits the MOV form when it cannot prove EFLAGS dead at
+  // the insertion point (see X86InstrInfo::reMaterialize), but in the final
+  // instruction order the flags are often dead anyway. The XOR form is three
+  // bytes shorter and breaks the dependency on the register's old value.
+  auto ProcessMOVZeroToXOR = [&](unsigned NewOpc) -> bool {
+    if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != 0)
+      return false;
+    // `movl $0, %r11d` is part of the __morestack prologue sequence, which
+    // the gold linker recognizes by its byte pattern.
+    if (MF.shouldSplitStack())
+      return false;
+    if (MBB.computeRegisterLiveness(TRI, X86::EFLAGS, I, 16) !=
+        MachineBasicBlock::LQR_Dead)
+      return false;
+    Register Reg = MI.getOperand(0).getReg();
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      // Rewrite in place so that the implicit operands, flags and debug
+      // instruction number of the MOV are kept as they are.
+      MI.setDesc(TII->get(NewOpc));
+      MI.removeOperand(1);
+      // The destination is now tied to the sources.
+      MI.getOperand(0).setIsRenamable(false);
+      MachineInstrBuilder(MF, MI)
+          .addReg(Reg, RegState::Undef)
+          .addReg(Reg, RegState::Undef);
+      MI.addRegisterDead(X86::EFLAGS, TRI, /*AddIfNotFound=*/true);
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   switch (Opc) {
+  case X86::MOV32ri:
+    return ProcessMOVZeroToXOR(X86::XOR32rr);
+
   case X86::BLENDPDrri:
     return ProcessBLENDToMOV(X86::MOVSDrr, 0x3, 0x1);
   case X86::VBLENDPDrri:

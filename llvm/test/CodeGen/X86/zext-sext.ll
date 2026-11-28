@@ -15,7 +15,7 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-NEXT:    subq %rax, %rsi
 ; CHECK-NEXT:    movq (%rdx), %rax
 ; CHECK-NEXT:    movswl 8(%rdi), %edx
-; CHECK-NEXT:    movl $0, %edi
+; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movswl (%rax,%rsi,2), %eax
 ; CHECK-NEXT:    imull %edx, %eax
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
