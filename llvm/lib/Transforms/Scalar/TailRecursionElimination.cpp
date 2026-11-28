@@ -83,6 +83,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -918,6 +919,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       // byval parameter is always treated as "readonly," even if the readonly
       // attribute is removed.
       F.removeParamAttr(I, Attribute::ReadOnly);
+      // Account for the argument-memory accesses introduced by these copies.
+      if (F.hasFnAttribute(Attribute::Memory))
+        F.setMemoryEffects(F.getMemoryEffects() | MemoryEffects::argMemOnly());
       ArgumentPHIs[I]->addIncoming(F.getArg(I), BB);
     } else
       ArgumentPHIs[I]->addIncoming(CI->getArgOperand(I), BB);
