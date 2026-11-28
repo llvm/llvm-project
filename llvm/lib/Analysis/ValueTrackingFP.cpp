@@ -788,8 +788,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::canonicalize: {
+      FPClassTest InterestedSrcs = InterestedClasses;
+      // Subnormals flush to zero, and the NSZ flag may demand the other zero.
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcZero | fcSubnormal;
+
       KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
@@ -797,7 +802,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
-      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
+
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode, HasNSZ);
       break;
     }
     case Intrinsic::vector_reduce_fmax:

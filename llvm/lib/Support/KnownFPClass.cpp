@@ -167,7 +167,7 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
 
 KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
                                         const fltSemantics &Flt,
-                                        DenormalMode Mode) {
+                                        DenormalMode Mode, bool MayBeNSZ) {
   KnownFPClass Known;
 
   // TODO: implement for x86_fp80
@@ -185,18 +185,30 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   else
     Known.knownNot(fcSNan);
 
+  // DenormalMode and NSZ only matter if the input could be zero or subnormal.
+  if (KnownSrc.isKnownNever(fcZero | fcSubnormal)) {
+    Known.knownNot(fcZero);
+    return Known;
+  }
+
   // If the parent function flushes denormals, the canonical output cannot be a
   // denormal.
   if (Mode == DenormalMode::getIEEE()) {
-    if (KnownSrc.isKnownNever(fcPosZero))
+    if (KnownSrc.isKnownNever(fcZero) ||
+        (!MayBeNSZ && KnownSrc.isKnownNever(fcPosZero)))
       Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNever(fcNegZero))
+    if (KnownSrc.isKnownNever(fcZero) ||
+        (!MayBeNSZ && KnownSrc.isKnownNever(fcNegZero)))
       Known.knownNot(fcNegZero);
     return Known;
   }
 
   if (Mode.inputsAreZero() || Mode.outputsAreZero())
     Known.knownNot(fcSubnormal);
+
+  // TODO: Refine results under NSZ.
+  if (MayBeNSZ)
+    return Known;
 
   if (Mode == DenormalMode::getPreserveSign()) {
     if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))

@@ -1506,6 +1506,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
             SrcDemandedMask &= ~fcNegSubnormal;
         }
 
+        // nsz can flip the sign of a zero, so a demanded zero of either sign
+        // demands both source zeros.
+        const bool HasNSZ = FMF.noSignedZeros();
+        if ((DemandedMask & fcZero) && HasNSZ) {
+          SrcDemandedMask |= fcZero;
+          // Any subnormal that can flush to either zero is also demanded.
+          if (Mode != DenormalMode::getIEEE())
+            SrcDemandedMask |= fcSubnormal;
+        }
+
         KnownFPClass KnownSrc;
 
         // Simplify upstream operations before trying to simplify this call.
@@ -1514,7 +1524,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           return I;
 
         // Perform the canonicalization to see if this folded to a constant.
-        Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
+        Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode, HasNSZ);
         Known.knownNot(~DemandedMask);
 
         if (Constant *SingleVal =

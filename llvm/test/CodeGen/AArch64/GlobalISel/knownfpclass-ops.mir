@@ -1286,6 +1286,22 @@ body:             |
     %copy:_(f32) = COPY %frem
 ...
 ---
+name:            FCanonicalizeFabsNSZ
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FCanonicalizeFabsNSZ
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fabs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %canon:_ FPClasses:(zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(zero psub pnorm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %canon:_(f32) = nsz G_FCANONICALIZE %fabs
+    %copy:_(f32) = COPY %canon
+...
+---
 name:            ShuffleVec
 body:             |
   bb.0:
