@@ -219,6 +219,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log10:
   case Intrinsic::pow:
   case Intrinsic::powi:
+  case Intrinsic::sincos:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
@@ -759,6 +760,27 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
+}
+
+static Value *expandSinCosIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getArgOperand(0);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+
+  CallInst *Sin =
+      Builder.CreateIntrinsicWithoutFolding(Ty, Intrinsic::sin, {X}, Orig);
+  Sin->setTailCall(Orig->isTailCall());
+  CallInst *Cos =
+      Builder.CreateIntrinsicWithoutFolding(Ty, Intrinsic::cos, {X}, Orig);
+  Cos->setTailCall(Orig->isTailCall());
+  if (MDNode *MD = Orig->getMetadata(LLVMContext::MD_fpmath)) {
+    Sin->setMetadata(LLVMContext::MD_fpmath, MD);
+    Cos->setMetadata(LLVMContext::MD_fpmath, MD);
+  }
+
+  Value *Agg = PoisonValue::get(Orig->getType());
+  Agg = Builder.CreateInsertValue(Agg, Sin, 0);
+  return Builder.CreateInsertValue(Agg, Cos, 1);
 }
 
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
@@ -1319,6 +1341,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::pow:
   case Intrinsic::powi:
     Result = expandPowIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::sincos:
+    Result = expandSinCosIntrinsic(Orig);
     break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
