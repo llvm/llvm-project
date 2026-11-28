@@ -363,9 +363,6 @@ const void* dyn_cast_slow(
 
 __shim_type_info::~__shim_type_info() {}
 
-void __shim_type_info::noop1() const {}
-void __shim_type_info::noop2() const {}
-
 // __fundamental_type_info
 
 // This miraculously (compiler magic) emits the type_info's for:

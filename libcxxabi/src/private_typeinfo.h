@@ -19,9 +19,6 @@ namespace __cxxabiv1 {
 class _LIBCXXABI_TYPE_VIS __shim_type_info : public std::type_info {
 public:
   _LIBCXXABI_HIDDEN ~__shim_type_info() override;
-
-  _LIBCXXABI_HIDDEN virtual void noop1() const;
-  _LIBCXXABI_HIDDEN virtual void noop2() const;
   _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info* thrown_type, void*& adjustedPtr) const = 0;
 };
 
