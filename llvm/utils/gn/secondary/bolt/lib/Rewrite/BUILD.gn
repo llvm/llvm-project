@@ -37,6 +37,7 @@ static_library("Rewrite") {
     "RSeqRewriter.cpp",
     "RewriteInstance.cpp",
     "SDTRewriter.cpp",
+    "StrippedBinary.cpp",
   ]
 
   defines = []
