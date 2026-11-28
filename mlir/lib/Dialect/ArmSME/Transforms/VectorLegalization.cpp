@@ -347,6 +347,12 @@ struct LegalizeTransferWriteOpsByDecomposition
       return rewriter.notifyMatchFailure(writeOp,
                                          kMatchFailureUnsupportedMaskOp);
 
+    // TODO: Support writes in `vector.mask`. For now, the new ops would end up
+    // inside the `vector.mask`, which can only hold one op.
+    if (writeOp.isMasked())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureUnsupportedMaskOp);
+
     auto permutationMap = writeOp.getPermutationMap();
     if (!permutationMap.isPermutation())
       return rewriter.notifyMatchFailure(writeOp,
@@ -443,6 +449,12 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask) || (mask && (vectorType.getDimSize(0) > 16 ||
                                               vectorType.getDimSize(1) > 16)))
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureUnsupportedMaskOp);
+
+    // TODO: Support writes in `vector.mask`. For now, the new ops would end up
+    // inside the `vector.mask`, which can only hold one op.
+    if (writeOp.isMasked())
       return rewriter.notifyMatchFailure(writeOp,
                                          kMatchFailureUnsupportedMaskOp);
 
@@ -763,6 +775,12 @@ struct LowerIllegalTransposeStoreViaZA
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     if (!isSupportedMaskOp(writeOp.getMask()))
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureUnsupportedMaskOp);
+
+    // TODO: Support writes in `vector.mask`. For now, the new ops would end up
+    // inside the `vector.mask`, which can only hold one op.
+    if (writeOp.isMasked())
       return rewriter.notifyMatchFailure(writeOp,
                                          kMatchFailureUnsupportedMaskOp);
 

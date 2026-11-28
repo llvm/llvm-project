@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -arm-sme-vector-legalization -cse -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -arm-sme-vector-legalization -cse -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @outerproduct_f32_scalable_8x8_no_acc(
 // CHECK-SAME:                                        %[[LHS:.*]]: vector<[8]xf32>,
@@ -243,6 +243,20 @@ func.func @transfer_write_f32_scalable_8x8_masked(%dest: memref<?x?xf32>, %dim0:
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
   vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// The store loop and the decomposition both skip writes in `vector.mask`, so
+// the write fails to legalize.
+
+func.func @negative_transfer_write_f32_scalable_8x8_masked(%dest: memref<?x?xf32>, %dim0: index, %dim1: index, %vec: vector<[8]x[8]xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
+  // expected-error@+1 {{failed to legalize operation 'vector.transfer_write' that was explicitly marked illegal}}
+  vector.mask %mask { vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32> } : vector<[8]x[8]xi1>
   return
 }
 
@@ -599,6 +613,23 @@ func.func @transpose_store_scalable_via_za_multi_tile_wide(%vec: vector<2x[8]xf3
 func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vector<2x[7]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
   %tr = vector.transpose %vec, [1, 0] : vector<2x[7]xf32> to vector<[7]x2xf32>
   vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[7]x2xf32>,  memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @negative_transpose_store_scalable_via_za_masked
+// CHECK-SAME:    %[[VEC:.*]]: vector<2x[4]xf32>, %[[DEST:.*]]: memref<?x?xf32>, %[[A:.*]]: index, %[[B:.*]]: index
+// CHECK-NOT:     arm_sme.get_tile
+// CHECK:         %[[MASK:.*]] = vector.create_mask %[[A]], %[[B]] : vector<[4]x2xi1>
+// CHECK:         %[[TR:.*]] = vector.transpose %[[VEC]], [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
+// CHECK:         vector.mask %[[MASK]] { vector.transfer_write %[[TR]], %[[DEST]]{{.*}} : vector<[4]x2xf32>, memref<?x?xf32> } : vector<[4]x2xi1>
+// CHECK-NOT:     arm_sme.get_tile
+func.func @negative_transpose_store_scalable_via_za_masked(%vec: vector<2x[4]xf32>, %dest: memref<?x?xf32>, %a: index, %b: index) {
+  %c0 = arith.constant 0 : index
+  %mask = vector.create_mask %a, %b : vector<[4]x2xi1>
+  %tr = vector.transpose %vec, [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
+  vector.mask %mask { vector.transfer_write %tr, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x2xf32>, memref<?x?xf32> } : vector<[4]x2xi1>
   return
 }
 
