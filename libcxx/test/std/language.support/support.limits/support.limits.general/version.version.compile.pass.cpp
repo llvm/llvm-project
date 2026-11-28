@@ -168,6 +168,10 @@
 #    error "__cpp_lib_clamp should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_common_reference
 #    error "__cpp_lib_common_reference should not be defined before c++20"
 #  endif
@@ -876,6 +880,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -976,6 +984,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -1046,6 +1058,10 @@
 
 #  ifdef __cpp_lib_string_view
 #    error "__cpp_lib_string_view should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_submdspan
@@ -1307,6 +1323,10 @@
 
 #  ifdef __cpp_lib_clamp
 #    error "__cpp_lib_clamp should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_common_reference
@@ -2059,6 +2079,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -2174,6 +2198,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -2247,6 +2275,10 @@
 
 #  ifdef __cpp_lib_string_view
 #    error "__cpp_lib_string_view should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_submdspan
@@ -2559,6 +2591,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_common_reference
@@ -3410,6 +3446,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -3555,6 +3595,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -3631,6 +3675,10 @@
 #  endif
 #  if __cpp_lib_string_view != 201606L
 #    error "__cpp_lib_string_view should have the value 201606L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_submdspan
@@ -4027,6 +4075,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -5028,6 +5080,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -5188,6 +5244,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -5279,6 +5339,10 @@
 #  endif
 #  if __cpp_lib_string_view != 201803L
 #    error "__cpp_lib_string_view should have the value 201803L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_submdspan
@@ -5720,6 +5784,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -6856,6 +6924,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_slide
 #      error "__cpp_lib_ranges_slide should be defined in c++23"
@@ -7046,6 +7118,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -7164,6 +7240,10 @@
 #  endif
 #  if __cpp_lib_string_view != 201803L
 #    error "__cpp_lib_string_view should have the value 201803L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_submdspan
@@ -7647,6 +7727,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -9359,6 +9443,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_slide
 #      error "__cpp_lib_ranges_slide should be defined in c++26"
@@ -9585,6 +9673,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -9724,6 +9816,10 @@
 #  endif
 #  if __cpp_lib_string_view != 202403L
 #    error "__cpp_lib_string_view should have the value 202403L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -10246,6 +10342,19 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_clmul
+#      error "__cpp_lib_clmul should be defined in c++29"
+#    endif
+#    if __cpp_lib_clmul != 202611L
+#      error "__cpp_lib_clmul should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_clmul
+#      error "__cpp_lib_clmul should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -11986,6 +12095,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_slice
+#      error "__cpp_lib_ranges_slice should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_slice != 202611L
+#      error "__cpp_lib_ranges_slice should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_slice
+#      error "__cpp_lib_ranges_slice should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_slide
 #      error "__cpp_lib_ranges_slide should be defined in c++29"
 #    endif
@@ -12221,6 +12343,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_clmul
+#      error "__cpp_lib_simd_clmul should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd_clmul != 202611L
+#      error "__cpp_lib_simd_clmul should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_clmul
+#      error "__cpp_lib_simd_clmul should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_simd_complex
 #      error "__cpp_lib_simd_complex should be defined in c++29"
 #    endif
@@ -12368,6 +12503,19 @@
 #  endif
 #  if __cpp_lib_string_view != 202403L
 #    error "__cpp_lib_string_view should have the value 202403L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should be defined in c++29"
+#    endif
+#    if __cpp_lib_structural_types != 202611L
+#      error "__cpp_lib_structural_types should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

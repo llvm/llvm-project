@@ -44,6 +44,10 @@
 #    error "__cpp_lib_optional_range_support should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_constexpr_exceptions
@@ -68,6 +72,10 @@
 
 #  ifdef __cpp_lib_optional_range_support
 #    error "__cpp_lib_optional_range_support should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 17
@@ -99,6 +107,10 @@
 #    error "__cpp_lib_optional_range_support should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 20
 
 #  ifdef __cpp_lib_constexpr_exceptions
@@ -128,6 +140,10 @@
 #    error "__cpp_lib_optional_range_support should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 23
 
 #  ifdef __cpp_lib_constexpr_exceptions
@@ -155,6 +171,10 @@
 
 #  ifdef __cpp_lib_optional_range_support
 #    error "__cpp_lib_optional_range_support should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 26
@@ -225,6 +245,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER > 26
 
 #  if !defined(_LIBCPP_VERSION)
@@ -290,6 +314,19 @@
 #  else
 #    ifdef __cpp_lib_optional_range_support
 #      error "__cpp_lib_optional_range_support should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should be defined in c++29"
+#    endif
+#    if __cpp_lib_structural_types != 202611L
+#      error "__cpp_lib_structural_types should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

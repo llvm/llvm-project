@@ -62,6 +62,7 @@ __cpp_lib_char8_t                                       201907L <atomic> <filesy
 __cpp_lib_chrono                                        201611L <chrono>
 __cpp_lib_chrono_udls                                   201304L <chrono>
 __cpp_lib_clamp                                         201603L <algorithm>
+__cpp_lib_clmul                                         202611L <numeric>
 __cpp_lib_common_reference                              202302L <type_traits>
 __cpp_lib_common_reference_wrapper                      202302L <functional>
 __cpp_lib_complex_udls                                  201309L <complex>
@@ -264,6 +265,7 @@ __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
 __cpp_lib_ranges_reserve_hint                           202502L <ranges>
+__cpp_lib_ranges_slice                                  202611L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
 __cpp_lib_ranges_stride                                 202207L <ranges>
@@ -292,6 +294,7 @@ __cpp_lib_shift                                         202202L <algorithm>
                                                         201806L // C++20
 __cpp_lib_simd                                          202411L <simd>
 __cpp_lib_simd_bitops                                   202607L <simd>
+__cpp_lib_simd_clmul                                    202611L <simd>
 __cpp_lib_simd_complex                                  202502L <simd>
 __cpp_lib_simd_permutations                             202506L <simd>
 __cpp_lib_smart_ptr_for_overwrite                       202002L <memory>
@@ -312,6 +315,8 @@ __cpp_lib_string_udls                                   201304L <string>
 __cpp_lib_string_view                                   202403L <string> <string_view>
                                                         201803L // C++20
                                                         201606L // C++17
+__cpp_lib_structural_types                              202611L <optional> <span> <string_view>
+                                                                <tuple> <variant>
 __cpp_lib_submdspan                                     202306L <mdspan>
 __cpp_lib_syncbuf                                       201803L <syncstream>
 __cpp_lib_task                                          202506L <execution>
@@ -750,13 +755,17 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #if _LIBCPP_STD_VER >= 29
 # undef  __cpp_lib_bitops
 # define __cpp_lib_bitops                               202606L
+// # define __cpp_lib_clmul                                202611L
 # undef  __cpp_lib_expected
 # define __cpp_lib_expected                             202606L
 // # define __cpp_lib_map_lookup                           202606L
 // # define __cpp_lib_mdspan_copy                          202606L
 // # define __cpp_lib_pointer_tag_pair                     202606L
+// # define __cpp_lib_ranges_slice                         202611L
 // # define __cpp_lib_simd_bitops                          202607L
+// # define __cpp_lib_simd_clmul                           202611L
 // # define __cpp_lib_simd_complex                         202502L
+// # define __cpp_lib_structural_types                     202611L
 // # define __cpp_lib_thread_attributes                    202606L
 # define __cpp_lib_view_interface                       202606L
 #endif

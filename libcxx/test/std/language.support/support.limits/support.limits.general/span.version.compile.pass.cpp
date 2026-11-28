@@ -32,6 +32,10 @@
 #    error "__cpp_lib_span_at should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_hardened_span
@@ -46,6 +50,10 @@
 #    error "__cpp_lib_span_at should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 17
 
 #  ifdef __cpp_lib_hardened_span
@@ -58,6 +66,10 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 20
@@ -77,6 +89,10 @@
 #    error "__cpp_lib_span_at should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 23
 
 #  ifdef __cpp_lib_hardened_span
@@ -92,6 +108,10 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 26
@@ -123,6 +143,10 @@
 #    error "__cpp_lib_span_at should have the value 202311L in c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER > 26
 
 #  if !defined(_LIBCPP_VERSION)
@@ -150,6 +174,19 @@
 #  endif
 #  if __cpp_lib_span_at != 202311L
 #    error "__cpp_lib_span_at should have the value 202311L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should be defined in c++29"
+#    endif
+#    if __cpp_lib_structural_types != 202611L
+#      error "__cpp_lib_structural_types should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #endif // TEST_STD_VER > 26
