@@ -252,6 +252,18 @@ struct RValueDerefContainer {
   iterator end() const;
 };
 
+template <typename T>
+struct NonTrivialDtorContainer {
+  struct iterator {
+    ~iterator();
+    bool operator!=(const iterator &other) const;
+    T &operator*();
+    iterator &operator++();
+  };
+  iterator begin();
+  iterator end();
+};
+
 namespace Macros {
 
 struct MacroStruct {
