@@ -3337,6 +3337,11 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     Scav = LongBranchReservedReg;
   } else {
     RS->enterBasicBlockEnd(MBB);
+    // SI_RETURN has no register operand for the incoming return address
+    // (s[30:31]). Mark the pair live so the scavenger won't choose it as
+    // long-branch scratch even if liveness tracking sees no use for it.
+    if (!MFI->isEntryFunction())
+      RS->setRegUsed(getRegisterInfo().getReturnAddressReg(*MF));
     Scav = RS->scavengeRegisterBackwards(
         AMDGPU::SReg_64RegClass, MachineBasicBlock::iterator(GetPC),
         /* RestoreAfter */ false, 0, /* AllowSpill */ false);

@@ -10,9 +10,7 @@
 # scratch reservation. With the low caller-clobbered pairs in use, the next
 # scratch pair must preserve the return address and callee-saved registers.
 
-# FIXME: The initial reservation picks a callee-saved pair. Frame lowering
-# then moves the reservation to the return-address pair.
-# RESERVE: longBranchReservedReg: '$sgpr100_sgpr101'
+# RESERVE: longBranchReservedReg: '$sgpr94_sgpr95'
 ---
 name: preserve_return_address
 machineFunctionInfo:
@@ -23,10 +21,10 @@ body: |
   ; CHECK-LABEL: name: preserve_return_address
   ; CHECK: bb.0:
   ; CHECK: bb.3:
-  ; CHECK:   $sgpr30_sgpr31 = S_GETPC_B64 post-instr-symbol <mcsymbol >
-  ; CHECK-NEXT:   $sgpr30 = S_ADD_U32 $sgpr30, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc
-  ; CHECK-NEXT:   $sgpr31 = S_ADDC_U32 $sgpr31, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc, implicit $scc
-  ; CHECK-NEXT:   S_SETPC_B64 $sgpr30_sgpr31
+  ; CHECK:   $sgpr40_sgpr41 = S_GETPC_B64 post-instr-symbol <mcsymbol >
+  ; CHECK-NEXT:   $sgpr40 = S_ADD_U32 $sgpr40, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc
+  ; CHECK-NEXT:   $sgpr41 = S_ADDC_U32 $sgpr41, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc, implicit $scc
+  ; CHECK-NEXT:   S_SETPC_B64 $sgpr40_sgpr41
   ; CHECK: bb.1:
   ; CHECK: bb.2:
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31

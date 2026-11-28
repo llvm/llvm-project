@@ -6,7 +6,6 @@
 # a branch after the return address has been restored. The frame records that
 # the pair was saved, so pristine-register tracking alone won't protect it, and
 # the return does not expose its use to liveness tracking.
-# FIXME: The scavenger currently chooses the restored return-address pair.
 ---
 name: scavenge_after_return_address_restore
 frameInfo:
@@ -22,10 +21,10 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   $sgpr30_sgpr31 = S_MOV_B64 killed $sgpr40_sgpr41
   ; CHECK: bb.3:
-  ; CHECK:   $sgpr30_sgpr31 = S_GETPC_B64 post-instr-symbol <mcsymbol >
-  ; CHECK-NEXT:   $sgpr30 = S_ADD_U32 $sgpr30, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc
-  ; CHECK-NEXT:   $sgpr31 = S_ADDC_U32 $sgpr31, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc, implicit $scc
-  ; CHECK-NEXT:   S_SETPC_B64 $sgpr30_sgpr31
+  ; CHECK:   $sgpr40_sgpr41 = S_GETPC_B64 post-instr-symbol <mcsymbol >
+  ; CHECK-NEXT:   $sgpr40 = S_ADD_U32 $sgpr40, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc
+  ; CHECK-NEXT:   $sgpr41 = S_ADDC_U32 $sgpr41, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc, implicit $scc
+  ; CHECK-NEXT:   S_SETPC_B64 $sgpr40_sgpr41
   ; CHECK: bb.1:
   ; CHECK: bb.2:
   ; CHECK:   S_SETPC_B64_return undef $sgpr30_sgpr31

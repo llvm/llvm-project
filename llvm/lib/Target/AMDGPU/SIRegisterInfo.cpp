@@ -4116,28 +4116,42 @@ bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
          OpType <= AMDGPU::OPERAND_REG_IMM_LAST;
 }
 
-/// Returns a lowest register that is not used at any point in the function.
-///        If all registers are used, then this function will return
-///         AMDGPU::NoRegister. If \p ReserveHighestRegister = true, then return
-///         highest unused register.
 MCRegister SIRegisterInfo::findUnusedRegister(
     const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
-    const MachineFunction &MF, bool ReserveHighestRegister) const {
-  // Never offer VCC as an unused register.
-  auto isVCC = [](MCRegister Reg) {
-    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
+    const MachineFunction &MF, bool ReserveHighestRegister,
+    const LiveRegUnits *LiveRegs) const {
+  auto IsAvailable = [&](MCRegister Reg) {
+    if (LiveRegs && !LiveRegs->available(Reg))
+      return false;
+    return MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) &&
+           Reg != AMDGPU::VCC && Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI;
   };
 
   if (ReserveHighestRegister) {
     for (MCRegister Reg : reverse(*RC))
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
+      if (IsAvailable(Reg))
         return Reg;
   } else {
     for (MCRegister Reg : *RC)
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
+      if (IsAvailable(Reg))
         return Reg;
   }
   return MCRegister();
+}
+
+MCRegister
+SIRegisterInfo::findUnusedLongBranchSGPR(const MachineFunction &MF,
+                                         bool ReserveHighestRegister) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LiveRegUnits LiveRegs(*this);
+  // Branch relaxation inserts the clobber after callee saves have been emitted.
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+    LiveRegs.addReg(*CSR);
+  // SI_RETURN does not model the return address as a register operand.
+  if (!MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction())
+    LiveRegs.addReg(getReturnAddressReg(MF));
+  return findUnusedRegister(MRI, &AMDGPU::SGPR_64RegClass, MF,
+                            ReserveHighestRegister, &LiveRegs);
 }
 
 bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,

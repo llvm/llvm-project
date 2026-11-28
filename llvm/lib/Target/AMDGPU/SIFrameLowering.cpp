@@ -1855,16 +1855,13 @@ void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
       MRI.reserveReg(UnusedLowVGPR, TRI);
     }
   }
-  // We initally reserved the highest available SGPR pair for long branches
-  // now, after RA, we shift down to a lower unused one if one exists
-  Register LongBranchReservedReg = FuncInfo->getLongBranchReservedReg();
-  Register UnusedLowSGPR =
-      TRI->findUnusedRegister(MRI, &AMDGPU::SGPR_64RegClass, MF);
-  // If LongBranchReservedReg is null then we didn't find a long branch
-  // and never reserved a register to begin with so there is nothing to
-  // shift down. Then if UnusedLowSGPR is null, there isn't available lower
-  // register to use so just keep the original one we set.
-  if (LongBranchReservedReg && UnusedLowSGPR) {
+  // Before register allocation we reserved the highest available SGPR pair
+  // for long branches. Now try to move that reservation to a lower unused pair
+  // to reduce SGPR usage.
+  if (!FuncInfo->getLongBranchReservedReg())
+    return;
+  // Keep the original reservation if no lower pair is available.
+  if (Register UnusedLowSGPR = TRI->findUnusedLongBranchSGPR(MF)) {
     FuncInfo->setLongBranchReservedReg(UnusedLowSGPR);
     MRI.reserveReg(UnusedLowSGPR, TRI);
   }
