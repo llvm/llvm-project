@@ -1515,14 +1515,30 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (!VD || VD->isInvalidDecl() || !Seen.insert(VD).second)
       continue;
 
-    if (const IncompleteArrayType *ArrayT
-        = Context.getAsIncompleteArrayType(VD->getType())) {
-      // Set the length of the array to 1 (C99 6.9.2p5).
-      Diag(VD->getLocation(), diag::warn_tentative_incomplete_array);
-      llvm::APInt One(Context.getTypeSize(Context.getSizeType()), true);
-      QualType T = Context.getConstantArrayType(
-          ArrayT->getElementType(), One, nullptr, ArraySizeModifier::Normal, 0);
-      VD->setType(T);
+    if (const IncompleteArrayType *ArrayT =
+            Context.getAsIncompleteArrayType(VD->getType())) {
+      VarDecl *MostRecentFileDecl = nullptr;
+      for (VarDecl *Prev = VD->getMostRecentDecl(); Prev;
+           Prev = Prev->getPreviousDecl()) {
+        if (Prev->isFileVarDecl()) {
+          MostRecentFileDecl = Prev;
+          break;
+        }
+      }
+      QualType MostRecentType =
+          MostRecentFileDecl ? MostRecentFileDecl->getType() : QualType();
+      if (!MostRecentType.isNull() &&
+          !MostRecentType->isIncompleteArrayType()) {
+        VD->setType(MostRecentType);
+      } else {
+        // Set the length of the array to 1 (C99 6.9.2p5).
+        Diag(VD->getLocation(), diag::warn_tentative_incomplete_array);
+        llvm::APInt One(Context.getTypeSize(Context.getSizeType()), true);
+        QualType T =
+            Context.getConstantArrayType(ArrayT->getElementType(), One, nullptr,
+                                         ArraySizeModifier::Normal, 0);
+        VD->setType(T);
+      }
     } else if (RequireCompleteType(VD->getLocation(), VD->getType(),
                                    diag::err_tentative_def_incomplete_type))
       VD->setInvalidDecl();

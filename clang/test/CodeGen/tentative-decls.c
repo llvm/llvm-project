@@ -36,3 +36,13 @@ static int c5[];
 static int func(void) { return c5[0]; }
 int callfunc(void) { return func(); }
 
+// GH242842: Check that tentative array completed by later extern gets the completed size.
+// CHECK-DAG: @gh242842_a = {{(dso_local )?}}global [10 x {{.*}}] zeroinitializer
+int gh242842_a[];
+extern int gh242842_a[10];
+
+// CHECK-DAG: @gh242842_b = internal global [10 x {{.*}}] zeroinitializer
+static int gh242842_b[];
+extern int gh242842_b[10];
+int *use_gh242842_b(void) { return gh242842_b; }
+
