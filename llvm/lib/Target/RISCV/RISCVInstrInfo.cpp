@@ -2459,6 +2459,23 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
 
   // Mask
   if (RISCVII::usesMaskPolicy(TSFlags)) {
+    auto GetMaskSource = [&](const MachineInstr &MI) {
+      const auto *Info = RISCV::getMaskedPseudoInfo(MI.getOpcode());
+      assert(Info && "Expected a masked pseudo");
+      Register Reg =
+          MI.getOperand(Info->MaskOpIdx + MI.getNumExplicitDefs()).getReg();
+      while (Reg.isVirtual()) {
+        const MachineInstr *Def = MRI->getVRegDef(Reg);
+        if (!Def || !Def->isCopy() || !Def->getOperand(1).getReg().isVirtual())
+          break;
+        Reg = Def->getOperand(1).getReg();
+      }
+      return Reg;
+    };
+
+    if (GetMaskSource(Root) != GetMaskSource(Prev))
+      return false;
+
     const MachineBasicBlock *MBB = Root.getParent();
     const MachineBasicBlock::const_reverse_iterator It1(&Root);
     const MachineBasicBlock::const_reverse_iterator It2(&Prev);
