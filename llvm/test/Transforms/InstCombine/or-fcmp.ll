@@ -4653,3 +4653,101 @@ define i1 @or_fcmp_reassoc4(i1 %x, double %a, double %b) {
   %retval = or i1 %cmp1, %or
   ret i1 %retval
 }
+
+define i1 @or_uno_olt_nonnan_const(double %x) {
+; CHECK-LABEL: @or_uno_olt_nonnan_const(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[X:%.*]], f0x43E0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno = fcmp uno double %x, 0.0
+  %lt = fcmp olt double %x, 0x43E0000000000000    ; 2^63
+  %r = or i1 %uno, %lt
+  ret i1 %r
+}
+
+define i1 @or_uno_oge_nonnan_const_commute(double %x) {
+; CHECK-LABEL: @or_uno_oge_nonnan_const_commute(
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[X:%.*]], f0x43E0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno = fcmp uno double %x, 0.0
+  %ge = fcmp oge double %x, 0x43E0000000000000    ; 2^63
+  %r = or i1 %ge, %uno
+  ret i1 %r
+}
+
+define i1 @or_uno_olt_nonnan_const_fmf(double %x) {
+; CHECK-LABEL: @or_uno_olt_nonnan_const_fmf(
+; CHECK-NEXT:    [[R:%.*]] = fcmp nsz ult double [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno = fcmp nsz uno double %x, 0.0
+  %lt  = fcmp nnan nsz olt double %x, 2.0
+  %r = or i1 %uno, %lt
+  ret i1 %r
+}
+
+define <2 x i1> @or_uno_olt_nonnan_const_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @or_uno_olt_nonnan_const_vec_poison(
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult <2 x double> [[X:%.*]], <double 2.000000e+00, double poison>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %uno = fcmp uno <2 x double> %x, zeroinitializer
+  %lt = fcmp olt <2 x double> %x, <double 2.0, double poison>
+  %r = or <2 x i1> %uno, %lt
+  ret <2 x i1> %r
+}
+
+define i1 @or_uno_olt_fabs_nonnan_const(double %x) {
+; CHECK-LABEL: @or_uno_olt_fabs_nonnan_const(
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[FABS]], 2.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %fabs = call double @llvm.fabs.f64(double %x)
+  %uno = fcmp uno double %x, 0.0
+  %lt = fcmp olt double %fabs, 2.0
+  %r = or i1 %uno, %lt
+  ret i1 %r
+}
+
+define <2 x i1> @or_uno_olt_nan_const_vec(<2 x double> %x) {
+; CHECK-LABEL: @or_uno_olt_nan_const_vec(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno <2 x double> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[LT:%.*]] = fcmp olt <2 x double> [[X]], <double 2.000000e+00, double +qnan>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[UNO]], [[LT]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %uno = fcmp uno <2 x double> %x, zeroinitializer
+  %lt = fcmp olt <2 x double> %x, <double 2.0, double 0x7FF8000000000000>   ; one NaN lane
+  %r = or <2 x i1> %uno, %lt
+  ret <2 x i1> %r
+}
+
+define i1 @or_uno_olt_nonnan_const_different_x(double %x, double %y) {
+; CHECK-LABEL: @or_uno_olt_nonnan_const_different_x(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[LT:%.*]] = fcmp olt double [[Y:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO]], [[LT]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %uno = fcmp uno double %x, 0.0
+  %lt = fcmp olt double %y, 2.0
+  %r = or i1 %uno, %lt
+  ret i1 %r
+}
+
+define i1 @or_uno_olt_nonnan_const_logical_select(double %x, double %y) {
+; CHECK-LABEL: @or_uno_olt_nonnan_const_logical_select(
+; CHECK-NEXT:    [[CS:%.*]] = call double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[LT:%.*]] = fcmp olt double [[CS]], 2.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[UNO]], i1 true, i1 [[LT]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cs = call double @llvm.copysign.f64(double %x, double %y)
+  %uno = fcmp uno double %x, 0.0
+  %lt = fcmp olt double %cs, 2.0
+  %r = select i1 %uno, i1 true, i1 %lt
+  ret i1 %r
+}
