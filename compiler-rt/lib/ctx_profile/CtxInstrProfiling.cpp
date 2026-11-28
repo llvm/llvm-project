@@ -39,9 +39,9 @@ Arena *FlatCtxArenaHead = nullptr;
 SANITIZER_GUARDED_BY(FlatCtxArenaMutex)
 Arena *FlatCtxArena = nullptr;
 
-// Set to true when we enter a root, and false when we exit - regardless if this
-// thread collects a contextual profile for that root.
-__thread bool IsUnderContext = false;
+// Depth of active root entries on this thread, regardless of whether this
+// thread collects a contextual profile for those roots.
+__thread uint32_t UnderContextDepth = 0;
 __sanitizer::atomic_uint8_t ProfilingStarted = {};
 
 __sanitizer::atomic_uintptr_t RootDetector = {};
@@ -290,7 +290,8 @@ ContextRoot *FunctionData::getOrAllocateContextRoot() {
 ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
                                       uint32_t Counters, uint32_t Callsites)
     SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  IsUnderContext = true;
+  if (UnderContextDepth < UINT32_MAX)
+    ++UnderContextDepth;
   __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
                                 __sanitizer::memory_order_relaxed);
   if (!Root->FirstMemBlock) {
@@ -334,7 +335,8 @@ ContextNode *getUnhandledContext(FunctionData &Data, void *Callee, GUID Guid,
       if (canBeRoot(CR))
         return tryStartContextGivenRoot(CR, Guid, NumCounters, NumCallsites);
     }
-    if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
+    if (UnderContextDepth > 0 ||
+        !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
       return TheScratchContext;
     else
       return markAsScratch(
@@ -355,6 +357,10 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
   if (!CtxRoot)
     return getUnhandledContext(*Data, Callee, Guid, NumCounters, NumCallsites,
                                nullptr);
+  if (auto *CR = Data->CtxRoot; CR && canBeRoot(CR)) {
+    if (UnderContextDepth < UINT32_MAX)
+      ++UnderContextDepth;
+  }
 
   // also fast "out" if the caller is scratch. We can see if it's scratch by
   // looking at the interior pointer into the subcontexts vector that the caller
@@ -417,9 +423,14 @@ void __llvm_ctx_profile_release_context(FunctionData *FData)
     SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   const auto *CurrentRoot = __llvm_ctx_profile_current_context_root;
   auto *CR = FData->CtxRoot;
+  // Every instrumented function releases its context on return. Only a root
+  // has a ContextRoot, and its exit ends an active root entry whether or not
+  // this thread took the root's collection lock. Guard against underflow in
+  // case a function was promoted to root while already on the stack.
+  if (CR && canBeRoot(CR) && UnderContextDepth > 0)
+    --UnderContextDepth;
   if (!CurrentRoot || CR != CurrentRoot)
     return;
-  IsUnderContext = false;
   assert(CR && canBeRoot(CR));
   __llvm_ctx_profile_current_context_root = nullptr;
   CR->Taken.Unlock();
@@ -499,6 +510,10 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
 
 void __llvm_ctx_profile_free() {
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, false);
+  // Reset TLS state for the calling thread (other threads are expected to have
+  // exited their active contexts before freeing).
+  __llvm_ctx_profile_current_context_root = nullptr;
+  UnderContextDepth = 0;
   {
     __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
         &AllContextsMutex);
