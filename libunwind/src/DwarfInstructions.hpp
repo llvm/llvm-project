@@ -65,7 +65,7 @@ private:
 
   static pint_t getCFA(A &addressSpace, const PrologInfo &prolog,
                        const R &registers) {
-    if (prolog.cfaRegister != 0) {
+    if (prolog.cfaRegister != PrologInfo::kNoRegister) {
       uintptr_t cfaRegister = registers.getRegister((int)prolog.cfaRegister);
       return (pint_t)(cfaRegister + prolog.cfaRegisterOffset);
     }

@@ -93,6 +93,11 @@ public:
   /// Information about a frame layout and registers saved determined
   /// by "running" the DWARF FDE "instructions"
   struct PrologInfo {
+    // Value of cfaRegister when the CFA is not register-relative (undefined or
+    // given by a DW_CFA_def_cfa_expression). It cannot be 0, since 0 is a valid
+    // DWARF register number on every target (e.g. %rax on x86-64, x0 on
+    // AArch64).
+    static const uint32_t kNoRegister = ~0U;
     uint32_t          cfaRegister;
     int32_t           cfaRegisterOffset;  // CFA = (cfaRegister)+cfaRegisterOffset
     int64_t           cfaExpression;      // CFA = expression
@@ -105,8 +110,10 @@ public:
 
     // When saving registers, this data structure is lazily initialized.
     PrologInfo(InitializeTime IT = InitializeTime::kNormal) {
-      if (IT == InitializeTime::kNormal)
+      if (IT == InitializeTime::kNormal) {
         memset(this, 0, sizeof(*this));
+        cfaRegister = kNoRegister;
+      }
     }
     void checkSaveRegister(uint64_t reg, PrologInfo &initialState) {
       if (!savedRegisters[reg].initialStateSaved) {
@@ -660,7 +667,7 @@ bool CFI_Parser<A>::parseFDEInstructions(
                                results->cfaRegisterOffset);
         break;
       case DW_CFA_def_cfa_expression:
-        results->cfaRegister = 0;
+        results->cfaRegister = PrologInfo::kNoRegister;
         results->cfaExpression = (int64_t)p;
         length = addressSpace.getULEB128(p, instructionsEnd);
         assert(length < static_cast<pint_t>(~0) && "pointer overflow");
