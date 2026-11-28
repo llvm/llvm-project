@@ -19,10 +19,10 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: false
 body: |
   bb.0.entry:
     successors: %bb.1.less, %bb.2.exit
+    liveins: $edi
 
     CMP32ri8 $edi, 10, implicit-def $eflags
     JCC_1 %bb.2.exit, 15, implicit $eflags
@@ -34,6 +34,7 @@ body: |
     RET64 killed $eax
 
   bb.2.exit:
+    liveins: $edi
     ; CHECK:      $eax = COPY killed $edi
     ; CHECK-NEXT: RET64 killed $eax
     $eax = COPY killed $edi

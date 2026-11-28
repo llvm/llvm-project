@@ -3,12 +3,11 @@
 
 ---
 name:            main
-tracksRegLiveness: false
 body:             |
  bb.0.entry:
-    liveins: $ymm7
+    liveins: $rax, $ymm7
     ; CHECK-LABEL: name: main
-    ; CHECK: liveins: $ymm7
+    ; CHECK: liveins: $rax, $ymm7
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $ymm6 = COPY killed renamable $ymm7
     ; CHECK-NEXT: CALL64r killed renamable $rax, csr_64_mostregs

@@ -40,12 +40,14 @@ name:            test_mul_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
 
     ; CHECK-LABEL: name: test_mul_i1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s8) = G_MUL [[TRUNC]], [[TRUNC1]]
@@ -66,13 +68,12 @@ name:            test_mul_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $edi, $esi
+    liveins: $dl, $edi, $esi
 
     ; CHECK-LABEL: name: test_mul_i8
-    ; CHECK: liveins: $edi, $esi
+    ; CHECK: liveins: $dl, $edi, $esi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dl
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $sil
@@ -90,7 +91,6 @@ name:            test_mul_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -114,12 +114,14 @@ name:            test_mul_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
 
     ; CHECK-LABEL: name: test_mul_i27
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[MUL]](s32)
     ; CHECK-NEXT: RET 0
@@ -136,7 +138,6 @@ name:            test_mul_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -160,13 +161,12 @@ name:            test_mul_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $rdi, $rsi
+    liveins: $rdi, $rdx, $rsi
 
     ; X64-LABEL: name: test_mul_i42
-    ; X64: liveins: $rdi, $rsi
+    ; X64: liveins: $rdi, $rdx, $rsi
     ; X64-NEXT: {{  $}}
     ; X64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY]]
@@ -174,7 +174,7 @@ body:             |
     ; X64-NEXT: RET 0
     ;
     ; X86-LABEL: name: test_mul_i42
-    ; X86: liveins: $rdi, $rsi
+    ; X86: liveins: $rdi, $rdx, $rsi
     ; X86-NEXT: {{  $}}
     ; X86-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
@@ -200,7 +200,6 @@ name:            test_mul_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi

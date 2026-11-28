@@ -13,6 +13,10 @@
 # CHECK: Use of %0 does not have a corresponding definition on every path
 # CHECK: ERROR: Use not jointly dominated by defs.
 name: func
+## FIXME: This test exercises a codepath in `LiveRangeCalc` that is only
+## reachable in the `tracksRegLiveness: false` configuration. Once this
+## configuration is no longer supported, we can drop this path and either update
+## this test to match the verifier output or drop it entirely.
 tracksRegLiveness: false
 body: |
   bb.0:

@@ -57,7 +57,6 @@
 ...
 ---
 name:            test_jumptable
-tracksRegLiveness: false
 # CHECK:      jumpTable:
 # CHECK-NEXT: kind: label-difference32
 # CHECK-NEXT: entries:
@@ -72,6 +71,7 @@ jumpTable:
 body: |
   bb.0.entry:
     successors: %bb.2, %bb.1
+    liveins: $edi
 
     $eax = MOV32rr $edi, implicit-def $rax
     CMP32ri8 $edi, 3, implicit-def $eflags
@@ -79,6 +79,7 @@ body: |
 
   bb.1.entry:
     successors: %bb.3, %bb.4, %bb.5, %bb.6
+    liveins: $rax
     ; CHECK: $rcx = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
     $rcx = LEA64r $rip, 1, _, %jump-table.0, _
     $rax = MOVSX64rm32 $rcx, 4, $rax, 0, _
@@ -107,7 +108,6 @@ body: |
 ...
 ---
 name:            test_jumptable2
-tracksRegLiveness: false
 jumpTable:
   kind:          label-difference32
   entries:
@@ -116,6 +116,7 @@ jumpTable:
 body: |
   bb.0.entry:
     successors: %bb.2, %bb.1
+    liveins: $edi
 
     $eax = MOV32rr $edi, implicit-def $rax
     CMP32ri8 $edi, 3, implicit-def $eflags
@@ -123,6 +124,7 @@ body: |
 
   bb.1.entry:
     successors: %bb.3, %bb.4, %bb.5, %bb.6
+    liveins: $rax
     ; Verify that the printer will use an id of 0 for this jump table:
     ; CHECK: $rcx = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
     $rcx = LEA64r $rip, 1, _, %jump-table.1, _

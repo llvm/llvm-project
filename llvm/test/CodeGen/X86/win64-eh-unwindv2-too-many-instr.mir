@@ -42,7 +42,6 @@
 ...
 ---
 name:            too_many_instr
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
@@ -50,16 +49,19 @@ body:             |
     frame-destroy SEH_EndEpilogue
     RET64 debug-location !10
   bb.1:
+    liveins: $rax
     $rcx = MOV64rr $rax
     frame-destroy SEH_BeginEpilogue
     frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.2:
+    liveins: $rax
     $rcx = MOV64rr $rax
     frame-destroy SEH_BeginEpilogue
     frame-destroy SEH_EndEpilogue
     RET64 debug-location !12
   bb.3:
+    liveins: $rax
     $rcx = MOV64rr $rax
     $rcx = MOV64rr $rax
     $rcx = MOV64rr $rax
@@ -88,6 +90,8 @@ body:             |
 # CHECK-NEXT:     RET64 debug-location !DILocation(line: 3, column: 1, scope: !6)
 
 # CHECK-LABEL:   bb.2
+# CHECK-NEXT:     liveins: $rax
+# CHECK-NEXT:     {{  $}}
 # bb.3 has enough instructions by itself that bb.2 needs to split.
 # ALLOWLESS-NEXT: frame-destroy SEH_SplitChainedAtEndOfBlock
 # ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock

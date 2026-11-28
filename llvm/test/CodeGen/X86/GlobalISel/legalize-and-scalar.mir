@@ -18,11 +18,13 @@ name:            test_and_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_and_i1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[TRUNC1]]
@@ -41,11 +43,13 @@ name:            test_and_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_and_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
@@ -63,11 +67,13 @@ name:            test_and_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_and_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
@@ -85,11 +91,13 @@ name:            test_and_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_and_i27
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[AND]](s32)
     ; CHECK-NEXT: RET 0
@@ -105,7 +113,6 @@ name:            test_and_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i32
@@ -125,16 +132,21 @@ name:            test_and_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $rdx
     ; X64-LABEL: name: test_and_i42
-    ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X64: liveins: $rdx
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[COPY]]
     ; X64-NEXT: $rax = COPY [[AND]](s64)
     ; X64-NEXT: RET 0
+    ;
     ; X86-LABEL: name: test_and_i42
-    ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X86: liveins: $rdx
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[UV2]]
@@ -154,7 +166,6 @@ name:            test_and_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_and_i64
@@ -163,6 +174,7 @@ body:             |
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[DEF1]]
     ; X64-NEXT: $rax = COPY [[AND]](s64)
     ; X64-NEXT: RET 0
+    ;
     ; X86-LABEL: name: test_and_i64
     ; X86: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X86-NEXT: [[DEF1:%[0-9]+]]:_(s64) = IMPLICIT_DEF

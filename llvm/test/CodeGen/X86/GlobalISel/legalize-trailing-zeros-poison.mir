@@ -9,18 +9,22 @@ name:            test_cttz35
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $rdx
     ; X64-LABEL: name: test_cttz35
-    ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X64: liveins: $rdx
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738368
     ; X64-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
     ; X64-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(s64) = G_CTTZ_ZERO_POISON [[OR]](s64)
     ; X64-NEXT: RET 0, implicit [[CTTZ_ZERO_POISON]](s64)
     ;
     ; X86-LABEL: name: test_cttz35
-    ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X86: liveins: $rdx
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; X86-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
@@ -50,7 +54,6 @@ name:            test_cttz8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_cttz8
@@ -70,7 +73,6 @@ name:            test_cttz64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; X64-LABEL: name: test_cttz64
@@ -107,7 +109,6 @@ name:            test_cttz32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_cttz32
@@ -125,7 +126,6 @@ name:            test_cttz16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_cttz16

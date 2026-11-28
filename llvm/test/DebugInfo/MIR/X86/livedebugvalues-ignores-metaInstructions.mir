@@ -48,18 +48,21 @@
 ...
 ---
 name:            _Z8bb_to_bb
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     successors: %bb.1
+    liveins: $eax
     $ebx = MOV32ri 0, debug-location !17
     DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
   bb.1.bb1:
     successors: %bb.2
+    liveins: $eax, $ebx
     renamable $ebx = KILL $ebx
   bb.2.bb2:
     successors: %bb.3
+    liveins: $eax, $ebx
     renamable $ebx = KILL $ebx
   bb.3.bb3:
+    liveins: $eax
     RET64 $eax, debug-location !17
 ...

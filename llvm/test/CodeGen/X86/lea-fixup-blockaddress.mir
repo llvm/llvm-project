@@ -13,10 +13,11 @@
 ...
 ---
 name:            square
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: square
   ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $ebp, $ebx
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $eax = LEA32r renamable $ebx, 1, renamable $ebp, 0, $noreg
   ; CHECK-NEXT:   $eax = ADD32ri $eax, target-flags(x86-gotoff) blockaddress(@square, %ir-block.1), implicit-def $eflags
   ; CHECK-NEXT:   JMP32r killed renamable $eax
@@ -24,6 +25,7 @@ body:             |
   ; CHECK-NEXT: bb.1 (%ir-block.1, ir-block-address-taken %ir-block.1):
   ; CHECK-NEXT:   RET 0
   bb.0:
+    liveins: $ebp, $ebx
     renamable $eax = LEA32r renamable $ebp, 1, renamable $ebx, target-flags(x86-gotoff) blockaddress(@square, %ir-block.1), $noreg
     JMP32r killed renamable $eax
 

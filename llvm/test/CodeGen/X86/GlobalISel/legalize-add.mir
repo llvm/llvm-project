@@ -19,11 +19,13 @@ name:            test_add_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_add_i1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC1]]
@@ -42,11 +44,13 @@ name:            test_add_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_add_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD]](s8)
@@ -64,11 +68,13 @@ name:            test_add_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_add_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s16) = G_ADD [[TRUNC]], [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD]](s16)
@@ -86,11 +92,13 @@ name:            test_add_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_add_i27
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
+    ; CHECK: liveins: $edx
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[ADD]](s32)
     ; CHECK-NEXT: RET 0
@@ -106,7 +114,6 @@ name:            test_add_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_add_i32
@@ -126,17 +133,21 @@ name:            test_add_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $rdx
     ; X64-LABEL: name: test_add_i42
-    ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X64: liveins: $rdx
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY]]
     ; X64-NEXT: $rax = COPY [[ADD]](s64)
     ; X64-NEXT: RET 0
     ;
     ; X86-LABEL: name: test_add_i42
-    ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
+    ; X86: liveins: $rdx
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[UV]], [[UV2]]
@@ -156,7 +167,6 @@ name:            test_add_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_add_i64
@@ -187,7 +197,6 @@ name:            test_add_i128
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_add_i128

@@ -8,9 +8,9 @@
 ...
 ---
 name:            baz
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0
 
     ; CHECK: COPY
     ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nnan VMULSSrr

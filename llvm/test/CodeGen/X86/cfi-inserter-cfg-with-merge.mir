@@ -6,9 +6,9 @@
 ...
 ---
 name: foo
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $eflags
     JCC_1 %bb.3, 4, implicit $eflags
   bb.1:
     CFI_INSTRUCTION def_cfa_offset 24

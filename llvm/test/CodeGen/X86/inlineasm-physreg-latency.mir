@@ -110,7 +110,6 @@ body: |
 # An inline asm that may load gets the load latency.
 ---
 name: asm_mayload_output_to_native_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_mayload_output_to_native_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -153,7 +152,6 @@ body: |
 
 ---
 name: asm_fixed_output_to_native_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_fixed_output_to_native_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -169,7 +167,6 @@ body: |
 # group, so it is a real definition as well.
 ---
 name: asm_clobber_to_native_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_clobber_to_native_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM

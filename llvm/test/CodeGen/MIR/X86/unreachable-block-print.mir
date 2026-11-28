@@ -2,17 +2,19 @@
 # RUN: llc -mtriple=x86_64-- -o - %s -run-pass=none -simplify-mir | FileCheck %s
 ---
 name: foo
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $eax
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   RET 0, $eax
   bb.0:
     successors:
 
   bb.1:
+    liveins: $eax
     RET 0, $eax
 ...

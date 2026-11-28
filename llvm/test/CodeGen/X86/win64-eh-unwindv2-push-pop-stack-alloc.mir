@@ -26,6 +26,8 @@
 # CHECK-LABEL:  name:            push_pop_different
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
+# CHECK-NEXT:       liveins: $ecx, $edx
+# CHECK-NEXT:       {{  $}}
 # CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r undef $rax
 # CHECK-NEXT:       frame-setup SEH_StackAlloc 8
@@ -40,6 +42,8 @@
 # CHECK-LABEL:  name:            push_add
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
+# CHECK-NEXT:       liveins: $rbx, $rcx, $rdi, $rdx, $rsi, $r8, $r14, $r15
+# CHECK-NEXT:       {{  $}}
 # CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r killed $r15
 # CHECK-NEXT:       frame-setup SEH_PushReg 126
@@ -92,7 +96,6 @@
 ...
 ---
 name:            push_pop_same
-tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
@@ -105,9 +108,9 @@ body:             |
 ...
 ---
 name:            push_pop_different
-tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
+    liveins: $ecx, $edx
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     frame-setup SEH_StackAlloc 8
     frame-setup SEH_EndPrologue
@@ -121,9 +124,9 @@ body:             |
 ...
 ---
 name:            push_add
-tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
+    liveins: $rbx, $rcx, $rdi, $rdx, $rsi, $r8, $r14, $r15
 
     frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 126

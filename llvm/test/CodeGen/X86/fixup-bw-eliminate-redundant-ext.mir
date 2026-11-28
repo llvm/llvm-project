@@ -21,7 +21,6 @@
 ---
 # The load already zero extends $r12d, so the extend below it is a no-op.
 name:            same_block
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -43,7 +42,6 @@ body:             |
 # though the only predecessor zero extends the value.  Removing it would mean
 # making $r9d live in to bb.1, which so far only needed $r9b.
 name:            across_blocks
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: across_blocks
   ; CHECK: bb.0:
@@ -90,7 +88,6 @@ body:             |
 # When the extend moves the value to a different register the move is still
 # needed, but it can be done 32 bits at a time.
 name:            into_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -109,7 +106,6 @@ body:             |
 ---
 # The add writes bits that the load had zeroed, so the extend is needed.
 name:            clobbered_super_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -131,7 +127,6 @@ body:             |
 # Knowing that $eax is in [0, 0xFF] says that $ah is zero, not that the extend
 # leaves $eax alone, so this one has to stay.
 name:            high_byte_source
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -151,7 +146,6 @@ body:             |
 # A value in [0, 0xFF] is also in [0, 0xFFFF], so extending it from its low
 # word does nothing either.
 name:            word_from_byte
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -172,7 +166,6 @@ body:             |
 # The other way round does not hold: 0x1234 is in [0, 0xFFFF] but extending
 # it from its low byte gives 0x34, so this extend has to stay.
 name:            byte_from_word
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -191,7 +184,6 @@ body:             |
 ---
 # The load already sign extends $eax, so the extend below it is a no-op.
 name:            sext_same_block
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -212,7 +204,6 @@ body:             |
 # A value in [-0x80, 0x7F] is also in [-0x8000, 0x7FFF], so sign extending it
 # from its low word does nothing either.
 name:            sext_word_from_byte
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -233,7 +224,6 @@ body:             |
 # The other way round does not hold: 0x1234 is in [-0x8000, 0x7FFF] but
 # extending it from its low byte gives 0x34, so this extend has to stay.
 name:            sext_byte_from_word
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -253,7 +243,6 @@ body:             |
 # A value in [0, 0xFF] has a clear sign bit when read as a word, so sign
 # extending its low word does nothing.
 name:            sext_word_from_zext_byte
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -275,7 +264,6 @@ body:             |
 # [0, 0xFF] but sign extending it from its low byte gives 0xFFFFFFFF, so this
 # extend has to stay.
 name:            sext_byte_from_zext_byte
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -295,7 +283,6 @@ body:             |
 # A sign extended value can be negative: -1 is in [-0x80, 0x7F] but zero
 # extending it from its low word gives 0xFFFF, so this extend has to stay.
 name:            zext_word_from_sext_byte
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -314,7 +301,6 @@ body:             |
 ---
 # The copy keeps being sign extended, so a second extend of it is a no-op too.
 name:            sext_into_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi

@@ -2,7 +2,6 @@
 
 ---
 name:            test1a
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: test1a
   ; CHECK: bb.0:
@@ -16,22 +15,24 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit killed $eflags
 
   bb.1:
+    liveins: $r12, $r13
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.2:
+    liveins: $r13
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 ...
 
 ---
 name:            test1b
-tracksRegLiveness: false
 body:             |
 
   ; Verify that we get the same rewrites as in test1a when adding some
@@ -51,15 +52,18 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit killed $eflags
 
   bb.1:
+    liveins: $r12, $r13
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.2:
+    liveins: $r13
     DBG_VALUE
     DBG_VALUE
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
@@ -68,7 +72,6 @@ body:             |
 
 ---
 name:            test2a
-tracksRegLiveness: false
 body:             |
   ; CFI instruction currently prevents the rewrite here (although technically
   ; I suppose that branch folding could let bb.1 fallthrough into bb.2 here).
@@ -86,15 +89,18 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit killed $eflags
 
   bb.1:
+    liveins: $r12, $r13
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.2:
+    liveins: $r13
     CFI_INSTRUCTION def_cfa_offset 8
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
@@ -102,7 +108,6 @@ body:             |
 
 ---
 name:            test2b
-tracksRegLiveness: false
 body:             |
   ; Verify that we get the same rewrites as in test1a when adding some
   ; DBG_VALUE instructions in the mix.
@@ -122,15 +127,18 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit killed $eflags
 
   bb.1:
+    liveins: $r12, $r13
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.2:
+    liveins: $r13
     DBG_VALUE
     CFI_INSTRUCTION def_cfa_offset 8
     DBG_VALUE
@@ -140,7 +148,6 @@ body:             |
 
 ---
 name:            test3a
-tracksRegLiveness: false
 body:             |
   ; The conditional branch in bb.1 duplicates the one in bb.0, so bb.0 falls
   ; through to it and the two blocks are merged.
@@ -157,24 +164,27 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.3, 5, implicit $eflags
 
   bb.1:
+    liveins: $eflags, $r12, $r13
     JCC_1 %bb.3, 5, implicit killed $eflags
 
   bb.2:
+    liveins: $r12
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.3:
+    liveins: $r13
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 ...
 
 ---
 name:            test3b
-tracksRegLiveness: false
 body:             |
   ; Verify that we get the same rewrites as in test3a when adding a DBG_VALUE
   ; instruction in the mix.
@@ -192,18 +202,22 @@ body:             |
   ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
   ; CHECK:   RET 0
   bb.0:
+    liveins: $al, $r12, $r13
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
     JCC_1 %bb.3, 5, implicit $eflags
 
   bb.1:
+    liveins: $eflags, $r12, $r13
     DBG_VALUE
     JCC_1 %bb.3, 5, implicit killed $eflags
 
   bb.2:
+    liveins: $r12
     MOV8mi $r12, 1, $noreg, 0, $noreg, 0
     RET 0
 
   bb.3:
+    liveins: $r13
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 ...

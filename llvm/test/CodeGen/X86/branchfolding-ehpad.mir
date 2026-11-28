@@ -5,14 +5,16 @@
 # Also make sure that the landing pad still can be tail merged.
 ---
 name: foo
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: foo
   bb.0:
     successors: %bb.1, %bb.3
+    liveins: $eflags, $r13
   bb.1:
+    liveins: $eflags, $r13
     JCC_1 %bb.4, 5, implicit killed $eflags
   bb.2:
+    liveins: $r13
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     JMP_1 %bb.5
   ; CHECK: bb.2:
@@ -20,10 +22,12 @@ body: |
   ; CHECK: bb.3 (landing-pad):
   ; CHECK-NOT: MOV8mi
   bb.3(landing-pad):
+    liveins: $r13
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     JMP_1 %bb.5
   ; CHECK: bb.4:
   bb.4:
+    liveins: $r13
     MOV8mi $r13, 2, $noreg, 0, $noreg, 0
   bb.5:
     RET 0

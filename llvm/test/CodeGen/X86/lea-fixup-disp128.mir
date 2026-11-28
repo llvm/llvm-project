@@ -21,11 +21,13 @@
 ...
 ---
 name:            disp128
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: disp128
-    ; CHECK: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
+    ; CHECK: liveins: $rdi, $rsi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
     ; CHECK-NEXT: $rax = SUB64ri32 $rax, -128, implicit-def $eflags
     ; CHECK-NEXT: JMP64r renamable $rax
     renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 128, $noreg
@@ -33,11 +35,13 @@ body:             |
 ...
 ---
 name:            disp128_32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: disp128_32
-    ; CHECK: renamable $eax = LEA64_32r renamable $rdi, 1, renamable $rsi, 0, $noreg
+    ; CHECK: liveins: $rdi, $rsi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $eax = LEA64_32r renamable $rdi, 1, renamable $rsi, 0, $noreg
     ; CHECK-NEXT: $eax = SUB32ri $eax, -128, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $eax
     renamable $eax = LEA64_32r renamable $rdi, 1, renamable $rsi, 128, $noreg
@@ -45,11 +49,13 @@ body:             |
 ...
 ---
 name:            disp129
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: disp129
-    ; CHECK: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
+    ; CHECK: liveins: $rdi, $rsi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
     ; CHECK-NEXT: $rax = ADD64ri32 $rax, 129, implicit-def $eflags
     ; CHECK-NEXT: JMP64r renamable $rax
     renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 129, $noreg
@@ -57,11 +63,13 @@ body:             |
 ...
 ---
 name:            disp_minus128
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: disp_minus128
-    ; CHECK: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
+    ; CHECK: liveins: $rdi, $rsi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
     ; CHECK-NEXT: $rax = ADD64ri32 $rax, -128, implicit-def $eflags
     ; CHECK-NEXT: JMP64r renamable $rax
     renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, -128, $noreg

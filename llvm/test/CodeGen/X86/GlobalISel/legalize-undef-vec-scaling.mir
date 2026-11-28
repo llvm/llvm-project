@@ -6,7 +6,6 @@
 
 ---
 name: test_basic_g_implicit_def_v8i64
-tracksRegLiveness: false
 body: |
   bb.0:
     ; AVX2-LABEL: name: test_basic_g_implicit_def_v8i64
@@ -28,25 +27,31 @@ body: |
 
 ---
 name: test_g_implicit_def_cample_size
-tracksRegLiveness: false
 body: |
   bb.1:
+    liveins: $rdi
     ; AVX2-LABEL: name: test_g_implicit_def_cample_size
-    ; AVX2: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; AVX2: liveins: $rdi
+    ; AVX2-NEXT: {{  $}}
+    ; AVX2-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
     ; AVX2-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
     ; AVX2-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
     ; AVX2-NEXT: $rax = COPY [[COPY]](p0)
     ; AVX2-NEXT: RET 0, $rax
     ;
     ; SSE2-LABEL: name: test_g_implicit_def_cample_size
-    ; SSE2: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; SSE2: liveins: $rdi
+    ; SSE2-NEXT: {{  $}}
+    ; SSE2-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
     ; SSE2-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
     ; SSE2-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
     ; SSE2-NEXT: $rax = COPY [[COPY]](p0)
     ; SSE2-NEXT: RET 0, $rax
     ;
     ; AVX512F-LABEL: name: test_g_implicit_def_cample_size
-    ; AVX512F: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; AVX512F: liveins: $rdi
+    ; AVX512F-NEXT: {{  $}}
+    ; AVX512F-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
     ; AVX512F-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
     ; AVX512F-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
     ; AVX512F-NEXT: $rax = COPY [[COPY]](p0)
