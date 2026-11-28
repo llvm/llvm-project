@@ -226,6 +226,9 @@ MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
                                                uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
+  // If it exists, record the position of this character.
+  if (Sym && Loc.isValid())
+    Ctx.setSymbolLoc(Sym, Loc);
   return new (Ctx) MCSymbolRefExpr(Sym, specifier, Loc);
 }
 
