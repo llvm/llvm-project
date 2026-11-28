@@ -42,3 +42,97 @@ bb3:
 bb7:
   ret void
 }
+
+define void @f_multi_inst(ptr %arg, i64 %idx) {
+; CHECK-LABEL: define void @f_multi_inst(
+; CHECK-SAME: ptr [[ARG:%.*]], i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[ARG]], i64 -64
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX]]
+; CHECK-NEXT:    call void @g(ptr [[GETELEMENTPTR]])
+; CHECK-NEXT:    [[SUNKADDR3:%.*]] = mul i64 [[IDX]], 4
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SUNKADDR3]]
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[GEP0]], i64 -64
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[SUNKADDR1]], align 8
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = mul i64 [[IDX]], 4
+; CHECK-NEXT:    [[SUNKADDR4:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SUNKADDR2]]
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[SUNKADDR4]], i64 -56
+; CHECK-NEXT:    [[LOAD4:%.*]] = load i32, ptr [[SUNKADDR]], align 8
+; CHECK-NEXT:    [[LOAD5:%.*]] = load ptr, ptr [[SUNKADDR1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 1, i32 0)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
+; CHECK-NEXT:    ret void
+;
+bb:
+  %gep0 = getelementptr i8, ptr %arg, i64 -64
+  %getelementptr = getelementptr i32, ptr %gep0, i64 %idx
+  %gep1 = getelementptr i8, ptr %arg, i64 -56
+  %getelementptr1 = getelementptr i32, ptr %gep1, i64 %idx
+  call void @g(ptr %getelementptr)
+  br label %bb3
+
+bb3:
+  %load = load ptr, ptr %getelementptr, align 8
+  %load4 = load i32, ptr %getelementptr1, align 8
+  %load5 = load ptr, ptr %getelementptr, align 8
+  %add = add i32 1, 0
+  %icmp = icmp eq i32 %add, 0
+  br i1 %icmp, label %bb7, label %bb7
+
+bb7:
+  ret void
+}
+
+define void @f_iv_inc_between_uses(ptr %arg) {
+; CHECK-LABEL: define void @f_iv_inc_between_uses(
+; CHECK-SAME: ptr [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr i8, ptr [[ARG]], i64 -64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[BB]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_SHL:%.*]] = shl i64 [[IV]], 2
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[GEP_BASE]], i64 [[IV_SHL]]
+; CHECK-NEXT:    call void @g(ptr [[GETELEMENTPTR]])
+; CHECK-NEXT:    [[SUNKADDR6:%.*]] = mul i64 [[IV]], 4
+; CHECK-NEXT:    [[SUNKADDR7:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SUNKADDR6]]
+; CHECK-NEXT:    [[SUNKADDR8:%.*]] = getelementptr i8, ptr [[SUNKADDR7]], i64 -64
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[SUNKADDR8]], align 8
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV]], 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 -56
+; CHECK-NEXT:    [[LOAD4:%.*]] = load i32, ptr [[SUNKADDR2]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[SUNKADDR3:%.*]] = mul i64 [[IV_NEXT]], 4
+; CHECK-NEXT:    [[SUNKADDR4:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SUNKADDR3]]
+; CHECK-NEXT:    [[SUNKADDR5:%.*]] = getelementptr i8, ptr [[SUNKADDR4]], i64 -68
+; CHECK-NEXT:    [[LOAD5:%.*]] = load ptr, ptr [[SUNKADDR5]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 1, i32 0)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[OV]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %gep.base = getelementptr i8, ptr %arg, i64 -64
+  %gep.base1 = getelementptr i8, ptr %arg, i64 -56
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %bb ], [ %iv.next, %loop ]
+  %iv.shl = shl i64 %iv, 2
+  %getelementptr = getelementptr i8, ptr %gep.base, i64 %iv.shl
+  %getelementptr1 = getelementptr i8, ptr %gep.base1, i64 %iv.shl
+  call void @g(ptr %getelementptr)
+  %load = load ptr, ptr %getelementptr, align 8
+  %load4 = load i32, ptr %getelementptr1, align 8
+  %iv.next = add i64 %iv, 1
+  %load5 = load ptr, ptr %getelementptr, align 8
+  %add = add i32 1, 0
+  %icmp = icmp eq i32 %add, 0
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
