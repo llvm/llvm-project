@@ -254,6 +254,26 @@ public:
 
   std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
 
+  struct ThreeOpMatch {
+    MachineInstr *Inner;
+    unsigned Opc;
+    const MachineOperand *Ops[3];
+    SmallVector<const MachineOperand *, 3> SGPRs;
+  };
+
+  /// Over budget three operand fusions per materialized constant.
+  DenseMap<Register, unsigned> NumSharedThreeOps;
+  /// VGPR copies of materialized constants, shared by all fusions.
+  DenseMap<Register, Register> SharedConstantVGPRs;
+
+  std::optional<ThreeOpMatch> matchThreeOp(const MachineInstr &Outer) const;
+  SmallVector<const MachineOperand *, 3>
+  getConstantBusSGPRs(const ThreeOpMatch &M) const;
+  bool isMaterializedConstant(const MachineOperand &MO) const;
+  unsigned getNumSharedThreeOps(Register Reg);
+  Register getSharedConstantVGPR(Register Reg);
+  bool tryFuseThreeOpSharedConstants(MachineInstr &MI);
+
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
@@ -2097,6 +2117,193 @@ bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
   return true;
 }
 
+/// The three operand VOP3 that fuses \p InnerOpc into \p OuterOpc, or 0.
+static unsigned getThreeOpOpcode(unsigned OuterOpc, unsigned InnerOpc) {
+  switch (OuterOpc) {
+  case AMDGPU::V_OR_B32_e64:
+    if (InnerOpc == AMDGPU::V_AND_B32_e64)
+      return AMDGPU::V_AND_OR_B32_e64;
+    if (InnerOpc == AMDGPU::V_OR_B32_e64)
+      return AMDGPU::V_OR3_B32_e64;
+    if (InnerOpc == AMDGPU::V_LSHLREV_B32_e64)
+      return AMDGPU::V_LSHL_OR_B32_e64;
+    return 0;
+  case AMDGPU::V_ADD_U32_e64:
+    if (InnerOpc == AMDGPU::V_ADD_U32_e64)
+      return AMDGPU::V_ADD3_U32_e64;
+    if (InnerOpc == AMDGPU::V_XOR_B32_e64)
+      return AMDGPU::V_XAD_U32_e64;
+    if (InnerOpc == AMDGPU::V_LSHLREV_B32_e64)
+      return AMDGPU::V_LSHL_ADD_U32_e64;
+    return 0;
+  case AMDGPU::V_LSHLREV_B32_e64:
+    return InnerOpc == AMDGPU::V_ADD_U32_e64 ? AMDGPU::V_ADD_LSHL_U32_e64 : 0;
+  }
+  return 0;
+}
+
+/// Match \p Outer and the single use instruction feeding it as a pair that
+/// selection left unfused, as its operands exceed the constant bus limit.
+std::optional<SIFoldOperandsImpl::ThreeOpMatch>
+SIFoldOperandsImpl::matchThreeOp(const MachineInstr &Outer) const {
+  if (!ST->hasGFX9Insts())
+    return std::nullopt;
+  unsigned OuterOpc = Outer.getOpcode();
+  if (OuterOpc != AMDGPU::V_ADD_U32_e64 && OuterOpc != AMDGPU::V_OR_B32_e64 &&
+      OuterOpc != AMDGPU::V_LSHLREV_B32_e64)
+    return std::nullopt;
+  if (TII->hasModifiersSet(Outer, AMDGPU::OpName::clamp))
+    return std::nullopt;
+
+  for (AMDGPU::OpName InnerName :
+       {AMDGPU::OpName::src0, AMDGPU::OpName::src1}) {
+    // A shift only fuses through the shifted value.
+    if (OuterOpc == AMDGPU::V_LSHLREV_B32_e64 &&
+        InnerName == AMDGPU::OpName::src0)
+      continue;
+    const MachineOperand *InnerOp = TII->getNamedOperand(Outer, InnerName);
+    if (!InnerOp->isReg() || !InnerOp->getReg().isVirtual() ||
+        InnerOp->getSubReg() || !MRI->hasOneNonDBGUse(InnerOp->getReg()))
+      continue;
+    MachineInstr *Inner = MRI->getVRegDef(InnerOp->getReg());
+    if (!Inner || Inner->getParent() != Outer.getParent() ||
+        TII->hasModifiersSet(*Inner, AMDGPU::OpName::clamp))
+      continue;
+    unsigned Opc = getThreeOpOpcode(OuterOpc, Inner->getOpcode());
+    if (!Opc)
+      continue;
+
+    const MachineOperand *A =
+        TII->getNamedOperand(*Inner, AMDGPU::OpName::src0);
+    const MachineOperand *B =
+        TII->getNamedOperand(*Inner, AMDGPU::OpName::src1);
+    const MachineOperand *C = TII->getNamedOperand(
+        Outer, InnerName == AMDGPU::OpName::src0 ? AMDGPU::OpName::src1
+                                                 : AMDGPU::OpName::src0);
+    // V_LSHLREV_B32 takes the shift amount first.
+    if (Inner->getOpcode() == AMDGPU::V_LSHLREV_B32_e64)
+      std::swap(A, B);
+    ThreeOpMatch M{Inner, Opc, {A, B, C}, {}};
+
+    // VOP3 literals are left to the constant bus legalization.
+    if (any_of(M.Ops, [this](const MachineOperand *MO) {
+          return MO->isReg() ? !MO->getReg().isVirtual()
+                             : !MO->isImm() || !TII->isInlineConstant(*MO);
+        }))
+      continue;
+    M.SGPRs = getConstantBusSGPRs(M);
+    if (M.SGPRs.size() <= ST->getConstantBusLimit(Opc))
+      continue;
+    return M;
+  }
+  return std::nullopt;
+}
+
+/// Distinct SGPR operands of \p M, in operand order.
+SmallVector<const MachineOperand *, 3>
+SIFoldOperandsImpl::getConstantBusSGPRs(const ThreeOpMatch &M) const {
+  SmallVector<const MachineOperand *, 3> SGPRs;
+  for (const MachineOperand *MO : M.Ops) {
+    if (!MO->isReg() || !TRI->isSGPRReg(*MRI, MO->getReg()))
+      continue;
+    if (none_of(SGPRs, [MO](const MachineOperand *Seen) {
+          return Seen->isIdenticalTo(*MO);
+        }))
+      SGPRs.push_back(MO);
+  }
+  return SGPRs;
+}
+
+bool SIFoldOperandsImpl::isMaterializedConstant(
+    const MachineOperand &MO) const {
+  if (!MO.isReg() || MO.getSubReg())
+    return false;
+  std::optional<int64_t> Imm = TII->getImmOrMaterializedImm(*MRI, MO);
+  return Imm && !TII->isInlineConstant(*Imm, AMDGPU::OPERAND_REG_IMM_INT32);
+}
+
+unsigned SIFoldOperandsImpl::getNumSharedThreeOps(Register Reg) {
+  auto [It, Inserted] = NumSharedThreeOps.try_emplace(Reg);
+  if (!Inserted)
+    return It->second;
+
+  // Counted once, before any fusion rewrites the users.
+  SmallPtrSet<const MachineInstr *, 8> Outers;
+  auto Count = [&](const MachineInstr &Outer) {
+    std::optional<ThreeOpMatch> M = matchThreeOp(Outer);
+    if (M && any_of(M->SGPRs, [Reg](const MachineOperand *MO) {
+          return MO->getReg() == Reg;
+        }))
+      Outers.insert(&Outer);
+  };
+
+  // Either half of a pair can read the constant.
+  for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+    Count(UseMI);
+    if (UseMI.getNumExplicitDefs() != 1)
+      continue;
+    Register Dst = UseMI.getOperand(0).getReg();
+    if (!Dst.isVirtual())
+      continue;
+    if (const MachineOperand *Use = MRI->getOneNonDBGUse(Dst))
+      Count(*Use->getParent());
+  }
+  return NumSharedThreeOps[Reg] = Outers.size();
+}
+
+Register SIFoldOperandsImpl::getSharedConstantVGPR(Register Reg) {
+  Register &VReg = SharedConstantVGPRs[Reg];
+  if (!VReg) {
+    MachineInstr &Def = *MRI->getVRegDef(Reg);
+    VReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*Def.getParent(), std::next(Def.getIterator()), Def.getDebugLoc(),
+            TII->get(AMDGPU::V_MOV_B32_e32), VReg)
+        .addImm(Def.getOperand(1).getImm());
+  }
+  return VReg;
+}
+
+/// Selection does not fuse a pair into a three operand VOP3 when its operands
+/// exceed the constant bus limit, as each extra constant would cost a move.
+/// A constant shared by enough such pairs needs only one move for all of them.
+bool SIFoldOperandsImpl::tryFuseThreeOpSharedConstants(MachineInstr &MI) {
+  std::optional<ThreeOpMatch> M = matchThreeOp(MI);
+  if (!M)
+    return false;
+
+  // Two users only break even, and cost a register on top.
+  SmallVector<Register, 3> Constants;
+  for (const MachineOperand *MO : M->SGPRs) {
+    if (!isMaterializedConstant(*MO))
+      continue;
+    if (getNumSharedThreeOps(MO->getReg()) < 3)
+      return false;
+    Constants.push_back(MO->getReg());
+  }
+  unsigned NumToVGPR = M->SGPRs.size() - ST->getConstantBusLimit(M->Opc);
+  if (Constants.size() < NumToVGPR)
+    return false;
+
+  // Keep the leading constants in SGPRs, and read the rest from VGPRs.
+  ArrayRef<Register> ToVGPR = ArrayRef(Constants).take_back(NumToVGPR);
+
+  LLVM_DEBUG(dbgs() << "Fusing over the constant bus limit: " << *M->Inner
+                    << "  into " << MI);
+
+  auto Fused = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(M->Opc),
+                       MI.getOperand(0).getReg());
+  for (const MachineOperand *MO : M->Ops) {
+    if (MO->isReg() && is_contained(ToVGPR, MO->getReg()))
+      Fused.addReg(getSharedConstantVGPR(MO->getReg()));
+    else
+      Fused.add(*MO);
+  }
+
+  M->Inner->eraseFromParent();
+  MI.eraseFromParent();
+  return true;
+}
+
 /// Fold S_AND (S_CSELECT EXEC|-1, 0), %mask -> S_CSELECT %mask, 0, rewriting
 /// the S_CSELECT in place. The EXEC form requires %mask to be masked by EXEC.
 /// Also handles S_CSELECT 0, EXEC|-1.
@@ -3389,6 +3596,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (tryFoldAndExec(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFuseThreeOpSharedConstants(MI)) {
         Changed = true;
         continue;
       }
