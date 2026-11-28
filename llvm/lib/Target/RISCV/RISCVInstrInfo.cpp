@@ -3787,7 +3787,8 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
       RVFI->hasCFProtectionBranch()
           ? RISCV::X7
           : RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
-  for (const MachineInstr &MI : MBB) {
+  for (const MachineInstr &MI :
+       instructionsWithoutDebug(MBB.begin(), MBB.end())) {
     if (isMIReadsReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))
       return true;
     if (isMIModifiesReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))
