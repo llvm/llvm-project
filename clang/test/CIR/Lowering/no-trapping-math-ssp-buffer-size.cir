@@ -13,8 +13,9 @@ module attributes {
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
     gpu_rdc = false, openmp = false, openmp_is_target_device = false,
-    clang_abi_compat = 0, long_double_size = 0, enable_noundef_attrs = true,
-    no_trapping_math = true, ssp_buffer_size = 16>
+    clang_abi_compat = 0, long_double_size = 0, sanitize_address = false,
+    sanitize_kernel_address = false, sanitize_hwaddress = false,
+    enable_noundef_attrs = true, no_trapping_math = true, ssp_buffer_size = 16>
 } {
   cir.func @def_fn() {
     cir.return

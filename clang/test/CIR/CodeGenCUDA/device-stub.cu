@@ -50,6 +50,21 @@
 // RUN:   -fhip-new-launch-api -cuid=123 -o %t.cuid.hip.ll
 // RUN: FileCheck --input-file=%t.cuid.hip.ll %s --check-prefix=HIP-CUID
 
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-cir %s -x hip \
+// RUN:   -fhip-new-launch-api -fcuda-include-gpubinary %t -fsanitize=address \
+// RUN:   -o %t.asan.hip.cir
+// RUN: FileCheck --input-file=%t.asan.hip.cir %s --check-prefix=HIP-ASAN-CIR
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclangir -emit-llvm %s -x hip \
+// RUN:   -fhip-new-launch-api -fcuda-include-gpubinary %t -fsanitize=address \
+// RUN:   -o %t.asan.hip-cir.ll
+// RUN: FileCheck --input-file=%t.asan.hip-cir.ll %s --check-prefix=HIP-ASAN
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -x hip \
+// RUN:   -fhip-new-launch-api -fcuda-include-gpubinary %t -fsanitize=address \
+// RUN:   -o %t.asan.hip.ll
+// RUN: FileCheck --input-file=%t.asan.hip.ll %s --check-prefix=HIP-ASAN
+
 #include "Inputs/cuda.h"
 
 __global__ void kernelfunc(int i, int j, int k) {}
@@ -390,3 +405,7 @@ __device__ _BitInt(36) c;
 // HIP-CUID-DAG: call i32 @atexit(ptr @__hip_module_dtor)
 // HIP-CUID-DAG: define internal void @__hip_module_dtor()
 // HIP-CUID-DAG: store ptr null, ptr @[[HANDLE]]
+
+// ASan redzones would break the packed .hipFatBinSegment array.
+// HIP-ASAN-CIR: cir.global constant cir_private @__hip_fatbin_wrapper = {{.*}} section(".hipFatBinSegment") sanitizer_metadata<no_address = true>
+// HIP-ASAN: @__hip_fatbin_wrapper = {{.*}}constant { i32, i32, ptr, ptr } {{.*}}, section ".hipFatBinSegment", no_sanitize_address

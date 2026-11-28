@@ -3420,6 +3420,11 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
     attributes.push_back(rewriter.getNamedAttr("externally_initialized",
                                                rewriter.getUnitAttr()));
 
+  if (cir::SanitizerMetadataAttr sanitizerMetadata =
+          op.getSanitizerMetadataAttr())
+    attributes.push_back(rewriter.getNamedAttr(
+        CIRDialect::getSanitizerMetadataAttrName(), sanitizerMetadata));
+
   return attributes;
 }
 

@@ -17,8 +17,9 @@ module attributes {
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = true,
     gpu_rdc = false, openmp = false, openmp_is_target_device = false,
-    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
-    no_trapping_math = true, ssp_buffer_size = 8>,
+    clang_abi_compat = 17, long_double_size = 0, sanitize_address = false,
+    sanitize_kernel_address = false, sanitize_hwaddress = false,
+    enable_noundef_attrs = true, no_trapping_math = true, ssp_buffer_size = 8>,
   cir.record_layouts = {NT = #cir.record_layout<
     arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
     record_align = 4>},
