@@ -1645,6 +1645,10 @@ struct __sanitizer_servent {
 
 extern const int si_SEGV_MAPERR;
 extern const int si_SEGV_ACCERR;
+
+extern const int threads_mtx_plain;
+extern const int threads_mtx_recursive;
+extern const int threads_mtx_timed;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \
