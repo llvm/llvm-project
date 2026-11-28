@@ -29,6 +29,14 @@
 
 namespace fuzzer {
 
+// Points to the temp directory of the active -fork run, null otherwise.
+static const std::string *ForkTempDir = nullptr;
+
+void RmForkTempDir() {
+  if (ForkTempDir)
+    RmDirRecursive(*ForkTempDir);
+}
+
 struct Stats {
   size_t number_of_executed_units = 0;
   size_t peak_rss_mb = 0;
@@ -345,6 +353,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
     GetSizedFilesFromDir(Dir, &SeedFiles);
   std::sort(SeedFiles.begin(), SeedFiles.end());
   Env.TempDir = TempPath("FuzzWithFork", ".dir");
+  ForkTempDir = &Env.TempDir;
   Env.DFTDir = DirPlusFile(Env.TempDir, "DFT");
   RmDirRecursive(Env.TempDir);  // in case there is a leftover from old runs.
   MkDir(Env.TempDir);
