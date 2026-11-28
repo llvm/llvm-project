@@ -55,6 +55,17 @@ using namespace llvm;
 
 STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
+// When a callee containing loops is inlined into a call site that resides
+// inside a caller loop, the merged loop nest increases register pressure:
+// This can force the register allocator to introduce more spills and reloads,
+// both of which degrade performance in tight numeric kernels. This penalty
+// scales with the callee's loop-body size to approximate the additional
+// register pressure.
+static cl::opt<int> InlineCallerLoopNestPenaltyScale(
+    "inline-caller-loop-nest-penalty-scale", cl::Hidden, cl::init(15),
+    cl::desc("Per-instruction penalty multiplier when inlining a "
+             "loop-carrying callee into a caller loop"));
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -967,6 +978,61 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         NumLoops++;
       }
       addCost(NumLoops * InlineConstants::LoopPenalty);
+    }
+
+    // Penalize inlining a callee with a large loop body into a call site
+    // that resides deep in a caller loop nest. When this happens, the
+    // callee's loop-body instrs become part of the caller's inner
+    // loop, increasing register pressure. This can force the register
+    // allocator to emit more spills and reloads.
+    //
+    // Try to apply this penalty conservatively:
+    //   - The callee must have a loop with a substantial body (>= 20 instrs)
+    //     to filter out tiny helper loops that inline harmlessly.
+    //   - The call site must be nested in the caller to avoid 
+    //     penalizing simple single-loop cases.
+    //   - The penalty scales only with instrs beyond the threshold,
+    //     so callees just over the limit get a small penalty.
+    if (InlineCallerLoopNestPenaltyScale > 0 && !Caller->hasMinSize() &&
+        !Caller->hasOptSize()) {
+      LoopInfo CalleeLI;
+      CalleeLI.analyze(&F);
+
+      // Find the largest callee loop body (excluding dead blocks).
+      int MaxLoopBodyInstrs = 0;
+      for (Loop *L : CalleeLI) {
+        if (DeadBlocks.count(L->getHeader()))
+          continue;
+        int LoopInstrs = 0;
+        for (BasicBlock *BB : L->blocks()) {
+          if (DeadBlocks.count(BB))
+            continue;
+          LoopInstrs += BB->size();
+        }
+        MaxLoopBodyInstrs = std::max(MaxLoopBodyInstrs, LoopInstrs);
+      }
+
+      // Only penalize if the callee has a substantial loop body.
+      // Small loop bodies (< 20 instrs) inline without pressure issues.
+      const int LoopBodyThreshold = 20;
+      if (MaxLoopBodyInstrs >= LoopBodyThreshold) {
+        // Determine the loop nest depth of the call site in the caller.
+        LoopInfo CallerLI;
+        CallerLI.analyze(Caller);
+        unsigned NestDepth = CallerLI.getLoopDepth(CandidateCall.getParent());
+
+        if (NestDepth > 0) {
+          int ExcessInstrs = MaxLoopBodyInstrs - LoopBodyThreshold;
+          int Penalty =
+              ExcessInstrs * NestDepth * InlineCallerLoopNestPenaltyScale;
+          LLVM_DEBUG(dbgs()
+                     << "  Caller-loop-nest reg-pressure penalty: " << Penalty
+                     << " (" << MaxLoopBodyInstrs << " loop instrs, "
+                     << ExcessInstrs << " excess x depth " << NestDepth << " x "
+                     << InlineCallerLoopNestPenaltyScale << " scale)\n");
+          addCost(Penalty);
+        }
+      }
     }
 
     // We applied the maximum possible vector bonus at the beginning. Now,
