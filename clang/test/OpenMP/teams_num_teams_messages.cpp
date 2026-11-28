@@ -58,7 +58,7 @@ T tmain(T argc) {
 #pragma omp teams num_teams(-10u)
   foo();
 #pragma omp target
-#pragma omp teams num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp teams num_teams(3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 #pragma omp target
 #pragma omp teams num_teams (1, 2, 3) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 1, have 3)}}

@@ -41,7 +41,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target teams num_teams(-10u)
   foo();
-#pragma omp target teams num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp target teams num_teams(3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 
   return 0;
