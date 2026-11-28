@@ -549,6 +549,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     bool isSubByte = elemBitSize < 8;
     uint64_t wScaleFactor = 1;
+    // Set for a one-row sub byte load that is lowered to a 1D block read.
+    bool useBlockLoad1D = false;
 
     if (!isSubByte && (elemBitSize % 8 != 0))
       return rewriter.notifyMatchFailure(
@@ -578,9 +580,29 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
             tileW = executionSize;
             wScaleFactor = subByteFactor;
           }
+        } else if (tdescTy.getDimSize(tileRank - 2) == 1 &&
+                   tileW == executionSize * subByteFactor) {
+          // Usage case for a one-row tile with one byte per lane, such as a
+          // row of per-column quantization parameters. The row is 16 bytes.
+          // Plain 2D block loads of 8 or 4 bit elements need rows of 32
+          // bytes, so this row is read with a 1D block read below. A 1D block
+          // read has no boundary check and reads a single block.
+          if (tdescTy.getBoundaryCheck() || tdescTy.getArrayLength() != 1 ||
+              op.getTranspose())
+            return rewriter.notifyMatchFailure(
+                op, "A one-row sub byte load needs a single block, no "
+                    "transpose and no boundary check.");
+          if (cast<VectorType>(op.getValue().getType()).getNumElements() !=
+              subByteFactor)
+            return rewriter.notifyMatchFailure(
+                op, "A one-row sub byte load needs one byte per lane.");
+          elemType = rewriter.getIntegerType(8);
+          tileW = executionSize;
+          wScaleFactor = subByteFactor;
+          useBlockLoad1D = true;
         }
       }
-      // If not handled by packed load case above, handle other cases.
+      // If not handled by the cases above, handle other cases.
       if (wScaleFactor == 1) {
         auto sub16BitFactor = subByteFactor * 2;
         if (tileW == executionSize * sub16BitFactor) {
@@ -672,6 +694,41 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       auto tileH = tdescTy.getDimSize(tileRank - 2);
       // Get vblocks from the tensor descriptor type.
       int32_t vblocks = tdescTy.getArrayLength();
+      if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
+        if (useBlockLoad1D) {
+          // offsetH counts rows. The pitch and offsetW are in bytes here.
+          // Lane i reads byte i of the row at basePtr + offsetH * pitch +
+          // offsetW. The 1D block read needs this address to be 4 byte
+          // aligned.
+          Type i64Ty = rewriter.getI64Type();
+          Value rowOffset = arith::MulIOp::create(
+              rewriter, loc,
+              arith::ExtSIOp::create(rewriter, loc, i64Ty, offsetH),
+              arith::ExtSIOp::create(rewriter, loc, i64Ty, basePitchBytes));
+          Value byteOffset = arith::AddIOp::create(
+              rewriter, loc, rowOffset,
+              arith::ExtSIOp::create(rewriter, loc, i64Ty, offsetW));
+          Value addr =
+              arith::AddIOp::create(rewriter, loc, basePtr, byteOffset);
+          Value ptr =
+              LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, addr);
+          auto loadCacheControl =
+              translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
+          Type i8Ty = rewriter.getI8Type();
+          Value byte = xevm::BlockLoadOp::create(
+              rewriter, loc, i8Ty, ptr,
+              xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+          VectorType byteVecTy = VectorType::get(1, i8Ty);
+          Value result =
+              vector::FromElementsOp::create(rewriter, loc, byteVecTy, byte);
+          VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
+          result = vector::BitCastOp::create(
+              rewriter, loc,
+              encodeVectorTypeTo(byteVecTy, dstVecTy.getElementType()), result);
+          rewriter.replaceOp(op, result);
+          return success();
+        }
+      }
       if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
         Value src = adaptor.getValue();
         // If store value is a scalar, get value from op instead of adaptor.
