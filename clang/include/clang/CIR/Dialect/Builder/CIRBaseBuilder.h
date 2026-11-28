@@ -309,7 +309,7 @@ public:
     }
 
     return cir::FenvAttr::get(getContext(), roundingMode, exceptMode,
-                              mlir::BoolAttr::get(getContext(), strictExcept));
+                              strictExcept);
   }
 
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,

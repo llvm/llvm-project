@@ -76,8 +76,8 @@ public:
   }
 
 private:
-  FPEnvConstrainedOpInterface getFenvOp() {
-    return mlir::cast<FPEnvConstrainedOpInterface>(this->getOperation());
+  ConcreteType getFenvOp() {
+    return mlir::cast<ConcreteType>(this->getOperation());
   }
 };
 

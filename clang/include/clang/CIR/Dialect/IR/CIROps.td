@@ -219,7 +219,6 @@ def CIR_FenvOpTrait : NativeOpTrait<"FenvOpTrait"> {
 }
 
 defvar CIR_FenvOpTraits = [
-  CIR_FPEnvConstrainedOpInterface,
   ConditionallySpeculatable,
   MemoryEffectsOpInterface,
   CIR_FenvOpTrait
