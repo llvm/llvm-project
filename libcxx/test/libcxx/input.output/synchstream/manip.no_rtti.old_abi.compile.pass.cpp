@@ -18,6 +18,7 @@
 #include <concepts>
 #include <ostream>
 #include <syncstream>
+#include <utility>
 
 // Selected only if std doesn't provide the manipulator: the conversion to any_ref ranks below any std overload.
 struct fallback {};
