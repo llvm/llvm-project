@@ -16,8 +16,8 @@ component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+the [libc++ C++ standard library](inv:libcxx:std:doc#index),
+the [LLD linker](inv:lld:std:doc#index), and more.
 
 (sources)=
 ## Getting the Source Code and Building LLVM
@@ -80,7 +80,7 @@ the [LLD linker](https://lld.llvm.org), and more.
      * `-DLLVM_ENABLE_ASSERTIONS=ON` --- Compile with assertion checks enabled
        (default is ON for Debug builds, OFF for all other build types).
 
-     * `-DLLVM_USE_LINKER=lld` --- Link with the [lld linker](https://lld.llvm.org), assuming it
+     * `-DLLVM_USE_LINKER=lld` --- Link with the [lld linker](inv:lld:std:doc#index), assuming it
        is installed on your system. This can dramatically speed up link times
        if the default linker is slow.
 
@@ -631,10 +631,9 @@ with the latest Xcode:
 Note: There are some additional flags that need to be passed when building for
 iOS due to limitations in the iOS SDK.
 
-Check {doc}`HowToCrossCompileLLVM` and [Clang docs on how to cross-compile in general]
+Check {doc}`HowToCrossCompileLLVM` and
+[Clang docs on how to cross-compile in general](inv:clang:std:doc#CrossCompilation)
 for more information about cross-compiling.
-
-[Clang docs on how to cross-compile in general]: https://clang.llvm.org/docs/CrossCompilation.html
 
 ### The Location of LLVM Object Files
 

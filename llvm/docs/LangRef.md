@@ -2730,7 +2730,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `safestack`
 :   This attribute indicates that
-    [SafeStack](https://clang.llvm.org/docs/SafeStack.html)
+    [SafeStack](inv:clang:std:doc#SafeStack)
     protection is enabled for this function.
 
     If a function that has a `safestack` attribute is inlined into a
@@ -5692,7 +5692,7 @@ This is currently only supported for ELF binary formats.
 
 `no_cfi @func`
 
-With [Control-Flow Integrity (CFI)](https://clang.llvm.org/docs/ControlFlowIntegrity.html), a '`no_cfi`'
+With [Control-Flow Integrity (CFI)](inv:clang:std:doc#ControlFlowIntegrity), a '`no_cfi`'
 constant represents a function reference that does not get replaced with a
 reference to the CFI jump table in the `LowerTypeTests` pass. These constants
 may be useful in low-level programs, such as operating system kernels, which
@@ -10088,7 +10088,7 @@ sections.
 
 ## ThinLTO Summary
 
-Compiling with [ThinLTO](https://clang.llvm.org/docs/ThinLTO.html)
+Compiling with [ThinLTO](inv:clang:std:doc#ThinLTO)
 causes the building of a compact summary of the module that is emitted into
 the bitcode. The summary is emitted into the LLVM assembly and identified
 in syntax by a caret ('`^`').
@@ -10324,7 +10324,7 @@ value (e.g., `^1`).
 #### TypeIdInfo
 
 The optional `TypeIdInfo` field, used for
-[Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html),
+[Control Flow Integrity](inv:clang:std:doc#ControlFlowIntegrity),
 looks like:
 
 ```text
@@ -10395,7 +10395,7 @@ Where each ConstVCall has the format described for
 
 Each type id summary entry corresponds to a type identifier resolution
 which is generated during the LTO link portion of the compile when building
-with [Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html),
+with [Control Flow Integrity](inv:clang:std:doc#ControlFlowIntegrity),
 so these are only present in a combined summary index.
 
 Example:
@@ -28381,7 +28381,8 @@ The optimizer is allowed to inline the memory assignment when it's profitable to
 
 LLVM provides intrinsics that lower to Objective-C ARC runtime entry points.
 LLVM is aware of the semantics of these functions, and optimizes based on that
-knowledge. You can read more about the details of Objective-C ARC [here](https://clang.llvm.org/docs/AutomaticReferenceCounting.html).
+knowledge. You can read more about the details of Objective-C ARC
+[here](inv:clang:std:doc#AutomaticReferenceCounting).
 
 #### '`llvm.objc.autorelease`' Intrinsic
 
@@ -28392,7 +28393,7 @@ declare ptr @llvm.objc.autorelease(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_autorelease](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-autorelease).
+Lowers to a call to [objc_autorelease](inv:clang:std:label#arc.runtime.objc_autorelease).
 
 #### '`llvm.objc.autoreleasePoolPop`' Intrinsic
 
@@ -28425,7 +28426,7 @@ declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_autoreleaseReturnValue](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-autoreleasereturnvalue).
+Lowers to a call to [objc_autoreleaseReturnValue](inv:clang:std:label#arc.runtime.objc_autoreleasereturnvalue).
 
 #### '`llvm.objc.copyWeak`' Intrinsic
 
@@ -28458,7 +28459,7 @@ declare ptr @llvm.objc.initWeak(ptr, ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_initWeak](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-initweak).
+Lowers to a call to [objc_initWeak](inv:clang:std:label#arc.runtime.objc_initweak).
 
 #### '`llvm.objc.loadWeak`' Intrinsic
 
@@ -28469,7 +28470,7 @@ declare ptr @llvm.objc.loadWeak(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_loadWeak](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-loadweak).
+Lowers to a call to [objc_loadWeak](inv:clang:std:label#arc.runtime.objc_loadweak).
 
 #### '`llvm.objc.loadWeakRetained`' Intrinsic
 
@@ -28480,7 +28481,7 @@ declare ptr @llvm.objc.loadWeakRetained(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_loadWeakRetained](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-loadweakretained).
+Lowers to a call to [objc_loadWeakRetained](inv:clang:std:label#arc.runtime.objc_loadweakretained).
 
 #### '`llvm.objc.moveWeak`' Intrinsic
 
@@ -28513,7 +28514,7 @@ declare ptr @llvm.objc.retain(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_retain](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-retain).
+Lowers to a call to [objc_retain](inv:clang:std:label#arc.runtime.objc_retain).
 
 #### '`llvm.objc.retainAutorelease`' Intrinsic
 
@@ -28524,7 +28525,7 @@ declare ptr @llvm.objc.retainAutorelease(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_retainAutorelease](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-retainautorelease).
+Lowers to a call to [objc_retainAutorelease](inv:clang:std:label#arc.runtime.objc_retainautorelease).
 
 #### '`llvm.objc.retainAutoreleaseReturnValue`' Intrinsic
 
@@ -28535,7 +28536,7 @@ declare ptr @llvm.objc.retainAutoreleaseReturnValue(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_retainAutoreleaseReturnValue](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-retainautoreleasereturnvalue).
+Lowers to a call to [objc_retainAutoreleaseReturnValue](inv:clang:std:label#arc.runtime.objc_retainautoreleasereturnvalue).
 
 #### '`llvm.objc.retainAutoreleasedReturnValue`' Intrinsic
 
@@ -28546,7 +28547,7 @@ declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_retainAutoreleasedReturnValue](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-retainautoreleasedreturnvalue).
+Lowers to a call to [objc_retainAutoreleasedReturnValue](inv:clang:std:label#arc.runtime.objc_retainautoreleasedreturnvalue).
 
 #### '`llvm.objc.retainBlock`' Intrinsic
 
@@ -28557,7 +28558,7 @@ declare ptr @llvm.objc.retainBlock(ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_retainBlock](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-retainblock).
+Lowers to a call to [objc_retainBlock](inv:clang:std:label#arc.runtime.objc_retainblock).
 
 #### '`llvm.objc.storeStrong`' Intrinsic
 
@@ -28579,7 +28580,7 @@ declare ptr @llvm.objc.storeWeak(ptr, ptr)
 
 ##### Lowering:
 
-Lowers to a call to [objc_storeWeak](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-storeweak).
+Lowers to a call to [objc_storeWeak](inv:clang:std:label#arc.runtime.objc_storeweak).
 
 ### Preserving Debug Information Intrinsics
 

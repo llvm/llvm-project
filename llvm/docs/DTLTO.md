@@ -88,8 +88,8 @@ also be specified. Such options are transparently forwarded.
 The backend compilations are currently performed by invoking Clang. For further
 details, refer to:
 
-- Clang documentation: <https://clang.llvm.org/docs/ThinLTO.html>
-- LLD documentation: <https://lld.llvm.org/DTLTO.html>
+- Clang documentation: [ThinLTO](inv:clang:std:doc#ThinLTO)
+- [LLD documentation](inv:lld:std:doc#DTLTO)
 
 When invoked with a distributor, LLD generates a JSON file describing the
 backend compilation jobs and executes the distributor, passing it this file.

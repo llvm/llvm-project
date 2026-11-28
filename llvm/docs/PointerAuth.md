@@ -11,7 +11,7 @@ signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
 For more details, see the clang documentation page for
-[Pointer Authentication](https://clang.llvm.org/docs/PointerAuthentication.html).
+[Pointer Authentication](inv:clang:std:doc#PointerAuthentication).
 
 At the IR level, it is represented using:
 
