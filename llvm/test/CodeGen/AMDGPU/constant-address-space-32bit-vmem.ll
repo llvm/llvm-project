@@ -2,24 +2,21 @@
 ; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa < %s | FileCheck %s --check-prefix=GFX6
 ; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck %s --check-prefix=GFX8
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s --check-prefix=GFX9
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -mattr=-flat-global-insts < %s | FileCheck %s --check-prefix=FLAT
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck %s --check-prefix=GFX1250
 
 define void @as6_i32_a2(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) {
 ; GFX6-LABEL: as6_i32_a2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, s17
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    s_mov_b32 s17, 0
-; GFX6-NEXT:    s_add_i32 s8, s16, 2
-; GFX6-NEXT:    s_mov_b32 s9, s17
-; GFX6-NEXT:    s_mov_b32 s10, s6
-; GFX6-NEXT:    s_mov_b32 s11, s7
 ; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0
 ; GFX6-NEXT:    s_mov_b32 s18, s6
 ; GFX6-NEXT:    s_mov_b32 s19, s7
-; GFX6-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX6-NEXT:    buffer_load_ushort v0, off, s[16:19], 0 offset:2
 ; GFX6-NEXT:    buffer_load_ushort v1, off, s[16:19], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(1)
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -54,6 +51,19 @@ define void @as6_i32_a2(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) 
 ; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i32_a2:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_dword v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_dword v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i32_a2:
 ; GFX1250:       ; %bb.0:
@@ -114,6 +124,19 @@ define void @as6_i8_a1(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) {
 ; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_a1:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_a1:
 ; GFX1250:       ; %bb.0:
@@ -217,6 +240,40 @@ define void @as6_i56_odd(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out)
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as6_i56_odd:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_add_i32 s6, s16, 6
+; FLAT-NEXT:    v_mov_b32_e32 v0, s6
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v6, v[0:1]
+; FLAT-NEXT:    s_mov_b32 s4, s17
+; FLAT-NEXT:    s_mov_b32 s17, 0
+; FLAT-NEXT:    s_add_i32 s6, s16, 4
+; FLAT-NEXT:    s_mov_b32 s7, s17
+; FLAT-NEXT:    s_load_dword s10, s[6:7], 0x0
+; FLAT-NEXT:    s_load_dword s11, s[16:17], 0x0
+; FLAT-NEXT:    s_add_u32 s8, s4, 6
+; FLAT-NEXT:    s_mov_b32 s5, s18
+; FLAT-NEXT:    s_addc_u32 s9, s18, 0
+; FLAT-NEXT:    v_mov_b32_e32 v0, s4
+; FLAT-NEXT:    v_mov_b32_e32 v1, s5
+; FLAT-NEXT:    s_add_u32 s4, s4, 4
+; FLAT-NEXT:    s_addc_u32 s5, s18, 0
+; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v8, s11
+; FLAT-NEXT:    v_mov_b32_e32 v2, s8
+; FLAT-NEXT:    v_mov_b32_e32 v3, s9
+; FLAT-NEXT:    v_mov_b32_e32 v4, s4
+; FLAT-NEXT:    v_mov_b32_e32 v5, s5
+; FLAT-NEXT:    v_mov_b32_e32 v7, s10
+; FLAT-NEXT:    flat_store_dword v[0:1], v8
+; FLAT-NEXT:    s_waitcnt vmcnt(1)
+; FLAT-NEXT:    flat_store_byte v[2:3], v6
+; FLAT-NEXT:    flat_store_short v[4:5], v7
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as6_i56_odd:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -250,18 +307,14 @@ define void @as6_hi_i32_a2(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %ou
 ; GFX6-LABEL: as6_hi_i32_a2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, s17
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    s_mov_b32 s17, 0x12345678
-; GFX6-NEXT:    s_add_i32 s8, s16, 2
-; GFX6-NEXT:    s_mov_b32 s9, s17
-; GFX6-NEXT:    s_mov_b32 s10, s6
-; GFX6-NEXT:    s_mov_b32 s11, s7
 ; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0x12345678
 ; GFX6-NEXT:    s_mov_b32 s18, s6
 ; GFX6-NEXT:    s_mov_b32 s19, s7
-; GFX6-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX6-NEXT:    buffer_load_ushort v0, off, s[16:19], 0 offset:2
 ; GFX6-NEXT:    buffer_load_ushort v1, off, s[16:19], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(1)
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -296,6 +349,19 @@ define void @as6_hi_i32_a2(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %ou
 ; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_hi_i32_a2:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_dword v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_dword v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_hi_i32_a2:
 ; GFX1250:       ; %bb.0:
@@ -360,6 +426,20 @@ define void @as6_hi_i8_offset(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as6_hi_i8_offset:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_add_i32 s16, s16, -1
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as6_hi_i8_offset:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -385,13 +465,12 @@ define void @as6_i8_nuw(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) 
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    s_add_i32 s8, s16, 0x64
-; GFX6-NEXT:    s_mov_b32 s9, 0
-; GFX6-NEXT:    s_mov_b32 s10, s6
-; GFX6-NEXT:    s_mov_b32 s11, s7
-; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
 ; GFX6-NEXT:    s_mov_b32 s5, s18
 ; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0
+; GFX6-NEXT:    s_mov_b32 s18, s6
+; GFX6-NEXT:    s_mov_b32 s19, s7
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[16:19], 0 offset:100
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -414,16 +493,28 @@ define void @as6_i8_nuw(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) 
 ; GFX9-LABEL: as6_i8_nuw:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_add_i32 s6, s16, 0x64
-; GFX9-NEXT:    s_mov_b32 s7, 0
-; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7]
-; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_mov_b32 s17, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[16:17] offset:100
+; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1] offset:100
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_nuw:
 ; GFX1250:       ; %bb.0:
@@ -432,9 +523,8 @@ define void @as6_i8_nuw(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) 
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_mov_b32 s3, s2
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
-; GFX1250-NEXT:    s_addk_co_i32 s0, 0x64
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
-; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] offset:100 nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -490,6 +580,20 @@ define void @as6_i8_wrap(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out)
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as6_i8_wrap:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_addk_i32 s16, 0x64
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as6_i8_wrap:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -515,13 +619,13 @@ define void @as6_i8_nuw_large(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg 
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    s_add_i32 s8, s16, 0x10000
-; GFX6-NEXT:    s_mov_b32 s9, 0
-; GFX6-NEXT:    s_mov_b32 s10, s6
-; GFX6-NEXT:    s_mov_b32 s11, s7
-; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
 ; GFX6-NEXT:    s_mov_b32 s5, s18
 ; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0
+; GFX6-NEXT:    s_mov_b32 s18, s6
+; GFX6-NEXT:    s_mov_b32 s19, s7
+; GFX6-NEXT:    s_mov_b32 s8, 0x10000
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[16:19], s8
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -544,16 +648,30 @@ define void @as6_i8_nuw_large(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg 
 ; GFX9-LABEL: as6_i8_nuw_large:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_add_i32 s6, s16, 0x10000
-; GFX9-NEXT:    s_mov_b32 s7, 0
-; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7]
-; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_mov_b32 s17, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x10000
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[16:17]
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
+; GFX9-NEXT:    global_store_byte v1, v0, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw_large:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, 0x10000
+; FLAT-NEXT:    v_add_u32_e32 v0, s16, v0
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_nuw_large:
 ; GFX1250:       ; %bb.0:
@@ -562,9 +680,8 @@ define void @as6_i8_nuw_large(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg 
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_mov_b32 s3, s2
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
-; GFX1250-NEXT:    s_add_co_i32 s0, s0, 0x10000
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
-; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] offset:65536 nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -618,6 +735,19 @@ define void @as6_i8_nuw_negative(ptr addrspace(6) inreg %p, ptr addrspace(1) inr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as6_i8_nuw_negative:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, -1
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as6_i8_nuw_negative:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -642,13 +772,12 @@ define void @as6_i8_nuw_hi(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %ou
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    s_add_i32 s8, s16, 0x64
-; GFX6-NEXT:    s_mov_b32 s9, 0x12345678
-; GFX6-NEXT:    s_mov_b32 s10, s6
-; GFX6-NEXT:    s_mov_b32 s11, s7
-; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
 ; GFX6-NEXT:    s_mov_b32 s5, s18
 ; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s18, s6
+; GFX6-NEXT:    s_mov_b32 s19, s7
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[16:19], 0 offset:100
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -671,16 +800,28 @@ define void @as6_i8_nuw_hi(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %ou
 ; GFX9-LABEL: as6_i8_nuw_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_add_i32 s6, s16, 0x64
-; GFX9-NEXT:    s_mov_b32 s7, 0x12345678
-; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7]
-; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[16:17] offset:100
+; GFX9-NEXT:    s_mov_b32 s5, s18
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw_hi:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1] offset:100
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_nuw_hi:
 ; GFX1250:       ; %bb.0:
@@ -689,9 +830,8 @@ define void @as6_i8_nuw_hi(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %ou
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_mov_b32 s3, s2
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
-; GFX1250-NEXT:    s_addk_co_i32 s0, 0x64
 ; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
-; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] offset:100 nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -711,12 +851,12 @@ define void @as6_i32_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) {
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s4, s6
 ; GFX6-NEXT:    s_mov_b32 s5, s6
-; GFX6-NEXT:    buffer_load_ushort v0, v[3:4], s[4:7], 0 addr64
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 2, v3
+; GFX6-NEXT:    buffer_load_ushort v0, v[3:4], s[4:7], 0 addr64 offset:2
 ; GFX6-NEXT:    buffer_load_ushort v3, v[3:4], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(1)
+; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX6-NEXT:    v_or_b32_e32 v0, v3, v0
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX6-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -742,6 +882,17 @@ define void @as6_i32_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) {
 ; GFX9-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i32_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v3, v0
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0
+; FLAT-NEXT:    flat_load_dword v0, v[3:4]
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_dword v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i32_divergent:
 ; GFX1250:       ; %bb.0:
@@ -795,6 +946,17 @@ define void @as6_i8_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) #0 {
 ; GFX9-NEXT:    global_store_byte v[1:2], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v3, v0
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v0, v[3:4]
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_divergent:
 ; GFX1250:       ; %bb.0:
@@ -889,6 +1051,32 @@ define void @as6_i56_odd_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as6_i56_odd_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0
+; FLAT-NEXT:    v_add_u32_e32 v3, 6, v0
+; FLAT-NEXT:    flat_load_ubyte v7, v[3:4]
+; FLAT-NEXT:    v_add_u32_e32 v3, 4, v0
+; FLAT-NEXT:    s_mov_b32 s5, 0
+; FLAT-NEXT:    v_readfirstlane_b32 s4, v3
+; FLAT-NEXT:    s_load_dword s6, s[4:5], 0x0
+; FLAT-NEXT:    v_readfirstlane_b32 s4, v0
+; FLAT-NEXT:    s_load_dword s4, s[4:5], 0x0
+; FLAT-NEXT:    v_add_co_u32_e32 v3, vcc, 6, v1
+; FLAT-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v2, vcc
+; FLAT-NEXT:    v_add_co_u32_e32 v5, vcc, 4, v1
+; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v8, s4
+; FLAT-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v2, vcc
+; FLAT-NEXT:    v_mov_b32_e32 v0, s6
+; FLAT-NEXT:    flat_store_dword v[1:2], v8
+; FLAT-NEXT:    s_waitcnt vmcnt(1)
+; FLAT-NEXT:    flat_store_byte v[3:4], v7
+; FLAT-NEXT:    flat_store_short v[5:6], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as6_i56_odd_divergent:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -956,6 +1144,18 @@ define void @as6_i8_workitem(ptr addrspace(6) %p, ptr addrspace(1) %out) #0 {
 ; GFX9-NEXT:    global_store_byte v[1:2], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_workitem:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
+; FLAT-NEXT:    v_add_u32_e32 v3, v0, v3
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v0, v[3:4]
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: as6_i8_workitem:
 ; GFX1250:       ; %bb.0:
@@ -1044,6 +1244,35 @@ define void @as4_i56_a8(ptr addrspace(4) inreg %p, ptr addrspace(1) inreg %out) 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; FLAT-LABEL: as4_i56_a8:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_add_u32 s4, s16, 6
+; FLAT-NEXT:    s_addc_u32 s5, s17, 0
+; FLAT-NEXT:    v_mov_b32_e32 v0, s4
+; FLAT-NEXT:    v_mov_b32_e32 v1, s5
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[16:17], 0x0
+; FLAT-NEXT:    s_add_u32 s6, s18, 4
+; FLAT-NEXT:    s_addc_u32 s7, s19, 0
+; FLAT-NEXT:    v_mov_b32_e32 v0, s6
+; FLAT-NEXT:    v_mov_b32_e32 v1, s7
+; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v3, s5
+; FLAT-NEXT:    flat_store_short v[0:1], v3
+; FLAT-NEXT:    v_mov_b32_e32 v3, s4
+; FLAT-NEXT:    s_add_u32 s4, s18, 6
+; FLAT-NEXT:    v_mov_b32_e32 v0, s18
+; FLAT-NEXT:    v_mov_b32_e32 v1, s19
+; FLAT-NEXT:    s_addc_u32 s5, s19, 0
+; FLAT-NEXT:    flat_store_dword v[0:1], v3
+; FLAT-NEXT:    v_mov_b32_e32 v0, s4
+; FLAT-NEXT:    v_mov_b32_e32 v1, s5
+; FLAT-NEXT:    s_waitcnt vmcnt(2)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX1250-LABEL: as4_i56_a8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1065,6 +1294,602 @@ define void @as4_i56_a8(ptr addrspace(4) inreg %p, ptr addrspace(1) inreg %out) 
   ret void
 }
 
+define void @as6_i8_nuw_unsigned(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) #0 {
+; GFX6-LABEL: as6_i8_nuw_unsigned:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s18, s6
+; GFX6-NEXT:    s_mov_b32 s19, s7
+; GFX6-NEXT:    s_mov_b32 s8, 0x80000020
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[16:19], s8
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_nuw_unsigned:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_add_i32 s16, s16, 0x80000020
+; GFX8-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v2, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_mov_b32_e32 v1, s18
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_nuw_unsigned:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX9-NEXT:    v_bfrev_b32_e32 v0, 1
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[16:17] offset:32
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v1, v0, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw_unsigned:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_bfrev_b32_e32 v0, 1
+; FLAT-NEXT:    v_add_u32_e32 v0, s16, v0
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1] offset:32
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_nuw_unsigned:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    s_add_co_i32 s0, s0, 0x80000020
+; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = getelementptr nuw i8, ptr addrspace(6) %p, i32 -2147483616
+  %v = load i8, ptr addrspace(6) %offset, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_nuw_split(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) #0 {
+; GFX6-LABEL: as6_i8_nuw_split:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s18, s6
+; GFX6-NEXT:    s_mov_b32 s19, s7
+; GFX6-NEXT:    s_mov_b32 s8, 0xffff
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[16:19], s8
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_nuw_split:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_add_i32 s16, s16, 0xffff
+; GFX8-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v2, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_mov_b32_e32 v1, s18
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_nuw_split:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_mov_b32 s17, 0x12345678
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0xf000
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[16:17] offset:4095
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v1, v0, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw_split:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v0, 0xf000
+; FLAT-NEXT:    v_add_u32_e32 v0, s16, v0
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1] offset:4095
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_nuw_split:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] offset:65535 nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = getelementptr nuw i8, ptr addrspace(6) %p, i32 65535
+  %v = load i8, ptr addrspace(6) %offset, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_nuw_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) #0 {
+; GFX6-LABEL: as6_i8_nuw_divergent:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s6, 0
+; GFX6-NEXT:    v_mov_b32_e32 v3, v0
+; GFX6-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    buffer_load_ubyte v0, v[3:4], s[4:7], 0 addr64 offset:100
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, v[1:2], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_nuw_divergent:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x64, v0
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v0, v[3:4]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[1:2], v0
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_nuw_divergent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v3, v0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v0, v[3:4], off offset:100
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v[1:2], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nuw_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_mov_b32_e32 v3, v0
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v0, v[3:4] offset:100
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_nuw_divergent:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v0, v[0:1], off offset:100 nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = getelementptr nuw i8, ptr addrspace(6) %p, i32 100
+  %v = load i8, ptr addrspace(6) %offset, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_wrap_divergent(ptr addrspace(6) %p, ptr addrspace(1) %out) #0 {
+; GFX6-LABEL: as6_i8_wrap_divergent:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s6, 0
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 0x64, v0
+; GFX6-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX6-NEXT:    buffer_load_ubyte v0, v[3:4], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, v[1:2], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_wrap_divergent:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x64, v0
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v0, v[3:4]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[1:2], v0
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_wrap_divergent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_u32_e32 v3, 0x64, v0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v0, v[3:4], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v[1:2], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_wrap_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_add_u32_e32 v3, 0x64, v0
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v0, v[3:4]
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_wrap_divergent:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x64, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v0, v[0:1], off nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = getelementptr i8, ptr addrspace(6) %p, i32 100
+  %v = load i8, ptr addrspace(6) %offset, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_nusw_negative(ptr addrspace(6) inreg %p, ptr addrspace(1) inreg %out) #0 {
+; GFX6-LABEL: as6_i8_nusw_negative:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_add_i32 s8, s16, 0xffffff9c
+; GFX6-NEXT:    s_mov_b32 s9, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s10, s6
+; GFX6-NEXT:    s_mov_b32 s11, s7
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
+; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_nusw_negative:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_addk_i32 s16, 0xff9c
+; GFX8-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v2, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_mov_b32_e32 v1, s18
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_nusw_negative:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_add_i32 s6, s16, 0xffffff9c
+; GFX9-NEXT:    s_mov_b32 s7, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7]
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_nusw_negative:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_addk_i32 s16, 0xff9c
+; FLAT-NEXT:    v_mov_b32_e32 v0, s16
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_nusw_negative:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    s_addk_co_i32 s0, 0xff9c
+; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = getelementptr nusw i8, ptr addrspace(6) %p, i32 -100
+  %v = load i8, ptr addrspace(6) %offset, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+define void @as6_i8_or_disjoint(i32 inreg %address, ptr addrspace(1) inreg %out) #0 {
+; GFX6-LABEL: as6_i8_or_disjoint:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_and_b32 s8, s16, -16
+; GFX6-NEXT:    s_mov_b32 s9, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s10, s6
+; GFX6-NEXT:    s_mov_b32 s11, s7
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0 offset:4
+; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_or_disjoint:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_and_b32 s4, s16, -16
+; GFX8-NEXT:    s_or_b32 s4, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v2, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_mov_b32_e32 v1, s18
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_or_disjoint:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_and_b32 s6, s16, -16
+; GFX9-NEXT:    s_mov_b32 s7, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7] offset:4
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_or_disjoint:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_and_b32 s4, s16, -16
+; FLAT-NEXT:    v_mov_b32_e32 v0, s4
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1] offset:4
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_or_disjoint:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    s_and_b32 s0, s0, -16
+; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] offset:4 nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %aligned = and i32 %address, -16
+  %offset = or disjoint i32 %aligned, 4
+  %p = inttoptr i32 %offset to ptr addrspace(6)
+  %v = load i8, ptr addrspace(6) %p, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_xor_sign_bit(i32 inreg %address, ptr addrspace(1) inreg %out) #0 {
+; GFX6-LABEL: as6_i8_xor_sign_bit:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_xor_b32 s8, s16, 0x80000000
+; GFX6-NEXT:    s_mov_b32 s9, 0x12345678
+; GFX6-NEXT:    s_mov_b32 s10, s6
+; GFX6-NEXT:    s_mov_b32 s11, s7
+; GFX6-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
+; GFX6-NEXT:    s_mov_b32 s5, s18
+; GFX6-NEXT:    s_mov_b32 s4, s17
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_xor_sign_bit:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_xor_b32 s4, s16, 0x80000000
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v2, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_mov_b32_e32 v1, s18
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_xor_sign_bit:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_xor_b32 s6, s16, 0x80000000
+; GFX9-NEXT:    s_mov_b32 s7, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[6:7]
+; GFX9-NEXT:    s_mov_b32 s5, s18
+; GFX9-NEXT:    s_mov_b32 s4, s17
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v0, v1, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_xor_sign_bit:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_xor_b32 s4, s16, 0x80000000
+; FLAT-NEXT:    v_mov_b32_e32 v0, s4
+; FLAT-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v2, v[0:1]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s17
+; FLAT-NEXT:    v_mov_b32_e32 v1, s18
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[0:1], v2
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_xor_sign_bit:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_mov_b32 s2, s1
+; GFX1250-NEXT:    s_xor_b32 s0, s0, 0x80000000
+; GFX1250-NEXT:    s_mov_b32 s1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v1, v0, s[0:1] nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = xor i32 %address, -2147483648
+  %p = inttoptr i32 %offset to ptr addrspace(6)
+  %v = load i8, ptr addrspace(6) %p, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define void @as6_i8_xor_sign_bit_divergent(i32 %address, ptr addrspace(1) %out) #0 {
+; GFX6-LABEL: as6_i8_xor_sign_bit_divergent:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s6, 0
+; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v0
+; GFX6-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX6-NEXT:    buffer_load_ubyte v0, v[3:4], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    buffer_store_byte v0, v[1:2], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: as6_i8_xor_sign_bit_divergent:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v0
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX8-NEXT:    flat_load_ubyte v0, v[3:4]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_byte v[1:2], v0
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: as6_i8_xor_sign_bit_divergent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v3, 0x80000000, v0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; GFX9-NEXT:    global_load_ubyte v0, v[3:4], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_byte v[1:2], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLAT-LABEL: as6_i8_xor_sign_bit_divergent:
+; FLAT:       ; %bb.0:
+; FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    v_xor_b32_e32 v3, 0x80000000, v0
+; FLAT-NEXT:    v_mov_b32_e32 v4, 0x12345678
+; FLAT-NEXT:    flat_load_ubyte v0, v[3:4]
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    flat_store_byte v[1:2], v0
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
+; FLAT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: as6_i8_xor_sign_bit_divergent:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x12345678
+; GFX1250-NEXT:    global_load_u8 v0, v[0:1], off nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %offset = xor i32 %address, -2147483648
+  %p = inttoptr i32 %offset to ptr addrspace(6)
+  %v = load i8, ptr addrspace(6) %p, align 1
+  store i8 %v, ptr addrspace(1) %out, align 1
+  ret void
+}
 
 attributes #0 = { "amdgpu-32bit-address-high-bits"="0x12345678" }
