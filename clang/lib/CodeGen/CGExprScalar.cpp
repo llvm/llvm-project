@@ -4124,8 +4124,8 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           llvm::isPowerOf2_64(StoreBits);
     } else {
       CanEmitAtomicRMW =
-          !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
-          ResultTy->isIntegerType() &&
+          !hasBoolConversionSemantics(AtomicValueTy) &&
+          AtomicValueTy->isIntegerType() && ResultTy->isIntegerType() &&
           !(AtomicValueTy->isUnsignedIntegerType() &&
             CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
           CGF.getLangOpts().getSignedOverflowBehavior() !=

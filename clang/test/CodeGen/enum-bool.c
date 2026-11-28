@@ -95,3 +95,8 @@ enum E r(_Accum x) { return (enum E)x; }
 // CHECK-LABEL: define{{.*}} zeroext i1 @r(
 // CHECK: %tobool = icmp ne i32 %{{.*}}, 0
 // CHECK: ret i1 %tobool
+
+void q(_Atomic(enum E) *p) { *p += 2; }
+// CHECK-LABEL: define{{.*}} void @q(
+// CHECK-NOT: atomicrmw
+// CHECK: cmpxchg
