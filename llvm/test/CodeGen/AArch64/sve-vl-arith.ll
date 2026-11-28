@@ -422,6 +422,457 @@ define <vscale x 2 x i64> @incd_vec_negative_mul16(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %res
 }
 
+; Scalar shift, multiply, truncation and extension chains produced by CodeGenPrepare.
+
+define <vscale x 2 x i64> @incd_shl_vec(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_shl_vec:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_shl_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_shl_vec:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %step = shl i64 %vscale, 1
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i32> @incw_trunc_vec(<vscale x 4 x i32> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incw_trunc_vec:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incw_trunc_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incw_trunc_vec:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %step = shl i64 %vscale, 2
+  %step.trunc = trunc i64 %step to i32
+  %insert = insertelement <vscale x 4 x i32> poison, i32 %step.trunc, i64 0
+  %splat = shufflevector <vscale x 4 x i32> %insert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = add <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @incw_i32_vec(<vscale x 4 x i32> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incw_i32_vec:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incw_i32_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incw_i32_vec:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %step = shl i32 %vscale, 2
+  %insert = insertelement <vscale x 4 x i32> poison, i32 %step, i64 0
+  %splat = shufflevector <vscale x 4 x i32> %insert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = add <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @incd_zext_vec(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_zext_vec:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_zext_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_zext_vec:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %vscale.ext = zext i32 %vscale to i64
+  %step = shl i64 %vscale.ext, 1
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+; Explicit scalar negation reverses the direction, including after truncation.
+
+define <vscale x 8 x i16> @dech_vec_negated_shift(<vscale x 8 x i16> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: dech_vec_negated_shift:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    dech z0.h
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: dech_vec_negated_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dech z0.h
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: dech_vec_negated_shift:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    dech z0.h
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %positive = shl i64 %vs, 3
+  %negative = sub i64 0, %positive
+  %step = trunc i64 %negative to i16
+  %insert = insertelement <vscale x 8 x i16> poison, i16 %step, i64 0
+  %splat = shufflevector <vscale x 8 x i16> %insert, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %res = add <vscale x 8 x i16> %a, %splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @decw_vec_negated_shift(<vscale x 4 x i32> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: decw_vec_negated_shift:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decw_vec_negated_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decw_vec_negated_shift:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %positive = shl i64 %vs, 2
+  %negative = sub i64 0, %positive
+  %step = trunc i64 %negative to i32
+  %insert = insertelement <vscale x 4 x i32> poison, i32 %step, i64 0
+  %splat = shufflevector <vscale x 4 x i32> %insert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = add <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+; Check negative multipliers
+
+define <vscale x 2 x i64> @decd_vec_negated_mul(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: decd_vec_negated_mul:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decd z0.d, all, mul #3
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decd_vec_negated_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decd z0.d, all, mul #3
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decd_vec_negated_mul:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decd z0.d, all, mul #3
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %scaled = mul i64 %vs, 6
+  %negative = sub i64 0, %scaled
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %negative, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_negated_negative_mul(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_negated_negative_mul:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #3
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_negated_negative_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d, all, mul #3
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_negated_negative_mul:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #3
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %scaled = mul i64 %vs, -6
+  %positive = sub i64 0, %scaled
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %positive, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+; Check negative and negated multipliers of zero-extended vscale.
+
+define <vscale x 2 x i64> @decd_vec_negative_mul_zext(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: decd_vec_negative_mul_zext:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decd z0.d, all, mul #3
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decd_vec_negative_mul_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decd z0.d, all, mul #3
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decd_vec_negative_mul_zext:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decd z0.d, all, mul #3
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i32 @llvm.vscale.i32()
+  %ext = zext i32 %vs to i64
+  %scaled = mul i64 %ext, -6
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %scaled, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_negated_negative_mul_zext(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_negated_negative_mul_zext:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #3
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_negated_negative_mul_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d, all, mul #3
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_negated_negative_mul_zext:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #3
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i32 @llvm.vscale.i32()
+  %ext = zext i32 %vs to i64
+  %scaled = mul i64 %ext, -6
+  %negated = sub i64 0, %scaled
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %negated, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+; Sums of splats, including leaves smaller than one vector and mixed signs.
+
+define <vscale x 2 x i64> @incd_vec_sum_small(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_sum_small:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_sum_small:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_sum_small:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %lhs = call i64 @llvm.vscale.i64()
+  %rhs = call i64 @llvm.vscale.i64()
+  %lhs.insert = insertelement <vscale x 2 x i64> poison, i64 %lhs, i64 0
+  %lhs.splat = shufflevector <vscale x 2 x i64> %lhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %rhs.insert = insertelement <vscale x 2 x i64> poison, i64 %rhs, i64 0
+  %rhs.splat = shufflevector <vscale x 2 x i64> %rhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %sum = add <vscale x 2 x i64> %lhs.splat, %rhs.splat
+  %res = add <vscale x 2 x i64> %a, %sum
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_sum_zext(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_sum_zext:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_sum_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_sum_zext:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i32 @llvm.vscale.i32()
+  %ext = zext i32 %vs to i64
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %ext, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %sum = add <vscale x 2 x i64> %splat, %splat
+  %res = add <vscale x 2 x i64> %a, %sum
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_sum_signed(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_sum_signed:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #2
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_sum_signed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d, all, mul #2
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_sum_signed:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #2
+; NO_FAST_INC-NEXT:    ret
+  %lhs.vs = call i64 @llvm.vscale.i64()
+  %lhs = mul i64 %lhs.vs, -2
+  %rhs.vs = call i64 @llvm.vscale.i64()
+  %rhs = mul i64 %rhs.vs, 6
+  %lhs.insert = insertelement <vscale x 2 x i64> poison, i64 %lhs, i64 0
+  %lhs.splat = shufflevector <vscale x 2 x i64> %lhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %rhs.insert = insertelement <vscale x 2 x i64> poison, i64 %rhs, i64 0
+  %rhs.splat = shufflevector <vscale x 2 x i64> %rhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %sum = add <vscale x 2 x i64> %lhs.splat, %rhs.splat
+  %res = add <vscale x 2 x i64> %a, %sum
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @decd_vec_sum_signed(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: decd_vec_sum_signed:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decd z0.d, all, mul #2
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decd_vec_sum_signed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decd z0.d, all, mul #2
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decd_vec_sum_signed:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decd z0.d, all, mul #2
+; NO_FAST_INC-NEXT:    ret
+  %lhs.vs = call i64 @llvm.vscale.i64()
+  %lhs = mul i64 %lhs.vs, 2
+  %rhs.vs = call i64 @llvm.vscale.i64()
+  %rhs = mul i64 %rhs.vs, -6
+  %lhs.insert = insertelement <vscale x 2 x i64> poison, i64 %lhs, i64 0
+  %lhs.splat = shufflevector <vscale x 2 x i64> %lhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %rhs.insert = insertelement <vscale x 2 x i64> poison, i64 %rhs, i64 0
+  %rhs.splat = shufflevector <vscale x 2 x i64> %rhs.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %sum = add <vscale x 2 x i64> %lhs.splat, %rhs.splat
+  %res = add <vscale x 2 x i64> %a, %sum
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i32> @incw_vec_sum_zext_trunc(<vscale x 4 x i32> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incw_vec_sum_zext_trunc:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incw_vec_sum_zext_trunc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incw_vec_sum_zext_trunc:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i32 @llvm.vscale.i32()
+  %ext = zext i32 %vs to i64
+  %scaled = mul i64 %ext, 2
+  %step = trunc i64 %scaled to i32
+  %insert = insertelement <vscale x 4 x i32> poison, i32 %step, i64 0
+  %splat = shufflevector <vscale x 4 x i32> %insert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %sum = add <vscale x 4 x i32> %splat, %splat
+  %res = add <vscale x 4 x i32> %a, %sum
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_nested_sum_zext(<vscale x 2 x i64> %a) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_nested_sum_zext:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #2
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_nested_sum_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d, all, mul #2
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_nested_sum_zext:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #2
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %two = shl i64 %vs, 1
+  %two.insert = insertelement <vscale x 2 x i64> poison, i64 %two, i64 0
+  %two.splat = shufflevector <vscale x 2 x i64> %two.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %vs32 = call i32 @llvm.vscale.i32()
+  %ext = zext i32 %vs32 to i64
+  %four = shl i64 %ext, 2
+  %four.insert = insertelement <vscale x 2 x i64> poison, i64 %four, i64 0
+  %four.splat = shufflevector <vscale x 2 x i64> %four.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %negative = sub i64 0, %two
+  %negative.insert = insertelement <vscale x 2 x i64> poison, i64 %negative, i64 0
+  %negative.splat = shufflevector <vscale x 2 x i64> %negative.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %six = add <vscale x 2 x i64> %two.splat, %four.splat
+  %sum = add <vscale x 2 x i64> %six, %negative.splat
+  %res = add <vscale x 2 x i64> %sum, %a
+  ret <vscale x 2 x i64> %res
+}
+
+; A shared splat still folds into a commuted vector add.
+
+define <vscale x 2 x i64> @incd_vec_mul16_shared(<vscale x 2 x i64> %a, ptr %out) vscale_range(1,16) {
+; NO_SCALAR_INC-LABEL: incd_vec_mul16_shared:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    rdvl x8, #2
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #16
+; NO_SCALAR_INC-NEXT:    mov z1.d, x8
+; NO_SCALAR_INC-NEXT:    str z1, [x0]
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_mul16_shared:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    incd z0.d, all, mul #16
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    str z1, [x0]
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_mul16_shared:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    rdvl x8, #2
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #16
+; NO_FAST_INC-NEXT:    mov z1.d, x8
+; NO_FAST_INC-NEXT:    str z1, [x0]
+; NO_FAST_INC-NEXT:    ret
+  %vs = call i64 @llvm.vscale.i64()
+  %step = mul i64 %vs, 32
+  %insert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  store volatile <vscale x 2 x i64> %splat, ptr %out
+  %res = add <vscale x 2 x i64> %splat, %a
+  ret <vscale x 2 x i64> %res
+}
+
 ; NOTE: As there is no need for the predicate pattern we
 ; fall back to using ADDVL with its larger immediate range.
 define i64 @incb_scalar_i64(i64 %a) {
