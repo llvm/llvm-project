@@ -2858,25 +2858,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
     unsigned BitWidth = Mask->getType()->getScalarSizeInBits();
+    KnownBits Known(BitWidth);
+    if (IC.SimplifyDemandedBits(&II, 2, APInt::getSignMask(BitWidth), Known))
+      return &II;
 
-    if (Mask->getType()->isIntOrIntVectorTy()) {
-      KnownBits Known(BitWidth);
-      if (IC.SimplifyDemandedBits(&II, 2, APInt::getSignMask(BitWidth), Known))
-        return &II;
-    } else if (auto *BC = dyn_cast<BitCastInst>(Mask)) {
-      if (BC->hasOneUse()) {
-        Value *Src = BC->getOperand(0);
-        if (Src->getType()->isIntOrIntVectorTy()) {
-          unsigned SrcBitWidth = Src->getType()->getScalarSizeInBits();
-          if (SrcBitWidth == BitWidth) {
-            KnownBits KnownSrc(SrcBitWidth);
-            if (IC.SimplifyDemandedBits(BC, 0, APInt::getSignMask(SrcBitWidth),
-                                        KnownSrc))
-              return &II;
-          }
-        }
-      }
-    }
     Mask = InstCombiner::peekThroughBitcast(Mask);
 
     // Bitshift upto the signbit can always be converted to an efficient

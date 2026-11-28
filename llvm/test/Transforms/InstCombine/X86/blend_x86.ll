@@ -475,6 +475,50 @@ define <8 x float> @blendvps_demanded_msb_multiuse(<8 x float> %a, <8 x float> %
   ret <8 x float> %r
 }
 
+define <4 x float> @blendvps_mask_signbit_known_zero(<4 x float> %a, <4 x float> %b, <4 x i32> %m) {
+; CHECK-LABEL: @blendvps_mask_signbit_known_zero(
+; CHECK-NEXT:    ret <4 x float> [[A:%.*]]
+;
+  %and = and <4 x i32> %m, splat (i32 2147483647)
+  %mask = bitcast <4 x i32> %and to <4 x float>
+  %r = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a, <4 x float> %b, <4 x float> %mask)
+  ret <4 x float> %r
+}
+
+define <4 x float> @blendvps_fp_mask(<4 x float> %a, <4 x float> %b, <4 x float> %m) {
+; CHECK-LABEL: @blendvps_fp_mask(
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[M:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %r = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a, <4 x float> %b, <4 x float> %m)
+  ret <4 x float> %r
+}
+
+define <4 x float> @blendvps_fadd_mask(<4 x float> %a, <4 x float> %b, <4 x float> %m, <4 x float> %n) {
+; CHECK-LABEL: @blendvps_fadd_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = fadd <4 x float> [[M:%.*]], [[N:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[MASK]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %mask = fadd <4 x float> %m, %n
+  %r = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a, <4 x float> %b, <4 x float> %mask)
+  ret <4 x float> %r
+}
+
+; Negative test: <2 x i64> -> <4 x float> changes element width.
+define <4 x float> @blendvps_mask_width_change(<4 x float> %a, <4 x float> %b, <2 x i64> %m) {
+; CHECK-LABEL: @blendvps_mask_width_change(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[M:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[MASK:%.*]] = bitcast <2 x i64> [[OR]] to <4 x float>
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[MASK]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %or = or <2 x i64> %m, splat (i64 1)
+  %mask = bitcast <2 x i64> %or to <4 x float>
+  %r = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a, <4 x float> %b, <4 x float> %mask)
+  ret <4 x float> %r
+}
+
 declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>, <4 x float>)
 declare <2 x double> @llvm.x86.sse41.blendvpd(<2 x double>, <2 x double>, <2 x double>)
