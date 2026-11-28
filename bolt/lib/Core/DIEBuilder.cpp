@@ -110,8 +110,20 @@ void DIEBuilder::updateReferences() {
 
   // Handling references in location expressions.
   for (LocWithReference &LocExpr : getState().LocWithReferencesToProcess) {
+    // Start from the current expression instead of the input one, since it
+    // could have been rewritten, e.g. with a new DW_OP_addrx index, and DIE
+    // offsets were calculated with its size.
+    const DIEValue CurValue = LocExpr.Die.findAttribute(LocExpr.Attr);
+    const DIEValueList &CurList =
+        LocExpr.Form == dwarf::DW_FORM_exprloc
+            ? static_cast<const DIEValueList &>(CurValue.getDIELoc())
+            : static_cast<const DIEValueList &>(CurValue.getDIEBlock());
+    SmallVector<uint8_t, 32> CurBytes;
+    for (const DIEValue &Byte : CurList.values())
+      CurBytes.push_back(Byte.getDIEInteger().getValue());
+
     SmallVector<uint8_t, 32> Buffer;
-    DataExtractor Data(LocExpr.BlockData, LocExpr.U.isLittleEndian());
+    DataExtractor Data(CurBytes, LocExpr.U.isLittleEndian());
     DWARFExpression Expr(Data, LocExpr.U.getAddressByteSize(),
                          LocExpr.U.getFormParams().Format);
     cloneExpression(Data, Expr, LocExpr.U, Buffer, CloneExpressionStage::PATCH);
@@ -776,18 +788,23 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
       uint32_t Offset = 0;
       if (RefOffset > 0 || Op.getCode() != dwarf::DW_OP_convert) {
         DoesContainReference = true;
-        std::optional<uint32_t> RefDieID =
-            getAllocDIEId(U, U.getOffset() + RefOffset);
-        std::optional<uint32_t> RefUnitID = getUnitId(U);
-        if (RefDieID.has_value() && RefUnitID.has_value()) {
-          DIEInfo &RefDieInfo = getDIEInfo(*RefUnitID, *RefDieID);
-          if (DIE *Clone = RefDieInfo.Die)
-            Offset = Stage == CloneExpressionStage::INIT ? RefOffset
-                                                         : Clone->getOffset();
-          else
-            BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
-                         "doesn't point to "
-                         "DW_TAG_base_type.\n";
+        if (Stage == CloneExpressionStage::INIT) {
+          // Keep the input offset for now, and later after DIE offsets are
+          // final, the PATCH stage will map it to the output offset.
+          Offset = RefOffset;
+        } else {
+          std::optional<uint32_t> RefDieID =
+              getAllocDIEId(U, U.getOffset() + RefOffset);
+          std::optional<uint32_t> RefUnitID = getUnitId(U);
+          if (RefDieID.has_value() && RefUnitID.has_value()) {
+            DIEInfo &RefDieInfo = getDIEInfo(*RefUnitID, *RefDieID);
+            if (DIE *Clone = RefDieInfo.Die)
+              Offset = Clone->getOffset();
+            else
+              BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: base type "
+                           "ref doesn't point to "
+                           "DW_TAG_base_type.\n";
+          }
         }
       }
       uint8_t ULEB[16];
@@ -838,8 +855,8 @@ void DIEBuilder::cloneBlockAttribute(
     DWARFExpression Expr(Data, U.getAddressByteSize(),
                          U.getFormParams().Format);
     if (cloneExpression(Data, Expr, U, Buffer, CloneExpressionStage::INIT))
-      getState().LocWithReferencesToProcess.emplace_back(
-          Bytes.vec(), U, Die, AttrSpec.Form, AttrSpec.Attr);
+      getState().LocWithReferencesToProcess.emplace_back(U, Die, AttrSpec.Form,
+                                                         AttrSpec.Attr);
     Bytes = Buffer;
   }
   for (auto Byte : Bytes)
