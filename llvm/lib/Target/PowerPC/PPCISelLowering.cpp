@@ -4115,6 +4115,19 @@ static unsigned EnsureStackAlignment(const PPCFrameLowering *Lowering,
   return alignTo(NumBytes, Lowering->getStackAlign());
 }
 
+/// Load an argument of type \p ValVT passed in memory at \p FIN.
+static SDValue loadStackArg(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue FIN, EVT ValVT, ISD::ArgFlagsTy Flags) {
+  // The caller extends a signext i1 to the whole slot, so the byte loaded here
+  // is 0xFF for true. A load of i1 assumes that the bits above bit 0 are zero,
+  // so load an i8 and truncate it instead.
+  if (ValVT == MVT::i1 && Flags.isSExt()) {
+    SDValue Byte = DAG.getLoad(MVT::i8, dl, Chain, FIN, MachinePointerInfo());
+    return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Byte);
+  }
+  return DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
+}
+
 SDValue PPCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -4264,8 +4277,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
 
       // Create load nodes to retrieve arguments from the stack.
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-      InVals.push_back(
-          DAG.getLoad(VA.getValVT(), dl, Chain, FIN, MachinePointerInfo()));
+      InVals.push_back(loadStackArg(DAG, dl, Chain, FIN, VA.getValVT(),
+                                    Ins[VA.getValNo()].Flags));
     }
   }
 
@@ -4708,7 +4721,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
         CurArgOffset += ArgSize - ObjSize;
       int FI = MFI.CreateFixedObject(ObjSize, CurArgOffset, isImmutable);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-      ArgVal = DAG.getLoad(ObjectVT, dl, Chain, FIN, MachinePointerInfo());
+      ArgVal = loadStackArg(DAG, dl, Chain, FIN, ObjectVT, Flags);
     }
 
     InVals.push_back(ArgVal);
@@ -7209,8 +7222,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
             (CallConv == CallingConv::Fast));
       int FI = MFI.CreateFixedObject(ValSize, CurArgOffset, IsImmutable);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-      SDValue ArgValue =
-          DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
+      SDValue ArgValue = loadStackArg(DAG, dl, Chain, FIN, ValVT, Flags);
 
       // While the ABI specifies the argument type is (sign or zero) extended
       // out to register width, not all code is compliant. We truncate and
