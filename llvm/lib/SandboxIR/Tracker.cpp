@@ -386,18 +386,24 @@ void Tracker::accept(bool AcceptAll) {
 }
 
 #ifndef NDEBUG
-void Tracker::dump(raw_ostream &OS) const {
+void Tracker::print(raw_ostream &OS) const {
   unsigned SnapshotCnt = 0;
+  auto PrintSnapshot = [&SnapshotCnt, &OS]() {
+    OS << "<Snapshot " << SnapshotCnt++ << ">\n";
+  };
   for (auto [Idx, ChangePtr] : enumerate(Changes)) {
+    if (find(Snapshots, Idx) != Snapshots.end())
+      PrintSnapshot();
     OS << Idx << ". ";
     ChangePtr->dump(OS);
-    if (find(Snapshots, Idx) != Snapshots.end())
-      OS << " [Snapshot " << SnapshotCnt++ << "]";
     OS << "\n";
   }
+  if (!Snapshots.empty() && Snapshots.back() == Changes.size())
+    PrintSnapshot();
 }
+
 void Tracker::dump() const {
-  dump(dbgs());
+  print(dbgs());
   dbgs() << "\n";
 }
 #endif // NDEBUG

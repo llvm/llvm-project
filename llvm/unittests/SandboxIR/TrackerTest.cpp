@@ -2110,4 +2110,57 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   EXPECT_EQ(Add1->getOperand(0), Arg0);
 }
 
+TEST_F(TrackerTest, NestedCheckpointsDump) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg0, i32 %arg1) {
+  %add0 = add i32 %arg0, %arg0
+  %add1 = add i32 %add0, %add0
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  std::string Str;
+  raw_string_ostream OS(Str);
+
+  Ctx.save();
+  Str.clear();
+  Ctx.getTracker().print(OS);
+  EXPECT_EQ("\n" + Str, R"DUMP(
+<Snapshot 0>
+)DUMP");
+
+  Ctx.save();
+  Str.clear();
+  Ctx.getTracker().print(OS);
+  EXPECT_EQ("\n" + Str, R"DUMP(
+<Snapshot 0>
+)DUMP");
+
+  Add0->moveAfter(Add1);
+  Str.clear();
+  Ctx.getTracker().print(OS);
+  EXPECT_EQ("\n" + Str, R"DUMP(
+<Snapshot 0>
+0. MoveInstr
+)DUMP");
+
+  Ctx.save();
+  Str.clear();
+  Ctx.getTracker().print(OS);
+  EXPECT_EQ("\n" + Str, R"DUMP(
+<Snapshot 0>
+0. MoveInstr
+<Snapshot 1>
+)DUMP");
+
+  Ctx.revert(true);
+}
+
 #endif // NDEBUG
