@@ -10,6 +10,7 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -71,8 +72,9 @@ uint64_t AMDGPUTargetInfo::getNumRegsForType(const Type *Ty) const {
   }
 
   if (const auto *RT = dyn_cast<RecordType>(Ty)) {
-    for (const FieldInfo &Field : RT->getFields())
-      NumRegs += getNumRegsForType(Field.FieldType);
+    for (const FieldInfo &Member :
+         concat<const FieldInfo>(RT->getBaseClasses(), RT->getFields()))
+      NumRegs += getNumRegsForType(Member.FieldType);
     return NumRegs;
   }
 
