@@ -3492,7 +3492,9 @@ struct FormatStyle {
 
   /// Insert braces after control statements (`if`, `else`, `for`, `do`,
   /// and `while`) in C++ unless the control statements are inside macro
-  /// definitions or the braces would enclose preprocessor directives.
+  /// definitions or a preprocessor directive separates a control statement
+  /// from its body. Braces may enclose preprocessor directives within a body
+  /// when the same closing-brace position is safe in every branch.
   /// \warning
   ///  Setting this option to `true` could lead to incorrect code formatting
   ///  due to clang-format's lack of complete semantic information. As such,
