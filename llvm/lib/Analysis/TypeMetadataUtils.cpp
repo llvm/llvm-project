@@ -240,6 +240,17 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
   return std::pair<Function *, Constant *>(Fn, C);
 }
 
+bool llvm::isTypeIdMemberAtOffset(const GlobalObject &GO, uint64_t Offset,
+                                  const Metadata *TypeId) {
+  SmallVector<MDNode *, 2> Types;
+  GO.getMetadata(LLVMContext::MD_type, Types);
+  return any_of(Types, [&](MDNode *Type) {
+    return Type->getOperand(1) == TypeId &&
+           mdconst::extract<ConstantInt>(Type->getOperand(0))->getZExtValue() ==
+               Offset;
+  });
+}
+
 static void replaceRelativePointerUserWithZero(User *U) {
   auto *PtrExpr = dyn_cast<ConstantExpr>(U);
   if (!PtrExpr || PtrExpr->getOpcode() != Instruction::PtrToInt)
