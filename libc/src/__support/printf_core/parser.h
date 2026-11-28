@@ -361,6 +361,9 @@ private:
       case CharT{'0'}:
         flags = static_cast<FormatFlags>(flags | FormatFlags::LEADING_ZEROES);
         break;
+      case CharT{'\''}:
+        flags = static_cast<FormatFlags>(flags | FormatFlags::GROUP_DECIMALS);
+        break;
       default:
         found_flag = false;
       }

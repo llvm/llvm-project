@@ -309,6 +309,11 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%05d", -581);
   ASSERT_STREQ_LEN(written, buff, "-0581");
 
+  // TODO: The ' flag is only accepted, and the C locale has no grouping, so it
+  // changes nothing. Update this if it is implemented for other locales.
+  written = LIBC_NAMESPACE::sprintf(buff, "%'d", 1234567);
+  ASSERT_STREQ_LEN(written, buff, "1234567");
+
   // Combined Tests.
 
   written = LIBC_NAMESPACE::sprintf(buff, "%+ u", 692);
