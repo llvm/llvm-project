@@ -27,6 +27,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -1413,19 +1414,56 @@ LogicalResult ExtractOp::verify() {
   return success();
 }
 
+static bool verifySliceValueDisjoint(Value v1, Value v2) {
+  auto c1 = getConstantIntValue(v1);
+  auto c2 = getConstantIntValue(v2);
+
+  if (!c1 || !c2) {
+    return false;
+  }
+
+  if (*c1 == *c2)
+    return false;
+
+  if (static_cast<uint32_t>(*c1) == static_cast<uint32_t>(*c2))
+    return false;
+
+  return true;
+}
+
+static bool verifyRangeDisjoint(OperandRange r1, OperandRange r2) {
+  if (r1.size() != r2.size()) {
+    return false;
+  }
+
+  return llvm::any_of(llvm::zip(r1, r2), [](auto pair) {
+    auto [v1, v2] = pair;
+    return verifySliceValueDisjoint(v1, v2);
+  });
+}
+
 /// If we have an ExtractOp consuming an InsertOp with the same
 /// indices, we can return the InsertOp's scalar directly.
-// TODO: This only checks the immediate producer; extend to go up the
-// insert/extract chain if the slices are disjoint.
 static Value foldExtractAfterInsert(ExtractOp extractOp) {
   auto insertOp = extractOp.getTensor().getDefiningOp<InsertOp>();
 
   auto isSame = [](Value a, Value b) {
     return getAsOpFoldResult(a) == getAsOpFoldResult(b);
   };
-  if (insertOp && insertOp.getScalar().getType() == extractOp.getType() &&
-      llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
-    return insertOp.getScalar();
+
+  SmallPtrSet<Operation *, 4> visited;
+  while (insertOp && visited.insert(insertOp).second) {
+    if (insertOp.getScalar().getType() == extractOp.getType() &&
+        llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
+      return insertOp.getScalar();
+
+    if (verifyRangeDisjoint(insertOp.getIndices(), extractOp.getIndices())) {
+      insertOp = insertOp.getDest().getDefiningOp<InsertOp>();
+      continue;
+    }
+
+    return {};
+  }
 
   return {};
 }
