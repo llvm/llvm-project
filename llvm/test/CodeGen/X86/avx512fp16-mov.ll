@@ -2420,7 +2420,9 @@ define <8 x i16> @pr59628_xmm(i16 %arg) {
 ; X64-NOVL-LABEL: pr59628_xmm:
 ; X64-NOVL:       # %bb.0:
 ; X64-NOVL-NEXT:    vmovw %edi, %xmm0
-; X64-NOVL-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-NOVL-NEXT:    vmovd %edi, %xmm1
+; X64-NOVL-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NOVL-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NOVL-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; X64-NOVL-NEXT:    retq
   %I1 = insertelement <8 x i16> zeroinitializer, i16 %arg, i16 0

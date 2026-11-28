@@ -280,19 +280,28 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 ; SSE-LABEL: wrong_min_signbits:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE-NEXT:    movd {{.*#+}} xmm0 = [1,0,0,0]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm0, %xmm2
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE-NEXT:    psllw $15, %xmm2
+; SSE-NEXT:    psraw $15, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movd %xmm2, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: wrong_min_signbits:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,0]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,0]
 ; AVX-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
