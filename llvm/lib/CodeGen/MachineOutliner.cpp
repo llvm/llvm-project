@@ -129,6 +129,14 @@ STATISTIC(NumPGOOptimisticOutlined,
 
 namespace {
 
+struct OutlinerMachineInstrExpressionTrait : MachineInstrExpressionTrait {
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
+    return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs,
+                              MachineInstr::IgnoreBundledDebugValues);
+  }
+};
+
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
   const MachineModuleInfo &MMI;
@@ -144,7 +152,7 @@ struct InstructionMapper {
   unsigned LegalInstrNumber = 0;
 
   /// Correspondence from \p MachineInstrs to unsigned integers.
-  DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>
+  DenseMap<MachineInstr *, unsigned, OutlinerMachineInstrExpressionTrait>
       InstructionIntegerMap;
 
   /// Correspondence between \p MachineBasicBlocks and target-defined flags.
@@ -192,8 +200,8 @@ struct InstructionMapper {
     InstrListForMBB.push_back(It);
     MachineInstr &MI = *It;
     bool WasInserted;
-    DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>::iterator
-        ResultIt;
+    DenseMap<MachineInstr *, unsigned,
+             OutlinerMachineInstrExpressionTrait>::iterator ResultIt;
     std::tie(ResultIt, WasInserted) =
         InstructionIntegerMap.insert(std::make_pair(&MI, LegalInstrNumber));
     unsigned MINumber = ResultIt->second;
@@ -1147,9 +1155,14 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       // Also clear debug locations and kill info on any bundled instructions.
       if (NewMI.isBundledWithSucc()) {
         auto BundleEnd = getBundleEnd(NewMI.getIterator());
-        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I) {
-          I->setDebugLoc(DL);
-          I->clearKillInfo();
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd;) {
+          MachineInstr &BundledMI = *I++;
+          if (BundledMI.isDebugInstr()) {
+            BundledMI.eraseFromBundle();
+            continue;
+          }
+          BundledMI.setDebugLoc(DL);
+          BundledMI.clearKillInfo();
         }
       }
     }
