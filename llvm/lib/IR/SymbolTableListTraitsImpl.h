@@ -17,6 +17,7 @@
 
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include <type_traits>
 
 namespace llvm {
 
@@ -70,6 +71,9 @@ void SymbolTableListTraits<ValueSubClass, Args...>::addNodeToList(
   ItemParentClass *Owner = getListOwner();
   V->setParent(Owner);
   invalidateParentIListOrdering(Owner);
+  if constexpr (std::is_same_v<ValueSubClass, Instruction>)
+    if (auto *F = Owner->getParent())
+      V->Number = F->NextInstNum++;
   if (V->hasName())
     if (ValueSymbolTable *ST = getSymTab(Owner))
       ST->reinsertValue(V);
@@ -96,6 +100,14 @@ void SymbolTableListTraits<ValueSubClass, Args...>::transferNodesFromList(
   ItemParentClass *OldIP = L2.getListOwner();
   if (NewIP == OldIP)
     return;
+
+  // Instructions moved to another function get new numbers.
+  if constexpr (std::is_same_v<ValueSubClass, Instruction>) {
+    auto *F = NewIP->getParent();
+    if (F && F != OldIP->getParent())
+      for (auto It = first; It != last; ++It)
+        It->Number = F->NextInstNum++;
+  }
 
   // We only have to update symbol table entries if we are transferring the
   // instructions to a different symtab object...

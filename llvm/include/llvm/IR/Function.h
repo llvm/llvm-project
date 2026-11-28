@@ -84,10 +84,15 @@ private:
   unsigned NextBlockNum = 0;
   /// Epoch of block numbers. (Could be shrinked to uint8_t if required.)
   unsigned BlockNumEpoch = 0;
+  // Instructions get their number when added to a function.
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
+                                     ilist_parent<BasicBlock>>;
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   uint32_t NumArgs;
   MaybeAlign PreferredAlign;
+  /// Epoch of instruction numbers.
+  uint16_t InstNumEpoch = 0;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -137,6 +142,7 @@ private:
   /// UnknownLibFunc if uninitialized. NotLibFunc if definitely not lib func.
   /// Otherwise may be libfunc if prototype validation passes.
   mutable LibFunc LibFuncCache = UnknownLibFunc;
+  unsigned NextInstNum = 0;
 
   void CheckLazyArguments() const {
     if (hasLazyArguments())
@@ -835,10 +841,24 @@ public:
   /// invalidated. This is solely intended as a debugging feature.
   unsigned getBlockNumberEpoch() const { return BlockNumEpoch; }
 
+  /// Return a value larger than the number of every instruction in this
+  /// function, for sizing a vector indexed by Instruction::getNumber().
+  unsigned getMaxInstructionNumber() const { return NextInstNum; }
+
+  /// Renumber instructions into a dense range starting from 0 in layout order,
+  /// changing the epoch.
+  void renumberInstructions();
+
+  /// Like getBlockNumberEpoch, for instruction numbers.
+  unsigned getInstructionNumberEpoch() const { return InstNumEpoch; }
+
 private:
   /// Assert that all blocks have unique numbers within 0..NextBlockNum. This
   /// has O(n) runtime complexity.
   void validateBlockNumbers() const;
+
+  /// Like validateBlockNumbers, for instruction numbers.
+  void validateInstructionNumbers() const;
 
 public:
   //===--------------------------------------------------------------------===//

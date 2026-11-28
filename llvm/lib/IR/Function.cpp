@@ -61,6 +61,15 @@ using namespace llvm;
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
+void Function::renumberInstructions() {
+  validateInstructionNumbers();
+
+  NextInstNum = 0;
+  for (Instruction &I : instructions(*this))
+    I.Number = NextInstNum++;
+  ++InstNumEpoch;
+}
+
 void Function::renumberBlocks() {
   validateBlockNumbers();
 
@@ -77,6 +86,18 @@ void Function::validateBlockNumbers() const {
     unsigned Num = BB.getNumber();
     assert(Num < NextBlockNum && "out of range block number");
     assert(!Numbers[Num] && "duplicate block numbers");
+    Numbers.set(Num);
+  }
+#endif
+}
+
+void Function::validateInstructionNumbers() const {
+#ifndef NDEBUG
+  BitVector Numbers(NextInstNum);
+  for (const Instruction &I : instructions(*this)) {
+    unsigned Num = I.getNumber();
+    assert(Num < NextInstNum && "out of range instruction number");
+    assert(!Numbers[Num] && "duplicate instruction numbers");
     Numbers.set(Num);
   }
 #endif
