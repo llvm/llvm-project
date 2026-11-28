@@ -1355,9 +1355,7 @@ void MicrosoftCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
   if (D->hasAttr<DLLExportAttr>() && D->isDefaultConstructor() &&
       D->isDefined()) {
     if (!hasDefaultCXXMethodCC(getContext(), D) || D->getNumParams() != 0) {
-      llvm::Function *Fn = getAddrOfCXXCtorClosure(D, Ctor_DefaultClosure);
-      Fn->setLinkage(llvm::GlobalValue::WeakODRLinkage);
-      CGM.setGVProperties(Fn, D);
+      getAddrOfCXXCtorClosure(D, Ctor_DefaultClosure);
     }
   }
 }
@@ -4177,13 +4175,20 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   llvm::FunctionType *ThunkTy = CGM.getTypes().GetFunctionType(FnInfo);
   const CXXRecordDecl *RD = CD->getParent();
   CanQualType RecordTy = getContext().getCanonicalTagType(RD);
+  // The default constructor closure is only emitted for dllexport default
+  // constructors, where it must use WeakODR so the linker can merge duplicates.
+  llvm::GlobalValue::LinkageTypes Linkage =
+      CT == Ctor_DefaultClosure ? llvm::GlobalValue::WeakODRLinkage
+                                : getLinkageForRTTI(RecordTy);
   llvm::Function *ThunkFn = llvm::Function::Create(
-      ThunkTy, getLinkageForRTTI(RecordTy), ThunkName.str(), &CGM.getModule());
-  ThunkFn->setCallingConv(static_cast<llvm::CallingConv::ID>(
-      FnInfo.getEffectiveCallingConvention()));
+      ThunkTy, Linkage, ThunkName.str(), &CGM.getModule());
   if (ThunkFn->isWeakForLinker())
     ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
   bool IsCopy = CT == Ctor_CopyingClosure;
+
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(CD, CT), FnInfo, ThunkFn,
+                                /*IsThunk=*/false);
+  CGM.SetLLVMFunctionAttributesForDefinition(CD, ThunkFn);
 
   // Start codegen.
   CodeGenFunction CGF(CGM);
@@ -4274,6 +4279,8 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   // Emit the ret instruction, remove any temporary instructions created for the
   // aid of CodeGen.
   CGF.FinishFunction(SourceLocation());
+
+  CGM.SetCommonAttributes(GlobalDecl(CD, CT), ThunkFn);
 
   return ThunkFn;
 }
