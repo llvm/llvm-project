@@ -183,9 +183,14 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   OpBuilder builder(launchOp.getContext());
   Region &launchOpBody = launchOp.getBody();
 
-  // Identify uses from values defined outside of the scope of the launch
-  // operation.
-  getUsedValuesDefinedAbove(launchOpBody, operands);
+  // Keep calling convention operands before other operands and captures.
+  SetVector<Value> orderedOperands;
+  for (Value operand : launchOp.getCallingConvention())
+    orderedOperands.insert(operand);
+  for (Value operand : operands)
+    orderedOperands.insert(operand);
+  getUsedValuesDefinedAbove(launchOpBody, orderedOperands);
+  operands = std::move(orderedOperands);
 
   // Create the gpu.func operation.
   SmallVector<Type, 4> kernelOperandTypes;
@@ -200,6 +205,13 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
       TypeRange(ValueRange(launchOp.getWorkgroupAttributionBBArgs())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc.setKernel(true);
+  if (auto argAttrs = launchOp.getArgAttrs()) {
+    DictionaryAttr emptyAttrs = builder.getDictionaryAttr({});
+    SmallVector<Attribute> kernelArgAttrs(operands.size(), emptyAttrs);
+    for (const auto &[index, attr] : llvm::enumerate(*argAttrs))
+      kernelArgAttrs[index] = attr;
+    outlinedFunc.setArgAttrsAttr(builder.getArrayAttr(kernelArgAttrs));
+  }
 
   // If we can infer bounds on the grid and/or block sizes from the arguments
   // to the launch op, propagate them to the generated kernel. This is safe
