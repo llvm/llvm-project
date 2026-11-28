@@ -3086,28 +3086,28 @@ public:
 };
 } // namespace
 
-/// Determine if we can hoist sink a sole store instruction out of a
-/// conditional block.
+/// Determine if we can hoist a sole store instruction out of a conditional
+/// block.
 ///
 /// We are looking for code like the following:
 ///   BrBB:
-///     store i32 %add, i32* %arrayidx2
+///     store i32 %add, ptr %arrayidx2
 ///     ... // No other stores or function calls (we could be calling a memory
 ///     ... // function).
 ///     %cmp = icmp ult %x, %y
 ///     br i1 %cmp, label %EndBB, label %ThenBB
 ///   ThenBB:
-///     store i32 %add5, i32* %arrayidx2
+///     store i32 %add5, ptr %arrayidx2
 ///     br label EndBB
 ///   EndBB:
 ///     ...
 ///   We are going to transform this into:
 ///   BrBB:
-///     store i32 %add, i32* %arrayidx2
+///     store i32 %add, ptr %arrayidx2
 ///     ... //
 ///     %cmp = icmp ult %x, %y
 ///     %add.add5 = select i1 %cmp, i32 %add, %add5
-///     store i32 %add.add5, i32* %arrayidx2
+///     store i32 %add.add5, ptr %arrayidx2
 ///     ...
 ///
 /// \return The value from the previous access if the store can be hoisted into
@@ -3159,7 +3159,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
-          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
+          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign() &&
+          !LI->hasPoisonGeneratingMetadata()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         // The dereferenceability query here is only required to satisfy the
