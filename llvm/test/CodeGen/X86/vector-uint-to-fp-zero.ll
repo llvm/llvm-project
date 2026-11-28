@@ -40,58 +40,52 @@ define <4 x float> @test_v4f32_u64(i64 %x) {
 ; AVX-LABEL: test_v4f32_u64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    testq %rdi, %rdi
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    js .LBB1_1
 ; AVX-NEXT:  # %bb.2:
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
-; AVX-NEXT:    jmp .LBB1_3
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    retq
 ; AVX-NEXT:  .LBB1_1:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    shrq %rax
 ; AVX-NEXT:    andl $1, %edi
 ; AVX-NEXT:    orq %rax, %rdi
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
-; AVX-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:  .LBB1_3:
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE-LABEL: test_v4f32_u64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testq %rdi, %rdi
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    js .LBB1_1
 ; SSE-NEXT:  # %bb.2:
-; SSE-NEXT:    cvtsi2ss %rdi, %xmm1
-; SSE-NEXT:    jmp .LBB1_3
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    retq
 ; SSE-NEXT:  .LBB1_1:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    shrq %rax
 ; SSE-NEXT:    andl $1, %edi
 ; SSE-NEXT:    orq %rax, %rdi
-; SSE-NEXT:    cvtsi2ss %rdi, %xmm1
-; SSE-NEXT:    addss %xmm1, %xmm1
-; SSE-NEXT:  .LBB1_3:
-; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE-NEXT:    addps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v4f32_u64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    testq %rdi, %rdi
+; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    js .LBB1_1
 ; SSE41-NEXT:  # %bb.2:
-; SSE41-NEXT:    cvtsi2ss %rdi, %xmm1
-; SSE41-NEXT:    jmp .LBB1_3
+; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE41-NEXT:    retq
 ; SSE41-NEXT:  .LBB1_1:
 ; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    shrq %rax
 ; SSE41-NEXT:    andl $1, %edi
 ; SSE41-NEXT:    orq %rax, %rdi
-; SSE41-NEXT:    cvtsi2ss %rdi, %xmm1
-; SSE41-NEXT:    addss %xmm1, %xmm1
-; SSE41-NEXT:  .LBB1_3:
-; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE41-NEXT:    addps %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v4f32_u64:
