@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s %}
 
 extern "C" {
   struct statvfs64 {
@@ -13,7 +14,8 @@ void some_func() {
   statvfs64(&st);
 // Check that even if there is a structure with redefined name before the
 // pragma, subsequent function name redefined properly. PR5172, Comment 11.
-// CHECK:  call i32 @statvfs(ptr noundef %st)
+// CHECK:  [[ST:%.*]] = alloca %struct.statvfs64
+// CHECK:  call i32 @statvfs(ptr noundef [[ST]])
 }
 
 // This is a case when redefenition is deferred *and* we have a local of the
