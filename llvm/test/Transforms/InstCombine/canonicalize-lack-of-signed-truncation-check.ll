@@ -232,3 +232,41 @@ define <2 x i1> @n3_vec_nonsplat(<2 x i8> %x) {
   %tmp2 = icmp eq <2 x i8> %tmp1, %x
   ret <2 x i1> %tmp2
 }
+
+; ============================================================================ ;
+; Same pattern spelled as sext (trunc %x)
+; ============================================================================ ;
+
+declare void @use3(i3)
+
+define i1 @p_sext_trunc(i8 %x) {
+; CHECK-LABEL: @p_sext_trunc(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0) ; the trunc may have other uses
+  %tmp1 = sext i3 %tmp0 to i8
+  %tmp2 = icmp eq i8 %tmp1, %x
+  ret i1 %tmp2
+}
+
+define i1 @n_sext_trunc_oneuse(i8 %x) {
+; CHECK-LABEL: @n_sext_trunc_oneuse(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0)
+  %tmp1 = sext i3 %tmp0 to i8
+  call void @use8(i8 %tmp1) ; the sext must be one-use
+  %tmp2 = icmp eq i8 %tmp1, %x
+  ret i1 %tmp2
+}
