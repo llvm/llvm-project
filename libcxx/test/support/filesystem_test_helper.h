@@ -30,9 +30,9 @@
 #include "format_string.h"
 
 // For creating socket files
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
-# include <sys/socket.h>
-# include <sys/un.h>
+#ifndef TEST_HAS_NO_SOCKETS
+#  include <sys/socket.h>
+#  include <sys/un.h>
 #endif
 namespace fs = std::filesystem;
 
@@ -296,6 +296,7 @@ struct scoped_test_env
                                        true);
     }
 
+#ifndef TEST_HAS_NO_HARDLINKS
     std::string create_hardlink(fs::path source_path, fs::path to_path) {
         std::string source = source_path.string();
         std::string to = to_path.string();
@@ -305,8 +306,9 @@ struct scoped_test_env
         assert(ret == 0);
         return to;
     }
+#endif
 
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
         int ret = ::mkfifo(file.c_str(), 0666); // rw-rw-rw- mode
@@ -315,9 +317,9 @@ struct scoped_test_env
     }
 #endif
 
-  // Some platforms doesn't support socket files so we shouldn't even
-  // allow tests to call this unguarded.
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
+    // Some platforms doesn't support socket files so we shouldn't even
+    // allow tests to call this unguarded.
+#ifndef TEST_HAS_NO_SOCKETS
     std::string create_socket(std::string file) {
       file = sanitize_path(std::move(file));
 

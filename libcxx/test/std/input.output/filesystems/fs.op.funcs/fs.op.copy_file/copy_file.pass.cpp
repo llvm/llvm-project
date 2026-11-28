@@ -13,10 +13,6 @@
 // against a built library that doesn't contain 0aa637b2037d.
 // XFAIL: using-built-library-before-llvm-13
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a FIFO file.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // bool copy_file(const path& from, const path& to);
@@ -79,7 +75,7 @@ static void test_error_reporting() {
   }
 }
 
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
 static void non_regular_file_test() {
   scoped_test_env env;
   const path fifo = env.create_fifo("fifo");
@@ -101,7 +97,7 @@ static void non_regular_file_test() {
   }
 
 }
-#endif // _WIN32
+#endif // TEST_HAS_NO_FIFOS
 
 static void test_attributes_get_copied() {
   scoped_test_env env;
@@ -191,7 +187,7 @@ static void copy_file() {
 int main(int, char**) {
   test_signatures();
   test_error_reporting();
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
   non_regular_file_test();
 #endif
   test_attributes_get_copied();

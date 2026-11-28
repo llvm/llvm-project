@@ -10,10 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // uintmax_t hard_link_count(const path& p);
@@ -76,6 +72,7 @@ static void hard_link_count_for_directory()
                hard_link_count(static_env.Dir3) == 1);
 }
 
+#ifndef TEST_HAS_NO_HARDLINKS
 static void hard_link_count_increments_test()
 {
     scoped_test_env env;
@@ -85,7 +82,7 @@ static void hard_link_count_increments_test()
     env.create_hardlink(file, "file_hl");
     assert(hard_link_count(file) == 2);
 }
-
+#endif
 
 static void hard_link_count_error_cases()
 {
@@ -106,7 +103,9 @@ int main(int, char**) {
     signature_test();
     hard_link_count_for_file();
     hard_link_count_for_directory();
+#ifndef TEST_HAS_NO_HARDLINKS
     hard_link_count_increments_test();
+#endif
     hard_link_count_error_cases();
 
     return 0;
