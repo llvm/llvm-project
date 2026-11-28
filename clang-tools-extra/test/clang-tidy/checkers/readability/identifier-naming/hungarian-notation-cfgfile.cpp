@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   --config-file=%S/Inputs/identifier-naming/hungarian-notation2/.clang-tidy -- -I %S
+// RUN:   --config-file=%S/Inputs/styles/hungarian-notation2/.clang-tidy -- -I %S/Inputs
 
 #include "identifier-naming-standard-types.h"
 
