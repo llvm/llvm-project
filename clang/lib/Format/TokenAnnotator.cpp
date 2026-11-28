@@ -6551,8 +6551,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
-  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+  if (Left.is(tok::hashhash))
     return false;
+  if (Right.is(tok::hashhash)) {
+    // GNU variadic macros can use `, ##__VA_ARGS__` to elide the comma.
+    return Line.InPPDirective && Left.is(tok::comma);
+  }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
