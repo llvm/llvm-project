@@ -21,6 +21,8 @@ static const u64 kMagic1 = kAsanStackAfterReturnMagic;
 static const u64 kMagic2 = (kMagic1 << 8) | kMagic1;
 static const u64 kMagic4 = (kMagic2 << 16) | kMagic2;
 static const u64 kMagic8 = (kMagic4 << 32) | kMagic4;
+static const u64 kRightRedzone8 =
+    0x0101010101010101ULL * kAsanStackRightRedzoneMagic;
 
 static const u64 kAllocaRedzoneSize = 32UL;
 static const u64 kAllocaRedzoneMask = 31UL;
@@ -41,10 +43,34 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
     PoisonShadow(ptr, size, static_cast<u8>(magic));
   }
 
-  if (magic == 0) {
-    uptr redzone_size = FakeStack::BytesInSizeClass(class_id) - size;
-    PoisonShadow(ptr + size, redzone_size, kAsanStackRightRedzoneMagic);
+  if (magic != 0)
+    return;
+  // On allocation, poison from ptr + size to the end of the size class as a
+  // right redzone.
+  const uptr class_size = FakeStack::BytesInSizeClass(class_id);
+  if (ASAN_SHADOW_SCALE == 3 && class_id <= 4) {
+    // The redzone is short here: a few stores of shadow words (u64, each for 64
+    // bytes) are cheaper than the call. As in PoisonShadow, write nothing if
+    // poisoning is off. The first shadow word written may also cover the end of
+    // the frame.
+    if (size == class_size || !CanPoisonMemory())
+      return;
+    CHECK_LT(size, class_size);
+    const uptr num_words = ((uptr)1) << class_id;
+    uptr i = size / 64;
+    const uptr frame_bits = (size / ASAN_SHADOW_GRANULARITY % 8) * 8;
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    shadow[i] = kRightRedzone8 >> frame_bits;
+#else
+    shadow[i] = kRightRedzone8 << frame_bits;
+#endif
+    while (++i < num_words) {
+      shadow[i] = kRightRedzone8;
+      SanitizerBreakOptimization(nullptr);
+    }
+    return;
   }
+  PoisonShadow(ptr + size, class_size - size, kAsanStackRightRedzoneMagic);
 }
 
 FakeStack* FakeStack::Create(uptr stack_size_log) {
