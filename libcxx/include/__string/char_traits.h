@@ -20,8 +20,8 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__functional/hash.h>
 #include <__functional/identity.h>
+#include <__fwd/mbstate_t.h>
 #include <__iterator/iterator_traits.h>
-#include <__std_mbstate_t.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__utility/is_pointer_in_range.h>
