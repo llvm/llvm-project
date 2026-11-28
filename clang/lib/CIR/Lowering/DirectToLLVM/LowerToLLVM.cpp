@@ -5503,8 +5503,11 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
   }
 
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  cir::CIRDataLayout cirDataLayout(op->getParentOfType<mlir::ModuleOp>());
+  auto dtorPtrTy = mlir::LLVM::LLVMPointerType::get(
+      rewriter.getContext(), cirDataLayout.getProgramAddressSpace());
   auto fnTy = mlir::LLVM::LLVMFunctionType::get(
-      voidTy, {llvmPtrTy, llvmPtrTy, llvmPtrTy});
+      voidTy, {llvmPtrTy, llvmPtrTy, dtorPtrTy});
 
   // Get or create `declare void @__cxa_throw(ptr, ptr, ptr)`
   const llvm::StringRef fnName = "__cxa_throw";
@@ -5516,10 +5519,10 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
 
   mlir::Value dtor;
   if (op.getDtor()) {
-    dtor = mlir::LLVM::AddressOfOp::create(rewriter, loc, llvmPtrTy,
+    dtor = mlir::LLVM::AddressOfOp::create(rewriter, loc, dtorPtrTy,
                                            adaptor.getDtorAttr());
   } else {
-    dtor = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
+    dtor = mlir::LLVM::ZeroOp::create(rewriter, loc, dtorPtrTy);
   }
 
   auto cxaThrowCall = mlir::LLVM::CallOp::create(

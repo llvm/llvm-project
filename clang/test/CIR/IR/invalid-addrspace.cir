@@ -70,3 +70,17 @@ cir.func @get_global_unexpected_address_space() {
   %0 = cir.get_global @global_default_as : !cir.ptr<!s32i, target_address_space(1)>
   cir.return
 }
+
+// -----
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.program_memory_space" = 4 : ui64>
+} {
+cir.func private @fn_in_program_as()
+cir.func @get_global_function_address_space() {
+  %0 = cir.get_global @fn_in_program_as : !cir.ptr<!cir.func<()>, target_address_space(4)>
+  // expected-error@+1 {{result type address space does not match the address space of the global @fn_in_program_as}}
+  %1 = cir.get_global @fn_in_program_as : !cir.ptr<!cir.func<()>, target_address_space(2)>
+  cir.return
+}
+}

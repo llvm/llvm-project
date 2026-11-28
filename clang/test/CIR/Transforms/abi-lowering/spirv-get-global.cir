@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=spirv | FileCheck %s
+
+// A function address retyped for an sret rewrite keeps the program address
+// space.
+
+!s32i = !cir.int<s, 32>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.triple = "spirv64-amd-amdhsa",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = true,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  cir.record_layouts = {NT = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.program_memory_space", 4 : ui64>>
+} {
+  cir.func private @make_nt() -> !rec_NT cc(spir_function) requires_call_conv_lowering
+
+  cir.func @addr_sret() -> !cir.ptr<!cir.func<() -> !rec_NT>, target_address_space(4)> cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.get_global @make_nt : !cir.ptr<!cir.func<() -> !rec_NT>, target_address_space(4)>
+    cir.return %0 : !cir.ptr<!cir.func<() -> !rec_NT>, target_address_space(4)>
+  }
+
+  // CHECK-LABEL: cir.func @addr_sret()
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_nt : !cir.ptr<!cir.func<(!cir.ptr<!rec_NT, target_address_space(4)>)>, target_address_space(4)>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_NT, target_address_space(4)>)>, target_address_space(4)> -> !cir.ptr<!cir.func<() -> !rec_NT>, target_address_space(4)>
+  // CHECK-NEXT:    cir.return %[[C]]
+}

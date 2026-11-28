@@ -2533,7 +2533,8 @@ void CIRABIRewriteContext::rewriteFunctionAddress(cir::GetGlobalOp addrOp,
     return;
 
   // The verifier requires the retype even when nothing reads the address.
-  addrOp.getAddr().setType(cir::PointerType::get(newFuncTy));
+  addrOp.getAddr().setType(
+      cir::PointerType::get(newFuncTy, oldPtrTy.getAddrSpace()));
   if (addrOp.getAddr().use_empty())
     return;
 
