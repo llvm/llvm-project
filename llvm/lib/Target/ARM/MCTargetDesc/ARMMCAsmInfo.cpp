@@ -102,6 +102,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
   initializeAtSpecifiers(atSpecifiers);
 
   SpecifierExprPrintFn = printSpecifierExpr;
+  SpecifierExprEvaluateFn = [](auto...) { return false; };
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -141,6 +142,7 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
   SectionDirectives.insert(".bss");
 
   SpecifierExprPrintFn = printSpecifierExpr;
+  SpecifierExprEvaluateFn = [](auto...) { return false; };
 }
 
 bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
@@ -165,6 +167,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
   initializeAtSpecifiers(atSpecifiers);
 
   SpecifierExprPrintFn = printSpecifierExpr;
+  SpecifierExprEvaluateFn = [](auto...) { return false; };
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -189,6 +192,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
   UseParensForSpecifier = true;
 
   SpecifierExprPrintFn = printSpecifierExpr;
+  SpecifierExprEvaluateFn = [](auto...) { return false; };
 }
 
 const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {
