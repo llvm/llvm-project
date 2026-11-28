@@ -293,6 +293,12 @@ ignoreUnsafeBufferInContainer(const Stmt &Node,
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
 }
 
+static bool
+ignoreUnsafeBufferInDataCall(const Stmt &Node,
+                             const UnsafeBufferUsageHandler *Handler) {
+  return Handler->ignoreUnsafeBufferInDataCall(Node.getBeginLoc());
+}
+
 static bool ignoreUnsafeLibcCall(const ASTContext &Ctx, const Stmt &Node,
                                  const UnsafeBufferUsageHandler *Handler) {
   if (Ctx.getLangOpts().CPlusPlus)
@@ -2383,7 +2389,9 @@ public:
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
-// Warning gadget for unsafe invocation of span::data method.
+// Warning gadget for unsafe invocation of container or view data() methods
+// (including methods annotated with [[clang::unsafe_buffer_usage_in_data_call]]
+// or [[clang::unsafe_buffer_usage("data")]]).
 // Triggers when the pointer returned by the invocation is immediately
 // cast to a larger type.
 
@@ -2401,13 +2409,14 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     auto *CE = dyn_cast<ExplicitCastExpr>(S);
     if (!CE)
       return false;
-    const Expr *Operand = CE->getSubExpr();
-    if (auto *Paren = dyn_cast<ParenExpr>(Operand))
-      Operand = Paren->getSubExpr();
+    if (ignoreUnsafeBufferInDataCall(*S, Handler))
+      return false;
+    const Expr *Operand = CE->getSubExpr()->IgnoreParens();
     auto *MCE = dyn_cast<CXXMemberCallExpr>(Operand);
     if (!MCE || !isDataFunction(MCE))
       return false;
@@ -2420,7 +2429,7 @@ public:
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeOperation(Op, IsRelatedToDecl, Ctx);
+    Handler.handleUnsafeDataCall(Op, Ctx);
   }
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
@@ -2434,6 +2443,9 @@ private:
     if (!callee || !isa<CXXMethodDecl>(callee))
       return false;
     auto *method = cast<CXXMethodDecl>(callee);
+    if (const auto *Attr = method->getAttr<UnsafeBufferUsageAttr>();
+        Attr && Attr->getCategory() == "data")
+      return true;
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
         llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
@@ -5047,6 +5059,8 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
     void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
                                           bool IsRelatedToDecl,
                                           ASTContext &Ctx) override {}
+    void handleUnsafeDataCall(const ExplicitCastExpr *Cast,
+                              ASTContext &Ctx) override {}
     bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
@@ -5062,6 +5076,10 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
     }
     bool ignoreUnsafeBufferInStaticSizedArray(
         const SourceLocation &Loc) const override {
+      return false;
+    }
+    bool
+    ignoreUnsafeBufferInDataCall(const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
