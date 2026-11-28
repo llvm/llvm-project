@@ -74,6 +74,24 @@ private:
 
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
   QualType resolveTypeOfCallExpr(const CallExpr *CE);
+  QualType resolveMemberExprBaseType(const CXXDependentScopeMemberExpr *ME);
+  std::vector<const NamedDecl *>
+  resolveDependentNameType(const DependentNameType *DNT, QualType &LookupType);
+  QualType resolveDeclToType(const NamedDecl *D, QualType LookupType);
+  QualType resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
+                              QualType LookupType = QualType());
+
+  // A class in which name lookup was performed, together with the type through
+  // which that class was named.
+  struct LookupStep {
+    QualType Type;
+    const CXXRecordDecl *RD;
+  };
+  bool findPathToClass(QualType From, const CXXRecordDecl *To,
+                       SmallVectorImpl<LookupStep> &Path,
+                       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Seen);
+  QualType substituteTemplateArguments(QualType T, const NamedDecl *Member,
+                                       QualType LookupType);
 
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
@@ -119,33 +137,6 @@ QualType getDefaultTemplateArgument(QualType T) {
   return DefaultArg.getAsType();
 }
 
-QualType resolveDeclToType(const NamedDecl *D, ASTContext &Ctx) {
-  if (const auto *TempD = dyn_cast<TemplateDecl>(D)) {
-    D = TempD->getTemplatedDecl();
-  }
-  // Check this before the TypeDecl case below, which a TypedefNameDecl also
-  // satisfies: canonicalizing it would discard the TemplateTypeParmDecl that
-  // the default argument hangs off.
-  if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
-    if (QualType Default = getDefaultTemplateArgument(TND->getUnderlyingType());
-        !Default.isNull())
-      return Default;
-  }
-  if (const auto *TD = dyn_cast<TypeDecl>(D))
-    return Ctx.getCanonicalTypeDeclType(TD);
-  if (const auto *VD = dyn_cast<ValueDecl>(D)) {
-    return VD->getType();
-  }
-  return QualType();
-}
-
-QualType resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
-                            ASTContext &Ctx) {
-  if (Decls.size() != 1) // Names an overload set -- just bail.
-    return QualType();
-  return resolveDeclToType(Decls[0], Ctx);
-}
-
 TemplateName getReferencedTemplateName(const Type *T) {
   if (const auto *TST = T->getAs<TemplateSpecializationType>()) {
     return TST->getTemplateName();
@@ -168,8 +159,9 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
   T = T->getCanonicalTypeInternal().getTypePtr();
 
   if (const auto *DNT = T->getAs<DependentNameType>()) {
-    T = resolveDeclsToType(resolveDependentNameType(DNT), Ctx)
-            .getTypePtrOrNull();
+    QualType LookupType;
+    auto Decls = resolveDependentNameType(DNT, LookupType);
+    T = resolveDeclsToType(Decls, LookupType).getTypePtrOrNull();
     if (!T)
       return nullptr;
     T = T->getCanonicalTypeInternal().getTypePtr();
@@ -196,6 +188,132 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
     return nullptr;
 
   return TD->getTemplatedDecl();
+}
+
+// If `D` is a member found by looking a name up in `LookupType`, pass that
+// along so that template arguments can be substituted into its type; see
+// substituteTemplateArguments().
+QualType HeuristicResolverImpl::resolveDeclToType(const NamedDecl *D,
+                                                  QualType LookupType) {
+  if (const auto *TempD = dyn_cast<TemplateDecl>(D)) {
+    D = TempD->getTemplatedDecl();
+  }
+  // Check this before the TypeDecl case below, which a TypedefNameDecl also
+  // satisfies: canonicalizing it would discard the TemplateTypeParmDecl that
+  // the default argument hangs off.
+  if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+    QualType Underlying = TND->getUnderlyingType();
+    QualType Substituted =
+        substituteTemplateArguments(Underlying, TND, LookupType);
+    if (QualType Default = getDefaultTemplateArgument(Substituted);
+        !Default.isNull())
+      return Default;
+    if (Substituted != Underlying)
+      return Substituted;
+  }
+  if (const auto *TD = dyn_cast<TypeDecl>(D))
+    return Ctx.getCanonicalTypeDeclType(TD);
+  if (const auto *VD = dyn_cast<ValueDecl>(D)) {
+    return VD->getType();
+  }
+  return QualType();
+}
+
+QualType HeuristicResolverImpl::resolveDeclsToType(
+    const std::vector<const NamedDecl *> &Decls, QualType LookupType) {
+  if (Decls.size() != 1) // Names an overload set -- just bail.
+    return QualType();
+  return resolveDeclToType(Decls[0], LookupType);
+}
+
+// Find the chain of classes from the one named by `From` to `To`, which is
+// either that class itself or one of its (possibly indirect) bases. Each step
+// records the type through which the class was named: `From` for the first
+// one, and the written base-specifier for each subsequent one.
+// This repeats the walk over the base classes that lookupDependentName()
+// already did to find the member. An alternative would be to have the lookup
+// functions return, along with each declaration, the type it was looked up in
+// and the base-specifiers taken to reach it (which the CXXBasePaths filled in
+// by lookupInBases() already records). That would avoid this second walk, but
+// change the signatures of most of this file's functions. The second walk also
+// misses bases named through a DependentNameType that the first walk already
+// resolved, since SeenDependentNameTypes then makes resolveTypeToTagDecl()
+// give up on them.
+bool HeuristicResolverImpl::findPathToClass(
+    QualType From, const CXXRecordDecl *To, SmallVectorImpl<LookupStep> &Path,
+    llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Seen) {
+  const auto *RD =
+      dyn_cast_if_present<CXXRecordDecl>(resolveTypeToTagDecl(From));
+  if (!RD || !RD->hasDefinition())
+    return false;
+  RD = RD->getDefinition();
+  if (!Seen.insert(RD).second)
+    return false;
+  Path.push_back({From, RD});
+  if (RD->getCanonicalDecl() == To->getCanonicalDecl())
+    return true;
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    if (findPathToClass(Base.getType(), To, Path, Seen))
+      return true;
+  }
+  Path.pop_back();
+  return false;
+}
+
+// `T` is a type named in the declaration of `Member`, which was found by
+// looking a name up in `LookupType`. Name lookup happens in primary templates
+// (see resolveDependentMember()), which discards the template arguments that
+// `LookupType`, and every base class between it and the class declaring
+// `Member`, were written with. Where `T` is a template parameter of that
+// class, recover the argument passed for it by following the chain of classes
+// back towards `LookupType`, as long as each argument is in turn a template
+// parameter of the class one step further out.
+// Only a bare template parameter is replaced (possibly behind a typedef);
+// one that is nested inside a larger type, such as `A *`, is left alone.
+// Where an argument was not written, the parameter is returned as is, so that
+// callers can fall back to its default argument.
+QualType HeuristicResolverImpl::substituteTemplateArguments(
+    QualType T, const NamedDecl *Member, QualType LookupType) {
+  if (T.isNull() || LookupType.isNull() || !T->getAs<TemplateTypeParmType>())
+    return T;
+  const auto *Owner = dyn_cast<CXXRecordDecl>(Member->getDeclContext());
+  if (!Owner)
+    return T;
+  SmallVector<LookupStep> Path;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 4> Seen;
+  if (!findPathToClass(LookupType, Owner, Path, Seen))
+    return T;
+
+  for (const LookupStep &Step : llvm::reverse(Path)) {
+    const auto *TTPT = T->getAs<TemplateTypeParmType>();
+    const ClassTemplateDecl *CTD = Step.RD->getDescribedClassTemplate();
+    if (!TTPT || !CTD)
+      break;
+    // A parameter of an enclosing template is not among this class's
+    // arguments, and a member template's own parameters are not known here.
+    const TemplateParameterList *Params = CTD->getTemplateParameters();
+    unsigned Index = TTPT->getIndex();
+    if (TTPT->getDepth() != Params->getDepth() || Index >= Params->size())
+      break;
+    const auto *TST = Step.Type->getAsNonAliasTemplateSpecializationType();
+    if (!TST)
+      break;
+    ArrayRef<TemplateArgument> Args = TST->template_arguments();
+    if (Index >= Args.size())
+      break;
+    // Parameter packs and pack expansions make the mapping from parameters to
+    // arguments non-positional.
+    if (llvm::any_of(Params->asArray().take_front(Index + 1),
+                     [](const NamedDecl *P) { return P->isParameterPack(); }) ||
+        llvm::any_of(Args.take_front(Index + 1), [](const TemplateArgument &A) {
+          return A.isPackExpansion();
+        }))
+      break;
+    if (Args[Index].getKind() != TemplateArgument::Type)
+      break;
+    T = Args[Index].getAsType();
+  }
+  return T;
 }
 
 QualType HeuristicResolverImpl::getPointeeType(QualType T) {
@@ -335,10 +453,7 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
 
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     const CXXDependentScopeMemberExpr *ME) {
-  // If the expression has a qualifier, try resolving the member inside the
-  // qualifier's type.
-  // Note that we cannot use a NonStaticFilter in either case, for a couple
-  // of reasons:
+  // Note that we cannot use a NonStaticFilter, for a couple of reasons:
   //   1. It's valid to access a static member using instance member syntax,
   //      e.g. `instance.static_member`.
   //   2. We can sometimes get a CXXDependentScopeMemberExpr for static
@@ -346,27 +461,24 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   //      an instance method, it's represented as a CXXDependentScopeMemberExpr
   //      with `this` as the base expression as `X` as the qualifier
   //      (which could be valid if `X` names a base class after instantiation).
-  if (NestedNameSpecifier NNS = ME->getQualifier()) {
-    if (QualType QualifierType = resolveNestedNameSpecifierToType(NNS);
-        !QualifierType.isNull()) {
-      auto Decls =
-          resolveDependentMember(QualifierType, ME->getMember(), NoFilter);
-      if (!Decls.empty())
-        return Decls;
-    }
+  return resolveDependentMember(resolveMemberExprBaseType(ME), ME->getMember(),
+                                NoFilter);
+}
 
-    // Do not proceed to try resolving the member in the expression's base type
-    // without regard to the qualifier, as that could produce incorrect results.
-    // For example, `void foo() { this->Base::foo(); }` shouldn't resolve to
-    // foo() itself!
-    return {};
-  }
+// Return the type in which the member named by `ME` is to be looked up.
+QualType HeuristicResolverImpl::resolveMemberExprBaseType(
+    const CXXDependentScopeMemberExpr *ME) {
+  // If the expression has a qualifier, the member is looked up inside the
+  // qualifier's type.
+  // Do not fall back to the expression's base type if the qualifier cannot be
+  // resolved, as that could produce incorrect results. For example,
+  // `void foo() { this->Base::foo(); }` shouldn't resolve to foo() itself!
+  if (NestedNameSpecifier NNS = ME->getQualifier())
+    return resolveNestedNameSpecifierToType(NNS);
 
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
-  QualType BaseType = ME->getBaseType();
-  BaseType = simplifyType(BaseType, Base, ME->isArrow());
-  return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
+  return simplifyType(ME->getBaseType(), Base, ME->isArrow());
 }
 
 std::vector<const NamedDecl *>
@@ -380,8 +492,19 @@ QualType HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
   // resolveExprToType(CE->getCallee()) would bail in the case of multiple
   // overloads, as it can't produce a single type for them. We can be more
   // permissive here, and allow multiple overloads with a common return type.
+  // For a member call, keep the type the callee was looked up in, so that
+  // template arguments can be substituted into its return type.
+  const Expr *Callee = CE->getCallee();
+  QualType LookupType;
+  std::vector<const NamedDecl *> Found;
+  if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(Callee)) {
+    LookupType = resolveMemberExprBaseType(ME);
+    Found = resolveDependentMember(LookupType, ME->getMember(), NoFilter);
+  } else {
+    Found = resolveExprToDecls(Callee);
+  }
   std::vector<const NamedDecl *> CalleeDecls;
-  for (const NamedDecl *D : resolveExprToDecls(CE->getCallee())) {
+  for (const NamedDecl *D : Found) {
     // The callee may be re-exported from a dependent base class by a using
     // declaration, e.g. libstdc++'s `vector` has `using _Base::get_allocator;`.
     // Such a declaration has no function type of its own, so replace it with
@@ -400,14 +523,15 @@ QualType HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
 
   QualType CommonReturnType;
   for (const NamedDecl *CalleeDecl : CalleeDecls) {
-    QualType CalleeType = resolveDeclToType(CalleeDecl, Ctx);
+    QualType CalleeType = resolveDeclToType(CalleeDecl, QualType());
     if (CalleeType.isNull())
       continue;
     if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
       CalleeType = FnTypePtr->getPointeeType();
     if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
-      QualType ReturnType =
-          simplifyType(FnType->getReturnType(), nullptr, false);
+      QualType ReturnType = substituteTemplateArguments(FnType->getReturnType(),
+                                                        CalleeDecl, LookupType);
+      ReturnType = simplifyType(ReturnType, nullptr, false);
       if (!CommonReturnType.isNull() && CommonReturnType != ReturnType) {
         return {}; // conflicting return types
       }
@@ -437,11 +561,18 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveUsingValueDecl(
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
+  QualType LookupType;
+  return resolveDependentNameType(DNT, LookupType);
+}
+
+// Also return the type in which the name was looked up, in `LookupType`.
+std::vector<const NamedDecl *>
+HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT,
+                                                QualType &LookupType) {
   if (auto [_, inserted] = SeenDependentNameTypes.insert(DNT); !inserted)
     return {};
-  return resolveDependentMember(
-      resolveNestedNameSpecifierToType(DNT->getQualifier()),
-      DNT->getIdentifier(), TypeFilter);
+  LookupType = resolveNestedNameSpecifierToType(DNT->getQualifier());
+  return resolveDependentMember(LookupType, DNT->getIdentifier(), TypeFilter);
 }
 
 std::vector<const NamedDecl *>
@@ -511,7 +642,7 @@ QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
 
   std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
   if (!Decls.empty())
-    return resolveDeclsToType(Decls, Ctx);
+    return resolveDeclsToType(Decls);
 
   return E->getType();
 }
@@ -527,12 +658,13 @@ QualType HeuristicResolverImpl::resolveNestedNameSpecifierToType(
     const auto *T = NNS.getAsType();
     // FIXME: Should this handle the DependentTemplateSpecializationType as
     // well?
-    if (const auto *DTN = dyn_cast<DependentNameType>(T))
+    if (const auto *DTN = dyn_cast<DependentNameType>(T)) {
+      QualType LookupType =
+          resolveNestedNameSpecifierToType(DTN->getQualifier());
       return resolveDeclsToType(
-          resolveDependentMember(
-              resolveNestedNameSpecifierToType(DTN->getQualifier()),
-              DTN->getIdentifier(), TypeFilter),
-          Ctx);
+          resolveDependentMember(LookupType, DTN->getIdentifier(), TypeFilter),
+          LookupType);
+    }
     return QualType(T, 0);
   }
   default:
