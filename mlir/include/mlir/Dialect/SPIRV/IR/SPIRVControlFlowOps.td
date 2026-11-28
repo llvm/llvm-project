@@ -461,8 +461,7 @@ def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
 
     <!-- End of AutoGen section -->
 
-    Only zero sizes are currently supported because SPIR-V dialect pointers
-    cannot point to void.
+    The size is not checked against the pointee type.
 
     #### Example:
 
@@ -481,7 +480,7 @@ def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+    I32Attr:$size
   );
 
   let results = (outs);
@@ -505,8 +504,7 @@ def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
 
     <!-- End of AutoGen section -->
 
-    Only zero sizes are currently supported because SPIR-V dialect pointers
-    cannot point to void.
+    The size is not checked against the pointee type.
 
     #### Example:
 
@@ -525,7 +523,7 @@ def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+    I32Attr:$size
   );
 
   let results = (outs);
