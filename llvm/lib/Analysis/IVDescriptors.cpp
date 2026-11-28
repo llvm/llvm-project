@@ -1812,10 +1812,12 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   return true;
 }
 
-const SCEV *
+SCEVUse
 ConditionalInductionDescriptor::getUnconditionalAddRec(ScalarEvolution &SE,
                                                        const Loop &L) const {
   assert(L.contains(HeaderPHI) &&
          "The provided loop does not contain this conditional induction");
-  return SE.getAddRecExpr(getStartSCEV(), getStepSCEV(), &L, SCEV::FlagNone);
+  return SE.getAddRecExpr(
+      getStartSCEV(), getStepSCEV(), &L,
+      SCEVFlagsPair(SCEVFlags::FlagNone, getSCEVNoWrapFlags()));
 }

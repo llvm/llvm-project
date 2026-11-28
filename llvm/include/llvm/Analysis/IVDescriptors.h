@@ -31,6 +31,8 @@ class SCEV;
 class SCEVPredicate;
 class StoreInst;
 enum class SCEVFlags;
+template <typename SCEVPtrT> struct SCEVUseT;
+using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -533,8 +535,8 @@ public:
   /// Returns an over-approximation of the conditional induction as a SCEVAddRec
   /// assuming the condition is always true. The loop \p L must be the loop
   /// containing the conditional induction.
-  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
-                                              const Loop &L) const;
+  LLVM_ABI SCEVUse getUnconditionalAddRec(ScalarEvolution &SE,
+                                          const Loop &L) const;
 
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
