@@ -1646,6 +1646,7 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
+def err_expected_module_name : Error<"expected module name">;
 def err_unexpected_tok_after_module_name : Error<
   "unexpected '%0' after module name, only ';' and '[' (start of attribute "
   "specifier sequence) are allowed">;

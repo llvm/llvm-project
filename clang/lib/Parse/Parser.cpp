@@ -2377,23 +2377,32 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   }
 
   // Parse a private-module-fragment, if present.
-  if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon) &&
-      NextToken().is(tok::kw_private)) {
-    if (MDK == Sema::ModuleDeclKind::Interface) {
-      Diag(StartLoc, diag::err_module_fragment_exported)
-        << /*private*/1 << FixItHint::CreateRemoval(StartLoc);
+  if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon)) {
+    if (NextToken().is(tok::kw_private)) {
+      if (MDK == Sema::ModuleDeclKind::Interface) {
+        Diag(StartLoc, diag::err_module_fragment_exported)
+            << /*private*/ 1 << FixItHint::CreateRemoval(StartLoc);
+      }
+      ConsumeToken();
+      SourceLocation PrivateLoc = ConsumeToken();
+      DiagnoseAndSkipCXX11Attributes();
+      ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
+      auto Result =
+          Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+      if (Result) {
+        ImportState =
+            ImportState == Sema::ModuleImportState::ImportAllowed
+                ? Sema::ModuleImportState::PrivateFragmentImportAllowed
+                : Sema::ModuleImportState::PrivateFragmentImportFinished;
+      }
+      return nullptr;
     }
-    ConsumeToken();
-    SourceLocation PrivateLoc = ConsumeToken();
-    DiagnoseAndSkipCXX11Attributes();
-    ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    auto Result = Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
-    if (Result) {
-      ImportState =
-          ImportState == Sema::ModuleImportState::ImportAllowed
-              ? Sema::ModuleImportState::PrivateFragmentImportAllowed
-              : Sema::ModuleImportState::PrivateFragmentImportFinished;
-    }
+
+    if (MDK == Sema::ModuleDeclKind::Interface)
+      Diag(Tok, diag::err_expected_module_name);
+    else
+      Diag(NextToken(), diag::err_expected) << tok::kw_private;
+    SkipUntil(tok::semi);
     return nullptr;
   }
   SmallVector<IdentifierLoc, 2> Path;

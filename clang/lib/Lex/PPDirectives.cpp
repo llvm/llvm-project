@@ -4362,11 +4362,17 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::kw_private)) {
-      if (Tok.isNot(tok::eod))
-        CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
-                            /*EnableMacros=*/false, &DirToks);
-      EnterModuleSuffixTokenStream(DirToks);
-      return;
+      SourceLocation WrongTokLoc = Tok.getLocation();
+
+      while (Tok.isNoneOf(tok::semi, tok::eod, tok::eof))
+        LexUnexpandedNonComment(Tok);
+
+      // Add synthetic semicolon to let parser recover
+      DirToks.push_back(Token::create(tok::semi, WrongTokLoc));
+
+      if (Tok.is(tok::eod))
+        DirToks.push_back(Tok);
+      break;
     }
     DirToks.push_back(Tok);
     break;
