@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -346,10 +347,15 @@ public:
   /// The location of the module definition.
   SourceLocation DefinitionLoc;
 
+private:
+  /// The ID used when referencing this module within a VisibleModuleSet.
+  unsigned VisibilityID;
+
+public:
   // FIXME: Consider if reducing the size of this enum (having Partition and
   // Named modules only) then representing interface/implementation separately
   // is more efficient.
-  enum ModuleKind {
+  enum ModuleKind : unsigned {
     /// This is a module that was defined by a module map and built out
     /// of header files.
     ModuleMapModule,
@@ -381,9 +387,6 @@ public:
     /// named module).
     ImplicitGlobalModuleFragment,
   };
-
-  /// The kind of this module.
-  ModuleKind Kind = ModuleMapModule;
 
   /// The parent of this module. This will be NULL for the top-level
   /// module.
@@ -435,9 +438,6 @@ private:
   /// top-level header filenames that aren't resolved to FileEntries yet.
   SmallVector<std::string, 1> TopHeaderNames;
 
-  /// The ID used when referencing this module within a VisibleModuleSet.
-  unsigned VisibilityID;
-
 public:
   enum HeaderKind {
     HK_Normal,
@@ -458,7 +458,7 @@ private:
   static const int NumHeaderKinds = HK_Excluded + 1;
   // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
   // The extra element at the end acts as the end index of the last HeaderKind.
-  unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
+  uint16_t HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
   SmallVector<Header, 1> HeadersStorage;
 
 public:
@@ -471,6 +471,8 @@ public:
   }
   void addHeader(HeaderKind HK, Header H) {
     assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    assert(HeadersStorage.size() < std::numeric_limits<uint16_t>::max() &&
+           "Too many headers in a module");
     auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
     HeadersStorage.insert(EndIt, std::move(H));
     for (unsigned HKI = HK + 1; HKI != NumHeaderKinds + 1; ++HKI)
@@ -591,6 +593,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned UnresolvedWildcardExport : 1;
 
+  /// The kind of this module.
+  ModuleKind Kind : 4;
+
+  /// Autolinking uses the framework name for linking purposes
+  /// when this is false and the export_as name otherwise.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UseExportAsModuleLinkName : 1;
+
   /// Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {
@@ -647,10 +657,6 @@ public:
     /// Whether this is a framework rather than a library.
     bool IsFramework = false;
   };
-
-  /// Autolinking uses the framework name for linking purposes
-  /// when this is false and the export_as name otherwise.
-  bool UseExportAsModuleLinkName = false;
 
   /// An unresolved conflict with another module.
   struct UnresolvedConflict {
