@@ -51,22 +51,22 @@ enum SymbolKind : uint16_t {
 };
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
-  inline Class operator|(Class a, Class b) {                                   \
+  constexpr inline Class operator|(Class a, Class b) {                         \
     return static_cast<Class>(llvm::to_underlying(a) |                         \
                               llvm::to_underlying(b));                         \
   }                                                                            \
-  inline Class operator&(Class a, Class b) {                                   \
+  constexpr inline Class operator&(Class a, Class b) {                         \
     return static_cast<Class>(llvm::to_underlying(a) &                         \
                               llvm::to_underlying(b));                         \
   }                                                                            \
-  inline Class operator~(Class a) {                                            \
+  constexpr inline Class operator~(Class a) {                                  \
     return static_cast<Class>(~llvm::to_underlying(a));                        \
   }                                                                            \
-  inline Class &operator|=(Class &a, Class b) {                                \
+  constexpr inline Class &operator|=(Class &a, Class b) {                      \
     a = a | b;                                                                 \
     return a;                                                                  \
   }                                                                            \
-  inline Class &operator&=(Class &a, Class b) {                                \
+  constexpr inline Class &operator&=(Class &a, Class b) {                      \
     a = a & b;                                                                 \
     return a;                                                                  \
   }
@@ -217,13 +217,14 @@ enum class FrameProcedureOptions : uint32_t {
   SafeBuffers = 0x00002000,
   EncodedLocalBasePointerMask = 0x0000C000,
   EncodedParamBasePointerMask = 0x00030000,
-  EncodedPointersMask =
-      EncodedLocalBasePointerMask | EncodedParamBasePointerMask,
+  EncodedPointersMask = EncodedLocalBasePointerMask |
+      EncodedParamBasePointerMask,
   ProfileGuidedOptimization = 0x00040000,
   ValidProfileCounts = 0x00080000,
   OptimizedForSpeed = 0x00100000,
   GuardCfg = 0x00200000,
-  GuardCfw = 0x00400000
+  GuardCfw = 0x00400000,
+  CoroutineKindMask = 0x0E000000,
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(FrameProcedureOptions)
 
@@ -629,6 +630,22 @@ enum class AssociationKind : uint16_t {
   None,
   /// Associated symbol is the primary coroutine function.
   Coroutine,
+};
+
+/// Three bit value indicating the coroutine kind of a function.
+///
+/// From `CV_CoroutineKind_e` (cvconst.h)
+enum class CoroutineKind : uint8_t {
+  /// Not a coroutine.
+  None = 0,
+  /// The original coroutine function.
+  Primary = 1,
+  /// Initialization function, sets up the coroutine frame.
+  Init = 2,
+  /// Resume function, contains the coroutine body code.
+  Resume = 3,
+  /// Destroy function, tears down the coroutine frame.
+  Destroy = 4,
 };
 }
 }
