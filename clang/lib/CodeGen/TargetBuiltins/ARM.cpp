@@ -6894,6 +6894,30 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_st4lane, Tys),
                         Ops, "");
   }
+  case NEON::BI__builtin_neon_vstnq_x2_v: {
+    auto *VecTy = cast<llvm::FixedVectorType>(Ops[1]->getType());
+    const unsigned NumElts = VecTy->getNumElements() * 2;
+    SmallVector<int, 32> ConcatMask(NumElts);
+    std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+    Value *WideValue = Builder.CreateShuffleVector(Ops[1], Ops[2], ConcatMask);
+    StoreInst *Store = Builder.CreateAlignedStore(WideValue, Ops[0], Align(16));
+    Store->setMetadata(
+        LLVMContext::MD_nontemporal,
+        MDNode::get(CGM.getLLVMContext(),
+                    ConstantAsMetadata::get(Builder.getInt32(1))));
+    return Store;
+  }
+  case NEON::BI__builtin_neon_vldnq_x2_v: {
+    auto *VecTy = cast<llvm::FixedVectorType>(VTy);
+    llvm::Type *WideTy = llvm::FixedVectorType::get(
+        VecTy->getElementType(), VecTy->getNumElements() * 2);
+    LoadInst *Load = Builder.CreateAlignedLoad(WideTy, Ops[1], Align(16));
+    Load->setMetadata(
+        LLVMContext::MD_nontemporal,
+        MDNode::get(CGM.getLLVMContext(),
+                    ConstantAsMetadata::get(Builder.getInt32(1))));
+    return Builder.CreateAlignedStore(Load, Ops[0], Align(16));
+  }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
     Ops[1] = Builder.CreateBitCast(Ops[1], Ty);

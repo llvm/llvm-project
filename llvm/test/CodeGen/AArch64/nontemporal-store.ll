@@ -12,7 +12,21 @@ define void @test_stnp_v4i64(ptr %p, <4 x i64> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <4 x i64> %v, ptr %p, align 1, !nontemporal !0
+  store <4 x i64> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v4f64(ptr %p, <4 x double> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v4f64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v4f64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <4 x double> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -27,7 +41,35 @@ define void @test_stnp_v4i32(ptr %p, <4 x i32> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <4 x i32> %v, ptr %p, align 1, !nontemporal !0
+  store <4 x i32> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v8f32(ptr %p, <8 x float> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v8f32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v8f32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <8 x float> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v8i32(ptr %p, <8 x i32> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v8i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v8i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <8 x i32> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -42,7 +84,49 @@ define void @test_stnp_v8i16(ptr %p, <8 x i16> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <8 x i16> %v, ptr %p, align 1, !nontemporal !0
+  store <8 x i16> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16i16(ptr %p, <16 x i16> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x i16> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16f16(ptr %p, <16 x half> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16f16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16f16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x half> %v, ptr %p, align 16, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16bf16(ptr %p, <16 x bfloat> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16bf16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16bf16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x bfloat> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -57,7 +141,7 @@ define void @test_stnp_v16i8(ptr %p, <16 x i8> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <16 x i8> %v, ptr %p, align 1, !nontemporal !0
+  store <16 x i8> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -73,7 +157,7 @@ define void @test_stnp_v2i32(ptr %p, <2 x i32> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <2 x i32> %v, ptr %p, align 1, !nontemporal !0
+  store <2 x i32> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -89,7 +173,7 @@ define void @test_stnp_v4i16(ptr %p, <4 x i16> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <4 x i16> %v, ptr %p, align 1, !nontemporal !0
+  store <4 x i16> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -105,7 +189,7 @@ define void @test_stnp_v8i8(ptr %p, <8 x i8> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <8 x i8> %v, ptr %p, align 1, !nontemporal !0
+  store <8 x i8> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -120,7 +204,7 @@ define void @test_stnp_v2f64(ptr %p, <2 x double> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <2 x double> %v, ptr %p, align 1, !nontemporal !0
+  store <2 x double> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -135,7 +219,7 @@ define void @test_stnp_v4f32(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <4 x float> %v, ptr %p, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -151,7 +235,7 @@ define void @test_stnp_v2f32(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <2 x float> %v, ptr %p, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -165,7 +249,7 @@ define void @test_stnp_v1f64(ptr %p, <1 x double> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <1 x double> %v, ptr %p, align 1, !nontemporal !0
+  store <1 x double> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -181,7 +265,7 @@ define void @test_stnp_v1i64(ptr %p, <1 x i64> %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  store <1 x i64> %v, ptr %p, align 1, !nontemporal !0
+  store <1 x i64> %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -196,7 +280,7 @@ define void @test_stnp_i64(ptr %p, i64 %v) #0 {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    str x1, [x0]
 ; CHECK-BE-NEXT:    ret
-  store i64 %v, ptr %p, align 1, !nontemporal !0
+  store i64 %v, ptr %p, align 16, !nontemporal !0
   ret void
 }
 
@@ -213,7 +297,7 @@ define void @test_stnp_v2f64_offset(ptr %p, <2 x double> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x0, #16]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr <2 x double>, ptr %p, i32 1
-  store <2 x double> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x double> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -229,7 +313,7 @@ define void @test_stnp_v2f64_offset_neg(ptr %p, <2 x double> %v) #0 {
 ; CHECK-BE-NEXT:    stur q0, [x0, #-16]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr <2 x double>, ptr %p, i32 -1
-  store <2 x double> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x double> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -246,7 +330,7 @@ define void @test_stnp_v2f32_offset(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str d0, [x0, #8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr <2 x float>, ptr %p, i32 1
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -263,7 +347,7 @@ define void @test_stnp_v2f32_offset_neg(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    stur d0, [x0, #-8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr <2 x float>, ptr %p, i32 -1
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -279,7 +363,7 @@ define void @test_stnp_i64_offset(ptr %p, i64 %v) #0 {
 ; CHECK-BE-NEXT:    str x1, [x0, #8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i64, ptr %p, i32 1
-  store i64 %v, ptr %tmp0, align 1, !nontemporal !0
+  store i64 %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -295,7 +379,7 @@ define void @test_stnp_i64_offset_neg(ptr %p, i64 %v) #0 {
 ; CHECK-BE-NEXT:    stur x1, [x0, #-8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i64, ptr %p, i32 -1
-  store i64 %v, ptr %tmp0, align 1, !nontemporal !0
+  store i64 %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -312,7 +396,7 @@ define void @test_stnp_v4f32_invalid_offset_4(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    stur q0, [x0, #4]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 4
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -329,7 +413,7 @@ define void @test_stnp_v4f32_invalid_offset_neg_4(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    stur q0, [x0, #-4]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 -4
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -346,7 +430,7 @@ define void @test_stnp_v4f32_invalid_offset_512(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x0, #512]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 512
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -363,7 +447,7 @@ define void @test_stnp_v4f32_offset_504(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 504
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -381,7 +465,7 @@ define void @test_stnp_v4f32_invalid_offset_508(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 508
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -399,7 +483,7 @@ define void @test_stnp_v4f32_invalid_offset_neg_520(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 -520
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -416,7 +500,7 @@ define void @test_stnp_v4f32_offset_neg_512(ptr %p, <4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 -512
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -435,7 +519,7 @@ define void @test_stnp_v2f32_invalid_offset_256(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str d0, [x0, #256]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 256
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -452,7 +536,7 @@ define void @test_stnp_v2f32_offset_252(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    stur d0, [x0, #252]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 252
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -471,7 +555,7 @@ define void @test_stnp_v2f32_invalid_offset_neg_260(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    str d0, [x8]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 -260
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -488,7 +572,7 @@ define void @test_stnp_v2f32_offset_neg_256(ptr %p, <2 x float> %v) #0 {
 ; CHECK-BE-NEXT:    stur d0, [x0, #-256]
 ; CHECK-BE-NEXT:    ret
   %tmp0 = getelementptr i8, ptr %p, i32 -256
-  store <2 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <2 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   ret void
 }
 
@@ -518,7 +602,7 @@ define void @test_stnp_v4f32_offset_alloca(<4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    add sp, sp, #32
 ; CHECK-BE-NEXT:    ret
   %tmp0 = alloca <4 x float>
-  store <4 x float> %v, ptr %tmp0, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp0, align 16, !nontemporal !0
   call void @dummy(ptr %tmp0)
   ret void
 }
@@ -548,7 +632,7 @@ define void @test_stnp_v4f32_offset_alloca_2(<4 x float> %v) #0 {
 ; CHECK-BE-NEXT:    ret
   %tmp0 = alloca <4 x float>, i32 2
   %tmp1 = getelementptr <4 x float>, ptr %tmp0, i32 1
-  store <4 x float> %v, ptr %tmp1, align 1, !nontemporal !0
+  store <4 x float> %v, ptr %tmp1, align 16, !nontemporal !0
   call void @dummy(ptr %tmp0)
   ret void
 }
@@ -564,7 +648,7 @@ define void @test_stnp_v32i8(<32 x i8> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <32 x i8> %v, ptr %ptr, align 4, !nontemporal !0
+  store <32 x i8> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -581,7 +665,7 @@ define void @test_stnp_v32i16(<32 x i16> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <32 x i16> %v, ptr %ptr, align 4, !nontemporal !0
+  store <32 x i16> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -598,7 +682,7 @@ define void @test_stnp_v32f16(<32 x half> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <32 x half> %v, ptr %ptr, align 4, !nontemporal !0
+  store <32 x half> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -615,7 +699,7 @@ define void @test_stnp_v16i32(<16 x i32> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <16 x i32> %v, ptr %ptr, align 4, !nontemporal !0
+  store <16 x i32> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -632,7 +716,7 @@ define void @test_stnp_v16f32(<16 x float> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <16 x float> %v, ptr %ptr, align 4, !nontemporal !0
+  store <16 x float> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -722,7 +806,7 @@ define void @test_stnp_v17f32(<17 x float> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    st1 { v0.4s }, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <17 x float> %v, ptr %ptr, align 4, !nontemporal !0
+  store <17 x float> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 define void @test_stnp_v16i32_invalid_offset(<16 x i32> %v, ptr %ptr) {
@@ -745,7 +829,7 @@ define void @test_stnp_v16i32_invalid_offset(<16 x i32> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    ret
 entry:
   %gep = getelementptr <16 x i32>, ptr %ptr, i32 500
-  store <16 x i32> %v, ptr %gep, align 4, !nontemporal !0
+  store <16 x i32> %v, ptr %gep, align 16, !nontemporal !0
   ret void
 }
 
@@ -766,7 +850,7 @@ define void @test_stnp_v16f64(<16 x double> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <16 x double> %v, ptr %ptr, align 4, !nontemporal !0
+  store <16 x double> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
@@ -787,7 +871,7 @@ define void @test_stnp_v16i64(<16 x i64> %v, ptr %ptr) {
 ; CHECK-BE-NEXT:    stp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
 entry:
-  store <16 x i64> %v, ptr %ptr, align 4, !nontemporal !0
+  store <16 x i64> %v, ptr %ptr, align 16, !nontemporal !0
   ret void
 }
 
