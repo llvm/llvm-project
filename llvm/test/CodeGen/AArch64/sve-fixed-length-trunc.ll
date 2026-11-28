@@ -2,6 +2,9 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
 ; RUN: llc -aarch64-sve-vector-bits-min=2048 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llvm-extract -S --func=trunc_v8i64_v8i8 %s -o - | \
+; RUN:   llc -mtriple=aarch64_be-linux-gnu -aarch64-sve-vector-bits-min=512 -verify-machineinstrs | \
+; RUN:   FileCheck %s --check-prefix=BE
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -305,6 +308,16 @@ define <8 x i8> @trunc_v8i64_v8i8(ptr %in) #0 {
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
+;
+; BE-LABEL: trunc_v8i64_v8i8:
+; BE:       // %bb.0:
+; BE-NEXT:    ptrue p0.d, vl8
+; BE-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; BE-NEXT:    uzp1 z0.b, z0.b, z0.b
+; BE-NEXT:    rev64 v0.8b, v0.8b
+; BE-NEXT:    ret
   %a = load <8 x i64>, ptr %in
   %b = trunc <8 x i64> %a to <8 x i8>
   ret <8 x i8> %b

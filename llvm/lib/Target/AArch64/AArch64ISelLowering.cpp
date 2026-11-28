@@ -35165,19 +35165,19 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorTruncateToSVE(
   default:
     llvm_unreachable("unimplemented container type");
   case MVT::nxv2i64:
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::nxv4i32, Val);
+    Val = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Val);
     Val = DAG.getNode(AArch64ISD::UZP1, DL, MVT::nxv4i32, Val, Val);
     if (VT.getVectorElementType() == MVT::i32)
       break;
     [[fallthrough]];
   case MVT::nxv4i32:
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::nxv8i16, Val);
+    Val = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv8i16, Val);
     Val = DAG.getNode(AArch64ISD::UZP1, DL, MVT::nxv8i16, Val, Val);
     if (VT.getVectorElementType() == MVT::i16)
       break;
     [[fallthrough]];
   case MVT::nxv8i16:
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i8, Val);
+    Val = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Val);
     Val = DAG.getNode(AArch64ISD::UZP1, DL, MVT::nxv16i8, Val, Val);
     assert(VT.getVectorElementType() == MVT::i8 && "Unexpected element type!");
     break;
