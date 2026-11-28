@@ -7,6 +7,7 @@
 declare i16 @llvm.bswap.i16(i16) nounwind readnone
 declare i32 @llvm.bswap.i32(i32) nounwind readnone
 declare i64 @llvm.bswap.i64(i64) nounwind readnone
+declare {i128, i1} @llvm.uadd.with.overflow.i128(i128, i128)
 
 define void @test1(ptr nocapture %x, i16 %y) nounwind {
 ; CHECK-LABEL: test1:
@@ -228,4 +229,167 @@ define i64 @test7(i64 %x) nounwind {
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
   %bswap = call i64 @llvm.bswap.i64(i64 %x)
   ret i64 %bswap
+}
+
+define i32 @test8(ptr %x) nounwind {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movbew (%rdi), %ax
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    retq
+;
+; SLM-LABEL: test8:
+; SLM:       # %bb.0:
+; SLM-NEXT:    xorl %eax, %eax
+; SLM-NEXT:    movbew (%rdi), %ax
+; SLM-NEXT:    retq
+;
+; EGPR-LABEL: test8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    xorl %eax, %eax
+; EGPR-NEXT:    movbew (%rdi), %ax
+; EGPR-NEXT:    retq
+;
+; NOMOVBE-LABEL: test8:
+; NOMOVBE:       # %bb.0:
+; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
+; NOMOVBE-NEXT:    movzwl %ax, %eax # encoding: [0x0f,0xb7,0xc0]
+; NOMOVBE-NEXT:    retq # encoding: [0xc3]
+  %load = load i16, ptr %x, align 2
+  %bswap = call i16 @llvm.bswap.i16(i16 %load)
+  %zest = zext i16 %bswap to i32
+  ret i32 %zest
+}
+
+define i64 @test9(ptr %x) nounwind {
+; CHECK-LABEL: test9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movbew (%rdi), %ax
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    retq
+;
+; SLM-LABEL: test9:
+; SLM:       # %bb.0:
+; SLM-NEXT:    xorl %eax, %eax
+; SLM-NEXT:    movbew (%rdi), %ax
+; SLM-NEXT:    retq
+;
+; EGPR-LABEL: test9:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    xorl %eax, %eax
+; EGPR-NEXT:    movbew (%rdi), %ax
+; EGPR-NEXT:    retq
+;
+; NOMOVBE-LABEL: test9:
+; NOMOVBE:       # %bb.0:
+; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
+; NOMOVBE-NEXT:    movzwl %ax, %eax # encoding: [0x0f,0xb7,0xc0]
+; NOMOVBE-NEXT:    retq # encoding: [0xc3]
+  %load = load i16, ptr %x, align 2
+  %bswap = call i16 @llvm.bswap.i16(i16 %load)
+  %zest = zext i16 %bswap to i64
+  ret i64 %zest
+}
+
+; EFLAGS is live at the load: the xor must go before the cmp.
+define i32 @test10(ptr %x, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl $7, %eax
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    movbew (%rdi), %cx
+; CHECK-NEXT:    cmovll %ecx, %eax
+; CHECK-NEXT:    retq
+;
+; SLM-LABEL: test10:
+; SLM:       # %bb.0:
+; SLM-NEXT:    xorl %ecx, %ecx
+; SLM-NEXT:    movbew (%rdi), %cx
+; SLM-NEXT:    cmpl %edx, %esi
+; SLM-NEXT:    movl $7, %eax
+; SLM-NEXT:    cmovll %ecx, %eax
+; SLM-NEXT:    retq
+;
+; EGPR-LABEL: test10:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    xorl %eax, %eax
+; EGPR-NEXT:    cmpl %edx, %esi
+; EGPR-NEXT:    movbew (%rdi), %ax
+; EGPR-NEXT:    movl $7, %ecx
+; EGPR-NEXT:    cmovgel %ecx, %eax
+; EGPR-NEXT:    retq
+;
+; NOMOVBE-LABEL: test10:
+; NOMOVBE:       # %bb.0:
+; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
+; NOMOVBE-NEXT:    cmpl %edx, %esi # encoding: [0x39,0xd6]
+; NOMOVBE-NEXT:    movzwl %ax, %eax # encoding: [0x0f,0xb7,0xc0]
+; NOMOVBE-NEXT:    movl $7, %ecx # encoding: [0xb9,0x07,0x00,0x00,0x00]
+; NOMOVBE-NEXT:    cmovgel %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x4d,0xc1]
+; NOMOVBE-NEXT:    retq # encoding: [0xc3]
+  %c = icmp slt i32 %a, %b
+  %load = load i16, ptr %x, align 2
+  %bswap = call i16 @llvm.bswap.i16(i16 %load)
+  %zest = zext i16 %bswap to i32
+  %r = select i1 %c, i32 %zest, i32 7
+  ret i32 %r
+}
+
+; EFLAGS is live at the load and defined by an ADC, which also reads it: no xor.
+define i32 @test11(ptr %x, i128 %a, i128 %b) nounwind {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    movbew (%rdi), %ax
+; CHECK-NEXT:    movzwl %ax, %ecx
+; CHECK-NEXT:    adcq %r8, %rdx
+; CHECK-NEXT:    movl $7, %eax
+; CHECK-NEXT:    cmovbl %ecx, %eax
+; CHECK-NEXT:    retq
+;
+; SLM-LABEL: test11:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movbew (%rdi), %ax
+; SLM-NEXT:    addq %rcx, %rsi
+; SLM-NEXT:    adcq %r8, %rdx
+; SLM-NEXT:    movzwl %ax, %ecx
+; SLM-NEXT:    movl $7, %eax
+; SLM-NEXT:    cmovbl %ecx, %eax
+; SLM-NEXT:    retq
+;
+; EGPR-LABEL: test11:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    addq %rsi, %rcx
+; EGPR-NEXT:    adcq %r8, %rdx
+; EGPR-NEXT:    movbew (%rdi), %ax
+; EGPR-NEXT:    movzwl %ax, %eax
+; EGPR-NEXT:    movl $7, %ecx
+; EGPR-NEXT:    cmovael %ecx, %eax
+; EGPR-NEXT:    retq
+;
+; NOMOVBE-LABEL: test11:
+; NOMOVBE:       # %bb.0:
+; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
+; NOMOVBE-NEXT:    addq %rsi, %rcx # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf1]
+; NOMOVBE-NEXT:    adcq %r8, %rdx # EVEX TO LEGACY Compression encoding: [0x4c,0x11,0xc2]
+; NOMOVBE-NEXT:    movzwl %ax, %eax # encoding: [0x0f,0xb7,0xc0]
+; NOMOVBE-NEXT:    movl $7, %ecx # encoding: [0xb9,0x07,0x00,0x00,0x00]
+; NOMOVBE-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; NOMOVBE-NEXT:    retq # encoding: [0xc3]
+  %s = call {i128, i1} @llvm.uadd.with.overflow.i128(i128 %a, i128 %b)
+  %o = extractvalue {i128, i1} %s, 1
+  %load = load i16, ptr %x, align 2
+  %bswap = call i16 @llvm.bswap.i16(i16 %load)
+  %zest = zext i16 %bswap to i32
+  %r = select i1 %o, i32 %zest, i32 7
+  ret i32 %r
 }
