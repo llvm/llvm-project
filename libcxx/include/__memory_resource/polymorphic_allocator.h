@@ -13,14 +13,12 @@
 #include <__config>
 #include <__cstddef/byte.h>
 #include <__cstddef/max_align_t.h>
-#include <__fwd/pair.h>
+#include <__memory/uses_allocator_construction.h>
 #include <__memory_resource/memory_resource.h>
 #include <__new/exceptions.h>
-#include <__new/placement_new_delete.h>
 #include <__utility/exception_guard.h>
-#include <__utility/piecewise_construct.h>
+#include <__utility/forward.h>
 #include <limits>
-#include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -119,51 +117,9 @@ public:
 
 #  endif // _LIBCPP_STD_VER >= 20
 
-  template <class _Tp, class... _Ts>
-  void construct(_Tp* __p, _Ts&&... __args) {
-    std::__user_alloc_construct_impl(
-        typename __uses_alloc_ctor<_Tp, polymorphic_allocator&, _Ts...>::type(),
-        __p,
-        *this,
-        std::forward<_Ts>(__args)...);
-  }
-
-  template <class _T1, class _T2, class... _Args1, class... _Args2>
-  void construct(pair<_T1, _T2>* __p, piecewise_construct_t, tuple<_Args1...> __x, tuple<_Args2...> __y) {
-    ::new ((void*)__p) pair<_T1, _T2>(
-        piecewise_construct,
-        __transform_tuple(typename __uses_alloc_ctor< _T1, polymorphic_allocator&, _Args1... >::type(),
-                          std::move(__x),
-                          make_index_sequence<sizeof...(_Args1)>()),
-        __transform_tuple(typename __uses_alloc_ctor< _T2, polymorphic_allocator&, _Args2... >::type(),
-                          std::move(__y),
-                          make_index_sequence<sizeof...(_Args2)>()));
-  }
-
-  template <class _T1, class _T2>
-  void construct(pair<_T1, _T2>* __p) {
-    construct(__p, piecewise_construct, tuple<>(), tuple<>());
-  }
-
-  template <class _T1, class _T2, class _Up, class _Vp>
-  void construct(pair<_T1, _T2>* __p, _Up&& __u, _Vp&& __v) {
-    construct(__p,
-              piecewise_construct,
-              std::forward_as_tuple(std::forward<_Up>(__u)),
-              std::forward_as_tuple(std::forward<_Vp>(__v)));
-  }
-
-  template <class _T1, class _T2, class _U1, class _U2>
-  void construct(pair<_T1, _T2>* __p, const pair<_U1, _U2>& __pr) {
-    construct(__p, piecewise_construct, std::forward_as_tuple(__pr.first), std::forward_as_tuple(__pr.second));
-  }
-
-  template <class _T1, class _T2, class _U1, class _U2>
-  void construct(pair<_T1, _T2>* __p, pair<_U1, _U2>&& __pr) {
-    construct(__p,
-              piecewise_construct,
-              std::forward_as_tuple(std::forward<_U1>(__pr.first)),
-              std::forward_as_tuple(std::forward<_U2>(__pr.second)));
+  template <class _Tp, class... _Args>
+  void construct(_Tp* __p, _Args&&... __args) {
+    std::__uninitialized_construct_using_allocator(__p, *this, std::forward<_Args>(__args)...);
   }
 
   template <class _Tp>
@@ -189,25 +145,6 @@ public:
 #  endif
 
 private:
-  template <class... _Args, size_t... _Is>
-  tuple<_Args&&...> __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    return std::forward_as_tuple(std::get<_Is>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Is>
-  tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    using _Tup = tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>;
-    return _Tup(allocator_arg, *this, std::get<_Is>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Is>
-  tuple<_Args&&..., polymorphic_allocator&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    using _Tup = tuple<_Args&&..., polymorphic_allocator&>;
-    return _Tup(std::get<_Is>(std::move(__t))..., *this);
-  }
-
   size_t __max_size() const noexcept { return numeric_limits<size_t>::max() / sizeof(value_type); }
 
   memory_resource* __res_;

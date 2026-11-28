@@ -114,8 +114,8 @@ int main(int, char**) {
     TestHarness<P> h;
     h.construct(std::piecewise_construct, t1, t2);
     P const& p = *h.ptr;
-    assert(p.first.count == 2);
-    assert(p.second.count == 2);
+    assert(p.first.count == 1);
+    assert(p.second.count == 1);
     assert(p.second.alloc == h.M);
   }
   {
@@ -129,9 +129,9 @@ int main(int, char**) {
     TestHarness<P> h;
     h.construct(std::piecewise_construct, std::move(t1), std::move(t2));
     P const& p = *h.ptr;
-    assert(p.first.count == 2);
+    assert(p.first.count == 1);
     assert(p.first.alloc == h.M);
-    assert(p.second.count == 2);
+    assert(p.second.count == 1);
     assert(p.second.alloc == h.M);
   }
   {
@@ -145,9 +145,9 @@ int main(int, char**) {
     TestHarness<P> h;
     h.construct(std::piecewise_construct, std::move(t1), std::move(t2));
     P const& p = *h.ptr;
-    assert(p.first.count == 2);
+    assert(p.first.count == 1);
     assert(p.first.alloc == h.M);
-    assert(p.second.count == 2);
+    assert(p.second.count == 1);
     assert(p.second.alloc == h.M);
   }
   {
@@ -161,9 +161,9 @@ int main(int, char**) {
     TestHarness<P> h;
     h.construct(std::piecewise_construct, t1, t2);
     P const& p = *h.ptr;
-    assert(p.first.count == 2);
+    assert(p.first.count == 1);
     assert(p.first.alloc == h.M);
-    assert(p.second.count == 2);
+    assert(p.second.count == 1);
   }
 
   return 0;
