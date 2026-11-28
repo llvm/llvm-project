@@ -857,6 +857,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Fixed incorrect diagnostics for nested template parameter lists containing ``>>>`` when parsing in CUDA mode.
 - Added `-Wcounter-extension` as a diagnostic group under `-Wc2y-extensions` to
   control `__COUNTER__` being diagnosed as an extension. This allows `-pedantic`
   users to disable the diagnostic with `-Wno-counter-extension` without having
