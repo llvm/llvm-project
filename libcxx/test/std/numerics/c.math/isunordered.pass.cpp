@@ -27,8 +27,9 @@ struct TestFloat {
     assert(std::isunordered(lim::quiet_NaN(), T(0)));
     assert(std::isunordered(T(0), lim::quiet_NaN()));
     assert(std::isunordered(lim::quiet_NaN(), lim::quiet_NaN()));
+    // Note: signaling NaN is intentionally not tested. Passing a signaling NaN to these macros may
+    // raise the "invalid" floating-point exception, which is not allowed during constant evaluation.
 
-    assert(std::isunordered(lim::signaling_NaN(), T(0)));
     assert(!std::isunordered(lim::infinity(), lim::infinity()));
     assert(!std::isunordered(lim::max(), lim::lowest()));
   }
