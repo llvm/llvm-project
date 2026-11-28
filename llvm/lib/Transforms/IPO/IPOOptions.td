@@ -192,7 +192,7 @@ defm : ValueField<"funcspec-max-block-predecessors", "unsigned", "2",
   "The maximum number of predecessors a basic block can have to be considered during the estimation of dead code">;
 defm : ValueField<"funcspec-max-clones", "unsigned", "3",
   "The maximum number of clones allowed for a single function specialization">;
-defm : ValueField<"funcspec-max-codesize-growth", "unsigned", "3",
+defm : ValueField<"funcspec-max-codesize-growth", "unsigned", "4",
   "Maximum codesize growth allowed per function">;
 defm : ValueField<"funcspec-max-discovery-iterations", "unsigned", "100",
   "The maximum number of iterations allowed when searching for transitive phis">;
