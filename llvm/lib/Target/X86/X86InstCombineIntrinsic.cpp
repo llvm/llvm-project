@@ -2189,6 +2189,12 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::x86_sse42_crc32_32_32:
+    if (II.getArgOperand(0) == II.getArgOperand(1)) {
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getNullValue(II.getType()));
+    }
+    break;
   case Intrinsic::x86_bmi_bextr_32:
   case Intrinsic::x86_bmi_bextr_64:
   case Intrinsic::x86_tbm_bextri_u32:
