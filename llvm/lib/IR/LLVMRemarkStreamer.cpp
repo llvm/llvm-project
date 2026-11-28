@@ -15,6 +15,8 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Remarks/RemarkParser.h"
+#include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -205,4 +207,44 @@ void llvm::finalizeLLVMOptimizationRemarks(LLVMContext &Context) {
     RS->releaseSerializer();
     Context.setMainRemarkStreamer(nullptr);
   }
+}
+
+// The buffer never reaches a file, so it always uses the bitstream format;
+// emitTo() serializes each remark again in the format of the remark file.
+Error LLVMRemarkBuffer::setup(LLVMContext &Ctx, StringRef RemarksPasses,
+                              bool RemarksWithHotness,
+                              std::optional<uint64_t> RemarksHotnessThreshold) {
+  assert(!Context && "remarks are already being collected");
+  if (Error E = setupLLVMOptimizationRemarks(Ctx, OS, RemarksPasses,
+                                             "bitstream", RemarksWithHotness,
+                                             RemarksHotnessThreshold))
+    return E;
+  Context = &Ctx;
+  return Error::success();
+}
+
+void LLVMRemarkBuffer::finalize() {
+  if (!Context)
+    return;
+  finalizeLLVMOptimizationRemarks(*Context);
+  Context = nullptr;
+}
+
+Error LLVMRemarkBuffer::emitTo(remarks::RemarkSerializer &Serializer) {
+  finalize();
+  // The bitstream serializer writes nothing until the first remark.
+  if (Buffer.empty())
+    return Error::success();
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> Parser =
+      remarks::createRemarkParser(remarks::Format::Bitstream, Buffer);
+  if (!Parser)
+    return Parser.takeError();
+
+  Expected<std::unique_ptr<remarks::Remark>> Remark = (*Parser)->next();
+  for (; Remark; Remark = (*Parser)->next())
+    Serializer.emit(**Remark);
+  // The parser reports the end of the buffer as an error.
+  return handleErrors(Remark.takeError(),
+                      [](const remarks::EndOfFileError &) {});
 }

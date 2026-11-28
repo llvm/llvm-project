@@ -14,10 +14,12 @@
 #ifndef LLVM_IR_LLVMREMARKSTREAMER_H
 #define LLVM_IR_LLVMREMARKSTREAMER_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -29,7 +31,8 @@ class LLVMContext;
 class ToolOutputFile;
 namespace remarks {
 class RemarkStreamer;
-}
+struct RemarkSerializer;
+} // namespace remarks
 
 /// Streamer for LLVM remarks which has logic for dealing with DiagnosticInfo
 /// objects.
@@ -157,6 +160,34 @@ LLVM_ABI Error setupLLVMOptimizationRemarks(
 /// Context. This must be called before closing the (file) stream that was used
 /// to set up the remarks.
 LLVM_ABI void finalizeLLVMOptimizationRemarks(LLVMContext &Context);
+
+/// Collects the optimization remarks of an LLVMContext in memory, so that they
+/// can be added to the remark file of another context later. Work that runs in
+/// several contexts, such as parallel code generation, uses one buffer per
+/// context to write all remarks to a single file in a deterministic order.
+class LLVMRemarkBuffer {
+  SmallString<0> Buffer;
+  raw_svector_ostream OS{Buffer};
+  /// The context whose remarks are being collected, if any.
+  LLVMContext *Context = nullptr;
+
+public:
+  ~LLVMRemarkBuffer() { finalize(); }
+
+  /// Start collecting the remarks of \p Ctx. The arguments have the same
+  /// meaning as for \ref setupLLVMOptimizationRemarks().
+  LLVM_ABI Error setup(LLVMContext &Ctx, StringRef RemarksPasses,
+                       bool RemarksWithHotness,
+                       std::optional<uint64_t> RemarksHotnessThreshold = 0);
+
+  /// Stop collecting remarks. This must be called before the context passed to
+  /// \ref setup() is destroyed.
+  LLVM_ABI void finalize();
+
+  /// Stop collecting remarks and emit the collected ones through
+  /// \p Serializer, in the order in which they were collected.
+  LLVM_ABI Error emitTo(remarks::RemarkSerializer &Serializer);
+};
 
 } // end namespace llvm
 

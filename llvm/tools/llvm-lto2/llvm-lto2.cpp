@@ -131,6 +131,12 @@ static cl::list<std::string> DTLTOCompilerArgs(
 // to use all hardware threads or cores in the system.
 static cl::opt<std::string> Threads("thinlto-threads");
 
+static cl::opt<unsigned> LTOPartitions(
+    "lto-partitions",
+    cl::desc("Number of partitions to split the regular LTO module into for "
+             "parallel code generation"),
+    cl::init(1));
+
 static cl::list<std::string> SymbolResolutions(
     "r",
     cl::desc("Specify a symbol resolution: filename,symbolname,resolution\n"
@@ -480,13 +486,13 @@ static int run(int argc, char **argv) {
   std::unique_ptr<LTO> Lto;
   if (!DTLTODistributor.empty()) {
     Lto = std::make_unique<DTLTO>(
-        std::move(Conf), 1, LTOMode, nullptr, ThinLTOEmitIndexes,
+        std::move(Conf), LTOPartitions, LTOMode, nullptr, ThinLTOEmitIndexes,
         ThinLTOEmitImports, OutputFilename, DTLTODistributor,
         DTLTODistributorArgsSV, DTLTOCompiler, DTLTOCompilerPrependArgsSV,
         DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
   } else {
-    Lto =
-        std::make_unique<LTO>(std::move(Conf), std::move(Backend), 1, LTOMode);
+    Lto = std::make_unique<LTO>(std::move(Conf), std::move(Backend),
+                                LTOPartitions, LTOMode);
   }
 
   for (std::string F : InputFilenames) {
