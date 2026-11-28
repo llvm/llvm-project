@@ -190,9 +190,7 @@ struct scoped_test_env
         //
         // Android's chmod was buggy in old OSs, but skipping this assert is
         // sufficient to ensure that the `rm -rf` succeeds for almost all tests:
-        //  - Android L: chmod aborts after one error
-        //  - Android L and M: chmod -R tries to set permissions of a symlink
-        //    target.
+        //  - Android M: chmod -R tries to set permissions of a symlink target.
         // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
         // onto old devices, re-enable this assert for devices running Android N
         // and up, rewrite this chmod+rm in C or C++.

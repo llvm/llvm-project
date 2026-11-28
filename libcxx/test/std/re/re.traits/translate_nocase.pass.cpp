@@ -17,7 +17,7 @@
 
 // Prior to Android O (API 26), in the "en_US.UTF-8" locale, towlower(L'\xDA')
 // returned 0xDA instead of 0xFA.
-// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{21|22|23|24|25}}
+// XFAIL: android && android-device-api={{23|24|25}}
 
 #include <regex>
 #include <cassert>

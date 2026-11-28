@@ -11,7 +11,7 @@
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
 
 // <filesystem>
 

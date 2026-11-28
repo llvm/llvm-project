@@ -8,7 +8,8 @@
 //
 // UNSUPPORTED: no-threads
 
-// This test occasionally fails on Android.
+// Flakes on Android when pthread_cond_signal() wakes both waiters (allowed by
+// POSIX), which this test does not tolerate.
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // <condition_variable>

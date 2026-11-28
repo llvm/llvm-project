@@ -17,7 +17,8 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
-// The error exception has no system error string.
+// Bionic leaves ferror() as 0 on a read-only FILE* write, and <print> passes
+// ferror() instead of errno to __throw_system_error.
 // XFAIL: LIBCXX-ANDROID-FIXME
 
 // <print>
