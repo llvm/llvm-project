@@ -94,6 +94,7 @@ private:
   void CollectSpecifics(
       DistinguishabilityHelper &, const Symbol &, const GenericDetails &);
   void CheckSpecifics(const Symbol &, const GenericDetails &);
+  void CheckSpecificsVsMergedIntrinsics(const Symbol &, const GenericDetails &);
   void CheckEquivalenceSet(const EquivalenceSet &);
   void CheckEquivalenceObject(const EquivalenceObject &);
   void CheckBlockData(const Scope &);
@@ -2227,11 +2228,76 @@ void CheckHelper::CollectSpecifics(DistinguishabilityHelper &helper,
   }
 }
 
+// A reference matching both a specific and an intrinsic module procedure
+// merged into the generic resolves to the specific; warn about clashes.
+void CheckHelper::CheckSpecificsVsMergedIntrinsics(
+    const Symbol &generic, const GenericDetails &details) {
+  if (!details.kind().IsName() ||
+      !context_.ShouldWarn(
+          common::LanguageFeature::IndistinguishableSpecifics)) {
+    return;
+  }
+  for (const Symbol &use : details.uses()) {
+    const Symbol &intrinsic{use.GetUltimate()};
+    if (!intrinsic.attrs().test(Attr::INTRINSIC) ||
+        intrinsic.has<GenericDetails>()) {
+      continue;
+    }
+    std::string name{intrinsic.name().ToString()};
+    bool isFunc{context_.intrinsics().IsIntrinsicFunction(name)};
+    bool isSubr{context_.intrinsics().IsIntrinsicSubroutine(name)};
+    if (isFunc == isSubr) {
+      continue;
+    }
+    bool niladic{false};
+    {
+      parser::Messages buffer;
+      auto restorer{foldingContext_.messages().SetMessages(buffer)};
+      evaluate::ActualArguments noActuals;
+      niladic = context_.intrinsics()
+                    .Probe(evaluate::CallCharacteristics{name, isSubr},
+                        noActuals, foldingContext_)
+                    .has_value() &&
+          !buffer.AnyFatalError();
+    }
+    for (const Symbol &specific : details.specificProcs()) {
+      if (specific.GetUltimate().attrs().test(Attr::INTRINSIC)) {
+        continue;
+      }
+      const Procedure *proc{Characterize(specific)};
+      if (!proc || !proc->HasExplicitInterface()) {
+        continue;
+      }
+      if (proc->IsSubroutine() != isSubr) {
+        if (auto *msg{Warn(common::LanguageFeature::IndistinguishableSpecifics,
+                generic.name(),
+                "Generic '%s' should not have both %s '%s' from an intrinsic module and %s '%s' as specific procedures"_port_en_US,
+                generic.name(), isSubr ? "subroutine" : "function", name,
+                isSubr ? "function" : "subroutine", specific.name())}) {
+          msg->Attach(
+              specific.name(), "Declaration of '%s'"_en_US, specific.name());
+        }
+      } else if (niladic &&
+          std::none_of(proc->dummyArguments.begin(), proc->dummyArguments.end(),
+              [](const auto &dummy) { return !dummy.IsOptional(); })) {
+        if (auto *msg{Warn(common::LanguageFeature::IndistinguishableSpecifics,
+                generic.name(),
+                "Generic '%s' should not have specific procedure '%s' whose interface is not distinguishable from intrinsic module procedure '%s' by the rules in the standard"_port_en_US,
+                generic.name(), specific.name(), name)}) {
+          msg->Attach(
+              specific.name(), "Declaration of '%s'"_en_US, specific.name());
+        }
+      }
+    }
+  }
+}
+
 void CheckHelper::CheckSpecifics(
     const Symbol &generic, const GenericDetails &details) {
   DistinguishabilityHelper helper{context_};
   CollectSpecifics(helper, generic, details);
   helper.Check(generic.owner());
+  CheckSpecificsVsMergedIntrinsics(generic, details);
 }
 
 static bool CUDAHostDeviceDiffer(
