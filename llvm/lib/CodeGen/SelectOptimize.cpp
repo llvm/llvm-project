@@ -1030,7 +1030,7 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
   }
 
   // If unpredictable, branch form is less profitable.
-  if (SI.getI()->getMetadata(LLVMContext::MD_unpredictable)) {
+  if (ASI.isUnpredictable()) {
     ++NumSelectUnPred;
     ORmiss << "Not converted to branch because of unpredictable branch. ";
     EmitAndPrintRemark(ORE, ORmiss);
