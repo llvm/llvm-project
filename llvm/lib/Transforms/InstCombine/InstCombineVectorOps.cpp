@@ -1787,6 +1787,61 @@ static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
   return new BitCastInst(NewInsert, VTy);
 }
 
+/// Reuse the original vectors when a complete insert chain reconstructs their
+/// elements through scalar PHIs. This is the vector counterpart of aggregate
+/// reconstruction through PHIs, without inserting any operations on the edges.
+static Value *foldInsEltOfExtractedPhis(InsertElementInst &IE,
+                                        InstCombiner::BuilderTy &Builder) {
+  auto *VecTy = dyn_cast<FixedVectorType>(IE.getType());
+  uint64_t Index;
+  if (!VecTy || !match(IE.getOperand(2), m_ConstantInt(Index)) ||
+      Index != VecTy->getNumElements() - 1)
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  SmallVector<PHINode *, 4> Phis;
+  Value *V = &IE;
+  for (unsigned Lane = NumElts; Lane-- > 0;) {
+    auto *Ins = dyn_cast<InsertElementInst>(V);
+    auto *Phi = Ins ? dyn_cast<PHINode>(Ins->getOperand(1)) : nullptr;
+    if (!Ins || (Ins != &IE && !Ins->hasOneUse()) || !Phi ||
+        !Phi->hasOneUse() || !match(Ins->getOperand(2), m_SpecificInt(Lane)))
+      return nullptr;
+    Phis.push_back(Phi);
+    V = Ins->getOperand(0);
+  }
+  if (!match(V, m_Undef()))
+    return nullptr;
+
+  PHINode *First = Phis.front();
+  if (any_of(Phis, [&](PHINode *Phi) {
+        return Phi->getParent() != First->getParent();
+      }))
+    return nullptr;
+
+  SmallDenseMap<BasicBlock *, Value *, 4> Incoming;
+  for (auto [Lane, Phi] : enumerate(reverse(Phis))) {
+    for (unsigned I = 0; I != Phi->getNumIncomingValues(); ++I) {
+      Value *Elt = Phi->getIncomingValue(I);
+      Value *Vec;
+      if (!match(Elt, m_ExtractElt(m_Value(Vec), m_SpecificInt(Lane))) ||
+          Vec->getType() != VecTy)
+        return nullptr;
+      auto [It, Inserted] = Incoming.try_emplace(Phi->getIncomingBlock(I), Vec);
+      if (!Inserted && It->second != Vec)
+        return nullptr;
+    }
+  }
+
+  InstCombiner::BuilderTy::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(First);
+  PHINode *Phi = Builder.CreatePHI(VecTy, First->getNumIncomingValues(),
+                                   IE.getName() + ".merged");
+  for (BasicBlock *Pred : First->blocks())
+    Phi->addIncoming(Incoming.lookup(Pred), Pred);
+  return Phi;
+}
+
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
@@ -1936,6 +1991,9 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Ext = foldTruncInsEltPair(IE, DL.isBigEndian(), Builder))
     return Ext;
+
+  if (Value *V = foldInsEltOfExtractedPhis(IE, Builder))
+    return replaceInstUsesWith(IE, V);
 
   return nullptr;
 }
