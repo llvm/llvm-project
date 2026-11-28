@@ -1633,3 +1633,240 @@ define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
     store <16 x i1> %d1, ptr %a1
     ret void
 }
+
+define void @reuse_subvector_broadcast_load(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_load:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_load:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <4 x i32>, ptr %p, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_different_ptr(ptr %p, ptr %q, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_different_ptr:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    vmovaps (%rsi), %xmm1
+; AVX512-NEXT:    vmovaps %xmm1, (%rcx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_different_ptr:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    vmovaps (%rsi), %xmm1
+; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rcx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <4 x i32>, ptr %q, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_different_chain(ptr %p, ptr %q, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_different_chain:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    movl $42, (%rsi)
+; AVX512-NEXT:    vmovaps (%rdi), %xmm1
+; AVX512-NEXT:    vmovaps %xmm1, (%rcx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_different_chain:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    movl $42, (%rsi)
+; AVX512NOTDQ-NEXT:    vmovaps (%rdi), %xmm1
+; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rcx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  store i32 42, ptr %q, align 4
+  %n = load <4 x i32>, ptr %p, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_different_width(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_different_width:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vmovaps (%rdi), %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512-NEXT:    vmovdqu64 %zmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_different_width:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512NOTDQ-NEXT:    vmovaps (%rdi), %ymm1
+; AVX512NOTDQ-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqu64 %zmm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <8 x i32>, ptr %p, align 32
+  store <8 x i32> %n, ptr %out, align 32
+  store <16 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_volatile(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_volatile:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    vmovaps (%rdi), %xmm1
+; AVX512-NEXT:    vmovaps %xmm1, (%rdx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_volatile:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    vmovaps (%rdi), %xmm1
+; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load volatile <4 x i32>, ptr %p, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_extending(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_extending:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpmovsxwd (%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512-NEXT:    vmovdqu64 %zmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_extending:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512NOTDQ-NEXT:    vpmovsxwd (%rdi), %ymm1
+; AVX512NOTDQ-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqu64 %zmm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <8 x i16>, ptr %p, align 16
+  %e = sext <8 x i16> %n to <8 x i32>
+  store <8 x i32> %e, ptr %out, align 32
+  store <16 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_multiple_loads(ptr %p, ptr %wide, ptr %out, ptr %other) {
+; AVX512-LABEL: reuse_subvector_broadcast_multiple_loads:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    vmovdqa %xmm0, (%rcx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_multiple_loads:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm0, (%rcx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <4 x float>, ptr %p, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <4 x i32>, ptr %p, align 16
+  %n2 = load <2 x double>, ptr %p, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <2 x double> %n2, ptr %other, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_loaded_pointer(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_loaded_pointer:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movq (%rdi), %rax
+; AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_loaded_pointer:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    movq (%rdi), %rax
+; AVX512NOTDQ-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %addr = load volatile ptr, ptr %p, align 8
+  %v = load <4 x float>, ptr %addr, align 16
+  %b = shufflevector <4 x float> %v, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %n = load <4 x i32>, ptr %addr, align 16
+  store <4 x i32> %n, ptr %out, align 16
+  store <8 x float> %b, ptr %wide, align 16
+  ret void
+}
+
+define void @reuse_subvector_broadcast_load256(ptr %p, ptr %wide, ptr %out) {
+; AVX512-LABEL: reuse_subvector_broadcast_load256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastf64x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: reuse_subvector_broadcast_load256:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vbroadcastf64x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3]
+; AVX512NOTDQ-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512NOTDQ-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+  %v = load <8 x float>, ptr %p, align 32
+  %b = shufflevector <8 x float> %v, <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %n = load <8 x i32>, ptr %p, align 32
+  store <8 x i32> %n, ptr %out, align 32
+  store <16 x float> %b, ptr %wide, align 64
+  ret void
+}
