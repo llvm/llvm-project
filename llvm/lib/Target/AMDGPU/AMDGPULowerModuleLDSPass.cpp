@@ -999,27 +999,17 @@ public:
 
     // Convert global-scope LDS to external declarations. Their uses remain
     // intact and ISel generates R_AMDGPU_ABS32_LO relocations for them.
-    for (GlobalVariable *V : GlobalScopeVars) {
-      V->setInitializer(nullptr);
-      V->setLinkage(GlobalValue::ExternalLinkage);
-    }
+    for (GlobalVariable *V : GlobalScopeVars)
+      externalizeLDSGlobalForObjectLinking(*V);
 
     // Emit amdgpu.lds.uses metadata for struct and global-scope LDS.
-    {
-      LLVMContext &Ctx = M.getContext();
-      NamedMDNode *LdsMD = M.getOrInsertNamedMetadata("amdgpu.lds.uses");
+    for (auto &[F, SGV] : FuncToLdsStruct)
+      recordLDSUseForObjectLinking(*F, *SGV);
 
-      for (auto &[F, SGV] : FuncToLdsStruct)
-        LdsMD->addOperand(MDNode::get(
-            Ctx, {ValueAsMetadata::get(F), ValueAsMetadata::get(SGV)}));
-
-      for (auto &[V, Funcs] : VarToFuncs) {
-        if (GlobalScopeVars.count(V) && !InternalMultiUserVars.count(V)) {
-          for (Function *F : Funcs) {
-            LdsMD->addOperand(MDNode::get(
-                Ctx, {ValueAsMetadata::get(F), ValueAsMetadata::get(V)}));
-          }
-        }
+    for (auto &[V, Funcs] : VarToFuncs) {
+      if (GlobalScopeVars.count(V) && !InternalMultiUserVars.count(V)) {
+        for (Function *F : Funcs)
+          recordLDSUseForObjectLinking(*F, *V);
       }
     }
 
