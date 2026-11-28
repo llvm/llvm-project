@@ -1812,61 +1812,64 @@ multiclass SXATMLDm<SDPatternOperator from, ValueType TY,
                     RM torri, RM torii,
                     RM tozri, RM tozii> {
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrri:$addr))), TY)),
-            (i2l (torri MEMrri:$addr))>;
+            (torri MEMrri:$addr)>;
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrii:$addr))), TY)),
-            (i2l (torii MEMrii:$addr))>;
+            (torii MEMrii:$addr)>;
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzri:$addr))), TY)),
-            (i2l (tozri MEMzri:$addr))>;
+            (tozri MEMzri:$addr)>;
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzii:$addr))), TY)),
-            (i2l (tozii MEMzii:$addr))>;
+            (tozii MEMzii:$addr)>;
 }
 multiclass SXATMLD32m<SDPatternOperator from,
                       RM torri, RM torii,
                       RM tozri, RM tozii> {
   def : Pat<(i64 (sext (from ADDRrri:$addr))),
-            (i2l (torri MEMrri:$addr))>;
+            (torri MEMrri:$addr)>;
   def : Pat<(i64 (sext (from ADDRrii:$addr))),
-            (i2l (torii MEMrii:$addr))>;
+            (torii MEMrii:$addr)>;
   def : Pat<(i64 (sext (from ADDRzri:$addr))),
-            (i2l (tozri MEMzri:$addr))>;
+            (tozri MEMzri:$addr)>;
   def : Pat<(i64 (sext (from ADDRzii:$addr))),
-            (i2l (tozii MEMzii:$addr))>;
+            (tozii MEMzii:$addr)>;
 }
-defm : SXATMLDm<atomic_load_aext_8, i8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
-defm : SXATMLDm<atomic_load_aext_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
-                LD2BSXzii>;
-defm : SXATMLD32m<atomic_load_nonext_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
+defm : SXATMLDm<atomic_load_aext_8, i8, LD1BSX64rri, LD1BSX64rii, LD1BSX64zri,
+                LD1BSX64zii>;
+defm : SXATMLDm<atomic_load_aext_16, i16, LD2BSX64rri, LD2BSX64rii, LD2BSX64zri,
+                LD2BSX64zii>;
+defm : SXATMLD32m<atomic_load_nonext_32, LDLSX64rri, LDLSX64rii, LDLSX64zri,
+                  LDLSX64zii>;
 
 // Optimized atomic loads with zext
 multiclass ZXATMLDm<SDPatternOperator from, int VAL,
                     RM torri, RM torii,
                     RM tozri, RM tozii> {
   def : Pat<(i64 (and (anyext (from ADDRrri:$addr)), VAL)),
-            (i2l (torri MEMrri:$addr))>;
+            (torri MEMrri:$addr)>;
   def : Pat<(i64 (and (anyext (from ADDRrii:$addr)), VAL)),
-            (i2l (torii MEMrii:$addr))>;
+            (torii MEMrii:$addr)>;
   def : Pat<(i64 (and (anyext (from ADDRzri:$addr)), VAL)),
-            (i2l (tozri MEMzri:$addr))>;
+            (tozri MEMzri:$addr)>;
   def : Pat<(i64 (and (anyext (from ADDRzii:$addr)), VAL)),
-            (i2l (tozii MEMzii:$addr))>;
+            (tozii MEMzii:$addr)>;
 }
 multiclass ZXATMLD32m<SDPatternOperator from,
                       RM torri, RM torii,
                       RM tozri, RM tozii> {
   def : Pat<(i64 (zext (from ADDRrri:$addr))),
-            (i2l (torri MEMrri:$addr))>;
+            (torri MEMrri:$addr)>;
   def : Pat<(i64 (zext (from ADDRrii:$addr))),
-            (i2l (torii MEMrii:$addr))>;
+            (torii MEMrii:$addr)>;
   def : Pat<(i64 (zext (from ADDRzri:$addr))),
-            (i2l (tozri MEMzri:$addr))>;
+            (tozri MEMzri:$addr)>;
   def : Pat<(i64 (zext (from ADDRzii:$addr))),
-            (i2l (tozii MEMzii:$addr))>;
+            (tozii MEMzii:$addr)>;
 }
-defm : ZXATMLDm<atomic_load_aext_8, 0xFF, LD1BZXrri, LD1BZXrii, LD1BZXzri,
-                LD1BZXzii>;
-defm : ZXATMLDm<atomic_load_aext_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
-                LD2BZXzii>;
-defm : ZXATMLD32m<atomic_load_nonext_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
+defm : ZXATMLDm<atomic_load_aext_8, 0xFF, LD1BZX64rri, LD1BZX64rii, LD1BZX64zri,
+                LD1BZX64zii>;
+defm : ZXATMLDm<atomic_load_aext_16, 0xFFFF, LD2BZX64rri, LD2BZX64rii,
+                LD2BZX64zri, LD2BZX64zii>;
+defm : ZXATMLD32m<atomic_load_nonext_32, LDLZX64rri, LDLZX64rii, LDLZX64zri,
+                  LDLZX64zii>;
 
 // Atomic stores
 multiclass ATMSTm<SDPatternOperator from, ValueType ty,
