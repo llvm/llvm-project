@@ -3,27 +3,16 @@
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=CHECK,AVX10_2
 
 define <8 x bfloat> @pr222673(i1 %0) {
-; AVX512BF16-LABEL: pr222673:
-; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    testb $1, %dil
-; AVX512BF16-NEXT:    jne .LBB0_1
-; AVX512BF16-NEXT:  # %bb.2:
-; AVX512BF16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512BF16-NEXT:    retq
-; AVX512BF16-NEXT:  .LBB0_1:
-; AVX512BF16-NEXT:    vbroadcastss {{.*#+}} xmm0 = [16256,16256,16256,16256,16256,16256,16256,16256]
-; AVX512BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: pr222673:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    testb $1, %dil
-; AVX10_2-NEXT:    jne .LBB0_1
-; AVX10_2-NEXT:  # %bb.2:
-; AVX10_2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX10_2-NEXT:    retq
-; AVX10_2-NEXT:  .LBB0_1:
-; AVX10_2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [1.875E+0,1.875E+0,1.875E+0,1.875E+0,1.875E+0,1.875E+0,1.875E+0,1.875E+0]
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: pr222673:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [?,?,?,?,?,?,?,?]
+; CHECK-NEXT:    retq
   %2 = select i1 %0, <8 x bfloat> splat (bfloat 1.000000e+00), <8 x bfloat> zeroinitializer
   ret <8 x bfloat> %2
 }

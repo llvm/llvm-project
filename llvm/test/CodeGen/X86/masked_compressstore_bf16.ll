@@ -49,37 +49,44 @@ define void @compressstore_v8bf16_v8i16(ptr %base, <8 x bfloat> %V, <8 x i16> %t
 ; AVX512F-NEXT:    testb $2, %al
 ; AVX512F-NEXT:    je .LBB0_4
 ; AVX512F-NEXT:  .LBB0_3: # %cond.store1
-; AVX512F-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    je .LBB0_6
 ; AVX512F-NEXT:  .LBB0_5: # %cond.store4
-; AVX512F-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $8, %al
 ; AVX512F-NEXT:    je .LBB0_8
 ; AVX512F-NEXT:  .LBB0_7: # %cond.store7
-; AVX512F-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    je .LBB0_10
 ; AVX512F-NEXT:  .LBB0_9: # %cond.store10
-; AVX512F-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $32, %al
 ; AVX512F-NEXT:    je .LBB0_12
 ; AVX512F-NEXT:  .LBB0_11: # %cond.store13
-; AVX512F-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    je .LBB0_14
 ; AVX512F-NEXT:  .LBB0_13: # %cond.store16
-; AVX512F-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $-128, %al
 ; AVX512F-NEXT:    je .LBB0_16
 ; AVX512F-NEXT:  .LBB0_15: # %cond.store19
-; AVX512F-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -120,37 +127,44 @@ define void @compressstore_v8bf16_v8i16(ptr %base, <8 x bfloat> %V, <8 x i16> %t
 ; AVX512BW-NEXT:    testb $2, %al
 ; AVX512BW-NEXT:    je .LBB0_4
 ; AVX512BW-NEXT:  .LBB0_3: # %cond.store1
-; AVX512BW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $4, %al
 ; AVX512BW-NEXT:    je .LBB0_6
 ; AVX512BW-NEXT:  .LBB0_5: # %cond.store4
-; AVX512BW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $8, %al
 ; AVX512BW-NEXT:    je .LBB0_8
 ; AVX512BW-NEXT:  .LBB0_7: # %cond.store7
-; AVX512BW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $16, %al
 ; AVX512BW-NEXT:    je .LBB0_10
 ; AVX512BW-NEXT:  .LBB0_9: # %cond.store10
-; AVX512BW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $32, %al
 ; AVX512BW-NEXT:    je .LBB0_12
 ; AVX512BW-NEXT:  .LBB0_11: # %cond.store13
-; AVX512BW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $64, %al
 ; AVX512BW-NEXT:    je .LBB0_14
 ; AVX512BW-NEXT:  .LBB0_13: # %cond.store16
-; AVX512BW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $-128, %al
 ; AVX512BW-NEXT:    je .LBB0_16
 ; AVX512BW-NEXT:  .LBB0_15: # %cond.store19
-; AVX512BW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -189,37 +203,44 @@ define void @compressstore_v8bf16_v8i16(ptr %base, <8 x bfloat> %V, <8 x i16> %t
 ; AVX512VLBW-NEXT:    testb $2, %al
 ; AVX512VLBW-NEXT:    je .LBB0_4
 ; AVX512VLBW-NEXT:  .LBB0_3: # %cond.store1
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $4, %al
 ; AVX512VLBW-NEXT:    je .LBB0_6
 ; AVX512VLBW-NEXT:  .LBB0_5: # %cond.store4
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $8, %al
 ; AVX512VLBW-NEXT:    je .LBB0_8
 ; AVX512VLBW-NEXT:  .LBB0_7: # %cond.store7
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $16, %al
 ; AVX512VLBW-NEXT:    je .LBB0_10
 ; AVX512VLBW-NEXT:  .LBB0_9: # %cond.store10
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $32, %al
 ; AVX512VLBW-NEXT:    je .LBB0_12
 ; AVX512VLBW-NEXT:  .LBB0_11: # %cond.store13
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $64, %al
 ; AVX512VLBW-NEXT:    je .LBB0_14
 ; AVX512VLBW-NEXT:  .LBB0_13: # %cond.store16
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $-128, %al
 ; AVX512VLBW-NEXT:    je .LBB0_16
 ; AVX512VLBW-NEXT:  .LBB0_15: # %cond.store19
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VBMI2-LABEL: compressstore_v8bf16_v8i16:
@@ -274,11 +295,12 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    jns .LBB1_16
 ; AVX512F-NEXT:  .LBB1_15: # %cond.store19
-; AVX512F-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:  .LBB1_16: # %else20
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    jne .LBB1_17
 ; AVX512F-NEXT:  # %bb.18: # %else23
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
@@ -310,32 +332,38 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512F-NEXT:    testb $2, %al
 ; AVX512F-NEXT:    je .LBB1_4
 ; AVX512F-NEXT:  .LBB1_3: # %cond.store1
-; AVX512F-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    je .LBB1_6
 ; AVX512F-NEXT:  .LBB1_5: # %cond.store4
-; AVX512F-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $8, %al
 ; AVX512F-NEXT:    je .LBB1_8
 ; AVX512F-NEXT:  .LBB1_7: # %cond.store7
-; AVX512F-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    je .LBB1_10
 ; AVX512F-NEXT:  .LBB1_9: # %cond.store10
-; AVX512F-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $32, %al
 ; AVX512F-NEXT:    je .LBB1_12
 ; AVX512F-NEXT:  .LBB1_11: # %cond.store13
-; AVX512F-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    je .LBB1_14
 ; AVX512F-NEXT:  .LBB1_13: # %cond.store16
-; AVX512F-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    js .LBB1_15
@@ -346,37 +374,44 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512F-NEXT:    je .LBB1_20
 ; AVX512F-NEXT:  .LBB1_19: # %cond.store25
-; AVX512F-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512F-NEXT:    je .LBB1_22
 ; AVX512F-NEXT:  .LBB1_21: # %cond.store28
-; AVX512F-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512F-NEXT:    je .LBB1_24
 ; AVX512F-NEXT:  .LBB1_23: # %cond.store31
-; AVX512F-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    je .LBB1_26
 ; AVX512F-NEXT:  .LBB1_25: # %cond.store34
-; AVX512F-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512F-NEXT:    je .LBB1_28
 ; AVX512F-NEXT:  .LBB1_27: # %cond.store37
-; AVX512F-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    je .LBB1_30
 ; AVX512F-NEXT:  .LBB1_29: # %cond.store40
-; AVX512F-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
 ; AVX512F-NEXT:    je .LBB1_32
 ; AVX512F-NEXT:  .LBB1_31: # %cond.store43
-; AVX512F-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -409,7 +444,8 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    jns .LBB1_16
 ; AVX512BW-NEXT:  .LBB1_15: # %cond.store19
-; AVX512BW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:  .LBB1_16: # %else20
 ; AVX512BW-NEXT:    testl $256, %eax # imm = 0x100
@@ -445,32 +481,38 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512BW-NEXT:    testb $2, %al
 ; AVX512BW-NEXT:    je .LBB1_4
 ; AVX512BW-NEXT:  .LBB1_3: # %cond.store1
-; AVX512BW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $4, %al
 ; AVX512BW-NEXT:    je .LBB1_6
 ; AVX512BW-NEXT:  .LBB1_5: # %cond.store4
-; AVX512BW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $8, %al
 ; AVX512BW-NEXT:    je .LBB1_8
 ; AVX512BW-NEXT:  .LBB1_7: # %cond.store7
-; AVX512BW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $16, %al
 ; AVX512BW-NEXT:    je .LBB1_10
 ; AVX512BW-NEXT:  .LBB1_9: # %cond.store10
-; AVX512BW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $32, %al
 ; AVX512BW-NEXT:    je .LBB1_12
 ; AVX512BW-NEXT:  .LBB1_11: # %cond.store13
-; AVX512BW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $64, %al
 ; AVX512BW-NEXT:    je .LBB1_14
 ; AVX512BW-NEXT:  .LBB1_13: # %cond.store16
-; AVX512BW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    js .LBB1_15
@@ -481,37 +523,44 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512BW-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512BW-NEXT:    je .LBB1_20
 ; AVX512BW-NEXT:  .LBB1_19: # %cond.store25
-; AVX512BW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512BW-NEXT:    je .LBB1_22
 ; AVX512BW-NEXT:  .LBB1_21: # %cond.store28
-; AVX512BW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512BW-NEXT:    je .LBB1_24
 ; AVX512BW-NEXT:  .LBB1_23: # %cond.store31
-; AVX512BW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512BW-NEXT:    je .LBB1_26
 ; AVX512BW-NEXT:  .LBB1_25: # %cond.store34
-; AVX512BW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512BW-NEXT:    je .LBB1_28
 ; AVX512BW-NEXT:  .LBB1_27: # %cond.store37
-; AVX512BW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512BW-NEXT:    je .LBB1_30
 ; AVX512BW-NEXT:  .LBB1_29: # %cond.store40
-; AVX512BW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $32768, %eax # imm = 0x8000
 ; AVX512BW-NEXT:    je .LBB1_32
 ; AVX512BW-NEXT:  .LBB1_31: # %cond.store43
-; AVX512BW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -543,7 +592,8 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512VLBW-NEXT:    testb %al, %al
 ; AVX512VLBW-NEXT:    jns .LBB1_16
 ; AVX512VLBW-NEXT:  .LBB1_15: # %cond.store19
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:  .LBB1_16: # %else20
 ; AVX512VLBW-NEXT:    testl $256, %eax # imm = 0x100
@@ -579,32 +629,38 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512VLBW-NEXT:    testb $2, %al
 ; AVX512VLBW-NEXT:    je .LBB1_4
 ; AVX512VLBW-NEXT:  .LBB1_3: # %cond.store1
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $4, %al
 ; AVX512VLBW-NEXT:    je .LBB1_6
 ; AVX512VLBW-NEXT:  .LBB1_5: # %cond.store4
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $8, %al
 ; AVX512VLBW-NEXT:    je .LBB1_8
 ; AVX512VLBW-NEXT:  .LBB1_7: # %cond.store7
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $16, %al
 ; AVX512VLBW-NEXT:    je .LBB1_10
 ; AVX512VLBW-NEXT:  .LBB1_9: # %cond.store10
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $32, %al
 ; AVX512VLBW-NEXT:    je .LBB1_12
 ; AVX512VLBW-NEXT:  .LBB1_11: # %cond.store13
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $64, %al
 ; AVX512VLBW-NEXT:    je .LBB1_14
 ; AVX512VLBW-NEXT:  .LBB1_13: # %cond.store16
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb %al, %al
 ; AVX512VLBW-NEXT:    js .LBB1_15
@@ -615,37 +671,44 @@ define void @compressstore_v16bf16_v16i16(ptr %base, <16 x bfloat> %V, <16 x i16
 ; AVX512VLBW-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512VLBW-NEXT:    je .LBB1_20
 ; AVX512VLBW-NEXT:  .LBB1_19: # %cond.store25
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512VLBW-NEXT:    je .LBB1_22
 ; AVX512VLBW-NEXT:  .LBB1_21: # %cond.store28
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512VLBW-NEXT:    je .LBB1_24
 ; AVX512VLBW-NEXT:  .LBB1_23: # %cond.store31
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512VLBW-NEXT:    je .LBB1_26
 ; AVX512VLBW-NEXT:  .LBB1_25: # %cond.store34
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512VLBW-NEXT:    je .LBB1_28
 ; AVX512VLBW-NEXT:  .LBB1_27: # %cond.store37
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512VLBW-NEXT:    je .LBB1_30
 ; AVX512VLBW-NEXT:  .LBB1_29: # %cond.store40
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $32768, %eax # imm = 0x8000
 ; AVX512VLBW-NEXT:    je .LBB1_32
 ; AVX512VLBW-NEXT:  .LBB1_31: # %cond.store43
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
 ;
@@ -709,11 +772,12 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    jns .LBB2_16
 ; AVX512F-NEXT:  .LBB2_15: # %cond.store19
-; AVX512F-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:  .LBB2_16: # %else20
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
+; AVX512F-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
 ; AVX512F-NEXT:    jne .LBB2_17
 ; AVX512F-NEXT:  # %bb.18: # %else23
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
@@ -737,11 +801,12 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testw %ax, %ax
 ; AVX512F-NEXT:    jns .LBB2_32
 ; AVX512F-NEXT:  .LBB2_31: # %cond.store43
-; AVX512F-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:  .LBB2_32: # %else44
-; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; AVX512F-NEXT:    testl $65536, %eax # imm = 0x10000
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; AVX512F-NEXT:    jne .LBB2_33
 ; AVX512F-NEXT:  # %bb.34: # %else47
 ; AVX512F-NEXT:    testl $131072, %eax # imm = 0x20000
@@ -765,11 +830,12 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512F-NEXT:    je .LBB2_48
 ; AVX512F-NEXT:  .LBB2_47: # %cond.store67
-; AVX512F-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:  .LBB2_48: # %else68
-; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; AVX512F-NEXT:    testl $16777216, %eax # imm = 0x1000000
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; AVX512F-NEXT:    jne .LBB2_49
 ; AVX512F-NEXT:  # %bb.50: # %else71
 ; AVX512F-NEXT:    testl $33554432, %eax # imm = 0x2000000
@@ -801,32 +867,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testb $2, %al
 ; AVX512F-NEXT:    je .LBB2_4
 ; AVX512F-NEXT:  .LBB2_3: # %cond.store1
-; AVX512F-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    je .LBB2_6
 ; AVX512F-NEXT:  .LBB2_5: # %cond.store4
-; AVX512F-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $8, %al
 ; AVX512F-NEXT:    je .LBB2_8
 ; AVX512F-NEXT:  .LBB2_7: # %cond.store7
-; AVX512F-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    je .LBB2_10
 ; AVX512F-NEXT:  .LBB2_9: # %cond.store10
-; AVX512F-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $32, %al
 ; AVX512F-NEXT:    je .LBB2_12
 ; AVX512F-NEXT:  .LBB2_11: # %cond.store13
-; AVX512F-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    je .LBB2_14
 ; AVX512F-NEXT:  .LBB2_13: # %cond.store16
-; AVX512F-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    js .LBB2_15
@@ -837,32 +909,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512F-NEXT:    je .LBB2_20
 ; AVX512F-NEXT:  .LBB2_19: # %cond.store25
-; AVX512F-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512F-NEXT:    je .LBB2_22
 ; AVX512F-NEXT:  .LBB2_21: # %cond.store28
-; AVX512F-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512F-NEXT:    je .LBB2_24
 ; AVX512F-NEXT:  .LBB2_23: # %cond.store31
-; AVX512F-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    je .LBB2_26
 ; AVX512F-NEXT:  .LBB2_25: # %cond.store34
-; AVX512F-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512F-NEXT:    je .LBB2_28
 ; AVX512F-NEXT:  .LBB2_27: # %cond.store37
-; AVX512F-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    je .LBB2_30
 ; AVX512F-NEXT:  .LBB2_29: # %cond.store40
-; AVX512F-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testw %ax, %ax
 ; AVX512F-NEXT:    js .LBB2_31
@@ -873,32 +951,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testl $131072, %eax # imm = 0x20000
 ; AVX512F-NEXT:    je .LBB2_36
 ; AVX512F-NEXT:  .LBB2_35: # %cond.store49
-; AVX512F-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX512F-NEXT:    je .LBB2_38
 ; AVX512F-NEXT:  .LBB2_37: # %cond.store52
-; AVX512F-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $524288, %eax # imm = 0x80000
 ; AVX512F-NEXT:    je .LBB2_40
 ; AVX512F-NEXT:  .LBB2_39: # %cond.store55
-; AVX512F-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX512F-NEXT:    je .LBB2_42
 ; AVX512F-NEXT:  .LBB2_41: # %cond.store58
-; AVX512F-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $2097152, %eax # imm = 0x200000
 ; AVX512F-NEXT:    je .LBB2_44
 ; AVX512F-NEXT:  .LBB2_43: # %cond.store61
-; AVX512F-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX512F-NEXT:    je .LBB2_46
 ; AVX512F-NEXT:  .LBB2_45: # %cond.store64
-; AVX512F-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512F-NEXT:    jne .LBB2_47
@@ -909,37 +993,44 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512F-NEXT:    testl $33554432, %eax # imm = 0x2000000
 ; AVX512F-NEXT:    je .LBB2_52
 ; AVX512F-NEXT:  .LBB2_51: # %cond.store73
-; AVX512F-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX512F-NEXT:    je .LBB2_54
 ; AVX512F-NEXT:  .LBB2_53: # %cond.store76
-; AVX512F-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $134217728, %eax # imm = 0x8000000
 ; AVX512F-NEXT:    je .LBB2_56
 ; AVX512F-NEXT:  .LBB2_55: # %cond.store79
-; AVX512F-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX512F-NEXT:    je .LBB2_58
 ; AVX512F-NEXT:  .LBB2_57: # %cond.store82
-; AVX512F-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512F-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $536870912, %eax # imm = 0x20000000
 ; AVX512F-NEXT:    je .LBB2_60
 ; AVX512F-NEXT:  .LBB2_59: # %cond.store85
-; AVX512F-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX512F-NEXT:    je .LBB2_62
 ; AVX512F-NEXT:  .LBB2_61: # %cond.store88
-; AVX512F-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:    addq $2, %rdi
 ; AVX512F-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
 ; AVX512F-NEXT:    je .LBB2_64
 ; AVX512F-NEXT:  .LBB2_63: # %cond.store91
-; AVX512F-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -971,7 +1062,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    jns .LBB2_16
 ; AVX512BW-NEXT:  .LBB2_15: # %cond.store19
-; AVX512BW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:  .LBB2_16: # %else20
 ; AVX512BW-NEXT:    testl $256, %eax # imm = 0x100
@@ -999,7 +1091,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testw %ax, %ax
 ; AVX512BW-NEXT:    jns .LBB2_32
 ; AVX512BW-NEXT:  .LBB2_31: # %cond.store43
-; AVX512BW-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:  .LBB2_32: # %else44
 ; AVX512BW-NEXT:    testl $65536, %eax # imm = 0x10000
@@ -1027,7 +1120,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512BW-NEXT:    je .LBB2_48
 ; AVX512BW-NEXT:  .LBB2_47: # %cond.store67
-; AVX512BW-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:  .LBB2_48: # %else68
 ; AVX512BW-NEXT:    testl $16777216, %eax # imm = 0x1000000
@@ -1063,32 +1157,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testb $2, %al
 ; AVX512BW-NEXT:    je .LBB2_4
 ; AVX512BW-NEXT:  .LBB2_3: # %cond.store1
-; AVX512BW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $4, %al
 ; AVX512BW-NEXT:    je .LBB2_6
 ; AVX512BW-NEXT:  .LBB2_5: # %cond.store4
-; AVX512BW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $8, %al
 ; AVX512BW-NEXT:    je .LBB2_8
 ; AVX512BW-NEXT:  .LBB2_7: # %cond.store7
-; AVX512BW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $16, %al
 ; AVX512BW-NEXT:    je .LBB2_10
 ; AVX512BW-NEXT:  .LBB2_9: # %cond.store10
-; AVX512BW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $32, %al
 ; AVX512BW-NEXT:    je .LBB2_12
 ; AVX512BW-NEXT:  .LBB2_11: # %cond.store13
-; AVX512BW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb $64, %al
 ; AVX512BW-NEXT:    je .LBB2_14
 ; AVX512BW-NEXT:  .LBB2_13: # %cond.store16
-; AVX512BW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    js .LBB2_15
@@ -1099,32 +1199,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512BW-NEXT:    je .LBB2_20
 ; AVX512BW-NEXT:  .LBB2_19: # %cond.store25
-; AVX512BW-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512BW-NEXT:    je .LBB2_22
 ; AVX512BW-NEXT:  .LBB2_21: # %cond.store28
-; AVX512BW-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512BW-NEXT:    je .LBB2_24
 ; AVX512BW-NEXT:  .LBB2_23: # %cond.store31
-; AVX512BW-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512BW-NEXT:    je .LBB2_26
 ; AVX512BW-NEXT:  .LBB2_25: # %cond.store34
-; AVX512BW-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512BW-NEXT:    je .LBB2_28
 ; AVX512BW-NEXT:  .LBB2_27: # %cond.store37
-; AVX512BW-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512BW-NEXT:    je .LBB2_30
 ; AVX512BW-NEXT:  .LBB2_29: # %cond.store40
-; AVX512BW-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testw %ax, %ax
 ; AVX512BW-NEXT:    js .LBB2_31
@@ -1135,32 +1241,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testl $131072, %eax # imm = 0x20000
 ; AVX512BW-NEXT:    je .LBB2_36
 ; AVX512BW-NEXT:  .LBB2_35: # %cond.store49
-; AVX512BW-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX512BW-NEXT:    je .LBB2_38
 ; AVX512BW-NEXT:  .LBB2_37: # %cond.store52
-; AVX512BW-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $524288, %eax # imm = 0x80000
 ; AVX512BW-NEXT:    je .LBB2_40
 ; AVX512BW-NEXT:  .LBB2_39: # %cond.store55
-; AVX512BW-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX512BW-NEXT:    je .LBB2_42
 ; AVX512BW-NEXT:  .LBB2_41: # %cond.store58
-; AVX512BW-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $2097152, %eax # imm = 0x200000
 ; AVX512BW-NEXT:    je .LBB2_44
 ; AVX512BW-NEXT:  .LBB2_43: # %cond.store61
-; AVX512BW-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX512BW-NEXT:    je .LBB2_46
 ; AVX512BW-NEXT:  .LBB2_45: # %cond.store64
-; AVX512BW-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512BW-NEXT:    jne .LBB2_47
@@ -1171,37 +1283,44 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512BW-NEXT:    testl $33554432, %eax # imm = 0x2000000
 ; AVX512BW-NEXT:    je .LBB2_52
 ; AVX512BW-NEXT:  .LBB2_51: # %cond.store73
-; AVX512BW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX512BW-NEXT:    je .LBB2_54
 ; AVX512BW-NEXT:  .LBB2_53: # %cond.store76
-; AVX512BW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $134217728, %eax # imm = 0x8000000
 ; AVX512BW-NEXT:    je .LBB2_56
 ; AVX512BW-NEXT:  .LBB2_55: # %cond.store79
-; AVX512BW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX512BW-NEXT:    je .LBB2_58
 ; AVX512BW-NEXT:  .LBB2_57: # %cond.store82
-; AVX512BW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $536870912, %eax # imm = 0x20000000
 ; AVX512BW-NEXT:    je .LBB2_60
 ; AVX512BW-NEXT:  .LBB2_59: # %cond.store85
-; AVX512BW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX512BW-NEXT:    je .LBB2_62
 ; AVX512BW-NEXT:  .LBB2_61: # %cond.store88
-; AVX512BW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512BW-NEXT:    addq $2, %rdi
 ; AVX512BW-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
 ; AVX512BW-NEXT:    je .LBB2_64
 ; AVX512BW-NEXT:  .LBB2_63: # %cond.store91
-; AVX512BW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512BW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1233,7 +1352,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testb %al, %al
 ; AVX512VLBW-NEXT:    jns .LBB2_16
 ; AVX512VLBW-NEXT:  .LBB2_15: # %cond.store19
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:  .LBB2_16: # %else20
 ; AVX512VLBW-NEXT:    testl $256, %eax # imm = 0x100
@@ -1261,7 +1381,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testw %ax, %ax
 ; AVX512VLBW-NEXT:    jns .LBB2_32
 ; AVX512VLBW-NEXT:  .LBB2_31: # %cond.store43
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:  .LBB2_32: # %else44
 ; AVX512VLBW-NEXT:    testl $65536, %eax # imm = 0x10000
@@ -1289,7 +1410,8 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512VLBW-NEXT:    je .LBB2_48
 ; AVX512VLBW-NEXT:  .LBB2_47: # %cond.store67
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:  .LBB2_48: # %else68
 ; AVX512VLBW-NEXT:    testl $16777216, %eax # imm = 0x1000000
@@ -1325,32 +1447,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testb $2, %al
 ; AVX512VLBW-NEXT:    je .LBB2_4
 ; AVX512VLBW-NEXT:  .LBB2_3: # %cond.store1
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $4, %al
 ; AVX512VLBW-NEXT:    je .LBB2_6
 ; AVX512VLBW-NEXT:  .LBB2_5: # %cond.store4
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $8, %al
 ; AVX512VLBW-NEXT:    je .LBB2_8
 ; AVX512VLBW-NEXT:  .LBB2_7: # %cond.store7
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $16, %al
 ; AVX512VLBW-NEXT:    je .LBB2_10
 ; AVX512VLBW-NEXT:  .LBB2_9: # %cond.store10
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $32, %al
 ; AVX512VLBW-NEXT:    je .LBB2_12
 ; AVX512VLBW-NEXT:  .LBB2_11: # %cond.store13
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb $64, %al
 ; AVX512VLBW-NEXT:    je .LBB2_14
 ; AVX512VLBW-NEXT:  .LBB2_13: # %cond.store16
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testb %al, %al
 ; AVX512VLBW-NEXT:    js .LBB2_15
@@ -1361,32 +1489,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testl $512, %eax # imm = 0x200
 ; AVX512VLBW-NEXT:    je .LBB2_20
 ; AVX512VLBW-NEXT:  .LBB2_19: # %cond.store25
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512VLBW-NEXT:    je .LBB2_22
 ; AVX512VLBW-NEXT:  .LBB2_21: # %cond.store28
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $2048, %eax # imm = 0x800
 ; AVX512VLBW-NEXT:    je .LBB2_24
 ; AVX512VLBW-NEXT:  .LBB2_23: # %cond.store31
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512VLBW-NEXT:    je .LBB2_26
 ; AVX512VLBW-NEXT:  .LBB2_25: # %cond.store34
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $8192, %eax # imm = 0x2000
 ; AVX512VLBW-NEXT:    je .LBB2_28
 ; AVX512VLBW-NEXT:  .LBB2_27: # %cond.store37
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512VLBW-NEXT:    je .LBB2_30
 ; AVX512VLBW-NEXT:  .LBB2_29: # %cond.store40
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testw %ax, %ax
 ; AVX512VLBW-NEXT:    js .LBB2_31
@@ -1397,32 +1531,38 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testl $131072, %eax # imm = 0x20000
 ; AVX512VLBW-NEXT:    je .LBB2_36
 ; AVX512VLBW-NEXT:  .LBB2_35: # %cond.store49
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX512VLBW-NEXT:    je .LBB2_38
 ; AVX512VLBW-NEXT:  .LBB2_37: # %cond.store52
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $524288, %eax # imm = 0x80000
 ; AVX512VLBW-NEXT:    je .LBB2_40
 ; AVX512VLBW-NEXT:  .LBB2_39: # %cond.store55
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm1, %xmm2
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX512VLBW-NEXT:    je .LBB2_42
 ; AVX512VLBW-NEXT:  .LBB2_41: # %cond.store58
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $2097152, %eax # imm = 0x200000
 ; AVX512VLBW-NEXT:    je .LBB2_44
 ; AVX512VLBW-NEXT:  .LBB2_43: # %cond.store61
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX512VLBW-NEXT:    je .LBB2_46
 ; AVX512VLBW-NEXT:  .LBB2_45: # %cond.store64
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm1, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm2, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $8388608, %eax # imm = 0x800000
 ; AVX512VLBW-NEXT:    jne .LBB2_47
@@ -1433,37 +1573,44 @@ define void @compressstore_v32bf16_v32i16(ptr %base, <32 x bfloat> %V, <32 x i16
 ; AVX512VLBW-NEXT:    testl $33554432, %eax # imm = 0x2000000
 ; AVX512VLBW-NEXT:    je .LBB2_52
 ; AVX512VLBW-NEXT:  .LBB2_51: # %cond.store73
-; AVX512VLBW-NEXT:    vpextrw $1, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX512VLBW-NEXT:    je .LBB2_54
 ; AVX512VLBW-NEXT:  .LBB2_53: # %cond.store76
-; AVX512VLBW-NEXT:    vpextrw $2, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $134217728, %eax # imm = 0x8000000
 ; AVX512VLBW-NEXT:    je .LBB2_56
 ; AVX512VLBW-NEXT:  .LBB2_55: # %cond.store79
-; AVX512VLBW-NEXT:    vpextrw $3, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrlq $48, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX512VLBW-NEXT:    je .LBB2_58
 ; AVX512VLBW-NEXT:  .LBB2_57: # %cond.store82
-; AVX512VLBW-NEXT:    vpextrw $4, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $536870912, %eax # imm = 0x20000000
 ; AVX512VLBW-NEXT:    je .LBB2_60
 ; AVX512VLBW-NEXT:  .LBB2_59: # %cond.store85
-; AVX512VLBW-NEXT:    vpextrw $5, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX512VLBW-NEXT:    je .LBB2_62
 ; AVX512VLBW-NEXT:  .LBB2_61: # %cond.store88
-; AVX512VLBW-NEXT:    vpextrw $6, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512VLBW-NEXT:    addq $2, %rdi
 ; AVX512VLBW-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
 ; AVX512VLBW-NEXT:    je .LBB2_64
 ; AVX512VLBW-NEXT:  .LBB2_63: # %cond.store91
-; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
+; AVX512VLBW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
 ;
