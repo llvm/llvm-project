@@ -123,25 +123,21 @@ using InstOverlapIntervalsTy = MapVector<Instruction *, OverlapIntervalsTy>;
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
 static bool isShortenableAtTheEnd(Instruction *I) {
-  // Don't shorten stores for now
-  if (isa<StoreInst>(I))
-    return false;
-
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-      default: return false;
-      case Intrinsic::memset:
-      case Intrinsic::memcpy:
-      case Intrinsic::memcpy_element_unordered_atomic:
-      case Intrinsic::memset_element_unordered_atomic:
-        // Do shorten memory intrinsics.
-        // FIXME: Add memmove if it's also safe to transform.
-        return true;
+    default:
+      return false;
+    case Intrinsic::memset:
+    case Intrinsic::memcpy:
+    case Intrinsic::memmove:
+    case Intrinsic::memset_inline:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memset_element_unordered_atomic:
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memmove_element_unordered_atomic:
+      return true;
     }
   }
-
-  // Don't shorten libcalls calls for now.
-
   return false;
 }
 
