@@ -585,7 +585,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
   assert(DppCtrl && DppCtrl->isImm());
-  unsigned DppCtrlVal = DppCtrl->getImm();
+  uint64_t DppCtrlVal = DppCtrl->getImm();
   if ((MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
        MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp)) {
     if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP)) {
