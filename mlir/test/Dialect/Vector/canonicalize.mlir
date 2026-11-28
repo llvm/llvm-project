@@ -601,6 +601,65 @@ func.func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
 
 // -----
 
+// The extract of lanes [1, 3) starts before the last insert of lanes [2, 4),
+// but still reads lane 2 from it, so that insert is not disjoint and must not
+// be skipped.
+// CHECK-LABEL: negative_extract_strided_fold_insert_partial_overlap
+//  CHECK-SAME: (%[[A:.*]]: vector<4xi32>, %[[X:.*]]: vector<2xi32>, %[[Y:.*]]: vector<2xi32>)
+//       CHECK:   %[[INS0:.*]] = vector.insert_strided_slice %[[X]], %[[A]]
+//       CHECK:   %[[INS1:.*]] = vector.insert_strided_slice %[[Y]], %[[INS0]]
+//       CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %[[INS1]]
+//  CHECK-SAME:     offsets = [1], sizes = [2], strides = [1]
+//  CHECK-NEXT:   return %[[EXT]] : vector<2xi32>
+func.func @negative_extract_strided_fold_insert_partial_overlap(
+    %a: vector<4xi32>, %x: vector<2xi32>, %y: vector<2xi32>) -> vector<2xi32> {
+  %0 = vector.insert_strided_slice %x, %a offsets = [1], strides = [1]
+    : vector<2xi32> into vector<4xi32>
+  %1 = vector.insert_strided_slice %y, %0 offsets = [2], strides = [1]
+    : vector<2xi32> into vector<4xi32>
+  %2 = vector.extract_strided_slice %1 offsets = [1], sizes = [2], strides = [1]
+    : vector<4xi32> to vector<2xi32>
+  return %2 : vector<2xi32>
+}
+
+// -----
+
+// The extract has no offset for the trailing dimension, so it reads the whole
+// dimension, while the insert only writes part of it.
+// CHECK-LABEL: negative_extract_strided_fold_insert_trailing_dim
+//  CHECK-SAME: (%[[A:.*]]: vector<3x4xf32>, %[[X:.*]]: vector<2x2xf32>)
+//       CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[X]], %[[A]]
+//       CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %[[INS]]
+//  CHECK-SAME:     offsets = [0], sizes = [2], strides = [1]
+//  CHECK-SAME:       : vector<3x4xf32> to vector<2x4xf32>
+//  CHECK-NEXT:   return %[[EXT]] : vector<2x4xf32>
+func.func @negative_extract_strided_fold_insert_trailing_dim(
+    %a: vector<3x4xf32>, %x: vector<2x2xf32>) -> vector<2x4xf32> {
+  %0 = vector.insert_strided_slice %x, %a offsets = [0, 1], strides = [1, 1]
+    : vector<2x2xf32> into vector<3x4xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [0], sizes = [2], strides = [1]
+    : vector<3x4xf32> to vector<2x4xf32>
+  return %1 : vector<2x4xf32>
+}
+
+// -----
+
+// The insert writes the whole trailing dimension, so the extract without a
+// trailing offset still reads only inserted elements and can be folded.
+// CHECK-LABEL: extract_strided_fold_insert_trailing_dim
+//  CHECK-SAME: (%[[A:.*]]: vector<2x4xf32>, %[[X:.*]]: vector<1x4xf32>)
+//  CHECK-NEXT:   return %[[X]] : vector<1x4xf32>
+func.func @extract_strided_fold_insert_trailing_dim(
+    %a: vector<2x4xf32>, %x: vector<1x4xf32>) -> vector<1x4xf32> {
+  %0 = vector.insert_strided_slice %x, %a offsets = [1, 0], strides = [1, 1]
+    : vector<1x4xf32> into vector<2x4xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [1], sizes = [1], strides = [1]
+    : vector<2x4xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: transpose_3D_identity
 // CHECK-SAME: ([[ARG:%.*]]: vector<4x3x2xf32>)
 func.func @transpose_3D_identity(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
