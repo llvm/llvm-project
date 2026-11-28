@@ -12,14 +12,14 @@ add_libc_test(
 
 if(LIBC_TARGET_OS_IS_LINUX)
   add_libc_test(
-    dirent_dttoif_test
+    dirent_macros_test
     SUITE
       libc-include-tests
     SRCS
-      dirent_dttoif_test.cpp
+      dirent_macros_test.cpp
     DEPENDS
-      libc.include.dirent
-      libc.include.sys_stat
+      libc.include.llvm-libc-macros.dirent_macros
+      libc.include.llvm-libc-macros.sys_stat_macros
   )
 endif()
 
