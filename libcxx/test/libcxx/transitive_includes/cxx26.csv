@@ -441,6 +441,11 @@ future string_view
 future tuple
 future typeinfo
 future version
+hive compare
+hive cstdint
+hive initializer_list
+hive limits
+hive version
 initializer_list version
 iomanip cctype
 iomanip cerrno

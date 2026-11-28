@@ -200,6 +200,7 @@ mandatory_inclusions = {
     "flat_set": ["compare", "initializer_list"],
     "functional": ["initializer_list", "typeinfo"],
     "forward_list": ["compare", "initializer_list"],
+    "hive": ["compare", "initializer_list"],
     "ios": ["iosfwd"],
     "iostream": ["ios", "istream", "ostream", "streambuf"],
     "iterator": ["compare", "concepts", "initializer_list"],

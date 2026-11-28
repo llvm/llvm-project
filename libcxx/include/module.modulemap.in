@@ -1487,6 +1487,22 @@ module std {
     export *
   }
 
+  module hive {
+    module hive                {
+      header "__hive/hive.h"
+      export std.memory.allocator
+    }
+    module hive_bitmap         { header "__hive/hive_bitmap.h" }
+    module hive_block          { header "__hive/hive_block.h" }
+    module hive_block_capacity { header "__hive/hive_block_capacity.h" }
+    module hive_iterator       { header "__hive/hive_iterator.h" }
+    module hive_limits         { header "__hive/hive_limits.h" }
+    module hive_storage        { header "__hive/hive_storage.h" }
+
+    header "hive"
+    export *
+  }
+
   module initializer_list {
     header "initializer_list"
     export *

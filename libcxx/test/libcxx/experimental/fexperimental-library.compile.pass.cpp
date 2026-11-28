@@ -35,3 +35,7 @@
 #if !_LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
 #  error "-fexperimental-library should allow using the Hardening observe semantic"
 #endif
+
+#if !_LIBCPP_HAS_EXPERIMENTAL_HIVE
+#  error "-fexperimental-library should enable the hive header"
+#endif

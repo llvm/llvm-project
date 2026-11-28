@@ -86,6 +86,20 @@ Libc++ implements `std::is_debugger_present()` differently depending on the host
 It is also defined as a weak symbol in the library to allow it to be replaceable, as per the standard, so a user may
 redefine it with their own implementation.
 
+### [[hive.overview]](https://eel.is/c++draft/hive.overview) Effects of invalid `hive` limits
+
+In the `extensive` and `debug` hardening modes, constructing a `std::hive` with limits that are not within the hard
+limits, or whose minimum is greater than the maximum, triggers an assertion. Otherwise the maximum is clamped into the
+hard limits, then the minimum is clamped between the minimum hard limit and that maximum.
+
+### [[hive.overview]](https://eel.is/c++draft/hive.overview) Growth factor of `hive` active block capacities
+
+A new active block gets the capacity of the number of elements the hive holds when the block is allocated, clamped to
+the block capacity limits and then rounded up to a multiple of 64 without exceeding the maximum limit. The first block
+is therefore the minimum limit rounded up that way, and while the hive grows each new block holds as many elements as
+all the blocks before it, up to the maximum limit. With the default limits of `std::hive<int>` the block capacities
+are 64, 64, 128, 256, 512, 1024, 2048, 4096, 4096 and so on.
+
 
 ## Listed in the index of implementation-defined behavior
 
