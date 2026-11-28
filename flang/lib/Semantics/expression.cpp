@@ -253,10 +253,15 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       }
     } else if (auto interface{context_.intrinsics().IsSpecificIntrinsicFunction(
                    symbol.name().ToString())};
-               interface && !interface->isRestrictedSpecific) {
+        interface) {
+      const bool isRestrictedSpecific{interface->isRestrictedSpecific};
       SpecificIntrinsic intrinsic{
           symbol.name().ToString(), std::move(*interface)};
-      intrinsic.isRestrictedSpecific = interface->isRestrictedSpecific;
+      intrinsic.isRestrictedSpecific = isRestrictedSpecific;
+      if (isRestrictedSpecific) {
+        Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
+            last.name());
+      }
       return Expr<SomeType>{ProcedureDesignator{std::move(intrinsic)}};
     } else {
       Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
