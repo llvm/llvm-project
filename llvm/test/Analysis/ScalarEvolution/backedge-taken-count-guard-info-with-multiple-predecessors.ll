@@ -409,3 +409,51 @@ bb8:                                              ; preds = %bb8, %bb6
 bb12:                                             ; preds = %bb8, %bb6
   ret void
 }
+
+; The guard on the backedge from %outer.latch is merged with the guards from
+; %e1 and %e2, so %count u>= 2 holds on entry to %loop.
+define void @merge_through_backedge(ptr %A, i16 %a, i16 %a2, i1 %c) {
+; CHECK-LABEL: 'merge_through_backedge'
+; CHECK-NEXT:  Determining loop execution counts for: @merge_through_backedge
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (21 + (-1 * %count))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 19
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (21 + (-1 * %count))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %outer: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for outer: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for outer.latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %outer: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %outer: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    symbolic max exit count for outer: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for outer.latch: ***COULDNOTCOMPUTE***
+;
+entry:
+  br i1 %c, label %e1, label %e2
+
+e1:
+  %cmp1 = icmp ult i16 %a, 2
+  br i1 %cmp1, label %exit, label %outer
+
+e2:
+  %cmp1b = icmp ult i16 %a2, 3
+  br i1 %cmp1b, label %exit, label %outer
+
+outer:
+  %count = phi i16 [ %a, %e1 ], [ %a2, %e2 ], [ %b, %outer.latch ]
+  %cmp3 = icmp ule i16 %count, 20
+  br i1 %cmp3, label %loop, label %exit
+
+loop:
+  %iv = phi i16 [ %iv.next, %loop ], [ %count, %outer ]
+  %iv.next = add i16 %iv, 1
+  %exitcond = icmp eq i16 %iv.next, 22
+  br i1 %exitcond, label %outer.latch, label %loop
+
+outer.latch:
+  %b = load i16, ptr %A
+  %cmp2 = icmp ult i16 %b, 5
+  br i1 %cmp2, label %exit, label %outer
+
+exit:
+  ret void
+}

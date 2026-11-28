@@ -1598,6 +1598,8 @@ public:
     /// The loop to collect guards for on first use by applyLoopGuards, if not
     /// collected yet.
     const Loop *PendingLoop = nullptr;
+    /// Do not merge guards through incoming backedges of phis.
+    bool SkipPhiBackedges = false;
     ScalarEvolution &SE;
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
