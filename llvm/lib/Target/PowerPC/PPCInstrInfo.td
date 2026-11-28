@@ -590,6 +590,12 @@ def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
 def PPCtc_return : SDNode<"PPCISD::TC_RETURN", SDT_PPCTC_ret,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// TC_RETURN_INDIRECT - An indirect tail call return with the callee address in
+// a GPR. Same operands as TC_RETURN. Kept separate so that a constant callee
+// address is not mistaken for an absolute branch target.
+def PPCtc_return_indirect : SDNode<"PPCISD::TC_RETURN_INDIRECT", SDT_PPCTC_ret,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 // EH_SJLJ_SETJMP - SjLj exception handling setjmp.
 def PPCeh_sjlj_setjmp  : SDNode<"PPCISD::EH_SJLJ_SETJMP",
                                 SDTypeProfile<1, 1, [SDTCisInt<0>,
@@ -1862,6 +1868,17 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNri : PPCEmitTimePseudo<(outs), (ins CTRRC:$dst, i32imm:$offset),
                  "#TC_RETURNr $dst $offset",
                  []>;
+
+// Indirect tail call taking the callee address in a GPR. This is what ISel
+// produces, so that the terminator sequence before the tail call only consists
+// of copies into the argument registers (this matters for stack protectors,
+// which split the block in front of that sequence). The custom inserter
+// expands it into MTCTR + TCRETURNri.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
+def TCRETURNri_GPR : PPCCustomInserterPseudo<(outs),
+                                             (ins gprc:$dst, i32imm:$offset),
+                                             "#TC_RETURNri_GPR $dst $offset",
+                                             []>;
 
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR, R2], Uses = [CTR, RM], RST = 2 in {
@@ -3437,8 +3454,8 @@ def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
 def : Pat<(PPCtc_return (i32 texternalsym:$dst), imm:$imm),
           (TCRETURNdi texternalsym:$dst, imm:$imm)>;
 
-def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
-          (TCRETURNri CTRRC:$dst, imm:$imm)>;
+def : Pat<(PPCtc_return_indirect i32:$dst, imm:$imm),
+          (TCRETURNri_GPR $dst, imm:$imm)>;
 
 def : Pat<(int_ppc_fence), (FENCE)>;
 def : Pat<(int_ppc_readflm), (MFFS)>;
