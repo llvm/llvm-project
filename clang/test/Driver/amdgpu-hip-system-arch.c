@@ -4,7 +4,7 @@
 // CLANG_TOOLCHAIN_PROGRAM_TIMEOUT, see
 // https://github.com/llvm/llvm-project/issues/238903.
 // UNSUPPORTED: system-darwin
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_fail %t/

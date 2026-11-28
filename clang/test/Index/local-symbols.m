@@ -46,3 +46,4 @@ void test() {
 // CHECK: local-symbols.m:23:25: ObjCProtocolRef=Prot8380046:17:11 Extent=[23:25 - 23:36]
 
 // CHECK: local-symbols.m:29:17: ObjCStringLiteral="objc str" Extent=[29:17 - 29:28]
+// UNSUPPORTED: system-zos
