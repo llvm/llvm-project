@@ -19,7 +19,7 @@ using signal_handler = void (*)(int);
 
 LLVM_LIBC_FUNCTION(signal_handler, signal,
                    (int signum, signal_handler handler)) {
-  struct sigaction action, old;
+  struct sigaction action{}, old{};
   action.sa_handler = handler;
   action.sa_flags = SA_RESTART;
   // Errno will already be set so no need to worry about changing errno here.

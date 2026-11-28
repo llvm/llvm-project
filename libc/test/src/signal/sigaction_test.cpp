@@ -10,6 +10,9 @@
 #include "hdr/signal_macros.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaction.h"
+#include "src/signal/sigaddset.h"
+#include "src/signal/sigemptyset.h"
+#include "src/signal/sigprocmask.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -173,4 +176,38 @@ TEST(LlvmLibcSigaction, Siginfo) {
   LIBC_NAMESPACE::raise(SIGUSR1);
   EXPECT_TRUE(SiginfoTest::received);
   EXPECT_EQ(SiginfoTest::signo, SIGUSR1);
+}
+
+struct SigmaskTest {
+  inline static sigset_t blocked;
+  static void handler(int) {
+    LIBC_NAMESPACE::sigprocmask(SIG_BLOCK, nullptr, &blocked);
+  }
+};
+
+// Verify that sa_mask reaches the kernel, comes back unchanged, and is blocked
+// along with the signal itself while the handler runs.
+TEST(LlvmLibcSigaction, Sigmask) {
+  struct sigaction action{};
+  action.sa_handler = SigmaskTest::handler;
+  action.sa_flags = SA_RESTART;
+  ASSERT_EQ(LIBC_NAMESPACE::sigemptyset(&action.sa_mask), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::sigaddset(&action.sa_mask, SIGUSR2), 0);
+  struct sigaction old_action{};
+  ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, &action, &old_action),
+              Succeeds());
+
+  struct sigaction current{};
+  ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, nullptr, &current),
+              Succeeds());
+  EXPECT_EQ(current.sa_mask.__signals[0], action.sa_mask.__signals[0]);
+  EXPECT_EQ(current.sa_flags & SA_RESTART, SA_RESTART);
+
+  LIBC_NAMESPACE::raise(SIGUSR1);
+  sigset_t expected = action.sa_mask;
+  ASSERT_EQ(LIBC_NAMESPACE::sigaddset(&expected, SIGUSR1), 0);
+  EXPECT_EQ(SigmaskTest::blocked.__signals[0], expected.__signals[0]);
+
+  EXPECT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, &old_action, nullptr),
+              Succeeds());
 }

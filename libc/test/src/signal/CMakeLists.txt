@@ -51,6 +51,9 @@ add_libc_test(
     libc.hdr.signal_macros
     libc.src.signal.raise
     libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
