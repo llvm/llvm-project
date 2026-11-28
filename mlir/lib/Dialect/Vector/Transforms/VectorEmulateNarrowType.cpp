@@ -1683,6 +1683,9 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   // documented above. Replace with an assert.
   if (!subByteVecTy)
     return rewriter.notifyMatchFailure(op, "not a vector!");
+  // The alignment checks below read the trailing dimension.
+  if (subByteVecTy.getRank() == 0)
+    return rewriter.notifyMatchFailure(op, "0-D vectors are not supported");
 
   unsigned subByteBits = subByteVecTy.getElementTypeBitWidth();
   unsigned containerBits = containerTy.getIntOrFloatBitWidth();

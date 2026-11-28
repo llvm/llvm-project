@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s --implicit-check-not='arith.{{(extui|extsi|trunci)}} {{.*}}xi4>' --implicit-check-not=arith.ori --implicit-check-not=xegpu.lane_shuffle
+// RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s --implicit-check-not='arith.{{(extui|extsi|trunci|uitofp|sitofp)}} {{.*}}xi4>' --implicit-check-not=arith.ori --implicit-check-not=xegpu.lane_shuffle
 
 
 // Hoist only the i4-to-i8 part of the extension before the shuffle. Extending
@@ -8,7 +8,7 @@
 gpu.module @test {
 // CHECK-LABEL: gpu.func @unpack_shape_cast_extui
 // CHECK-SAME: %[[SRC:.*]]: vector<2xi8>
-gpu.func @unpack_shape_cast_extui(%a: vector<2xi8>) -> vector<1x4xi32> {
+gpu.func @unpack_shape_cast_extui(%a: vector<2xi8>) -> (vector<1x4xi32>, vector<4xf16>) {
   // CHECK: %[[MASK:.*]] = arith.constant dense<15> : vector<2xi8>
   // CHECK: %[[LOW:.*]] = arith.andi %[[SRC]], %[[MASK]] : vector<2xi8>
   // CHECK: %[[SHIFT:.*]] = arith.constant dense<4> : vector<2xi8>
@@ -18,12 +18,17 @@ gpu.func @unpack_shape_cast_extui(%a: vector<2xi8>) -> vector<1x4xi32> {
   // CHECK: %[[SHUFFLED:.*]] = xevm.bitcast_shuffle %[[PACKED]] : (i32) -> vector<4xi8>
   // CHECK: %[[SHAPED:.*]] = vector.shape_cast %[[SHUFFLED]] : vector<4xi8> to vector<1x4xi8>
   // CHECK: %[[RES:.*]] = arith.extui %[[SHAPED]] : vector<1x4xi8> to vector<1x4xi32>
-  // CHECK: gpu.return %[[RES]] : vector<1x4xi32>
+  // CHECK: %[[ULOW:.*]] = arith.andi %[[SRC]], %{{.*}} : vector<2xi8>
+  // CHECK: %[[UHIGH:.*]] = arith.shrui %[[SRC]], %{{.*}} : vector<2xi8>
+  // CHECK: %[[UBYTES:.*]] = vector.shuffle %[[ULOW]], %[[UHIGH]] [0, 2, 1, 3] : vector<2xi8>, vector<2xi8>
+  // CHECK: %[[UF:.*]] = arith.uitofp %[[UBYTES]] : vector<4xi8> to vector<4xf16>
+  // CHECK: gpu.return %[[RES]], %[[UF]] : vector<1x4xi32>, vector<4xf16>
   %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
   %shuffled = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
   %shaped = vector.shape_cast %shuffled : vector<4xi4> to vector<1x4xi4>
   %res = arith.extui %shaped : vector<1x4xi4> to vector<1x4xi32>
-  gpu.return %res : vector<1x4xi32>
+  %u = arith.uitofp %nibbles : vector<4xi4> to vector<4xf16>
+  gpu.return %res, %u : vector<1x4xi32>, vector<4xf16>
 }
 }
 
@@ -34,7 +39,7 @@ gpu.func @unpack_shape_cast_extui(%a: vector<2xi8>) -> vector<1x4xi32> {
 gpu.module @test {
 // CHECK-LABEL: gpu.func @pack_extsi
 // CHECK-SAME: %[[SRC:.*]]: vector<2xi8>
-gpu.func @pack_extsi(%a: vector<2xi8>) -> vector<4xi32> {
+gpu.func @pack_extsi(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xf32>) {
   // CHECK: %[[SHIFT:.*]] = arith.constant dense<4> : vector<2xi8>
   // CHECK: %[[LEFT:.*]] = arith.shli %[[SRC]], %[[SHIFT]] : vector<2xi8>
   // CHECK: %[[LOW:.*]] = arith.shrsi %[[LEFT]], %{{.*}} : vector<2xi8>
@@ -43,11 +48,17 @@ gpu.func @pack_extsi(%a: vector<2xi8>) -> vector<4xi32> {
   // CHECK: %[[PACKED:.*]] = xevm.bitcast_shuffle %[[BYTES]] : (vector<4xi8>) -> i32
   // CHECK: %[[SHUFFLED:.*]] = llvm.bitcast %[[PACKED]] : i32 to vector<4xi8>
   // CHECK: %[[RES:.*]] = arith.extsi %[[SHUFFLED]] : vector<4xi8> to vector<4xi32>
-  // CHECK: gpu.return %[[RES]] : vector<4xi32>
+  // CHECK: %[[SLEFT:.*]] = arith.shli %[[SRC]], %{{.*}} : vector<2xi8>
+  // CHECK: %[[SLOW:.*]] = arith.shrsi %[[SLEFT]], %{{.*}} : vector<2xi8>
+  // CHECK: %[[SHIGH:.*]] = arith.shrsi %[[SRC]], %{{.*}} : vector<2xi8>
+  // CHECK: %[[SBYTES:.*]] = vector.shuffle %[[SLOW]], %[[SHIGH]] [0, 2, 1, 3] : vector<2xi8>, vector<2xi8>
+  // CHECK: %[[SF:.*]] = arith.sitofp %[[SBYTES]] : vector<4xi8> to vector<4xf32>
+  // CHECK: gpu.return %[[RES]], %[[SF]] : vector<4xi32>, vector<4xf32>
   %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
   %shuffled = xegpu.lane_shuffle %nibbles pack : vector<4xi4>
   %res = arith.extsi %shuffled : vector<4xi4> to vector<4xi32>
-  gpu.return %res : vector<4xi32>
+  %s = arith.sitofp %nibbles : vector<4xi4> to vector<4xf32>
+  gpu.return %res, %s : vector<4xi32>, vector<4xf32>
 }
 }
 

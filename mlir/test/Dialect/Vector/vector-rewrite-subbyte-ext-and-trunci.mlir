@@ -5,13 +5,16 @@
 ///
 /// [Pattern: RewriteAlignedSubByteIntExt]
 ///----------------------------------------------------------------------------------------
-// Negative test - the trailing dim 1 is not a multiple of 2 (i.e. 8 / 4).
+// Negative test - the trailing dim 1 is not a multiple of 2 (i.e. 8 / 4), and
+// a 0-D vector has no trailing dim.
 // CHECK-LABEL: func.func @unaligned_extsi_i4_to_i8(
-func.func @unaligned_extsi_i4_to_i8(%a: vector<1xi4>) -> vector<1xi8> {
+func.func @unaligned_extsi_i4_to_i8(%a: vector<1xi4>, %b: vector<i4>) -> (vector<1xi8>, vector<i8>) {
   // CHECK-NOT: arith.bitcast
   // CHECK: arith.extsi %[[IN:.*]] : vector<1xi4> to vector<1xi8>
+  // CHECK: arith.extsi %{{.*}} : vector<i4> to vector<i8>
   %0 = arith.extsi %a : vector<1xi4> to vector<1xi8>
-  return %0 : vector<1xi8>
+  %1 = arith.extsi %b : vector<i4> to vector<i8>
+  return %0, %1 : vector<1xi8>, vector<i8>
 }
 
 // Negative test - the trailing dim 2 is not a multiple of 4 (i.e. 8 / 2).

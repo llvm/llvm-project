@@ -2097,8 +2097,10 @@ struct ConvertXeGPUToXeVMPass
               applyOpPatternsGreedily(extensions, std::move(patterns), config)))
         return signalPassFailure();
     }
-    // Expand the new i4-to-i8 casts into byte-level masks and shifts before
-    // lowering. LLVM extensions on i4 vectors are not legal in the backend.
+    // Expand casts of i4 vectors into byte-level masks and shifts before
+    // lowering: the i4-to-i8 casts made above, other extensions, and
+    // conversions to float. LLVM casts of i4 vectors are not legal in the
+    // backend.
     {
       RewritePatternSet patterns(context);
       vector::populateVectorNarrowTypeRewritePatterns(patterns);
@@ -2107,7 +2109,7 @@ struct ConvertXeGPUToXeVMPass
       SmallVector<Operation *> casts;
       getOperation()->walk([&](Operation *op) {
         if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp,
-                vector::BitCastOp>(op))
+                arith::UIToFPOp, arith::SIToFPOp, vector::BitCastOp>(op))
           casts.push_back(op);
       });
       if (failed(applyOpPatternsGreedily(casts, std::move(patterns), config)))
