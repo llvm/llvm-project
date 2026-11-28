@@ -1961,6 +1961,7 @@ AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  ABI = "darwinpcs";
   Int64Type = SignedLongLong;
   if (getTriple().isArch32Bit())
     IntMaxType = SignedLongLong;

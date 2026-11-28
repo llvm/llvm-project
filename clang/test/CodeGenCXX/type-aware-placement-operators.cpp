@@ -40,9 +40,9 @@ extern "C" void test_s1(Context& Ctx) {
 }
 
 // CHECK-LABEL: test_s1
-// CHECK: [[S1_NEW:%.*]] = call noundef ptr @_ZnwSt13type_identityI2S1EmSt11align_val_tR7Context({{.*}},{{.*}} 4,{{.*}} 4, ptr noundef nonnull align 1 [[S1_NEW_CONTEXT:%.*]])
-// CHECK: call void @_ZdlSt13type_identityI2S1EPvmSt11align_val_t({{.*}}, ptr noundef %2,{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZdlSt13type_identityI2S1EPvmSt11align_val_tR7Context({{.*}}, ptr noundef [[S1_NEW]],{{.*}} 4,{{.*}} 4, ptr noundef nonnull align 1 [[S1_NEW_CONTEXT]])
+// CHECK: [[S1_NEW:%.*]] = call noundef ptr @_ZnwSt13type_identityI2S1EmSt11align_val_tR7Context({{.*}} 4,{{.*}} 4, ptr noundef nonnull align 1 [[S1_NEW_CONTEXT:%.*]])
+// CHECK: call void @_ZdlSt13type_identityI2S1EPvmSt11align_val_t(ptr noundef %1,{{.*}} 4,{{.*}} 4)
+// CHECK: call void @_ZdlSt13type_identityI2S1EPvmSt11align_val_tR7Context(ptr noundef [[S1_NEW]],{{.*}} 4,{{.*}} 4, ptr noundef nonnull align 1 [[S1_NEW_CONTEXT]])
 
 extern "C" void test_s2(Context& Ctx) {
   S2 *s2_1 = new (Ctx) S2;
@@ -52,12 +52,12 @@ extern "C" void test_s2(Context& Ctx) {
 }
 
 // CHECK-LABEL: test_s2
-// CHECK: [[S2_NEW1:%.*]] = call noundef ptr @_ZN2S2nwIS_EEPvSt13type_identityIT_EmSt11align_val_tR7Context({{.*}},{{.*}} 4,{{.*}} 4,{{.*}} [[S2_NEW1_CONTEXT:%.*]])
-// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4)
-// CHECK: [[S2_NEW2:%.*]] = call noundef ptr @_ZN2S2nwIS_EEPvSt13type_identityIT_EmSt11align_val_tR7Context({{.*}},{{.*}} 4,{{.*}} 128,{{.*}} [[S2_NEW2_CONTEXT:%.*]])
-// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_tR7Context({{.*}}, {{.*}} [[S2_NEW1]],{{.*}} 4,{{.*}} 4,{{.*}} [[S2_NEW1_CONTEXT]])
-// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_tR7Context({{.*}}, {{.*}} [[S2_NEW2]],{{.*}} 4,{{.*}} 128,{{.*}} [[S2_NEW2_CONTEXT]])
+// CHECK: [[S2_NEW1:%.*]] = call noundef ptr @_ZN2S2nwIS_EEPvSt13type_identityIT_EmSt11align_val_tR7Context({{.*}} 4,{{.*}} 4,{{.*}} [[S2_NEW1_CONTEXT:%.*]])
+// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4)
+// CHECK: [[S2_NEW2:%.*]] = call noundef ptr @_ZN2S2nwIS_EEPvSt13type_identityIT_EmSt11align_val_tR7Context({{.*}} 4,{{.*}} 128,{{.*}} [[S2_NEW2_CONTEXT:%.*]])
+// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4)
+// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_tR7Context({{.*}} [[S2_NEW1]],{{.*}} 4,{{.*}} 4,{{.*}} [[S2_NEW1_CONTEXT]])
+// CHECK: call void @_ZN2S2dlIS_EEvSt13type_identityIT_EPvmSt11align_val_tR7Context({{.*}} [[S2_NEW2]],{{.*}} 4,{{.*}} 128,{{.*}} [[S2_NEW2_CONTEXT]])
 
 extern "C" void test_s3(Context& Ctx) {
   S3 *s3_1 = new S3;
@@ -67,9 +67,9 @@ extern "C" void test_s3(Context& Ctx) {
 }
 
 // CHECK-LABEL: test_s3
-// CHECK: [[S3_NEW1:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4) 
-// CHECK: [[S3_NEW2:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 128)
-// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}}[[S3_NEW1]],{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}}[[S3_NEW2]],{{.*}} 4,{{.*}} 128)
+// CHECK: [[S3_NEW1:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}} 4,{{.*}} 4)
+// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4) 
+// CHECK: [[S3_NEW2:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}} 4,{{.*}} 128)
+// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4)
+// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}}[[S3_NEW1]],{{.*}} 4,{{.*}} 4)
+// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}}[[S3_NEW2]],{{.*}} 4,{{.*}} 128)
