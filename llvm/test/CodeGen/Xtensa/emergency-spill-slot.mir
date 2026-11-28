@@ -26,8 +26,8 @@ body: |
     ; CHECK-LABEL: name: load_far
     ; CHECK: liveins: $a0, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10, $a11, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ENTRY $sp, 1136, implicit-def $sp
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 1136
+    ; CHECK-NEXT: frame-setup ENTRY $sp, 1136, implicit-def $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1136
     ; CHECK-NEXT: $a2 = MOVI 1096
     ; CHECK-NEXT: $a2 = ADD $sp, killed $a2
     ; CHECK-NEXT: $a2 = L32I killed $a2, 0
@@ -48,8 +48,8 @@ body: |
     ; CHECK-LABEL: name: float_load_far
     ; CHECK: liveins: $a0, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10, $a11, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ENTRY $sp, 1136, implicit-def $sp
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 1136
+    ; CHECK-NEXT: frame-setup ENTRY $sp, 1136, implicit-def $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1136
     ; CHECK-NEXT: S32I killed $a8, $sp, 0 :: (store (s32) into %stack.1)
     ; CHECK-NEXT: $a8 = MOVI 1100
     ; CHECK-NEXT: $a8 = ADD $sp, killed $a8
@@ -72,8 +72,8 @@ body: |
     ; CHECK-LABEL: name: store_byte_far
     ; CHECK: liveins: $a0, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10, $a11, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ENTRY $sp, 336, implicit-def $sp
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 336
+    ; CHECK-NEXT: frame-setup ENTRY $sp, 336, implicit-def $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 336
     ; CHECK-NEXT: S32I killed $a8, $sp, 0 :: (store (s32) into %stack.1)
     ; CHECK-NEXT: $a8 = MOVI 303
     ; CHECK-NEXT: $a8 = ADD $sp, killed $a8
@@ -97,8 +97,8 @@ body: |
     ; CHECK-LABEL: name: inline_asm_mem
     ; CHECK: liveins: $a0, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10, $a11, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ENTRY $sp, 48, implicit-def $sp
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 48
+    ; CHECK-NEXT: frame-setup ENTRY $sp, 48, implicit-def $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 48
     ; CHECK-NEXT: S32I killed $a8, $sp, 0 :: (store (s32) into %stack.2)
     ; CHECK-NEXT: $a8 = MOVI 6
     ; CHECK-NEXT: $a8 = ADD $sp, killed $a8
@@ -124,8 +124,8 @@ body: |
     ; CHECK-LABEL: name: store_incoming_arg
     ; CHECK: liveins: $a0, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10, $a11, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ENTRY $sp, 48, implicit-def $sp
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 48
+    ; CHECK-NEXT: frame-setup ENTRY $sp, 48, implicit-def $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 48
     ; CHECK-NEXT: S32I killed $a8, $sp, 0 :: (store (s32) into %stack.1)
     ; CHECK-NEXT: $a8 = MOVI 260
     ; CHECK-NEXT: $a8 = ADD $sp, killed $a8
@@ -151,20 +151,20 @@ body: |
     ; CHECK-LABEL: name: store_incoming_arg_call0
     ; CHECK: liveins: $a0, $a12, $a13, $a14, $a15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a8 = MOVI -256
-    ; CHECK-NEXT: $a8 = ADD $sp, killed $a8
-    ; CHECK-NEXT: $sp = OR killed $a8, killed $a8
-    ; CHECK-NEXT: CFI_INSTRUCTION def_cfa_offset 256
-    ; CHECK-NEXT: S32I killed $a0, $sp, 252 :: (store (s32) into %stack.2)
-    ; CHECK-NEXT: S32I killed $a12, $sp, 248 :: (store (s32) into %stack.3)
-    ; CHECK-NEXT: S32I killed $a13, $sp, 244 :: (store (s32) into %stack.4)
-    ; CHECK-NEXT: S32I killed $a14, $sp, 240 :: (store (s32) into %stack.5)
-    ; CHECK-NEXT: S32I killed $a15, $sp, 236 :: (store (s32) into %stack.6)
-    ; CHECK-NEXT: CFI_INSTRUCTION offset $a0, -4
-    ; CHECK-NEXT: CFI_INSTRUCTION offset $a12, -8
-    ; CHECK-NEXT: CFI_INSTRUCTION offset $a13, -12
-    ; CHECK-NEXT: CFI_INSTRUCTION offset $a14, -16
-    ; CHECK-NEXT: CFI_INSTRUCTION offset $a15, -20
+    ; CHECK-NEXT: $a8 = frame-setup MOVI -256
+    ; CHECK-NEXT: $a8 = frame-setup ADD $sp, killed $a8
+    ; CHECK-NEXT: $sp = frame-setup OR killed $a8, killed $a8
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 256
+    ; CHECK-NEXT: frame-setup S32I killed $a0, $sp, 252 :: (store (s32) into %stack.2)
+    ; CHECK-NEXT: frame-setup S32I killed $a12, $sp, 248 :: (store (s32) into %stack.3)
+    ; CHECK-NEXT: frame-setup S32I killed $a13, $sp, 244 :: (store (s32) into %stack.4)
+    ; CHECK-NEXT: frame-setup S32I killed $a14, $sp, 240 :: (store (s32) into %stack.5)
+    ; CHECK-NEXT: frame-setup S32I killed $a15, $sp, 236 :: (store (s32) into %stack.6)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $a0, -4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $a12, -8
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $a13, -12
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $a14, -16
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $a15, -20
     ; CHECK-NEXT: $a0 = MOVI 0
     ; CHECK-NEXT: $a2 = MOVI 0
     ; CHECK-NEXT: $a3 = MOVI 0
