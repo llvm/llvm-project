@@ -73,7 +73,7 @@ static bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
       if (MBBI->getOpcode() != X86::RET64)
         continue;
 
-      unsigned ClobberReg = TRI->findDeadCallerSavedReg(MBB, MBBI);
+      unsigned ClobberReg = TRI->findDeadScratchReg(MBB, MBBI);
       if (ClobberReg != X86::NoRegister) {
         BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::POP64r))
             .addReg(ClobberReg, RegState::Define)

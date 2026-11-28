@@ -142,11 +142,11 @@ public:
   /// TODO: Fix this and return true like all other targets.
   bool eliminateFrameIndicesBackwards() const override { return false; }
 
-  /// findDeadCallerSavedReg - Return a caller-saved register that isn't live
+  /// findDeadScratchReg - Return a scratch register that isn't live
   /// when it reaches the "return" instruction. We can then pop a stack object
   /// to this register without worry about clobbering it.
-  unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator &MBBI) const;
+  unsigned findDeadScratchReg(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator &MBBI) const;
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
