@@ -27,6 +27,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
@@ -50,6 +51,38 @@ LLVMSymbolizer::LLVMSymbolizer(const Options &Opts)
       BIDFetcher(std::make_unique<BuildIDFetcher>(Opts.DebugFileDirectory)) {}
 
 LLVMSymbolizer::~LLVMSymbolizer() = default;
+
+Expected<uint64_t>
+LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
+                                       XCOFF::SectionTypeFlags SectionTypeFlag,
+                                       StringRef SectionTypeName) {
+  // Check the cache first.
+  uint64_t &Entry = XCOFFSectionBaseCache[ModulePath][SectionTypeFlag];
+  if (Entry != 0)
+    return Entry;
+
+  Expected<ObjectFile *> ObjOrErr =
+      getOrCreateObject(ModulePath.str(), Opts.DefaultArch);
+  if (!ObjOrErr)
+    return ObjOrErr.takeError();
+
+  const object::XCOFFObjectFile *XCOFFObj =
+      dyn_cast<object::XCOFFObjectFile>(*ObjOrErr);
+  if (!XCOFFObj)
+    return createStringError(
+        "section type syntax is only supported for XCOFF objects");
+
+  Expected<DataRefImpl> DRIOrErr = XCOFFObj->getSectionByType(SectionTypeFlag);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
+  DataRefImpl MatchDRI = *DRIOrErr;
+  if (MatchDRI.p == 0)
+    return createStringError("no '" + SectionTypeName +
+                             "' section found in XCOFF object");
+
+  Entry = object::SectionRef(MatchDRI, XCOFFObj).getAddress();
+  return Entry;
+}
 
 template <typename T>
 Expected<DILineInfo>
