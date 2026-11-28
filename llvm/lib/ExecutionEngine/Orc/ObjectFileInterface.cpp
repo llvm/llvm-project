@@ -204,9 +204,21 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
       return SymFlags.takeError();
     *SymFlags |= JITSymbolFlags::Exported;
 
-    // Weak external is always a function
-    if (COFFSym.isWeakExternal())
-      *SymFlags |= JITSymbolFlags::Callable;
+    // A weak external is callable iff its default is. The default may itself
+    // be a weak external; the bound stops a malformed cycle.
+    if (auto *WeakExternal = COFFSym.getWeakExternal()) {
+      auto Default = Obj.getSymbol(WeakExternal->TagIndex);
+      for (unsigned Depth = 0; Default && Default->getWeakExternal() &&
+                               Depth != Obj.getNumberOfSymbols();
+           ++Depth)
+        Default = Obj.getSymbol(Default->getWeakExternal()->TagIndex);
+      if (!Default)
+        return Default.takeError();
+      if (Default->getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION)
+        *SymFlags |= JITSymbolFlags::Callable;
+      else
+        *SymFlags &= ~JITSymbolFlags::Callable;
+    }
 
     if (IsWeak)
       *SymFlags |= JITSymbolFlags::Weak;
