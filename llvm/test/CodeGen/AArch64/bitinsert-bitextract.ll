@@ -142,7 +142,7 @@ define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 define b1 @test_bitinsert_b1(b1 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w0, w1, #0x1
+; AARCH64-NEXT:    mov w0, w1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b1 %base, i1 %val, i32 0
   ret b1 %result
@@ -300,7 +300,7 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 define b1 @test_bitinsert_b1_var(b1 %base, i1 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b1_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w0, w1, #0x1
+; AARCH64-NEXT:    mov w0, w1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b1 %base, i1 %val, i32 %off
   ret b1 %result
