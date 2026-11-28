@@ -258,7 +258,7 @@ Error DbiStream::initializeSectionContributionData() {
 
 // Initializes this->SectionHeaders.
 Error DbiStream::initializeSectionHeadersData(PDBFile *Pdb) {
-  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+  Expected<std::unique_ptr<BinaryStream>> ExpectedStream =
       createIndexedStreamForHeaderType(Pdb, DbgHeaderType::SectionHdr);
   if (auto EC = ExpectedStream.takeError())
     return EC;
@@ -284,7 +284,7 @@ Error DbiStream::initializeSectionHeadersData(PDBFile *Pdb) {
 
 // Initializes this->Fpos.
 Error DbiStream::initializeOldFpoRecords(PDBFile *Pdb) {
-  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+  Expected<std::unique_ptr<BinaryStream>> ExpectedStream =
       createIndexedStreamForHeaderType(Pdb, DbgHeaderType::FPO);
   if (auto EC = ExpectedStream.takeError())
     return EC;
@@ -308,7 +308,7 @@ Error DbiStream::initializeOldFpoRecords(PDBFile *Pdb) {
 }
 
 Error DbiStream::initializeNewFpoRecords(PDBFile *Pdb) {
-  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+  Expected<std::unique_ptr<BinaryStream>> ExpectedStream =
       createIndexedStreamForHeaderType(Pdb, DbgHeaderType::NewFPO);
   if (auto EC = ExpectedStream.takeError())
     return EC;
@@ -324,7 +324,7 @@ Error DbiStream::initializeNewFpoRecords(PDBFile *Pdb) {
   return Error::success();
 }
 
-Expected<std::unique_ptr<msf::MappedBlockStream>>
+Expected<std::unique_ptr<BinaryStream>>
 DbiStream::createIndexedStreamForHeaderType(PDBFile *Pdb,
                                             DbgHeaderType Type) const {
   if (!Pdb)
@@ -339,7 +339,7 @@ DbiStream::createIndexedStreamForHeaderType(PDBFile *Pdb,
   if (StreamNum == kInvalidStreamIndex)
     return nullptr;
 
-  return Pdb->safelyCreateIndexedStream(StreamNum);
+  return Pdb->safelyCreateStream(StreamNum);
 }
 
 BinarySubstreamRef DbiStream::getSectionContributionData() const {

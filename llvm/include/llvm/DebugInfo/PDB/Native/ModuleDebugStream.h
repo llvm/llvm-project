@@ -20,6 +20,7 @@
 #include <memory>
 
 namespace llvm {
+class BinaryStream;
 class BinaryStreamReader;
 namespace codeview {
 class DebugChecksumsSubsectionRef;
@@ -33,6 +34,8 @@ class ModuleDebugStreamRef {
   using DebugSubsectionIterator = codeview::DebugSubsectionArray::Iterator;
 
 public:
+  LLVM_ABI ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
+                                std::unique_ptr<BinaryStream> Stream);
   LLVM_ABI ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
                                 std::unique_ptr<msf::MappedBlockStream> Stream);
   ModuleDebugStreamRef(ModuleDebugStreamRef &&Other) = default;
@@ -78,7 +81,7 @@ private:
 
   uint32_t Signature;
 
-  std::shared_ptr<msf::MappedBlockStream> Stream;
+  std::shared_ptr<BinaryStream> Stream;
 
   codeview::CVSymbolArray SymbolArray;
 

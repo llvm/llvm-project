@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
 namespace llvm {
 class BinaryStream;
@@ -104,7 +105,7 @@ private:
   Error initializeOldFpoRecords(PDBFile *Pdb);
   Error initializeNewFpoRecords(PDBFile *Pdb);
 
-  Expected<std::unique_ptr<msf::MappedBlockStream>>
+  Expected<std::unique_ptr<BinaryStream>>
   createIndexedStreamForHeaderType(PDBFile *Pdb, DbgHeaderType Type) const;
 
   std::unique_ptr<BinaryStream> Stream;
@@ -128,13 +129,13 @@ private:
   FixedStreamArray<SectionContrib2> SectionContribs2;
   FixedStreamArray<SecMapEntry> SectionMap;
 
-  std::unique_ptr<msf::MappedBlockStream> SectionHeaderStream;
+  std::unique_ptr<BinaryStream> SectionHeaderStream;
   FixedStreamArray<object::coff_section> SectionHeaders;
 
-  std::unique_ptr<msf::MappedBlockStream> OldFpoStream;
+  std::unique_ptr<BinaryStream> OldFpoStream;
   FixedStreamArray<object::FpoData> OldFpoRecords;
   
-  std::unique_ptr<msf::MappedBlockStream> NewFpoStream;
+  std::unique_ptr<BinaryStream> NewFpoStream;
   codeview::DebugFrameDataSubsectionRef NewFpoRecords;
 
   const DbiStreamHeader *Header;

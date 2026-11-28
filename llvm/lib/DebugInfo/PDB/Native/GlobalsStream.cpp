@@ -32,8 +32,11 @@ using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-GlobalsStream::GlobalsStream(std::unique_ptr<MappedBlockStream> Stream)
+GlobalsStream::GlobalsStream(std::unique_ptr<BinaryStream> Stream)
     : Stream(std::move(Stream)) {}
+
+GlobalsStream::GlobalsStream(std::unique_ptr<MappedBlockStream> Stream)
+    : GlobalsStream(std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 GlobalsStream::~GlobalsStream() = default;
 

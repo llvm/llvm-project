@@ -32,8 +32,11 @@ using namespace llvm::support;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-TpiStream::TpiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream)
+TpiStream::TpiStream(PDBFile &File, std::unique_ptr<BinaryStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
+
+TpiStream::TpiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream)
+    : TpiStream(File, std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 TpiStream::~TpiStream() = default;
 
@@ -77,7 +80,7 @@ Error TpiStream::reload() {
 
   // Hash indices, hash values, etc come from the hash stream.
   if (Header->HashStreamIndex != kInvalidStreamIndex) {
-    auto HS = Pdb.safelyCreateIndexedStream(Header->HashStreamIndex);
+    auto HS = Pdb.safelyCreateStream(Header->HashStreamIndex);
     if (!HS) {
       consumeError(HS.takeError());
       return make_error<RawError>(raw_error_code::corrupt_file,

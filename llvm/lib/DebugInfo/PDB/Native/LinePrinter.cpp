@@ -183,28 +183,30 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
     formatLine("Stream {0}: Not present", StreamIdx);
     return;
   }
-  if (Size + Offset > File.getStreamByteSize(StreamIdx)) {
+  uint64_t StreamSize = File.getStreamByteSize(StreamIdx);
+  if (Offset > StreamSize || (Size != 0 && Size > StreamSize - Offset)) {
     formatLine(
         "Stream {0}: Invalid offset and size, range out of stream bounds",
         StreamIdx);
     return;
   }
 
-  auto S = File.createIndexedStream(StreamIdx);
+  auto S = File.safelyCreateStream(StreamIdx);
   if (!S) {
     NewLine();
-    formatLine("Stream {0}: Not present", StreamIdx);
+    formatLine("Stream {0}: {1}", StreamIdx, toString(S.takeError()));
     return;
   }
+  std::unique_ptr<BinaryStream> Stream = std::move(*S);
 
-  uint64_t End =
-      (Size == 0) ? S->getLength() : std::min(Offset + Size, S->getLength());
+  uint64_t End = (Size == 0) ? Stream->getLength()
+                             : std::min(Offset + Size, Stream->getLength());
   Size = End - Offset;
 
   formatLine("Stream {0}: {1} (dumping {2:N} / {3:N} bytes)", StreamIdx,
-             StreamPurpose, Size, S->getLength());
+             StreamPurpose, Size, Stream->getLength());
   AutoIndent Indent(*this);
-  BinaryStreamRef Slice(*S);
+  BinaryStreamRef Slice(*Stream);
   BinarySubstreamRef Substream;
   Substream.Offset = Offset;
   Substream.StreamData = Slice.drop_front(Offset).keep_front(Size);
@@ -217,6 +219,35 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
                                       const msf::MSFStreamLayout &Stream,
                                       BinarySubstreamRef Substream) {
   BinaryStreamReader Reader(Substream.StreamData);
+
+  if (File.isMSFZ()) {
+    NewLine();
+    OS << Label << " (";
+    bool HasData = Reader.bytesRemaining() != 0;
+    while (Reader.bytesRemaining() != 0) {
+      uint64_t Offset = Substream.Offset + Reader.getOffset();
+      ArrayRef<uint8_t> Data;
+      if (Error E = Reader.readLongestContiguousChunk(Data)) {
+        OS << "\nError reading stream: " << toString(std::move(E));
+        NewLine();
+        OS << ")";
+        return;
+      }
+      if (Data.empty()) {
+        OS << "\nError reading stream: empty contiguous chunk";
+        NewLine();
+        OS << ")";
+        return;
+      }
+      OS << "\n";
+      OS << format_bytes_with_ascii(Data, Offset, 32, 4,
+                                    CurrentIndent + IndentSpaces, true);
+    }
+    if (HasData)
+      NewLine();
+    OS << ")";
+    return;
+  }
 
   auto Runs = computeBlockRuns(File.getBlockSize(), Stream);
 

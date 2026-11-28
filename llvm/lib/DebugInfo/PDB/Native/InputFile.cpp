@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
@@ -56,9 +55,11 @@ llvm::pdb::getModuleDebugStream(PDBFile &File, StringRef &ModuleName,
     return make_error<RawError>(raw_error_code::no_stream,
                                 "Module stream not present");
 
-  auto ModStreamData = File.createIndexedStream(ModiStream);
+  auto ModStreamData = File.safelyCreateStream(ModiStream);
+  if (!ModStreamData)
+    return ModStreamData.takeError();
 
-  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  ModuleDebugStreamRef ModS(Modi, std::move(*ModStreamData));
   if (auto EC = ModS.reload())
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid module stream");
@@ -80,9 +81,11 @@ Expected<ModuleDebugStreamRef> llvm::pdb::getModuleDebugStream(PDBFile &File,
     return make_error<RawError>(raw_error_code::no_stream,
                                 "Module stream not present");
 
-  auto ModStreamData = File.createIndexedStream(ModiStream);
+  auto ModStreamData = File.safelyCreateStream(ModiStream);
+  if (!ModStreamData)
+    return ModStreamData.takeError();
 
-  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  ModuleDebugStreamRef ModS(Modi, std::move(*ModStreamData));
   if (Error Err = ModS.reload())
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid module stream");
