@@ -6251,12 +6251,16 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 /// can be rebuilt at the interleaved width.
 static bool canWidenDeinterleavedOperations(
     const VectorizeOptions &Opts, ArrayRef<Value *> Members,
-    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers) {
+    DenseSet<Value *> &Visited,
+    DenseSet<SmallVector<Value *, 8>> &ValidatedGroups,
+    SmallPtrSetImpl<User *> &UndroppableUsers) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
 
-  if (all_of(Members, [&](Value *V) { return Visited.count(V); }))
+  // A value may have been visited as part of a different operand group.
+  SmallVector<Value *, 8> Group(Members);
+  if (ValidatedGroups.contains(Group))
     return true;
 
   if (Visited.size() + Factor > Opts.vector_combine_max_scan_instrs)
@@ -6291,9 +6295,10 @@ static bool canWidenDeinterleavedOperations(
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
         !canWidenDeinterleavedOperations(Opts, Operands, Visited,
-                                         UndroppableUsers))
+                                         ValidatedGroups, UndroppableUsers))
       return false;
   }
+  ValidatedGroups.insert(std::move(Group));
   return true;
 }
 
@@ -6417,8 +6422,9 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   SmallVector<Value *, 8> RootMembers(Interleave->args());
   SmallPtrSet<User *, 4> UndroppableUsers;
   DenseSet<Value *> Visited;
+  DenseSet<SmallVector<Value *, 8>> ValidatedGroups;
   if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
-                                       UndroppableUsers))
+                                       ValidatedGroups, UndroppableUsers))
     return false;
   // Every users should be in the tree.
   if (!set_is_subset(UndroppableUsers, Visited))
