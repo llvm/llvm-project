@@ -4699,24 +4699,18 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           Template->findSpecialization(CTAI.CanonicalConverted, InsertToken)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
     if (Spec->getType()->isUndeducedType()) {
-      if (ParsingInitForAutoVars.count(Spec)) {
+      if (ParsingInitForAutoVars.count(Spec))
         Diag(TemplateNameLoc,
              diag::err_auto_variable_cannot_appear_in_own_initializer)
             << diag::ParsingInitFor::VarTemplateExplicitSpec << Spec
             << Spec->getType();
-        return true;
-      }
-      if (InstantiatingSpecializations.contains(
-              {Spec->getCanonicalDecl(),
-               unsigned(RecursiveInstGuard::Kind::Template)})) {
+      else
         // We are substituting the initializer of this variable template
         // specialization.
         Diag(TemplateNameLoc, diag::err_var_template_spec_type_depends_on_self)
             << Spec << Spec->getType();
-        return true;
-      }
-      // Not yet deduced; the type is completed when the definition is
-      // instantiated.
+
+      return true;
     }
     // If we already have a variable template specialization, return it.
     return Spec;
