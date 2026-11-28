@@ -13,9 +13,12 @@ int mock_gpu_accelerator_finish(void) { return 0; }
 // GDB server.
 void mock_gpu_accelerator_connect(void) {}
 
+void mock_gpu_accelerator_wait_for_resume(void) {}
+
 int main(void) {
   mock_gpu_accelerator_initialize();
   mock_gpu_accelerator_connect();
+  mock_gpu_accelerator_wait_for_resume();
   int result = mock_gpu_accelerator_compute(21);
   mock_gpu_accelerator_finish();
   return result == 42 ? 0 : 1;
