@@ -1,114 +1,76 @@
 """
-Make sure that we handle an expression on a thread, if
-the thread exits while the expression is running.
+Test that an expression fails cleanly when its thread exits while it runs, and
+that the process can continue afterwards.
 """
 
 import lldb
 from lldbsuite.test.decorators import *
-import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
 
 
 @requireThreadSupport
+@requireNotWasm("main.c continues past __builtin_debugtrap, a fatal trap on Wasm.")
 @skipIfAsan
-class TestExitDuringExpression(TestBase):
+@skipIfWindows
+class ExitDuringExpressionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"], bugnumber="llvm.org/pr48414")
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48414")
     @expectedFailureNetBSD
-    def test_exit_before_one_thread_unwind(self):
-        """Test the case where we exit within the one thread timeout"""
-        self.exiting_expression_test(True, True)
+    def test_exit_before_one_thread_timeout_unwind(self):
+        self.do_test(exit_before_one_thread_timeout=True, unwind=True)
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"], bugnumber="llvm.org/pr48414")
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48414")
     @expectedFailureNetBSD
-    def test_exit_before_one_thread_no_unwind(self):
-        """Test the case where we exit within the one thread timeout"""
-        self.exiting_expression_test(True, False)
+    def test_exit_before_one_thread_timeout_no_unwind(self):
+        self.do_test(exit_before_one_thread_timeout=True, unwind=False)
 
-    @skipIfWindows
-    def test_exit_after_one_thread_unwind(self):
-        """Test the case where we exit within the one thread timeout"""
-        self.exiting_expression_test(False, True)
+    def test_exit_after_one_thread_timeout_unwind(self):
+        self.do_test(exit_before_one_thread_timeout=False, unwind=True)
 
-    @skipIfWindows
-    def test_exit_after_one_thread_no_unwind(self):
-        """Test the case where we exit within the one thread timeout"""
-        self.exiting_expression_test(False, False)
+    def test_exit_after_one_thread_timeout_no_unwind(self):
+        self.do_test(exit_before_one_thread_timeout=False, unwind=False)
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source_file = lldb.SBFileSpec("main.c")
-        self.build()
-
-    def exiting_expression_test(self, before_one_thread_timeout, unwind):
-        """function_to_call sleeps for g_timeout microseconds, then calls pthread_exit.
-        This test calls function_to_call with an overall timeout of 500
-        microseconds, and a one_thread_timeout as passed in.
-        It also sets unwind_on_exit for the call to the unwind passed in.
-        This allows you to have the thread exit either before the one thread
-        timeout is passed."""
-
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Break here and cause the thread to exit", self.main_source_file
-        )
-
-        # We'll continue to this breakpoint after running our expression:
-        return_bkpt = target.BreakpointCreateBySourceRegex(
-            "Break here to make sure the thread exited", self.main_source_file
-        )
-        frame = thread.frames[0]
+    def do_test(self, exit_before_one_thread_timeout, unwind):
+        target, process, thread, _ = self.build_and_run()
         tid = thread.GetThreadID()
-        # Find the timeout:
-        var_options = lldb.SBVariablesOptions()
-        var_options.SetIncludeArguments(False)
-        var_options.SetIncludeLocals(False)
-        var_options.SetIncludeStatics(True)
 
-        value_list = frame.GetVariables(var_options)
-        g_timeout = value_list.GetFirstValueByName("g_timeout")
-        self.assertTrue(g_timeout.IsValid(), "Found g_timeout")
-
-        error = lldb.SBError()
-        timeout_value = g_timeout.GetValueAsUnsigned(error)
-        self.assertSuccess(error, "Couldn't get timeout value")
-
-        one_thread_timeout = 0
-        if before_one_thread_timeout:
-            one_thread_timeout = timeout_value * 2
-        else:
-            one_thread_timeout = int(timeout_value / 2)
+        # Keep the thread alive until lldb resumes all threads.
+        if not exit_before_one_thread_timeout:
+            wait_for_release = target.FindFirstGlobalVariable("g_wait_for_release")
+            error = lldb.SBError()
+            wait_for_release.SetValueFromCString("1", error)
+            self.assertSuccess(error)
 
         options = lldb.SBExpressionOptions()
         options.SetUnwindOnError(unwind)
-        options.SetOneThreadTimeoutInMicroSeconds(one_thread_timeout)
-        options.SetTimeoutInMicroSeconds(4 * timeout_value)
+        # The thread exits immediately in the first case, and the second case
+        # only depends on the one-thread timeout having passed.
+        options.SetOneThreadTimeoutInMicroSeconds(100 * 1000)
+        # Only an upper bound; the expression ends as soon as the thread exits.
+        options.SetTimeoutInMicroSeconds(60 * 1000 * 1000)
 
-        result = frame.EvaluateExpression("function_to_call()", options)
+        result = self.frame().EvaluateExpression("exit_current_thread()", options)
+        # The thread-exit error, not a timeout.
+        self.assertIn("exited during its execution", str(result.GetError()))
+        self.assertFalse(process.GetThreadByID(tid).IsValid(), "the thread exited")
 
-        # Make sure the thread actually exited:
-        thread = process.GetThreadByID(tid)
-        self.assertFalse(thread.IsValid(), "The thread exited")
+        if exit_before_one_thread_timeout:
+            # main is still waiting for the thread in pthread_join.
+            process.Continue()
+        # Traps are reported as exceptions on Darwin and signals elsewhere.
+        trap_stop_reason = lldb.eStopReasonSignal
+        if self.platformIsDarwin():
+            trap_stop_reason = lldb.eStopReasonException
+        main_thread = lldbutil.get_stopped_thread(process, trap_stop_reason)
+        self.assertIsNotNone(main_thread, "main stopped at the trap")
+        thread_exited = main_thread.GetFrameAtIndex(0).FindVariable("thread_exited")
+        self.assertEqual(thread_exited.GetValueAsUnsigned(), 1)
 
-        # Make sure the expression failed:
-        self.assertFalse(result.GetError().Success(), "Expression failed.")
-
-        # Make sure we can keep going:
-        threads = lldbutil.continue_to_breakpoint(process, return_bkpt)
-        if not threads:
-            self.fail("didn't get any threads back after continuing")
-
-        self.assertEqual(len(threads), 1, "One thread hit our breakpoint")
-        thread = threads[0]
-        frame = thread.frames[0]
-        # Now get the return value, if we successfully caused the thread to exit
-        # it should be 10, not 20.
-        ret_val = frame.FindVariable("ret_val")
-        self.assertSuccess(ret_val.GetError(), "Found ret_val")
-        ret_val_value = ret_val.GetValueAsSigned(error)
-        self.assertSuccess(error, "Got ret_val's value")
-        self.assertEqual(ret_val_value, 10, "We put the right value in ret_val")
+        # main returns 0 only if the thread exited instead of returning.
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)
