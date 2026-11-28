@@ -1495,9 +1495,11 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   }
 
   bool IsMatrixValue = Shape.IsMatrix && Type->isVectorTy();
-  llvm::Type *LeafTy = Shape.IsMatrix && !IsMatrixValue
-                           ? RowTy
-                           : CGM.getTypes().ConvertType(Shape.RowType);
+  llvm::Type *LeafTy = Type;
+  if (IsMatrixValue)
+    LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  while (auto *AT = dyn_cast<llvm::ArrayType>(LeafTy))
+    LeafTy = AT->getElementType();
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
   const unsigned NumRows = Shape.getNumRows();
