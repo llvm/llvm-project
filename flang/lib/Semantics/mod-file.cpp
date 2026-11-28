@@ -601,7 +601,8 @@ void ModFileWriter::PutSymbol(
             if (symbol.owner().IsDerivedType()) {
               // generic binding
               for (const Symbol &proc : x.specificProcs()) {
-                PutGenericName(typeBindings << "generic::", symbol)
+                PutAttrs(typeBindings << "generic", symbol.attrs());
+                PutGenericName(typeBindings << "::", symbol)
                     << "=>" << proc.name() << '\n';
               }
             } else {

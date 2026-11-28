@@ -1972,6 +1972,23 @@ void CheckHelper::CheckDerivedType(
           derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
+  // F2023 19.3.1 p3, 7.5.7.2 p1
+  for (const Symbol &param : details.paramNameOrder()) {
+    if (!param.get<TypeParamDetails>().attr()) {
+      continue; // A missing definition has already been diagnosed.
+    }
+    for (const Scope *parentScope{scope->GetDerivedTypeParent()}; parentScope;
+        parentScope = parentScope->GetDerivedTypeParent()) {
+      auto inherited{parentScope->find(param.name())};
+      if (inherited != parentScope->end() &&
+          IsAccessible(*inherited->second, *scope)) {
+        SayWithDeclaration(*inherited->second, param.name(),
+            "Type parameter '%s' conflicts with an accessible name inherited from a parent type"_err_en_US,
+            param.name());
+        break;
+      }
+    }
+  }
   if (HasIntrinsicTypeName(derivedType)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
