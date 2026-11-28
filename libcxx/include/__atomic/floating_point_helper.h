@@ -33,7 +33,7 @@ constexpr bool __has_rmw_builtin() {
 #  ifndef _LIBCPP_COMPILER_CLANG_BASED
   return false;
 #  else
-  // The builtin __cxx_atomic_fetch_add errors during compilation for
+  // The builtin __c11_atomic_fetch_add errors during compilation for
   // long double on platforms with fp80 format.
   // For more details, see
   // lib/Sema/SemaChecking.cpp function IsAllowedValueType
