@@ -167,6 +167,8 @@ end program
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFECsize") fortran_attrs<parameter> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
+! Each ALLOCATE first reports an error if the object is already allocated.
+! CHECK:           fir.assert {{.*}}, status, "The object 'arr' is already allocated"
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : index
 ! CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : index
@@ -176,6 +178,7 @@ end program
 ! CHECK:           fir.store %[[VAL_17]] to %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_18:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> index
+! CHECK:           fir.assert {{.*}}, status, "The object 'maxes' is already allocated"
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_21:.*]] = arith.cmpi sgt, %[[VAL_19]], %[[VAL_20]] : index
 ! CHECK:           %[[VAL_22:.*]] = arith.select %[[VAL_21]], %[[VAL_19]], %[[VAL_20]] : index
@@ -185,6 +188,7 @@ end program
 ! CHECK:           fir.store %[[VAL_25]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_26:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i32) -> index
+! CHECK:           fir.assert {{.*}}, status, "The object 'mins' is already allocated"
 ! CHECK:           %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_29:.*]] = arith.cmpi sgt, %[[VAL_27]], %[[VAL_28]] : index
 ! CHECK:           %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_27]], %[[VAL_28]] : index
