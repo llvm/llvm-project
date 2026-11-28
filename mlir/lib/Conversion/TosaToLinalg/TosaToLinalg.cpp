@@ -1463,8 +1463,21 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   // since here we know which dimension to expand, and `tosa::ReshapeOp` would
   // not have access to such information. This matters when handling dynamically
   // sized tensors.
-  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(op, resultTy, reducedRes,
-                                                     reassociationMap);
+  //
+  // Expand to the shape the reduce op is guaranteed to produce: the input
+  // shape with the reduced axis re-inserted as a unit dimension. The declared
+  // result type can be more dynamic than this, in which case the resulting
+  // `tensor.expand_shape` would not verify against its source, so convert to
+  // `resultTy` with a `tensor.cast`.
+  SmallVector<int64_t> expandedShape(inputTy.getShape());
+  if (axis < expandedShape.size())
+    expandedShape[axis] = 1;
+  auto expandedTy = resultTy.clone(expandedShape);
+  Value expanded = tensor::ExpandShapeOp::create(rewriter, loc, expandedTy,
+                                                 reducedRes, reassociationMap);
+  if (expandedTy != resultTy)
+    expanded = tensor::CastOp::create(rewriter, loc, resultTy, expanded);
+  rewriter.replaceOp(op, expanded);
   return success();
 }
 

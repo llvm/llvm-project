@@ -66,9 +66,20 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
       continue;
 
     int64_t inputIndex = it.index();
-    // Call get<Value>() under the assumption that we're not casting
-    // dynamism.
-    Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
+    // The input dim size may be more static than the expanded type: its entry
+    // can be an attribute even though the corresponding output dim is dynamic.
+    // Materialize constants instead of assuming the entry is a Value. When the
+    // input dim size is statically known, it must be divisible by the static
+    // output sizes of the group for the dynamic dim size to be inferable.
+    if (indexGroupStaticSizesProductInt != 0) {
+      if (std::optional<int64_t> cstInputSize =
+              getConstantIntValue(inputShape[inputIndex])) {
+        if (cstInputSize.value() % indexGroupStaticSizesProductInt != 0)
+          return std::nullopt;
+      }
+    }
+    Value indexGroupSize =
+        getValueOrCreateConstantIndexOp(b, loc, inputShape[inputIndex]);
     Value indexGroupStaticSizesProduct =
         arith::ConstantIndexOp::create(b, loc, indexGroupStaticSizesProductInt);
     Value dynamicDimSize = b.createOrFold<arith::DivSIOp>(
