@@ -325,6 +325,9 @@ public:
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);
 
+  /// Expand \p Pred into recipes and live-ins using the builder.
+  VPValue *expandPredicate(const SCEVPredicate *Pred);
+
   /// Expand the expression of \p R, or return \p R if it must be expanded in
   /// IR.
   VPValue *expand(VPExpandSCEVRecipe &R) {

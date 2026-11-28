@@ -889,5 +889,9 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
       Legal->hasUncountableEarlyExit())
     return false;
 
+  // TODO: Not implemented yet.
+  if (Opts.enable_vplan_based_stride_mv)
+    return false;
+
   return true;
 }
