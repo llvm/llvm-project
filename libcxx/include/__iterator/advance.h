@@ -76,24 +76,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) 
 
 namespace ranges {
 struct __advance {
-private:
-  template <class _Ip>
-  static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
-    while (__n > 0) {
-      --__n;
-      ++__i;
-    }
-  }
-
-  template <class _Ip>
-  static constexpr void __advance_backward(_Ip& __i, iter_difference_t<_Ip> __n) {
-    while (__n < 0) {
-      ++__n;
-      --__i;
-    }
-  }
-
-public:
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
   constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
@@ -104,15 +86,19 @@ public:
     if constexpr (random_access_iterator<_Ip>) {
       __i += __n;
       return;
-    } else if constexpr (bidirectional_iterator<_Ip>) {
-      // Otherwise, if `n` is non-negative, increments `i` by `n`.
-      __advance_forward(__i, __n);
-      // Otherwise, decrements `i` by `-n`.
-      __advance_backward(__i, __n);
-      return;
     } else {
-      // Otherwise, if `n` is non-negative, increments `i` by `n`.
-      __advance_forward(__i, __n);
+      if constexpr (bidirectional_iterator<_Ip>) {
+        while (__n < 0) {
+          ++__n;
+          --__i;
+        }
+      }
+
+      while (__n > 0) {
+        --__n;
+        ++__i;
+      }
+
       return;
     }
   }
