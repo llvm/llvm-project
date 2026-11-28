@@ -847,12 +847,6 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
           N->getOperand(0).getResNo() == 1);
 }]>;
 
-// Any instruction that defines a 32-bit result leaves the high half of the
-// register zeroed, so a zero-extension to 64 bits is free.
-def def32 : PatLeaf<(i32 GR32:$src), [{
-  return isDef32(N);
-}]>;
-
 def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
   return isUnneededShiftMask(N, 3);
 }]>;

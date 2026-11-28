@@ -211,11 +211,10 @@ def : Pat<(i64 (zext GR16:$src)),
 def : Pat<(zextloadi64i16 addr:$src),
           (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
 
-// The preferred way to do 32-bit-to-64-bit zero extension on x86-64 is to use a
-// SUBREG_TO_REG to utilize implicit zero-extension, however this isn't possible
-// when the 32-bit value is defined by a truncate or is copied from something
-// where the high bits aren't necessarily all zero. In such cases, we fall back
-// to these explicit zext instructions.
+// 32-bit-to-64-bit zero extension always uses an explicit MOV32rr. Whether the
+// instruction that ends up defining $src already zeroes the upper 32 bits is
+// only known once every node has been selected, so the MOV32rr is removed in
+// X86DAGToDAGISel::PostprocessISelDAG instead (see isDef32).
 def : Pat<(i64 (zext GR32:$src)),
           (SUBREG_TO_REG (MOV32rr GR32:$src), sub_32bit)>;
 def : Pat<(i64 (zextloadi64i32 addr:$src)),
