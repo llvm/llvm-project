@@ -1017,6 +1017,26 @@ public:
   }
 };
 
+/// Erases `spirv.EntryPoint`. The function of a Kernel entry point gets the
+/// `spir_kernel` calling convention if it is already converted.
+class EntryPointPattern : public SPIRVToLLVMConversion<spirv::EntryPointOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::EntryPointOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::EntryPointOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // SPIR-V forbids calling entry points, so call sites keep the default CC.
+    if (op.getExecutionModel() == spirv::ExecutionModel::Kernel)
+      if (auto fn = SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(
+              op, op.getFnAttr()))
+        rewriter.modifyOpInPlace(
+            fn, [&] { fn.setCConv(LLVM::cconv::CConv::SPIR_KERNEL); });
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Converts `spirv.ExecutionMode` into a global struct constant that holds
 /// execution mode information.
 class ExecutionModePattern
@@ -2808,7 +2828,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       SelectionPattern, ErasePattern<spirv::MergeOp>,
 
       // Entry points and execution mode are handled separately.
-      ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
+      EntryPointPattern, ExecutionModePattern,
 
       // GLSL extended instruction set ops
       DirectConversionPattern<spirv::GLCeilOp, LLVM::FCeilOp>,
