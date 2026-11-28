@@ -1214,6 +1214,7 @@ bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
   case CallingConv::ARM64EC_Thunk_Native:
   case CallingConv::RISCV_VectorCall:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
   case CallingConv::RISCV_VLSCall_32:
   case CallingConv::RISCV_VLSCall_64:
   case CallingConv::RISCV_VLSCall_128:

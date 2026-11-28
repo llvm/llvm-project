@@ -702,6 +702,31 @@ def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
+// Out-of-line atomic preserve-most helpers (`__aarch64_*_preservemost`) use a
+// single uniform mask across all 1-, 2-, 4-, 8-, and 16-byte operations: X0-X4
+// cover the maximum argument/return footprint (16-byte CAS passes expected in
+// X0:X1, desired in X2:X3, and the address in X4, returning in X0:X1), while
+// X15-X17 and NZCV are clobbered as helper scratch and intra-procedure-call
+// linker veneer/PLT registers (IP0/IP1). All remaining GPRs (X5-X14, X18-X28,
+// FP, LR; on targets where X18 is reserved, getReservedRegs keeps it
+// unallocatable) and all SIMD/SVE vector (Z0-Z31, aliasing Q0-Q31) and
+// predicate (P0-P15) registers are preserved.
+//
+// Individual helper families have narrower footprints (`swp` and
+// `ld{add,clr,eor,set}` take arguments only in X0-X1 without modifying X1-X4,
+// with `swp` also leaving X15 untouched; 1-, 2-, 4-, and 8-byte `cas` take
+// arguments in X0-X2 and modify only X0, X16-X17, and NZCV; only `cas16` uses
+// X0-X4, while branchless `csel` LL/SC implementations of `cas16` such as
+// `libgcc`'s use extra scratch registers beyond X15-X17). Separate per-helper
+// or `_PreserveMost_From_X*` conventions could preserve more registers on
+// narrow helpers or allow extra scratch registers for `cas16` at the cost of
+// multiple calling convention IDs.
+def CSR_AArch64_Outline_Atomics_PreserveMost
+    : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                           (sequence "P%u", 0, 15),
+                           (sub (sequence "X%u", 5, 28), X15, X16, X17),
+                           LR, FP)>;
+
 // The SMSTART/SMSTOP instructions preserve only GPR registers.
 def CSR_AArch64_SMStartStop : CalleeSavedRegs<(add (sequence "X%u", 0, 28),
                                                    LR, FP)>;

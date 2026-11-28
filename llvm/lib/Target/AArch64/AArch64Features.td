@@ -665,6 +665,18 @@ def FeatureSMEF16F8F16 : ExtensionWithMArch<"sme-f16f8f16", "SME_F16F8F16", "FEA
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
+// Remap outline-atomic libcalls (`__aarch64_{cas,swp,ldadd,ldclr,ldeor,ldset}`)
+// to `*_preservemost` entry points using AArch64_Outline_Atomics_PreserveMost.
+// Marked InlineIgnore because both conventions use distinct runtime symbol
+// names and identical atomic memory semantics, so LTO can freely inline across
+// translation units compiled with different settings.
+def FeatureOutlineAtomicsPreserveMost
+    : SubtargetFeature<"outline-atomics-preserve-most",
+                       "OutlineAtomicsPreserveMost", "true",
+                       "Use a preserve-most calling convention for out-of-line "
+                       "atomic helper calls",
+                       [], InlineIgnore>;
+
 def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
   "Enable Function Multi Versioning support.">;
 

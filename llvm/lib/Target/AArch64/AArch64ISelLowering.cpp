@@ -9307,6 +9307,9 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
   case CallingConv::GRAAL:
+  // Outline-atomic preserve-most helpers pass arguments using the target's
+  // standard C calling convention (differing only in preserved registers).
+  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
     if (Subtarget->isTargetWindowsOrUEFI()) {
       if (IsVarArg) {
         if (Subtarget->isWindowsArm64EC())
