@@ -92,21 +92,19 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
-}
 
-void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                        const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  auto specifier = Expr.getSpecifier();
-  if (specifier && specifier != VE::S_REFLONG)
-    OS << '@' << getSpecifierName(specifier);
-}
-
-bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                               MCValue &Res,
-                                               const MCAssembler *Asm) const {
-  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(Expr.getSpecifier());
-  return true;
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    auto specifier = Expr.getSpecifier();
+    if (specifier && specifier != VE::S_REFLONG)
+      OS << '@' << MAI.getSpecifierName(specifier);
+  };
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Res,
+                               const MCAssembler *Asm) {
+    if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+      return false;
+    Res.setSpecifier(Expr.getSpecifier());
+    return true;
+  };
 }

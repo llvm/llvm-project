@@ -22,6 +22,87 @@
 
 using namespace llvm;
 
+static void printSwitchToSection(const MCAsmInfo &MAI, const MCSection &Section,
+                                 uint32_t, const Triple &T, raw_ostream &OS) {
+  auto &Sec = static_cast<const MCSectionCOFF &>(Section);
+  // standard sections don't require the '.section'
+  if (!Sec.getCOMDATSymbol() && !Sec.isUnique() &&
+      MAI.isSectionDirective(Sec.getName())) {
+    OS << '\t' << Sec.getName() << '\n';
+    return;
+  }
+
+  OS << "\t.section\t" << Sec.getName() << ",\"";
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
+    OS << 'd';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
+    OS << 'b';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_EXECUTE)
+    OS << 'x';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_WRITE)
+    OS << 'w';
+  else if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_READ)
+    OS << 'r';
+  else
+    OS << 'y';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_REMOVE)
+    OS << 'n';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)
+    OS << 's';
+  if ((Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE) &&
+      !Sec.isImplicitlyDiscardable(Sec.getName()))
+    OS << 'D';
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_INFO)
+    OS << 'i';
+  OS << '"';
+
+  // unique should be tail of .section directive.
+  if (Sec.isUnique() && !Sec.getCOMDATSymbol())
+    OS << ",unique," << Sec.getUniqueID();
+
+  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {
+    if (Sec.getCOMDATSymbol())
+      OS << ",";
+    else
+      OS << "\n\t.linkonce\t";
+    switch (Sec.getSelection()) {
+    case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES:
+      OS << "one_only";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_ANY:
+      OS << "discard";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_SAME_SIZE:
+      OS << "same_size";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH:
+      OS << "same_contents";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE:
+      OS << "associative";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_LARGEST:
+      OS << "largest";
+      break;
+    case COFF::IMAGE_COMDAT_SELECT_NEWEST:
+      OS << "newest";
+      break;
+    default:
+      assert(false && "unsupported COFF selection type");
+      break;
+    }
+    if (const MCSymbol *Sym = Sec.getCOMDATSymbol()) {
+      OS << ",";
+      Sym->print(OS, &MAI);
+    }
+  }
+
+  if (Sec.isUnique() && Sec.getCOMDATSymbol())
+    OS << ",unique," << Sec.getUniqueID();
+
+  OS << '\n';
+}
+
 void MCAsmInfoCOFF::anchor() {}
 
 MCAsmInfoCOFF::MCAsmInfoCOFF(const MCTargetOptions &Options)
@@ -55,6 +136,8 @@ MCAsmInfoCOFF::MCAsmInfoCOFF(const MCTargetOptions &Options)
   // make them global symbols as well.
   HasCOFFComdatConstants = true;
 
+  PrintSwitchToSectionFn = ::printSwitchToSection;
+
   // FIXME: Does .section .bss/.data/.text work everywhere??
   SectionDirectives.insert(".text");
   SectionDirectives.insert(".data");
@@ -83,86 +166,4 @@ void MCSectionCOFF::setSelection(int Selection) const {
   assert(Selection != 0 && "invalid COMDAT selection type");
   this->Selection = Selection;
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-}
-
-void MCAsmInfoCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
-                                         const Triple &T,
-                                         raw_ostream &OS) const {
-  auto &Sec = static_cast<const MCSectionCOFF &>(Section);
-  // standard sections don't require the '.section'
-  if (!Sec.getCOMDATSymbol() && !Sec.isUnique() &&
-      SectionDirectives.contains(Sec.getName())) {
-    OS << '\t' << Sec.getName() << '\n';
-    return;
-  }
-
-  OS << "\t.section\t" << Sec.getName() << ",\"";
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
-    OS << 'd';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
-    OS << 'b';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_EXECUTE)
-    OS << 'x';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_WRITE)
-    OS << 'w';
-  else if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_READ)
-    OS << 'r';
-  else
-    OS << 'y';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_REMOVE)
-    OS << 'n';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)
-    OS << 's';
-  if ((Sec.getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE) &&
-      !Sec.isImplicitlyDiscardable(Sec.getName()))
-    OS << 'D';
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_INFO)
-    OS << 'i';
-  OS << '"';
-
-  // unique should be tail of .section directive.
-  if (Sec.isUnique() && !Sec.COMDATSymbol)
-    OS << ",unique," << Sec.UniqueID;
-
-  if (Sec.getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {
-    if (Sec.COMDATSymbol)
-      OS << ",";
-    else
-      OS << "\n\t.linkonce\t";
-    switch (Sec.Selection) {
-    case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES:
-      OS << "one_only";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_ANY:
-      OS << "discard";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_SAME_SIZE:
-      OS << "same_size";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH:
-      OS << "same_contents";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE:
-      OS << "associative";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_LARGEST:
-      OS << "largest";
-      break;
-    case COFF::IMAGE_COMDAT_SELECT_NEWEST:
-      OS << "newest";
-      break;
-    default:
-      assert(false && "unsupported COFF selection type");
-      break;
-    }
-    if (Sec.COMDATSymbol) {
-      OS << ",";
-      Sec.COMDATSymbol->print(OS, this);
-    }
-  }
-
-  if (Sec.isUnique() && Sec.COMDATSymbol)
-    OS << ",unique," << Sec.UniqueID;
-
-  OS << '\n';
 }

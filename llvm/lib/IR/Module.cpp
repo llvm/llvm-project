@@ -1042,7 +1042,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
 }
 
-StringRef Module::getTargetABIFromMD() {
+StringRef Module::getTargetABIFromMD() const {
   StringRef TargetABI;
   if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();

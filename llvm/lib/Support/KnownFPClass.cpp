@@ -819,7 +819,9 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   const int MantissaBits = Precision - 1;
 
   int MinKnownExponent = ilogb(CRHS);
-  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+  bool CannotBeSubnormal = MinKnownExponent >= MantissaBits ||
+                           (KnownLHS.isKnownNeverSubnormal() &&
+                            CRHS.isNormal() && MinKnownExponent >= 0);
 
   KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
   if (CannotBeSubnormal)

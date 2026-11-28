@@ -219,6 +219,12 @@ protected:
   /// True if the target supports the .addrsig directive.
   bool HasAddrsigDirective = true;
 
+  void (*SpecifierExprPrintFn)(const MCAsmInfo &, raw_ostream &,
+                               const MCSpecifierExpr &) = nullptr;
+
+  bool (*SpecifierExprEvaluateFn)(const MCSpecifierExpr &E, MCValue &Res,
+                                  const MCAssembler *Asm) = nullptr;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -260,6 +266,10 @@ protected:
   bool SunStyleELFSectionSwitchSyntax = false;
 
   bool NeedsDwarfSectionOffsetDirective = false;
+
+  void (*PrintSwitchToSectionFn)(const MCAsmInfo &, const MCSection &,
+                                 uint32_t Subsection, const Triple &,
+                                 raw_ostream &);
 
   //===--- Alignment Information ----------------------------------------===//
 
@@ -514,8 +524,15 @@ public:
     return ReservedIdentifiers;
   }
 
-  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
-                                    const Triple &, raw_ostream &) const {}
+  bool isSectionDirective(StringRef SecName) const {
+    return SectionDirectives.contains(SecName);
+  }
+
+  void printSwitchToSection(const MCSection &Sec, uint32_t Subsection,
+                            const Triple &T, raw_ostream &OS) const {
+    if (PrintSwitchToSectionFn)
+      PrintSwitchToSectionFn(*this, Sec, Subsection, T, OS);
+  }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
@@ -743,12 +760,8 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &,
-                                  const MCSpecifierExpr &) const {
-    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
-  }
-  virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
-                                         const MCAssembler *Asm) const;
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
+                                 const MCAssembler *Asm) const;
 
   /// True if the instruction is stored in multiple halfwords, with
   /// the high-order half appearing first in memory regardless of target

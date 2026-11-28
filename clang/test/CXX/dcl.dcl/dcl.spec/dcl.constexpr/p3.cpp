@@ -158,8 +158,12 @@ constexpr int DisallowedStmtsCXX14_5() {
 constexpr int DisallowedStmtsCXX14_6() {
   //  - a definition of a variable of thread storage duration
   return 0;
-  thread_local constexpr int n = 123; // beforecxx14-warning {{variable declaration in a constexpr function is a C++14 extension}} \
-                                      // beforecxx23-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
+  thread_local constexpr int n = 123; // beforecxx14-warning {{variable declaration in a constexpr function is a C++14 extension}}
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#else
+  // beforecxx23-warning@-4 {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
+#endif
 }
 constexpr int DisallowedStmtsCXX14_7() {
   //  - a definition of a variable for which no initialization is performed

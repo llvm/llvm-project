@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -ferror-limit 300 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le51 -fopenmp-simd -ferror-limit 300 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -75,8 +75,6 @@ struct S8 {
 #pragma omp target update from(*(a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(*(*(this->ptr)+a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(*(this+this)) // expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
-#pragma omp target update from(([2])this) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])this)[0:1], (([2])this->ptr)[0:1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   }
 };
 
@@ -121,7 +119,7 @@ T tmain(T argc) {
 #pragma omp target update from(ba)
 #pragma omp target update from(h) // expected-error {{threadprivate variables are not allowed in 'from' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(k), to(k) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
-#pragma omp target update from(t), from(t[:5]) // le45-error 2 {{variable can appear only once in OpenMP 'target update' construct}} le45-note 2 {{used here}}
+#pragma omp target update from(t), from(t[:5]) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
 #pragma omp target update from(da)
 #pragma omp target update from(da[:4])
 
@@ -139,25 +137,6 @@ T tmain(T argc) {
   {
 #pragma omp target update from(s7.x)
   }
-
-// OpenMP 5.0 [2.1.4, Array Shaping]: the shaped pointer is the array of the
-// list item, so it can be the base of array sections and subscripts.
-#pragma omp target update from((([2][10])m)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([I][10])m)[0:I][1], (([I][10])m)[0:I][5]) // le45-error 2 {{'I' in capture list does not name a variable}} le45-error 2 {{expected body of lambda expression}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][3][4])m)[0:2][1][0:4]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[1][:]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[:2][2:]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][0:5:2]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ']'}} le45-note {{to match this '['}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[:][1]) // le51-error 2 {{array section does not specify length for outermost dimension}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])i)[0:2]) // le51-error 2 {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])t)[0:2]) // le51-error 2 {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][1]) to((([2][10])m)[0:2][1]) // le51-error 2 {{variable can appear only once in OpenMP 'target update' construct}} le51-note 2 {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2]) to((([2][10])m)[0:2][1]) // le51-error 2 {{variable can appear only once in OpenMP 'target update' construct}} le51-note 2 {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][1]) to(m[0]) // le51-error 2 {{same pointer dereferenced in multiple different ways in map clause expressions}} le51-note 2 {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(x, (([2][10])s7.p)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
-#pragma omp target data map(from: (([10])m)[0:10]) // le51-error 2 {{OpenMP array shaping operation is not allowed here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
-  {}
 
   return 0;
 }
@@ -178,7 +157,6 @@ int main(int argc, char **argv) {
   S7 s7;
   int **BB, *offset;
   int ***BBB;
-  void (*fp)(void);
 
 #pragma omp target update from // expected-error {{expected '(' after 'from'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
@@ -197,7 +175,7 @@ int main(int argc, char **argv) {
 #pragma omp target update from(ba)
 #pragma omp target update from(h) // expected-error {{threadprivate variables are not allowed in 'from' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(k), to(k) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
-#pragma omp target update from(t), from(t[:5]) // le45-error {{variable can appear only once in OpenMP 'target update' construct}} le45-note {{used here}}
+#pragma omp target update from(t), from(t[:5]) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
 #pragma omp target update from(da)
 #pragma omp target update from(da[:4])
 
@@ -226,30 +204,6 @@ int main(int argc, char **argv) {
   {
 #pragma omp target update from(s7.x)
   }
-
-// OpenMP 5.0 [2.1.4, Array Shaping]: the shaped pointer is the array of the
-// list item, so it can be the base of array sections and subscripts.
-#pragma omp target update from((([2][10])m)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([argc][argc + 2])m)[0:argc][1], (([argc][argc + 2])m)[0:argc][argc + 1]) // le45-error 2 {{expected body of lambda expression}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][3][4])m)[0:2][1][0:4]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[1][:]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[:2][2:]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][0:5:2]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ']'}} le45-note {{to match this '['}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[:][1]) // le51-error {{array section does not specify length for outermost dimension}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])i)[0:2]) // le51-error {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])t)[0:2]) // le51-error {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][1]) to((([2][10])m)[0:2][1]) // le51-error {{variable can appear only once in OpenMP 'target update' construct}} le51-note {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2]) to((([2][10])m)[0:2][1]) // le51-error {{variable can appear only once in OpenMP 'target update' construct}} le51-note {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])m)[0:2][1]) to(m[0]) // le51-error {{same pointer dereferenced in multiple different ways in map clause expressions}} le51-note {{used here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([1ULL << 62])m)[0:1]) // le51-error {{array is too large}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2])fp)[0:1]) // le51-error {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(x, (([2][10])s7.p)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
-#pragma omp target update from((([2][10])BB)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from((([2][10])BB[1])[0:][1]) // le51-error {{array section does not specify length for outermost dimension}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(s7.i) from(s7.x) from(s7.i) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
-#pragma omp target data map(from: (([10])m)[0:10]) // le51-error {{OpenMP array shaping operation is not allowed here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
-  {}
 
   return tmain<int, 3>(argc)+tmain<to, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }

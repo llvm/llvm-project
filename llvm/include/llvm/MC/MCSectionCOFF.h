@@ -51,7 +51,6 @@ class MCSectionCOFF final : public MCSection {
 
 private:
   friend class MCContext;
-  friend class MCAsmInfoCOFF;
   // The storage of Name is owned by MCContext's COFFUniquingMap.
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
                 MCSymbol *COMDATSymbol, int Selection, unsigned UniqueID,

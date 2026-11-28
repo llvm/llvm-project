@@ -543,7 +543,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         // the low bits for the mul result and high bits to do the overflow
         // check.
         .widenScalarIf(typeIs(0, sXLen),
-                       LegalizeMutations::changeTo(0, sDoubleXLen))
+                       LegalizeMutations::changeTo(0, LLT::integer(2 * XLen)))
         .lower();
   }
 

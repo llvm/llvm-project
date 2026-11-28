@@ -39,22 +39,3 @@ XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
 
   initializeAtSpecifiers(atSpecifiers);
 }
-
-void XtensaMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                         const MCSpecifierExpr &Expr) const {
-  StringRef S = Xtensa::getSpecifierName(Expr.getSpecifier());
-  if (!S.empty())
-    OS << '%' << S << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (!S.empty())
-    OS << ')';
-}
-
-uint8_t Xtensa::parseSpecifier(StringRef name) { return 0; }
-
-StringRef Xtensa::getSpecifierName(uint8_t S) {
-  switch (S) {
-  default:
-    llvm_unreachable("Invalid ELF symbol kind");
-  }
-}

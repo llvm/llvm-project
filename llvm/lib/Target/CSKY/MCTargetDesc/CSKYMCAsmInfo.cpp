@@ -26,18 +26,6 @@ constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
 };
 constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
-void CSKYMCAsmInfo::anchor() {}
-
-CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple,
-                             const MCTargetOptions &Options)
-    : MCAsmInfoELF(TargetTriple, Options) {
-  AlignmentIsInBytes = false;
-  SupportsDebugInformation = true;
-  CommentString = "#";
-
-  initializeAtSpecifiers(atSpecifiers);
-}
-
 static StringRef getVariantKindName(uint8_t Kind) {
   using namespace CSKY;
   switch (Kind) {
@@ -73,8 +61,20 @@ static StringRef getVariantKindName(uint8_t Kind) {
   }
 }
 
-void CSKYMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                       const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  OS << getVariantKindName(Expr.getSpecifier());
+void CSKYMCAsmInfo::anchor() {}
+
+CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple,
+                             const MCTargetOptions &Options)
+    : MCAsmInfoELF(TargetTriple, Options) {
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  CommentString = "#";
+
+  initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << getVariantKindName(Expr.getSpecifier());
+  };
 }

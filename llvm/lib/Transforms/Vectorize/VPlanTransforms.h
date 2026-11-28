@@ -319,8 +319,10 @@ struct VPlanTransforms {
   /// Materialize the abstract header mask of the loop region into concrete
   /// recipes: an active-lane-mask if \p UseActiveLaneMask (with a PHI if \p
   /// UseActiveLaneMaskForControlFlow), else (WideCanonicalIV icmp ule BTC).
-  static void materializeHeaderMask(VPlan &Plan, bool UseActiveLaneMask,
-                                    bool UseActiveLaneMaskForControlFlow);
+  /// LastActiveLane(HeaderMask) is replaced by BTC - CanonicalIV.
+  static void
+  materializeHeaderMaskAndLastActiveLane(VPlan &Plan, bool UseActiveLaneMask,
+                                         bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.

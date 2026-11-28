@@ -25,22 +25,6 @@
 
 using namespace llvm;
 
-void MCAsmInfoELF::anchor() {}
-
-MCAsmInfoELF::MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options)
-    : MCAsmInfo(Options) {
-  // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
-  // don't emit them.
-  EmitELFStackSection = !TT.isOSSolaris();
-
-  HasIdentDirective = true;
-  HasPreferredAlignment = true;
-  WeakRefDirective = "\t.weak\t";
-  InternalSymbolPrefix = ".L";
-  SectionDirectives.insert(".text");
-  SectionDirectives.insert(".data");
-}
-
 static void printName(raw_ostream &OS, StringRef Name) {
   if (Name.find_first_not_of("0123456789_."
                              "abcdefghijklmnopqrstuvwxyz"
@@ -64,11 +48,13 @@ static void printName(raw_ostream &OS, StringRef Name) {
   OS << '"';
 }
 
-void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
-                                        uint32_t Subsection, const Triple &T,
-                                        raw_ostream &OS) const {
+static void printSwitchToSection(const MCAsmInfo &MAI, const MCSection &Section,
+                                 uint32_t Subsection, const Triple &T,
+                                 raw_ostream &OS) {
   auto &Sec = static_cast<const MCSectionELF &>(Section);
-  if (!Sec.isUnique() && SectionDirectives.contains(Sec.getName())) {
+  unsigned Type = Sec.getType();
+  unsigned Flags = Sec.getFlags();
+  if (!Sec.isUnique() && MAI.isSectionDirective(Sec.getName())) {
     OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;
@@ -80,66 +66,66 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
   printName(OS, Sec.getName());
 
   // Handle the weird solaris syntax if desired.
-  if (usesSunStyleELFSectionSwitchSyntax() && !(Sec.Flags & ELF::SHF_MERGE)) {
-    if (Sec.Flags & ELF::SHF_ALLOC)
+  if (MAI.usesSunStyleELFSectionSwitchSyntax() && !(Flags & ELF::SHF_MERGE)) {
+    if (Flags & ELF::SHF_ALLOC)
       OS << ",#alloc";
-    if (Sec.Flags & ELF::SHF_EXECINSTR)
+    if (Flags & ELF::SHF_EXECINSTR)
       OS << ",#execinstr";
-    if (Sec.Flags & ELF::SHF_WRITE)
+    if (Flags & ELF::SHF_WRITE)
       OS << ",#write";
-    if (Sec.Flags & ELF::SHF_EXCLUDE)
+    if (Flags & ELF::SHF_EXCLUDE)
       OS << ",#exclude";
-    if (Sec.Flags & ELF::SHF_TLS)
+    if (Flags & ELF::SHF_TLS)
       OS << ",#tls";
     OS << '\n';
     return;
   }
 
   OS << ",\"";
-  if (Sec.Flags & ELF::SHF_ALLOC)
+  if (Flags & ELF::SHF_ALLOC)
     OS << 'a';
-  if (Sec.Flags & ELF::SHF_EXCLUDE)
+  if (Flags & ELF::SHF_EXCLUDE)
     OS << 'e';
-  if (Sec.Flags & ELF::SHF_EXECINSTR)
+  if (Flags & ELF::SHF_EXECINSTR)
     OS << 'x';
-  if (Sec.Flags & ELF::SHF_WRITE)
+  if (Flags & ELF::SHF_WRITE)
     OS << 'w';
-  if (Sec.Flags & ELF::SHF_MERGE)
+  if (Flags & ELF::SHF_MERGE)
     OS << 'M';
-  if (Sec.Flags & ELF::SHF_STRINGS)
+  if (Flags & ELF::SHF_STRINGS)
     OS << 'S';
-  if (Sec.Flags & ELF::SHF_TLS)
+  if (Flags & ELF::SHF_TLS)
     OS << 'T';
-  if (Sec.Flags & ELF::SHF_LINK_ORDER)
+  if (Flags & ELF::SHF_LINK_ORDER)
     OS << 'o';
-  if (Sec.Flags & ELF::SHF_GROUP)
+  if (Flags & ELF::SHF_GROUP)
     OS << 'G';
-  if (Sec.Flags & ELF::SHF_GNU_RETAIN)
+  if (Flags & ELF::SHF_GNU_RETAIN)
     OS << 'R';
 
   // If there are os-specific flags, print them.
   if (T.isOSSolaris())
-    if (Sec.Flags & ELF::SHF_SUNW_NODISCARD)
+    if (Flags & ELF::SHF_SUNW_NODISCARD)
       OS << 'R';
 
   // If there are tarSec.get-specific flags, print them.
   Triple::ArchType Arch = T.getArch();
   if (Arch == Triple::xcore) {
-    if (Sec.Flags & ELF::XCORE_SHF_CP_SECTION)
+    if (Flags & ELF::XCORE_SHF_CP_SECTION)
       OS << 'c';
-    if (Sec.Flags & ELF::XCORE_SHF_DP_SECTION)
+    if (Flags & ELF::XCORE_SHF_DP_SECTION)
       OS << 'd';
   } else if (T.isARM() || T.isThumb()) {
-    if (Sec.Flags & ELF::SHF_ARM_PURECODE)
+    if (Flags & ELF::SHF_ARM_PURECODE)
       OS << 'y';
   } else if (T.isAArch64()) {
-    if (Sec.Flags & ELF::SHF_AARCH64_PURECODE)
+    if (Flags & ELF::SHF_AARCH64_PURECODE)
       OS << 'y';
   } else if (Arch == Triple::hexagon) {
-    if (Sec.Flags & ELF::SHF_HEX_GPREL)
+    if (Flags & ELF::SHF_HEX_GPREL)
       OS << 's';
   } else if (Arch == Triple::x86_64) {
-    if (Sec.Flags & ELF::SHF_X86_64_LARGE)
+    if (Flags & ELF::SHF_X86_64_LARGE)
       OS << 'l';
   }
 
@@ -148,79 +134,78 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
   OS << ',';
 
   // If comment string is '@', e.g. as on ARM - use '%' instead
-  if (getCommentString()[0] == '@')
+  if (MAI.getCommentString()[0] == '@')
     OS << '%';
   else
     OS << '@';
 
-  if (Sec.Type == ELF::SHT_INIT_ARRAY)
+  if (Type == ELF::SHT_INIT_ARRAY)
     OS << "init_array";
-  else if (Sec.Type == ELF::SHT_FINI_ARRAY)
+  else if (Type == ELF::SHT_FINI_ARRAY)
     OS << "fini_array";
-  else if (Sec.Type == ELF::SHT_PREINIT_ARRAY)
+  else if (Type == ELF::SHT_PREINIT_ARRAY)
     OS << "preinit_array";
-  else if (Sec.Type == ELF::SHT_NOBITS)
+  else if (Type == ELF::SHT_NOBITS)
     OS << "nobits";
-  else if (Sec.Type == ELF::SHT_NOTE)
+  else if (Type == ELF::SHT_NOTE)
     OS << "note";
-  else if (Sec.Type == ELF::SHT_PROGBITS)
+  else if (Type == ELF::SHT_PROGBITS)
     OS << "progbits";
-  else if (Sec.Type == ELF::SHT_X86_64_UNWIND)
+  else if (Type == ELF::SHT_X86_64_UNWIND)
     OS << "unwind";
-  else if (Sec.Type == ELF::SHT_MIPS_DWARF)
+  else if (Type == ELF::SHT_MIPS_DWARF)
     // Print hex value of the flag while we do not have
     // any standard symbolic representation of the flag.
     OS << "0x7000001e";
-  else if (Sec.Type == ELF::SHT_LLVM_ODRTAB)
+  else if (Type == ELF::SHT_LLVM_ODRTAB)
     OS << "llvm_odrtab";
-  else if (Sec.Type == ELF::SHT_LLVM_LINKER_OPTIONS)
+  else if (Type == ELF::SHT_LLVM_LINKER_OPTIONS)
     OS << "llvm_linker_options";
-  else if (Sec.Type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
+  else if (Type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
     OS << "llvm_call_graph_profile";
-  else if (Sec.Type == ELF::SHT_LLVM_DEPENDENT_LIBRARIES)
+  else if (Type == ELF::SHT_LLVM_DEPENDENT_LIBRARIES)
     OS << "llvm_dependent_libraries";
-  else if (Sec.Type == ELF::SHT_LLVM_SYMPART)
+  else if (Type == ELF::SHT_LLVM_SYMPART)
     OS << "llvm_sympart";
-  else if (Sec.Type == ELF::SHT_LLVM_BB_ADDR_MAP)
+  else if (Type == ELF::SHT_LLVM_BB_ADDR_MAP)
     OS << "llvm_bb_addr_map";
-  else if (Sec.Type == ELF::SHT_LLVM_OFFLOADING)
+  else if (Type == ELF::SHT_LLVM_OFFLOADING)
     OS << "llvm_offloading";
-  else if (Sec.Type == ELF::SHT_LLVM_LTO)
+  else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
-  else if (Sec.Type == ELF::SHT_LLVM_JT_SIZES)
+  else if (Type == ELF::SHT_LLVM_JT_SIZES)
     OS << "llvm_jt_sizes";
-  else if (Sec.Type == ELF::SHT_LLVM_CFI_JUMP_TABLE)
+  else if (Type == ELF::SHT_LLVM_CFI_JUMP_TABLE)
     OS << "llvm_cfi_jump_table";
-  else if (Sec.Type == ELF::SHT_LLVM_CALL_GRAPH)
+  else if (Type == ELF::SHT_LLVM_CALL_GRAPH)
     OS << "llvm_call_graph";
-  else if (Sec.Type == ELF::SHT_LLVM_DYNDBG_ELF)
+  else if (Type == ELF::SHT_LLVM_DYNDBG_ELF)
     OS << "llvm_dyndbg_elf";
   else
-    OS << "0x" << Twine::utohexstr(Sec.Type);
+    OS << "0x" << Twine::utohexstr(Type);
 
-  if (Sec.EntrySize) {
-    assert((Sec.Flags & ELF::SHF_MERGE) ||
-           Sec.Type == ELF::SHT_LLVM_CFI_JUMP_TABLE);
-    OS << "," << Sec.EntrySize;
+  if (unsigned ES = Sec.getEntrySize()) {
+    assert((Flags & ELF::SHF_MERGE) || Type == ELF::SHT_LLVM_CFI_JUMP_TABLE);
+    OS << "," << ES;
   }
 
-  if (Sec.Flags & ELF::SHF_LINK_ORDER) {
+  if (Flags & ELF::SHF_LINK_ORDER) {
     OS << ",";
-    if (Sec.LinkedToSym)
-      printName(OS, Sec.LinkedToSym->getName());
+    if (const MCSymbol *Sym = Sec.getLinkedToSymbol())
+      printName(OS, Sym->getName());
     else
       OS << '0';
   }
 
-  if (Sec.Flags & ELF::SHF_GROUP) {
+  if (Flags & ELF::SHF_GROUP) {
     OS << ",";
-    printName(OS, Sec.Group.getPointer()->getName());
+    printName(OS, Sec.getGroup()->getName());
     if (Sec.isComdat())
       OS << ",comdat";
   }
 
   if (Sec.isUnique())
-    OS << ",unique," << Sec.UniqueID;
+    OS << ",unique," << Sec.getUniqueID();
 
   OS << '\n';
 
@@ -228,4 +213,21 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
     OS << "\t.subsection\t" << Subsection;
     OS << '\n';
   }
+}
+
+void MCAsmInfoELF::anchor() {}
+
+MCAsmInfoELF::MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
+  // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
+  // don't emit them.
+  EmitELFStackSection = !TT.isOSSolaris();
+
+  HasIdentDirective = true;
+  HasPreferredAlignment = true;
+  WeakRefDirective = "\t.weak\t";
+  InternalSymbolPrefix = ".L";
+  PrintSwitchToSectionFn = ::printSwitchToSection;
+  SectionDirectives.insert(".text");
+  SectionDirectives.insert(".data");
 }

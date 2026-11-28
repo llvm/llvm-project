@@ -82,9 +82,6 @@ class PlainCFGBuilder {
   void setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB);
   void fixHeaderPhis();
   VPBasicBlock *getOrCreateVPBB(BasicBlock *BB);
-#ifndef NDEBUG
-  bool isExternalDef(Value *Val);
-#endif
   VPValue *getOrCreateVPOperand(Value *IRVal);
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
   VPIRMetadata getTerminatorMetadata(Instruction &Term);
@@ -148,24 +145,6 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   return VPBB;
 }
 
-#ifndef NDEBUG
-// Return true if \p Val is considered an external definition. An external
-// definition is either:
-// 1. A Value that is not an Instruction. This will be refined in the future.
-// 2. An Instruction that is outside of the IR region represented in VPlan,
-// i.e., is not part of the loop nest.
-bool PlainCFGBuilder::isExternalDef(Value *Val) {
-  // All the Values that are not Instructions are considered external
-  // definitions for now.
-  Instruction *Inst = dyn_cast<Instruction>(Val);
-  if (!Inst)
-    return true;
-
-  // Check whether Instruction definition is in loop body.
-  return !TheLoop->contains(Inst);
-}
-#endif
-
 // Create a new VPValue or retrieve an existing one for the Instruction's
 // operand \p IRVal. This function must only be used to create/retrieve VPValues
 // for *Instruction's operands* and not to create regular VPInstruction's. For
@@ -182,9 +161,12 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
   //   A) a definition external to VPlan,
   //   B) any other Value without specific representation in VPlan.
   // For now, we use VPValue to represent A and B and classify both as external
-  // definitions. We may introduce specific VPValue subclasses for them in the
+  // definitions, i.e. Values that are not Instructions or Instructions outside
+  // the loop nest. We may introduce specific VPValue subclasses for them in the
   // future.
-  assert(isExternalDef(IRVal) && "Expected external definition as operand.");
+  assert((!isa<Instruction>(IRVal) ||
+          !TheLoop->contains(cast<Instruction>(IRVal))) &&
+         "Expected external definition as operand.");
 
   // A and B: Create VPValue and add it to the pool of external definitions and
   // to the Value->VPValue map.

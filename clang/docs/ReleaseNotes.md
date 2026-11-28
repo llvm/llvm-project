@@ -1815,8 +1815,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   this release.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
-- Array shaping expressions can now be the base of array sections in the `to`
-  and `from` clauses of `target update`. (#GH136294)
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.

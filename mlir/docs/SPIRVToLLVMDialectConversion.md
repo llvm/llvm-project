@@ -386,7 +386,8 @@ non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 First of all, it is important to note that there is no direct representation of
 entry points in LLVM. At the moment, we use the following approach:
 
-*   `spirv.EntryPoint` is simply removed.
+*   `spirv.EntryPoint` is removed. A function targeted by a `Kernel` entry
+    point gets the `spir_kernel` calling convention.
 
 *   In contrast, `spirv.ExecutionMode` may contain important information about the
     entry point. For example, `LocalSize` provides information about the

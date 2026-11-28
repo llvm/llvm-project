@@ -173,16 +173,17 @@ static const MachineInstr *
 findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
                                       SPIRV::ModuleAnalysisInfo &MAI) {
 
-  // We iterate over the instructions to find the last OpVariable instruction if
-  // any. The following SPIRV rule is used to terminate the traversal earlier:
-  // SPIR-V 2.16.1, Function Structure: "All OpVariable instructions in a
-  // function must be in the first block in the function. These instructions,
-  // together with any intermixed OpLine and OpNoLine instructions, must be the
-  // first instructions in that block."
+  // We iterate over the instructions to find the last OpVariable (or
+  // OpUntypedVariableKHR) instruction if any. The following SPIRV rule is used
+  // to terminate the traversal earlier: SPIR-V 2.16.1, Function Structure: "All
+  // OpVariable instructions in a function must be in the first block in the
+  // function. These instructions, together with any intermixed OpLine and
+  // OpNoLine instructions, must be the first instructions in that block."
   const MachineInstr *LastOpVariable = nullptr;
   bool SeenOpVariable = false;
   for (const MachineInstr &MI : MF.front()) {
-    if (MI.getOpcode() == SPIRV::OpVariable) {
+    if (MI.getOpcode() == SPIRV::OpVariable ||
+        MI.getOpcode() == SPIRV::OpUntypedVariableKHR) {
       SeenOpVariable = true;
       if (!MAI.getSkipEmission(&MI))
         LastOpVariable = &MI;
@@ -1949,7 +1950,8 @@ void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
     return;
 
   // DebugFunctionDefinition is emitted after the last function-level
-  // OpVariable. If there are none, it is emitted after the entry OpLabel.
+  // OpVariable (or OpUntypedVariableKHR). If there are none, it is emitted
+  // after the entry OpLabel.
   LastFunctionOpVariable =
       findLastFunctionOpVariableDeclaration(*MF, *CurrentMAI);
 

@@ -1854,23 +1854,22 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   DWARFCompileUnit *SrcUnit = DwCtx->getCompileUnitForOffset(SrcCUID);
   const DWARFDebugLine::LineTable *LineTable =
       DwCtx->getLineTableForUnit(SrcUnit);
+  const DWARFDebugLine::Prologue &Prologue = LineTable->Prologue;
   const DWARFDebugLine::FileNameEntry &FileNameEntry =
-      LineTable->Prologue.getFileNameEntry(FileIndex);
-  // Dir indexes start at 1 and a dir index 0
-  // means empty dir.
-  StringRef Dir = "";
-  if (FileNameEntry.DirIdx != 0) {
-    if (std::optional<const char *> DirName = dwarf::toString(
-            LineTable->Prologue.IncludeDirectories[FileNameEntry.DirIdx - 1])) {
-      Dir = *DirName;
-    }
-  }
+      Prologue.getFileNameEntry(FileIndex);
+  std::string Dir;
+  LineTable->getDirectoryForEntry(FileNameEntry, Dir);
   StringRef FileName = "";
   if (std::optional<const char *> FName = dwarf::toString(FileNameEntry.Name))
     FileName = *FName;
   assert(FileName != "");
+  // A DWARF 5 line table has MD5 checksums for all of its files or for none,
+  // so adding a file without its checksum drops the checksums of all files.
+  std::optional<MD5::MD5Result> Checksum;
+  if (Prologue.ContentTypes.HasMD5)
+    Checksum = FileNameEntry.Checksum;
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
-  return cantFail(getDwarfFile(Dir, FileName, 0, std::nullopt, std::nullopt,
+  return cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt,
                                DestCUID, DstUnit->getVersion()));
 }
 
@@ -2274,7 +2273,7 @@ void BinaryContext::preprocessDebugInfo() {
         FileName = *FName;
       assert(FileName != "");
       std::optional<MD5::MD5Result> Checksum;
-      if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
+      if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(getDwarfFile(Dir, FileName, I + Offset, Checksum, std::nullopt,
                             CUID, DwarfVersion));

@@ -7,29 +7,62 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/APINotes/APINotesYAMLCompiler.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 
-static llvm::cl::list<std::string> APINotes(llvm::cl::Positional,
-                                            llvm::cl::desc("[<apinotes> ...]"),
-                                            llvm::cl::Required);
+namespace {
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static llvm::cl::opt<std::string>
-    OutputFileName("o", llvm::cl::desc("output filename"),
-                   llvm::cl::value_desc("filename"), llvm::cl::init("-"));
+#define OPTTABLE_CODE
+#include "Opts.inc"
+
+class APINotesTestOptTable : public OptTable {
+public:
+  APINotesTestOptTable() : OptTable(optionTables()) {
+    setDashDashParsing(true);
+  }
+};
+} // namespace
 
 int main(int argc, const char **argv) {
   const bool DisableCrashReporting = true;
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0], DisableCrashReporting);
-  llvm::cl::ParseCommandLineOptions(argc, argv);
 
   auto Error = [](const llvm::Twine &Msg) {
     llvm::WithColor::error(llvm::errs(), "apinotes-test") << Msg << '\n';
   };
+
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver(A);
+  APINotesTestOptTable Tbl;
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver,
+                    [&](llvm::StringRef Msg) {
+                      Error(Msg);
+                      exit(EXIT_FAILURE);
+                    });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "apinotes-test [options] <apinotes> ...",
+                  "API notes testing tool");
+    return EXIT_SUCCESS;
+  }
+  std::vector<std::string> APINotes = Args.getAllArgValues(OPT_INPUT);
+  if (APINotes.empty()) {
+    Error("no input files");
+    return EXIT_FAILURE;
+  }
+  std::string OutputFileName = Args.getLastArgValue(OPT_o, "-").str();
 
   std::error_code EC;
   auto Out = std::make_unique<llvm::ToolOutputFile>(OutputFileName, EC,

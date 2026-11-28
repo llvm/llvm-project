@@ -1435,9 +1435,10 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
     return SP::NoRegister;
 
   StringRef Name = Tok.getString();
-  MCRegister Reg = MatchRegisterName(Name.lower());
+  // Register names are case-sensitive, as in GNU as.
+  MCRegister Reg = MatchRegisterName(Name);
   if (!Reg)
-    Reg = MatchRegisterAltName(Name.lower());
+    Reg = MatchRegisterAltName(Name);
 
   if (Reg) {
     // Some registers share a spelling (e.g. "f0" for F0/D0/Q0, "sp" for
@@ -1468,19 +1469,19 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   // Not all registers and their spellings are modeled in td files.
 
   // O6 and I6 have primary AsmNames "sp" and "fp", so handle "%o6"/"%i6" here.
-  if (Name.equals_insensitive("o6")) {
+  if (Name == "o6") {
     RegKind = SparcOperand::rk_IntReg;
     return SP::O6;
   }
-  if (Name.equals_insensitive("i6")) {
+  if (Name == "i6") {
     RegKind = SparcOperand::rk_IntReg;
     return SP::I6;
   }
 
   // %r0 - %r31
   unsigned RegNo;
-  if (Name.starts_with_insensitive("r") &&
-      !Name.drop_front().getAsInteger(10, RegNo) && RegNo <= 31) {
+  if (Name.starts_with("r") && !Name.drop_front().getAsInteger(10, RegNo) &&
+      RegNo <= 31) {
     RegKind = SparcOperand::rk_IntReg;
     return IntRegs[RegNo];
   }

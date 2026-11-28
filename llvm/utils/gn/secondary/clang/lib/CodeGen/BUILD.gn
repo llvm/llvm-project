@@ -1,7 +1,15 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("CodeGenCLOptions") {
+  visibility = [ ":CodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("CodeGen") {
   output_name = "clangCodeGen"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":CodeGenCLOptions",
     "//clang/include/clang/Basic:arm_cde_builtin_cg",
     "//clang/include/clang/Basic:arm_mve_builtin_cg",
     "//clang/include/clang/Basic:arm_sme_builtin_cg",
@@ -31,6 +39,7 @@ static_library("CodeGen") {
     "//llvm/lib/Linker",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Plugins",
     "//llvm/lib/ProfileData",
@@ -92,6 +101,7 @@ static_library("CodeGen") {
     "CGVTables.cpp",
     "CodeGenABITypes.cpp",
     "CodeGenAction.cpp",
+    "CodeGenCLOptions.cpp",
     "CodeGenFunction.cpp",
     "CodeGenModule.cpp",
     "CodeGenPGO.cpp",

@@ -5212,14 +5212,6 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
                                            rbLoc);
   }
 
-  // A subscript of an OpenMP array shaping expression is a single-element
-  // array section.
-  if (base && !base->getType().isNull() && ArgExprs.size() == 1 &&
-      base->hasPlaceholderType(BuiltinType::OMPArrayShaping))
-    return OpenMP().ActOnOMPArraySectionExpr(
-        base, lbLoc, ArgExprs.front(), SourceLocation(), SourceLocation(),
-        /*Length=*/nullptr, /*Stride=*/nullptr, rbLoc);
-
   // Since this might be a postfix expression, get rid of ParenListExprs.
   if (isa<ParenListExpr>(base)) {
     ExprResult result = MaybeConvertParenListExprToParenExpr(S, base);

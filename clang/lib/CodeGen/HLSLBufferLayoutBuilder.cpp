@@ -21,7 +21,7 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-static const CharUnits CBufferRowSize =
+constexpr CharUnits CBufferRowSize =
     CharUnits::fromQuantity(llvm::hlsl::CBufferRowSizeInBytes);
 
 namespace clang {
