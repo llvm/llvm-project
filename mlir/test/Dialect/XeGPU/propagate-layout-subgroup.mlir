@@ -1,7 +1,28 @@
 // RUN: mlir-opt -xevm-attach-target='chip=cri' -test-xegpu-propagate-layouts="layout-kind=subgroup" -split-input-file %s | FileCheck %s
 
 gpu.module @test {
-  // CHECK-LABEL: store_nd
+  // CHECK-LABEL: gpu.func @transpose_sliced_unit_axes
+  // CHECK: xegpu.load_nd
+  // CHECK-SAME: #xegpu.slice<#xegpu.layout<sg_layout = [4, 1, 1, 1], sg_data = [64, 1, 1, 64], order = [3, 1, 0, 2]>, dims = [0]>
+  // CHECK: vector.transpose
+  // CHECK-SAME: #xegpu.slice<#xegpu.layout<sg_layout = [4, 1, 1, 1], sg_data = [64, 1, 64, 1], order = [2, 1, 0, 3]>, dims = [0]>
+  gpu.func @transpose_sliced_unit_axes(%metadata: memref<1x1x64xf16>, %output: memref<64x64xf16>) kernel attributes {intel_reqd_sub_group_size = 16 : i32, known_block_size = array<i32: 64, 1, 1>} {
+    %desc = xegpu.create_nd_tdesc %metadata : memref<1x1x64xf16> -> !xegpu.tensor_desc<1x1x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+    %loaded = xegpu.load_nd %desc[0, 0, 0] : !xegpu.tensor_desc<1x1x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<1x1x64xf16>
+    %transposed = vector.transpose %loaded, [0, 2, 1] : vector<1x1x64xf16> to vector<1x64x1xf16>
+    %broadcast = vector.broadcast %transposed : vector<1x64x1xf16> to vector<64x1x64x1xf16>
+    %permuted = vector.transpose %broadcast, [1, 2, 3, 0] : vector<64x1x64x1xf16> to vector<1x64x1x64xf16>
+    %tile = vector.shape_cast %permuted : vector<1x64x1x64xf16> to vector<64x64xf16>
+    %out_desc = xegpu.create_nd_tdesc %output : memref<64x64xf16> -> !xegpu.tensor_desc<64x64xf16>
+    xegpu.store_nd %tile, %out_desc[0, 0] <{layout = #xegpu.layout<sg_layout = [1, 4], sg_data = [64, 64], order = [0, 1]>}> : vector<64x64xf16>, !xegpu.tensor_desc<64x64xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test {
+  // CHECK-LABEL: func.func @store_nd
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
   func.func @store_nd(%src: memref<256x128xf32>) {
     // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32>

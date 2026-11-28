@@ -1421,30 +1421,16 @@ DistributeLayoutAttr SliceAttr::expandDim(int64_t dim,
 
 SmallVector<int64_t> getPermForParentLayout(ArrayRef<int64_t> sliceDims,
                                             ArrayRef<int64_t> permutation) {
-  SmallVector<int64_t> sortedSliceDims = llvm::to_vector(sliceDims);
-  llvm::sort(sortedSliceDims);
+  int64_t parentRank = sliceDims.size() + permutation.size();
+  SmallVector<int64_t> visibleDims;
+  for (int64_t dim = 0; dim < parentRank; ++dim)
+    if (!llvm::is_contained(sliceDims, dim))
+      visibleDims.push_back(dim);
 
-  for (size_t i = 1; i < sortedSliceDims.size(); ++i) {
-    assert((sortedSliceDims[i] == sortedSliceDims[i - 1] + 1) &&
-           "slice dims non consecutive, cannot be transposed");
-  }
-
-  SmallVector<int64_t> permForParent;
-  if (sortedSliceDims.front() == 0) {
-    // Example: sliceDims.size() = 2, permutation= {1, 0}
-    // result: {3, 2, 1, 0}.
-    for (int64_t dim : permutation)
-      permForParent.push_back(dim + sortedSliceDims.size());
-    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
-      permForParent.push_back(i);
-  } else {
-    // Example: sliceDims.size() = 2, permutation = {0, 1}
-    // result: {3, 2, 0, 1}.
-    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
-      permForParent.push_back(i + permutation.size());
-    for (int64_t dim : permutation)
-      permForParent.push_back(dim);
-  }
+  SmallVector<int64_t> permForParent =
+      llvm::to_vector(llvm::seq<int64_t>(0, parentRank));
+  for (auto [position, dim] : llvm::enumerate(visibleDims))
+    permForParent[dim] = visibleDims[permutation[position]];
   return permForParent;
 }
 
