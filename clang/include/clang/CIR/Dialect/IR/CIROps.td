@@ -516,14 +516,13 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
 
     ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-    %1 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-              #cir.dyn_cast_info<
+    %1 = cir.dyn_cast ref #cir.dyn_cast_info<
                 srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
                 destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
                 runtimeFunc = @__dynamic_cast,
                 badCastFunc = @__cxa_bad_cast,
                 offsetHint = #cir.int<0> : !s64i
-              >
+              > %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
     ```
   }];
 
@@ -538,9 +537,8 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    enum($kind) $src
-    `:` qualified(type($src)) `->` qualified(type($result))
-    (qualified($info)^)? attr-dict
+    enum($kind) (qualified($info)^)? $src
+    `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
   }];
 
   let extraClassDeclaration = [{

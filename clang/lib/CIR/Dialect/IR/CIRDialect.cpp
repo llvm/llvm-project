@@ -2557,16 +2557,25 @@ ParseResult cir::parseSwitchFlatOpCases(
     SmallVectorImpl<llvm::SmallVector<Type>> &caseOperandTypes) {
   if (failed(parser.parseLSquare()))
     return failure();
-  if (succeeded(parser.parseOptionalRSquare()))
+  if (succeeded(parser.parseOptionalRSquare())) {
+    caseValues = ArrayAttr::get(flagType.getContext(), {});
     return success();
+  }
   llvm::SmallVector<mlir::Attribute> values;
+  auto intType = mlir::cast<cir::IntType>(flagType);
 
-  auto parseCase = [&]() {
-    int64_t value = 0;
+  auto parseCase = [&]() -> ParseResult {
+    llvm::APInt value;
+    llvm::SMLoc loc = parser.getCurrentLocation();
     if (failed(parser.parseInteger(value)))
       return failure();
-
-    values.push_back(cir::IntAttr::get(flagType, value));
+    if (intType.isSigned() ? !value.isSignedIntN(intType.getWidth())
+                           : (value.isNegative() ||
+                              value.getActiveBits() > intType.getWidth()))
+      return parser.emitError(loc, "case value out of range for ") << flagType;
+    values.push_back(cir::IntAttr::get(
+        flagType, intType.isSigned() ? value.sextOrTrunc(intType.getWidth())
+                                     : value.zextOrTrunc(intType.getWidth())));
 
     Block *destination;
     llvm::SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -2599,7 +2608,7 @@ void cir::printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
                                  const TypeRangeRange &caseOperandTypes) {
   p << '[';
   p.printNewline();
-  if (!caseValues) {
+  if (!caseValues || caseValues.empty()) {
     p << ']';
     return;
   }
@@ -2610,7 +2619,8 @@ void cir::printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
       [&](auto i) {
         p << "  ";
         mlir::Attribute a = std::get<0>(i);
-        p << mlir::cast<cir::IntAttr>(a).getValue();
+        mlir::cast<cir::IntAttr>(a).getValue().print(
+            p.getStream(), mlir::cast<cir::IntType>(flagType).isSigned());
         p << ": ";
         p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
       },

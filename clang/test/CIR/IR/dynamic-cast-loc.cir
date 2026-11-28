@@ -1,0 +1,17 @@
+// A cir.dyn_cast without #cir.dyn_cast_info followed by a location round-trips.
+
+// RUN: cir-opt --verify-roundtrip --mlir-print-debuginfo %s | FileCheck %s
+
+!rec_Base = !cir.struct<"Base" {data !cir.vptr}>
+!void = !cir.void
+
+module {
+  cir.func @cast_to_void(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
+    %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void> loc(#loc1)
+    cir.return %0 : !cir.ptr<!void>
+  }
+}
+#loc1 = loc("t.cpp":3:4)
+
+// CHECK: cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void> loc(#[[LOC:loc[0-9]*]])
+// CHECK: #[[LOC]] = loc("t.cpp":3:4)
