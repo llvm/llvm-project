@@ -28,6 +28,9 @@ branch.
 - The matrix multiplication optimization allocates packed arrays larger than
   `-polly-pattern-matching-max-stack-array-size` (1 MiB by default) on the
   heap instead of the stack. `-1` keeps all of them on the stack.
+- Packed arrays used by the matrix multiplication optimization are now
+  limited to the elements actually accessed, reducing memory usage for
+  multiplications smaller than the cache tiles.
 - Polly can now separate the complete tiles of a tiled loop nest from the
   partial ones. The point loops of the complete tiles then have constant
   bounds, which lets the loop vectorizer vectorize them without a scalar

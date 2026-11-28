@@ -3,8 +3,9 @@
 ; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -plugin-arg=Polly,-polly-target-throughput-vector-fma=1 -plugin-arg=Polly,-polly-target-latency-vector-fma=8 -plugin-arg=Polly,-polly-target-1st-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-2nd-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-1st-cache-level-size=32768 -plugin-arg=Polly,-polly-target-vector-register-bitwidth=256 -plugin-arg=Polly,-polly-target-2nd-cache-level-size=262144 -plugin-arg=Polly,-polly-pattern-matching-max-stack-array-size=0 '-passes=polly<no-default-opts;opt-isl>' -S < %s | FileCheck %s --check-prefix=HEAP
 ;
 ; The packed arrays of the matrix multiplication optimization are sized by the
-; cache parameters: here Packed_A takes 192 KiB and Packed_B 4 MiB. Arrays
-; larger than -polly-pattern-matching-max-stack-array-size (1 MiB by default)
+; cache parameters and accessed elements: here Packed_A takes 192 KiB and
+; Packed_B 2112 KiB. Arrays larger than
+; -polly-pattern-matching-max-stack-array-size (1 MiB by default)
 ; are allocated on the heap, the others on the stack. With -1 all of them are
 ; allocated on the stack, with 0 all of them on the heap.
 ;
@@ -19,19 +20,19 @@
 ;
 ; CHECK-LABEL: define internal void @kernel_gemm(
 ; CHECK:         %Packed_A = alloca [24 x [256 x [4 x double]]]
-; CHECK:         %Packed_B = tail call ptr @malloc(i64 4194304)
+; CHECK:         %Packed_B = tail call ptr @malloc(i64 2162688)
 ; CHECK-NOT:     call ptr @malloc
 ; CHECK:         tail call void @free(ptr %Packed_B)
 ; CHECK-NOT:     call void @free
 ;
 ; STACK-LABEL: define internal void @kernel_gemm(
-; STACK:         %Packed_B = alloca [256 x [256 x [8 x double]]]
+; STACK:         %Packed_B = alloca [132 x [256 x [8 x double]]]
 ; STACK-NEXT:    %Packed_A = alloca [24 x [256 x [4 x double]]]
 ; STACK-NOT:     call ptr @malloc
 ;
 ; HEAP-LABEL: define internal void @kernel_gemm(
 ; HEAP-NOT:      %Packed_{{[AB]}} = alloca
-; HEAP:          %Packed_B = tail call ptr @malloc(i64 4194304)
+; HEAP:          %Packed_B = tail call ptr @malloc(i64 2162688)
 ; HEAP-NEXT:     %Packed_A = tail call ptr @malloc(i64 196608)
 ; HEAP:          tail call void @free(ptr %Packed_B)
 ; HEAP-NEXT:     tail call void @free(ptr %Packed_A)
