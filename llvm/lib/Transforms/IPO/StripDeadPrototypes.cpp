@@ -23,13 +23,14 @@ using namespace llvm;
 
 STATISTIC(NumDeadPrototypes, "Number of dead prototypes removed");
 
-static bool stripDeadPrototypes(Module &M) {
+static bool stripDeadPrototypes(Module &M, FunctionAnalysisManager &FAM) {
   bool MadeChange = false;
 
   // Erase dead function prototypes.
   for (Function &F : llvm::make_early_inc_range(M)) {
     // Function must be a prototype and unused.
     if (F.isDeclaration() && F.use_empty()) {
+      FAM.clear(F, F.getName());
       F.eraseFromParent();
       ++NumDeadPrototypes;
       MadeChange = true;
@@ -39,8 +40,10 @@ static bool stripDeadPrototypes(Module &M) {
   // Erase dead global var prototypes.
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     // Global must be a prototype and unused.
-    if (GV.isDeclaration() && GV.use_empty())
+    if (GV.isDeclaration() && GV.use_empty()) {
       GV.eraseFromParent();
+      MadeChange = true;
+    }
   }
 
   // Return an indication of whether we changed anything or not.
@@ -48,8 +51,16 @@ static bool stripDeadPrototypes(Module &M) {
 }
 
 PreservedAnalyses StripDeadPrototypesPass::run(Module &M,
-                                               ModuleAnalysisManager &) {
-  if (stripDeadPrototypes(M))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+                                               ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  if (!stripDeadPrototypes(M, FAM))
+    return PreservedAnalyses::all();
+
+  // Only unused declarations were deleted, which does not affect any remaining
+  // function.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
