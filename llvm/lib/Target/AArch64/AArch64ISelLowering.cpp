@@ -20987,9 +20987,52 @@ static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getZExtOrTrunc(Cntp, DL, N->getValueType(0));
 }
 
+// A legal NEON long reduction sums these complete fixed vectors without
+// overflow. Reducing the original elements therefore has the same i64 result
+// as extending each lane first.
+static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
+                                              const AArch64Subtarget *ST) {
+  if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
+    return SDValue();
+
+  SDValue Ext = N->getOperand(0);
+  unsigned ExtOpcode = Ext.getOpcode();
+  if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  SDValue Input = Ext.getOperand(0);
+  EVT InputVT = Input.getValueType();
+  if (InputVT != MVT::v8i8 && InputVT != MVT::v16i8 && InputVT != MVT::v4i16 &&
+      InputVT != MVT::v8i16)
+    return SDValue();
+
+  // Use the same legal node/result types as the existing UADDLV/SADDLV
+  // intrinsic lowering.
+  SDLoc DL(N);
+  unsigned AddlvOpcode =
+      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UADDLV : AArch64ISD::SADDLV;
+  SDValue Sum = DAG.getNode(AddlvOpcode, DL, MVT::v4i32, Input);
+  SDValue Scalar;
+  if (InputVT.getVectorElementType() == MVT::i8) {
+    SDValue PackedHalfwords =
+        DAG.getNode(AArch64ISD::NVCAST, SDLoc(Sum), MVT::v8i16, Sum);
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, PackedHalfwords,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else {
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Sum,
+                         DAG.getConstant(0, DL, MVT::i64));
+  }
+  return ExtOpcode == ISD::ZERO_EXTEND
+             ? DAG.getZExtOrTrunc(Scalar, DL, MVT::i64)
+             : DAG.getSExtOrTrunc(Scalar, DL, MVT::i64);
+}
+
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
   if (SDValue Result = performVecReduceAddCntpCombine(N, DAG, ST))
+    return Result;
+
+  if (SDValue Result = performWidenedReductionCombine(N, DAG, ST))
     return Result;
 
   if (!ST->isNeonAvailable())
