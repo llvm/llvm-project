@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/APInt.h"
 #include <array>
@@ -262,4 +265,42 @@ TEST(IntRangeInference, SignedCeilDivMinDividend) {
         intrange::inferCeilDivS(interval),
         ConstantIntRanges::fromSigned((min + 1).sdiv(two), -min.sdiv(two)));
   }
+}
+
+TEST(IntRangeMatchers, LazyIndexBitwidth) {
+  MLIRContext context;
+  context.loadDialect<arith::ArithDialect>();
+  OpBuilder builder(&context);
+  Location loc = builder.getUnknownLoc();
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  builder.setInsertionPointToStart(module->getBody());
+  auto noQuery = [](Operation *) -> std::optional<unsigned> {
+    ADD_FAILURE() << "fixed-width match requested an index bit width";
+    return std::nullopt;
+  };
+  auto one = arith::ConstantIntOp::create(builder, loc, 1, 32);
+  EXPECT_TRUE(m_IntRangeWithoutZeroU(noQuery).match(one.getValue()));
+  EXPECT_TRUE(m_IntRangeWithoutZeroS(noQuery).match(one));
+  auto ext = arith::ExtUIOp::create(builder, loc, builder.getI64Type(), one);
+  EXPECT_FALSE(m_IntRangeWithoutZeroU(noQuery).match(ext));
+
+  auto unknown = [](Operation *) -> std::optional<unsigned> {
+    return std::nullopt;
+  };
+  auto seven = builder.getIndexAttr(7);
+  EXPECT_TRUE(m_IntRangeWithoutZeroU(unknown).match(seven, *module));
+  EXPECT_FALSE(m_IntRangeWithoutZeroOrNegOneS(unknown).match(seven, *module));
+
+  auto width32 = [](Operation *) -> std::optional<unsigned> { return 32; };
+  auto width64 = [](Operation *) -> std::optional<unsigned> { return 64; };
+  auto zeroAt32 = builder.getIndexAttr(int64_t{1} << 32);
+  EXPECT_FALSE(m_IntRangeWithoutZeroU().match(zeroAt32));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU(unknown).match(zeroAt32, *module));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU(width32).match(zeroAt32, *module));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU(width64).match(zeroAt32, *module));
+  auto minusOneAt32 = builder.getIndexAttr(UINT32_MAX);
+  EXPECT_FALSE(
+      m_IntRangeWithoutZeroOrNegOneS(width32).match(minusOneAt32, *module));
+  EXPECT_TRUE(
+      m_IntRangeWithoutZeroOrNegOneS(width64).match(minusOneAt32, *module));
 }
