@@ -49,10 +49,11 @@ class FunctionTypesTestCase(TestBase):
         self.build()
         self.runToBreakpoint()
 
-        self.expect(
-            "expr string_not_empty",
-            substrs=["(int (*)(const char *)) $0 = ", "a.out`"],
-        )
+        if self.getArchitecture() == "arm64e":
+            substrs = ["(int (*)(const char *)) $0 = ", "(actual=0x", "a.out`"]
+        else:
+            substrs = ["(int (*)(const char *)) $0 = ", "a.out`"]
+        self.expect("expr string_not_empty", substrs=substrs)
 
         if self.platformIsDarwin():
             regexps = [r"lib.*\.dylib`printf"]
