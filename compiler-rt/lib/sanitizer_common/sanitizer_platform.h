@@ -500,7 +500,8 @@
 
 // Older gcc have issues aligning to a constexpr, and require an integer.
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56859 among others.
-#if defined(__powerpc__) || defined(__powerpc64__)
+#if defined(__powerpc__) || defined(__powerpc64__) || \
+    (SANITIZER_APPLE && defined(__aarch64__))
 #  define SANITIZER_CACHE_LINE_SIZE 128
 #else
 #  define SANITIZER_CACHE_LINE_SIZE 64
