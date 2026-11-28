@@ -54,3 +54,123 @@ float64x2_t test_vsqrtq_f64(float64x2_t a) {
 // LLVM: ret <2 x double> [[SQRT]]
   return vsqrtq_f64(a);
 }
+
+// LLVM-LABEL: @test_vceqzs_f32(
+// CIR-LABEL: @vceqzs_f32(
+uint32_t test_vceqzs_f32(float32_t a) {
+// CIR: cir.fcmp oeq %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: float {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i32
+// LLVM: ret i32 [[RES]]
+  return vceqzs_f32(a);
+}
+
+// LLVM-LABEL: @test_vcgezs_f32(
+// CIR-LABEL: @vcgezs_f32(
+uint32_t test_vcgezs_f32(float32_t a) {
+// CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.float signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: float {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i32
+// LLVM: ret i32 [[RES]]
+  return vcgezs_f32(a);
+}
+
+// LLVM-LABEL: @test_vclezs_f32(
+// CIR-LABEL: @vclezs_f32(
+uint32_t test_vclezs_f32(float32_t a) {
+// CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.float signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: float {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i32
+// LLVM: ret i32 [[RES]]
+  return vclezs_f32(a);
+}
+
+// LLVM-LABEL: @test_vcgtzs_f32(
+// CIR-LABEL: @vcgtzs_f32(
+uint32_t test_vcgtzs_f32(float32_t a) {
+// CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.float signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: float {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i32
+// LLVM: ret i32 [[RES]]
+  return vcgtzs_f32(a);
+}
+
+// LLVM-LABEL: @test_vcltzs_f32(
+// CIR-LABEL: @vcltzs_f32(
+uint32_t test_vcltzs_f32(float32_t a) {
+// CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.float signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: float {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i32
+// LLVM: ret i32 [[RES]]
+  return vcltzs_f32(a);
+}
+
+// LLVM-LABEL: @test_vceqzd_f64(
+// CIR-LABEL: @vceqzd_f64(
+uint64_t test_vceqzd_f64(float64_t a) {
+// CIR: cir.fcmp oeq %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: double {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i64
+// LLVM: ret i64 [[RES]]
+  return vceqzd_f64(a);
+}
+
+// LLVM-LABEL: @test_vcgezd_f64(
+// CIR-LABEL: @vcgezd_f64(
+uint64_t test_vcgezd_f64(float64_t a) {
+// CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.double signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: double {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i64
+// LLVM: ret i64 [[RES]]
+  return vcgezd_f64(a);
+}
+
+// LLVM-LABEL: @test_vclezd_f64(
+// CIR-LABEL: @vclezd_f64(
+uint64_t test_vclezd_f64(float64_t a) {
+// CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.double signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: double {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i64
+// LLVM: ret i64 [[RES]]
+  return vclezd_f64(a);
+}
+
+// LLVM-LABEL: @test_vcgtzd_f64(
+// CIR-LABEL: @vcgtzd_f64(
+uint64_t test_vcgtzd_f64(float64_t a) {
+// CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.double signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: double {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i64
+// LLVM: ret i64 [[RES]]
+  return vcgtzd_f64(a);
+}
+
+// LLVM-LABEL: @test_vcltzd_f64(
+// CIR-LABEL: @vcltzd_f64(
+uint64_t test_vcltzd_f64(float64_t a) {
+// CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.double signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: double {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i64
+// LLVM: ret i64 [[RES]]
+  return vcltzd_f64(a);
+}

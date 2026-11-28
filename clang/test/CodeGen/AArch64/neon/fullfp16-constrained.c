@@ -31,3 +31,58 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 // LLVM: ret half [[FMA]]
   return vfmah_f16(a, b, c);
 }
+
+// ALL-LABEL: @test_vceqzh_f16(
+uint16_t test_vceqzh_f16(float16_t a) {
+// CIR: cir.fcmp oeq %{{.*}}, %{{.*}} : !cir.f16 fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f16(half [[A]], half 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i16
+// LLVM: ret i16 [[RES]]
+  return vceqzh_f16(a);
+}
+
+// ALL-LABEL: @test_vcgezh_f16(
+uint16_t test_vcgezh_f16(float16_t a) {
+// CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.f16 signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half [[A]], half 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i16
+// LLVM: ret i16 [[RES]]
+  return vcgezh_f16(a);
+}
+
+// ALL-LABEL: @test_vclezh_f16(
+uint16_t test_vclezh_f16(float16_t a) {
+// CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.f16 signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half [[A]], half 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i16
+// LLVM: ret i16 [[RES]]
+  return vclezh_f16(a);
+}
+
+// ALL-LABEL: @test_vcgtzh_f16(
+uint16_t test_vcgtzh_f16(float16_t a) {
+// CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.f16 signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half [[A]], half 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i16
+// LLVM: ret i16 [[RES]]
+  return vcgtzh_f16(a);
+}
+
+// ALL-LABEL: @test_vcltzh_f16(
+uint16_t test_vcltzh_f16(float16_t a) {
+// CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.f16 signaling fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
+// LLVM: [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half [[A]], half 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+// LLVM: [[RES:%.*]] = sext i1 [[CMP]] to i16
+// LLVM: ret i16 [[RES]]
+  return vcltzh_f16(a);
+}

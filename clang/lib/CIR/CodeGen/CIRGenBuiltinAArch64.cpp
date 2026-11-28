@@ -645,26 +645,24 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   if (!scalarCmp) {
     if constexpr (std::is_same<CmpKindTy, cir::FCmpOpKind>::value)
-      return builder.createVecFCompare(loc, kind, src, zero);
+      return builder.createVecFCompare(loc, kind, src, zero,
+                                       kind != cir::FCmpOpKind::oeq);
     else
       return builder.createVecCompare(loc, kind, src, zero);
   }
 
-  // FIXME FCmpOpKind is only supported for vector comparisons now, modify the
-  // if when scalar comparisons are supported too;
-  if constexpr (std::is_same<CmpKindTy, cir::CmpOpKind>::value) {
-    // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
-    // result is sign- rather zero-extended when casting to the output
-    // retType.
-    mlir::Value cmp = builder.createCast(
-        loc, cir::CastKind::bool_to_int,
-        builder.createCompare(loc, kind, src, zero), builder.getSIntNTy(1));
+  // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare result
+  // is sign- rather zero-extended when casting to the output retType.
+  mlir::Value op;
+  if constexpr (std::is_same<CmpKindTy, cir::FCmpOpKind>::value)
+    op = builder.createFCompare(loc, kind, src, zero,
+                                kind != cir::FCmpOpKind::oeq);
+  else
+    op = builder.createCompare(loc, kind, src, zero);
 
-    return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
-  }
-
-  llvm_unreachable("Should not end up here");
-  return {};
+  mlir::Value cmp = builder.createCast(loc, cir::CastKind::bool_to_int, op,
+                                       builder.getSIntNTy(1));
+  return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
 }
 
 static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
@@ -2907,33 +2905,64 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vceqzd_s64:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
   case NEON::BI__builtin_neon_vceqzd_f64:
   case NEON::BI__builtin_neon_vceqzs_f32:
   case NEON::BI__builtin_neon_vceqzh_f16:
     return emitAArch64CompareBuiltinExpr(
         *this, builder, loc, ops[0],
-        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
+        convertType(expr->getCallReturnType(getContext())),
+        cir::FCmpOpKind::oeq);
   case NEON::BI__builtin_neon_vcgezd_s64:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::ge);
   case NEON::BI__builtin_neon_vcgezd_f64:
   case NEON::BI__builtin_neon_vcgezs_f32:
   case NEON::BI__builtin_neon_vcgezh_f16:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())),
+        cir::FCmpOpKind::oge);
   case NEON::BI__builtin_neon_vclezd_s64:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::le);
   case NEON::BI__builtin_neon_vclezd_f64:
   case NEON::BI__builtin_neon_vclezs_f32:
   case NEON::BI__builtin_neon_vclezh_f16:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())),
+        cir::FCmpOpKind::ole);
   case NEON::BI__builtin_neon_vcgtzd_s64:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::gt);
   case NEON::BI__builtin_neon_vcgtzd_f64:
   case NEON::BI__builtin_neon_vcgtzs_f32:
   case NEON::BI__builtin_neon_vcgtzh_f16:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())),
+        cir::FCmpOpKind::ogt);
   case NEON::BI__builtin_neon_vcltzd_s64:
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::lt);
   case NEON::BI__builtin_neon_vcltzd_f64:
   case NEON::BI__builtin_neon_vcltzs_f32:
   case NEON::BI__builtin_neon_vcltzh_f16:
-  case NEON::BI__builtin_neon_vceqzd_u64: {
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())),
+        cir::FCmpOpKind::olt);
+  case NEON::BI__builtin_neon_vceqzd_u64:
     return emitAArch64CompareBuiltinExpr(
         *this, builder, loc, ops[0],
         convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
-  }
   case NEON::BI__builtin_neon_vceqd_f64:
   case NEON::BI__builtin_neon_vcled_f64:
   case NEON::BI__builtin_neon_vcltd_f64:
