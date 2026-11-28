@@ -1153,6 +1153,7 @@ __tid = -24
 	pushq	%rsi		// Put gtid on stack so can pass &tgid to pkfn
 	pushq	%rdx		// Put tid on stack so can pass &tid to pkfn
 
+	movslq	%ecx, %rcx	// argc is an int, upper 32 bits of %rcx are undefined
 	movq	%rcx, %rax	// Stack alignment calculation begins; argc -> %rax
 	movq	$0, %rbx	// constant for cmovs later
 	subq	$4, %rax	// subtract four args passed in registers to pkfn
