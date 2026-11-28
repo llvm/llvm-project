@@ -1093,12 +1093,21 @@ Serializer::processOp<spirv::ExecutionModeIdOp>(spirv::ExecutionModeIdOp op) {
   operands.push_back(funcID);
   operands.push_back(static_cast<uint32_t>(op.getExecutionMode()));
 
-  for (Attribute refVal : op.getValues().getValue()) {
-    uint32_t id = getSpecConstID(cast<FlatSymbolRefAttr>(refVal).getValue());
-    if (!id)
-      return op.emitError("unknown <id> for specialization constant ")
-             << cast<FlatSymbolRefAttr>(refVal).getValue();
-
+  for (Attribute value : op.getValues().getValue()) {
+    uint32_t id = 0;
+    if (auto typeAttr = dyn_cast<TypeAttr>(value)) {
+      if (failed(processType(op.getLoc(), typeAttr.getValue(), id)))
+        return failure();
+    } else if (auto refVal = dyn_cast<FlatSymbolRefAttr>(value)) {
+      id = getSpecConstID(refVal.getValue());
+      if (!id)
+        return op.emitError("unknown <id> for specialization constant ")
+               << refVal.getValue();
+    } else {
+      id = prepareConstantScalar(op.getLoc(), value);
+      if (!id)
+        return op.emitError("unsupported value operand: ") << value;
+    }
     operands.push_back(id);
   }
   encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionModeId,

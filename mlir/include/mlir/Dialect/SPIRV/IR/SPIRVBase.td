@@ -346,6 +346,7 @@ def SPV_KHR_cooperative_matrix               : I32EnumAttrCase<"SPV_KHR_cooperat
 def SPV_KHR_bfloat16                         : I32EnumAttrCase<"SPV_KHR_bfloat16", 32>;
 def SPV_KHR_untyped_pointers                 : I32EnumAttrCase<"SPV_KHR_untyped_pointers", 33>;
 def SPV_KHR_abort                            : I32EnumAttrCase<"SPV_KHR_abort", 34>;
+def SPV_KHR_float_controls2                  : I32EnumAttrCase<"SPV_KHR_float_controls2", 35>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -448,7 +449,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
       SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
       SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16, SPV_KHR_untyped_pointers,
-      SPV_KHR_abort,
+      SPV_KHR_abort, SPV_KHR_float_controls2,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -875,6 +876,11 @@ def SPIRV_C_ReplicatedCompositesEXT                     : I32EnumAttrCase<"Repli
 def SPIRV_C_BitInstructions                             : I32EnumAttrCase<"BitInstructions", 6025> {
   list<Availability> availability = [
     Extension<[SPV_KHR_bit_instructions]>
+  ];
+}
+def SPIRV_C_FloatControls2                              : I32EnumAttrCase<"FloatControls2", 6029> {
+  list<Availability> availability = [
+    Extension<[SPV_KHR_float_controls2]>
   ];
 }
 def SPIRV_C_AtomicFloat32AddEXT                         : I32EnumAttrCase<"AtomicFloat32AddEXT", 6033> {
@@ -1580,7 +1586,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_FPGARegINTEL, SPIRV_C_DotProductInputAll,
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
       SPIRV_C_CooperativeMatrixKHR, SPIRV_C_ReplicatedCompositesEXT,
-      SPIRV_C_BitInstructions, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT,
+      SPIRV_C_BitInstructions, SPIRV_C_FloatControls2, SPIRV_C_AtomicFloat32AddEXT,
+      SPIRV_C_AtomicFloat64AddEXT,
       SPIRV_C_LongCompositesINTEL, SPIRV_C_OptNoneINTEL,
       SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_DebugInfoModuleINTEL, SPIRV_C_SplitBarrierINTEL,
       SPIRV_C_GroupUniformArithmeticKHR, SPIRV_C_Shader, SPIRV_C_Vector16,
@@ -2381,7 +2388,7 @@ def SPIRV_D_FuncParamAttr                      : I32EnumAttrCase<"FuncParamAttr"
 def SPIRV_D_FPRoundingMode                     : I32EnumAttrCase<"FPRoundingMode", 39>;
 def SPIRV_D_FPFastMathMode                     : I32EnumAttrCase<"FPFastMathMode", 40> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_Kernel]>
+    Capability<[SPIRV_C_FloatControls2, SPIRV_C_Kernel]>
   ];
 }
 def SPIRV_D_LinkageAttributes                  : I32EnumAttrCase<"LinkageAttributes", 41> {
@@ -3212,6 +3219,11 @@ def SPIRV_EM_SchedulerTargetFmaxMhzINTEL      : I32EnumAttrCase<"SchedulerTarget
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
   ];
 }
+def SPIRV_EM_FPFastMathDefault                : I32EnumAttrCase<"FPFastMathDefault", 6028> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FloatControls2]>
+  ];
+}
 def SPIRV_EM_StreamingInterfaceINTEL          : I32EnumAttrCase<"StreamingInterfaceINTEL", 6154> {
   list<Availability> availability = [
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
@@ -3254,8 +3266,8 @@ def SPIRV_ExecutionModeAttr :
       SPIRV_EM_FloatingPointModeALTINTEL, SPIRV_EM_FloatingPointModeIEEEINTEL,
       SPIRV_EM_MaxWorkgroupSizeINTEL, SPIRV_EM_MaxWorkDimINTEL,
       SPIRV_EM_NoGlobalOffsetINTEL, SPIRV_EM_NumSIMDWorkitemsINTEL,
-      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_StreamingInterfaceINTEL,
-      SPIRV_EM_NamedBarrierCountINTEL
+      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_FPFastMathDefault,
+      SPIRV_EM_StreamingInterfaceINTEL, SPIRV_EM_NamedBarrierCountINTEL
     ]>;
 
 def SPIRV_EM_Vertex                 : I32EnumAttrCase<"Vertex", 0> {
@@ -5140,22 +5152,27 @@ def SPIRV_FPFMM_NotInf       : I32BitEnumAttrCaseBit<"NotInf", 1>;
 def SPIRV_FPFMM_NSZ          : I32BitEnumAttrCaseBit<"NSZ", 2>;
 def SPIRV_FPFMM_AllowRecip   : I32BitEnumAttrCaseBit<"AllowRecip", 3>;
 def SPIRV_FPFMM_Fast         : I32BitEnumAttrCaseBit<"Fast", 4>;
-def SPIRV_FPFMM_AllowContractFastINTEL : I32BitEnumAttrCaseBit<"AllowContractFastINTEL", 16> {
+def SPIRV_FPFMM_AllowContract : I32BitEnumAttrCaseBit<"AllowContract", 16> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+    Capability<[SPIRV_C_FloatControls2, SPIRV_C_FPFastMathModeINTEL]>
   ];
 }
-def SPIRV_FPFMM_AllowReassocINTEL : I32BitEnumAttrCaseBit<"AllowReassocINTEL", 17> {
+def SPIRV_FPFMM_AllowReassoc : I32BitEnumAttrCaseBit<"AllowReassoc", 17> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+    Capability<[SPIRV_C_FloatControls2, SPIRV_C_FPFastMathModeINTEL]>
+  ];
+}
+def SPIRV_FPFMM_AllowTransform : I32BitEnumAttrCaseBit<"AllowTransform", 18> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FloatControls2]>
   ];
 }
 
 def SPIRV_FPFastMathModeAttr :
     SPIRV_BitEnumAttr<"FPFastMathMode", "Indicates a floating-point fast math flag", "fastmath_mode", [
       SPIRV_FPFMM_None, SPIRV_FPFMM_NotNaN, SPIRV_FPFMM_NotInf, SPIRV_FPFMM_NSZ,
-      SPIRV_FPFMM_AllowRecip, SPIRV_FPFMM_Fast, SPIRV_FPFMM_AllowContractFastINTEL,
-      SPIRV_FPFMM_AllowReassocINTEL
+      SPIRV_FPFMM_AllowRecip, SPIRV_FPFMM_Fast, SPIRV_FPFMM_AllowContract,
+      SPIRV_FPFMM_AllowReassoc, SPIRV_FPFMM_AllowTransform
     ]>;
 
 //===----------------------------------------------------------------------===//

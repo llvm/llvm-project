@@ -656,8 +656,15 @@ Deserializer::processOp<spirv::ExecutionModeIdOp>(ArrayRef<uint32_t> words) {
   // Get the values.
   SmallVector<Attribute, 4> attrListElems;
   while (wordIndex < words.size()) {
-    std::string id = getSpecConstantSymbol(words[wordIndex++]);
-    attrListElems.push_back(FlatSymbolRefAttr::get(context, id));
+    uint32_t id = words[wordIndex++];
+    if (Type type = getType(id)) {
+      attrListElems.push_back(TypeAttr::get(type));
+    } else if (auto constInfo = getConstant(id)) {
+      attrListElems.push_back(constInfo->first);
+    } else {
+      attrListElems.push_back(
+          FlatSymbolRefAttr::get(context, getSpecConstantSymbol(id)));
+    }
   }
   ArrayAttr values = opBuilder.getArrayAttr(attrListElems);
   spirv::ExecutionModeIdOp::create(

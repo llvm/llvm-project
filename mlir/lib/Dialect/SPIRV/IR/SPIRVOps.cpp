@@ -988,6 +988,8 @@ getExecutionModeOperandSchema(spirv::ExecutionMode mode) {
     return {/*isIdOperand=*/false, /*numOperands=*/3};
   case spirv::ExecutionMode::SubgroupsPerWorkgroupId:
     return {/*isIdOperand=*/true, /*numOperands=*/1};
+  case spirv::ExecutionMode::FPFastMathDefault:
+    return {/*isIdOperand=*/true, /*numOperands=*/2};
   case spirv::ExecutionMode::LocalSizeId:
   case spirv::ExecutionMode::LocalSizeHintId:
     return {/*isIdOperand=*/true, /*numOperands=*/3};
@@ -1077,7 +1079,7 @@ ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
 
   SmallVector<Attribute, 4> values;
   if (parser.parseCommaSeparatedList([&]() -> ParseResult {
-        FlatSymbolRefAttr attr;
+        Attribute attr;
         if (parser.parseAttribute(attr))
           return failure();
         values.push_back(attr);
@@ -1097,9 +1099,7 @@ void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
   printer.printSymbolName(getFn());
   printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\" ";
 
-  llvm::interleaveComma(
-      getValues().getAsValueRange<FlatSymbolRefAttr>(), printer,
-      [&](StringRef value) { printer.printSymbolName(value); });
+  llvm::interleaveComma(getValues(), printer);
 }
 
 LogicalResult spirv::ExecutionModeIdOp::verify() {
@@ -1116,6 +1116,28 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
            << schema.numOperands << " value operand(s), got "
            << getValues().size();
 
+  if (getExecutionMode() == ExecutionMode::FPFastMathDefault) {
+    auto targetType = dyn_cast<TypeAttr>(getValues()[0]);
+    if (!targetType || !isa<FloatType>(targetType.getValue()) ||
+        !isa<ScalarType>(targetType.getValue()))
+      return emitOpError("expected Target Type to be a scalar float type");
+    auto fastMathMode = dyn_cast<IntegerAttr>(getValues()[1]);
+    if (!fastMathMode || !fastMathMode.getType().isInteger(32))
+      return emitOpError("expected Fast-Math Mode to be an i32 constant");
+    std::optional<FPFastMathMode> mode =
+        symbolizeFPFastMathMode(fastMathMode.getValue().getZExtValue());
+    if (!mode)
+      return emitOpError("expected Fast-Math Mode to be a valid bitmask");
+    if (bitEnumContainsAny(*mode, FPFastMathMode::Fast))
+      return emitOpError("expected Fast-Math Mode to not include Fast");
+    if (bitEnumContainsAny(*mode, FPFastMathMode::AllowTransform) &&
+        !bitEnumContainsAll(*mode, FPFastMathMode::AllowContract |
+                                       FPFastMathMode::AllowReassoc))
+      return emitOpError("expected Fast-Math Mode with AllowTransform to "
+                         "include AllowContract and AllowReassoc");
+    return success();
+  }
+
   if (!llvm::all_of(getValues(), llvm::IsaPred<FlatSymbolRefAttr>))
     return emitOpError("expected value operands to be symbol reference");
 
@@ -1124,7 +1146,10 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
 
 LogicalResult
 spirv::ExecutionModeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  for (auto valueSymbol : getValues().getAsRange<FlatSymbolRefAttr>()) {
+  for (Attribute value : getValues()) {
+    auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
+    if (!valueSymbol)
+      continue;
     if (!symbolTable.lookupNearestSymbolFrom(*this, valueSymbol))
       return emitOpError("cannot find symbol referenced by value operand: ")
              << valueSymbol.getValue();

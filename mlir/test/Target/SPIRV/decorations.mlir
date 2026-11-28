@@ -139,6 +139,16 @@ spirv.func @fadd_decorations(%arg: f32) -> f32 "None" {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, FloatControls2], [SPV_KHR_float_controls2]> {
+spirv.func @fadd_float_controls2(%arg: f32) -> f32 "None" {
+  // CHECK: spirv.FAdd %{{.*}}, %{{.*}} {fp_fast_math_mode = #spirv.fastmath_mode<AllowContract|AllowReassoc|AllowTransform>}
+  %0 = spirv.FAdd %arg, %arg {fp_fast_math_mode = #spirv.fastmath_mode<AllowContract|AllowReassoc|AllowTransform>} : f32
+  spirv.ReturnValue %0 : f32
+}
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 spirv.func @fmul_decorations(%arg: f32) -> f32 "None" {
   // CHECK: spirv.FMul %{{.*}}, %{{.*}} {no_contraction}
