@@ -144,8 +144,18 @@ public:
 
   static FormattersMatchVector
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
+    return GetPossibleMatches(
+        valobj, use_dynamic,
+        GetCandidateLanguages(valobj.GetObjectRuntimeLanguage()));
+  }
+
+  /// As above but precomuted candidate languages.
+  static FormattersMatchVector
+  GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic,
+                     llvm::ArrayRef<lldb::LanguageType> candidate_languages) {
     FormattersMatchVector matches;
-    GetPossibleMatches(valobj, valobj.GetCompilerType(), use_dynamic, matches,
+    GetPossibleMatches(valobj, valobj.GetCompilerType(), use_dynamic,
+                       candidate_languages, matches,
                        FormattersMatchCandidate::Flags(), true);
     return matches;
   }
@@ -158,13 +168,13 @@ public:
   GetCandidateLanguages(lldb::LanguageType lang_type);
 
 private:
-  static void GetPossibleMatches(ValueObject &valobj,
-                                 CompilerType compiler_type,
-                                 lldb::DynamicValueType use_dynamic,
-                                 FormattersMatchVector &entries,
-                                 FormattersMatchCandidate::Flags current_flags,
-                                 bool root_level = false,
-                                 uint32_t ptr_stripped_depth = 0);
+  static void
+  GetPossibleMatches(ValueObject &valobj, CompilerType compiler_type,
+                     lldb::DynamicValueType use_dynamic,
+                     llvm::ArrayRef<lldb::LanguageType> candidate_languages,
+                     FormattersMatchVector &entries,
+                     FormattersMatchCandidate::Flags current_flags,
+                     bool root_level = false, uint32_t ptr_stripped_depth = 0);
 
   std::atomic<uint32_t> m_last_revision;
   FormatCache m_format_cache;

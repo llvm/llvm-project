@@ -45,8 +45,7 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
       return (bool)retval_sp;
   }
 
-  ValueObject &valobj(match_data.GetValueObject());
-  bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
+  bool result = m_category_sp->Get(match_data.GetLanguage(),
                                    match_data.GetMatchesVector(), retval_sp);
   if (!match_data_name.empty() && (!retval_sp || !retval_sp->NonCacheable())) {
     m_format_cache.Set(match_data_name, retval_sp);
