@@ -63,6 +63,7 @@ add_library(
   src/LanguageLaunch.cpp
   src/LanguageRegistration.cpp
   src/State.cpp
+  src/Stream.cpp
   )
 
 if(LLVM_LINK_LLVM_DYLIB)
