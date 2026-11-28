@@ -216,6 +216,7 @@ enum {
   LLVMDILayerLocMetadataKind,
   LLVMDILayerLocListMetadataKind,
   LLVMMDFunctionLocalContextMetadataKind,
+  LLVMDIDbgLocMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

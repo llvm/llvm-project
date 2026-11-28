@@ -315,6 +315,15 @@ public:
       return SrcLocs[Idx.get()];
     return InlinedCalls[InlinedAt.get()].getInlinee()->getSrcLoc(Idx);
   }
+  bool isValidSrcLoc(FLIndex<FLSrcLoc> Idx,
+                     FLIndex<FLInlinedCall> InlinedAt) const {
+    if (!Idx)
+      return false;
+    if (!InlinedAt)
+      return Idx.get() < SrcLocs.size();
+    return Idx.get() <
+           InlinedCalls[InlinedAt.get()].InlineeContext->SrcLocs.size();
+  }
   FLInlinedCall getInlinedCall(FLIndex<FLInlinedCall> Idx) const {
     assert(Idx && "Attempted to fetch an InlinedCall with an empty index!");
     return InlinedCalls[Idx.get()];

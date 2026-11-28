@@ -177,6 +177,42 @@ DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   return Merged;
 }
 
+DIDbgLoc::DIDbgLoc(LLVMContext &C, StorageType Storage, Metadata *FLContext,
+                   FLIndex<FLSrcLoc> SrcLocIdx,
+                   FLIndex<FLInlinedCall> InlinedAt, uint16_t AtomGroup,
+                   uint8_t AtomRank)
+    : MDNode(C, DIDbgLocKind, Storage, FLContext), AtomGroup(AtomGroup),
+      AtomRank(AtomRank) {
+  assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+  assert(AtomGroup < (1 << 13) && "AtomGroup number should fit in 13 bits");
+
+  SubclassData32 = SrcLocIdx.asRaw();
+  SubclassData16 = InlinedAt.asRaw();
+}
+
+DIDbgLoc *DIDbgLoc::getImpl(LLVMContext &Context, Metadata *FLContext,
+                            FLIndex<FLSrcLoc> SrcLoc,
+                            FLIndex<FLInlinedCall> InlinedAt,
+                            uint16_t AtomGroup, uint8_t AtomRank,
+                            StorageType Storage, bool ShouldCreate) {
+  if (Storage == Uniqued) {
+    if (auto *N = getUniqued(
+            Context.pImpl->DIDbgLocs,
+            DIDbgLocInfo::KeyTy(
+                FLContext, FLDebugLoc(SrcLoc, InlinedAt, AtomGroup, AtomRank))))
+      return N;
+    if (!ShouldCreate)
+      return nullptr;
+  } else {
+    assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
+  }
+
+  return storeImpl(new (1, Storage)
+                       DIDbgLoc(Context, Storage, FLContext, SrcLoc, InlinedAt,
+                                AtomGroup, AtomRank),
+                   Storage, Context.pImpl->DIDbgLocs);
+}
+
 static DILexicalBlockBase *cloneAndReplaceParentScope(DILexicalBlockBase *LBB,
                                                       DIScope *NewParent) {
   TempMDNode ClonedScope = LBB->clone();

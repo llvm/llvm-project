@@ -1277,6 +1277,16 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
     visitMDNode(*Node, AreDebugLocsAllowed::No);
 }
 
+void Verifier::visitDIDbgLoc(const DIDbgLoc &N) {
+  CheckDI(N.getRawFLContext() &&
+              isa<MDFunctionLocalContext>(N.getRawFLContext()),
+          "context must be an MDFunctionLocalContext", &N, N.getRawFLContext());
+  CheckDI(N.getFLDebugLoc().isInstrLoc(),
+          "expected an instruction-location (with a valid SrcLoc)", &N);
+  CheckDI(N.getFLDebugLoc().isValidInContext(N.getFLContext()),
+          "invalid !!dbgLoc indexes into context", &N, N.getFLContext());
+}
+
 void Verifier::visitDILocation(const DILocation &N) {
   CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
           "location requires a valid scope", &N, N.getRawScope());

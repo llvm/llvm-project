@@ -2026,4 +2026,129 @@ TEST(FLMDTest, VerifyFLContext) {
   EXPECT_FALSE(verifyFunction(*F));
 }
 
+TEST(FLMDTest, FLDebugLocInterface) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("TestModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *File = DIB.createFile("test.cpp", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus, File,
+                                            "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", File, 1, DIB.createSubroutineType({}), 2,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeSP = DIB.createFunction(
+      CU, "callee", "", File, 11, DIB.createSubroutineType({}), 11,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  auto *CallerFLCtx = MDFunctionLocalContext::getDistinct(Ctx);
+  auto *CalleeFLCtx = MDFunctionLocalContext::getDistinct(Ctx);
+
+  // Assemble a simple valid pair of FLContexts...
+  auto *CalleeBlock = DILexicalBlock::getDistinct(Ctx, CalleeSP, File, 13, 4);
+  CalleeFLCtx->insertScope(CalleeSP);
+  CalleeFLCtx->insertScope(CalleeBlock);
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(12, 4, 0));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(13, 13, 0));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(14, 0, 1));
+  CalleeFLCtx->insertSrcLoc(FLSrcLoc(15, 0, 0));
+
+  auto *CallerBlock = DILexicalBlock::getDistinct(Ctx, CallerSP, File, 5, 0);
+  CallerFLCtx->insertScope(CallerSP);
+  CallerFLCtx->insertScope(CallerBlock);
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(0, 0, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(4, 10, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(5, 3, 0));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(6, 1, 1));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(7, 7, 1));
+  CallerFLCtx->insertSrcLoc(FLSrcLoc(8, 3, 0));
+  CallerFLCtx->insertInlinedCall(FLInlinedCall(4, {}, CalleeFLCtx, false));
+  CallerFLCtx->insertInlinedCall(FLInlinedCall(3, 0, CalleeFLCtx, false));
+  CallerFLCtx->insertInlinedCall(FLInlinedCall(3, 0, CalleeFLCtx, false));
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), std::vector<Type *>(), false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "caller", *M);
+  BasicBlock::Create(Ctx, "", F);
+  ReturnInst::Create(Ctx, nullptr, &*F->begin());
+  F->setSubprogram(CallerSP);
+  F->setFLContext(CallerFLCtx);
+
+  FLDebugLoc I0(2, {}, 4, 1);
+  FLDebugLoc I1(3, {}, 5, 1);
+  FLDebugLoc I2(1, 1, 6, 2);
+  FLDebugLoc I3(2, {}, 4, 1);
+  FLDebugLoc I4(1, 2, 6, 2);
+  FLDebugLoc I5;
+
+  // Check equality between FLDebugLocs.
+  EXPECT_NE(I0, I1);
+  EXPECT_EQ(I0, I3);
+
+  // Quick check for the "kinds".
+  EXPECT_TRUE(I0.isInstrLoc());
+  EXPECT_TRUE(I2.isInstrLoc());
+  EXPECT_TRUE(I0.isNonInlinedInstrLoc());
+  EXPECT_TRUE(I2.isInlinedInstrLoc());
+
+  // getInlinedAt works for inlined and non-inlined instructions, returning an
+  // InlinedCall DebugLoc and an Empty DebugLoc respectively.
+  FLDebugLoc IC0 = I0.getInlinedAt(CallerFLCtx);
+  FLDebugLoc IC1 = I2.getInlinedAt(CallerFLCtx);
+  FLDebugLoc IC2 = I4.getInlinedAt(CallerFLCtx);
+  EXPECT_TRUE(IC0.isEmpty());
+  EXPECT_TRUE(IC1.isInlinedCall());
+
+  // An InlinedCall that has the same InlinedAtIdx field as an InstrLoc will
+  // have a different getInlinedAt result.
+  EXPECT_EQ(I2.InlinedAtIdx, IC1.InlinedAtIdx);
+  EXPECT_EQ(I2.getInstrInlinedAt(), IC1.getIdxForInlinedCall());
+  EXPECT_NE(I2.getInlinedAt(CallerFLCtx), IC1.getInlinedAt(CallerFLCtx));
+
+  // For an InstrLoc, getInlinedAtIdx is equal to getInstrInlinedAt; for an
+  // InlinedCallLoc, getInlinedAtIdx is not equal to getIdxForInlinedCall.
+  EXPECT_EQ(I2.getInstrInlinedAt(), I2.getInlinedAtIdx(CallerFLCtx));
+  EXPECT_NE(IC1.getIdxForInlinedCall(), IC1.getInlinedAtIdx(CallerFLCtx));
+
+  // Identical but distinct inlined calls are different, until we erase their
+  // identity via getLocForInlinedCall().
+  EXPECT_NE(IC1, IC2);
+  EXPECT_EQ(IC1.getLocForInlinedCall(CallerFLCtx),
+            IC2.getLocForInlinedCall(CallerFLCtx));
+  EXPECT_TRUE(IC1.asInlinedCall(CallerFLCtx)
+                  .isEquivalent(IC2.asInlinedCall(CallerFLCtx)));
+
+  // Test fetching context data.
+  EXPECT_EQ(I0.getSrcLoc(CallerFLCtx).Line, (unsigned)5);
+  EXPECT_EQ(I0.getSrcLoc(CalleeFLCtx).Line, (unsigned)14);
+  // SrcLocIdx==1, InlineeCtx==CalleeFLCtx
+  EXPECT_EQ(I2.getSrcLoc(CallerFLCtx).Line, (unsigned)13);
+  // SrcLocIdx==3, InlineeCtx==CalleeFLCtx
+  EXPECT_EQ(IC1.getSrcLoc(CallerFLCtx).Line, (unsigned)15);
+  // SrcLocIdx==4, No InlineeCtx
+  EXPECT_EQ(IC1.getInlinedAt(CallerFLCtx).getSrcLoc(CallerFLCtx).Line,
+            (unsigned)7);
+  // Result of getInlinedAt has no atom group/rank.
+  EXPECT_EQ(IC1.AtomGroup, 0);
+  EXPECT_EQ(IC1.AtomRank, 0);
+
+  // Check `isValidInContext`
+  EXPECT_TRUE(I0.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(I1.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(I2.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(I3.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(I4.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(I5.isValidInContext(CallerFLCtx));
+
+  EXPECT_TRUE(IC1.isValidInContext(CallerFLCtx));
+  EXPECT_TRUE(IC2.isValidInContext(CallerFLCtx));
+  EXPECT_FALSE(IC1.isValidInContext(CalleeFLCtx));
+
+  FLDebugLoc Invalid0(6, {}); // SrcLocIdx too high
+  EXPECT_FALSE(Invalid0.isValidInContext(CallerFLCtx));
+  FLDebugLoc Invalid1(2, 3); // InlinedAtIdx too high
+  EXPECT_FALSE(Invalid1.isValidInContext(CallerFLCtx));
+  FLDebugLoc Invalid2(4, 1); // SrcLocIdx too high in inlined context
+  EXPECT_FALSE(Invalid2.isValidInContext(CallerFLCtx));
+}
+
 } // end namespace

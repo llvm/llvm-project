@@ -566,7 +566,7 @@ static bool isDILocationReachable(SmallPtrSetImpl<Metadata *> &Visited,
   MDNode *N = dyn_cast_or_null<MDNode>(MD);
   if (!N)
     return false;
-  if (isa<DILocation>(N) || Reachable.count(N))
+  if (isa<DILocation>(N) || isa<DIDbgLoc>(N) || Reachable.count(N))
     return true;
   if (!Visited.insert(N).second)
     return false;
@@ -588,7 +588,7 @@ static bool isAllDILocation(SmallPtrSetImpl<Metadata *> &Visited,
   MDNode *N = dyn_cast_or_null<MDNode>(MD);
   if (!N)
     return false;
-  if (isa<DILocation>(N) || AllDILocation.count(N))
+  if (isa<DILocation>(N) || isa<DIDbgLoc>(N) || AllDILocation.count(N))
     return true;
   if (!DIReachable.count(N))
     return false;
@@ -609,7 +609,7 @@ static bool isAllDILocation(SmallPtrSetImpl<Metadata *> &Visited,
 static Metadata *
 stripLoopMDLoc(const SmallPtrSetImpl<Metadata *> &AllDILocation,
                const SmallPtrSetImpl<Metadata *> &DIReachable, Metadata *MD) {
-  if (isa<DILocation>(MD) || AllDILocation.count(MD))
+  if (isa<DILocation>(MD) || isa<DIDbgLoc>(MD) || AllDILocation.count(MD))
     return nullptr;
 
   if (!DIReachable.count(MD))

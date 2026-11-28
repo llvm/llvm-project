@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DbgVariableFragmentInfo.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
@@ -3101,6 +3102,84 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocationKind;
+  }
+};
+
+class DIDbgLoc : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DIDbgLoc(LLVMContext &C, StorageType Storage, Metadata *FLContext,
+           FLIndex<FLSrcLoc> SrcLocIdx, FLIndex<FLInlinedCall> InlinedAt,
+           uint16_t AtomGroup, uint8_t AtomRank);
+  DIDbgLoc(LLVMContext &C, StorageType Storage, Metadata *FLContext,
+           FLDebugLoc DL)
+      : DIDbgLoc(C, Storage, FLContext, DL.SrcLocIdx, DL.InlinedAtIdx,
+                 DL.AtomGroup, DL.AtomRank) {}
+  ~DIDbgLoc() { dropAllReferences(); }
+
+  uint16_t AtomGroup : 13;
+  uint16_t AtomRank : 3;
+
+  LLVM_ABI static DIDbgLoc *getImpl(LLVMContext &Context,
+                                    MDFunctionLocalContext *FLContext,
+                                    FLDebugLoc DL, StorageType Storage,
+                                    bool ShouldCreate = true) {
+    return getImpl(Context, static_cast<Metadata *>(FLContext), DL.SrcLocIdx,
+                   DL.InlinedAtIdx, DL.AtomGroup, DL.AtomRank, Storage,
+                   ShouldCreate);
+  }
+
+  LLVM_ABI static DIDbgLoc *getImpl(LLVMContext &Context, Metadata *FLContext,
+                                    FLDebugLoc DL, StorageType Storage,
+                                    bool ShouldCreate = true) {
+    return getImpl(Context, FLContext, DL.SrcLocIdx, DL.InlinedAtIdx,
+                   DL.AtomGroup, DL.AtomRank, Storage, ShouldCreate);
+  }
+
+  LLVM_ABI static DIDbgLoc *getImpl(LLVMContext &Context, Metadata *FLContext,
+                                    FLIndex<FLSrcLoc> SrcLocIdx,
+                                    FLIndex<FLInlinedCall> InlinedAt,
+                                    uint16_t AtomGroup, uint8_t AtomRank,
+                                    StorageType Storage,
+                                    bool ShouldCreate = true);
+
+  TempDIDbgLoc cloneImpl() const {
+    return getTemporary(getContext(), getFLContext(), getFLDebugLoc());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIDbgLoc,
+                    (MDFunctionLocalContext * FLContext, FLDebugLoc DL),
+                    (FLContext, DL))
+  DEFINE_MDNODE_GET(DIDbgLoc, (Metadata * FLContext, FLDebugLoc DL),
+                    (FLContext, DL))
+  DEFINE_MDNODE_GET(DIDbgLoc,
+                    (Metadata * FLContext, FLIndex<FLSrcLoc> SrcLoc,
+                     FLIndex<FLInlinedCall> InlinedAt, uint16_t AtomGroup,
+                     uint8_t AtomRank),
+                    (FLContext, SrcLoc, InlinedAt, AtomGroup, AtomRank))
+
+  TempDIDbgLoc clone() const { return cloneImpl(); }
+
+  FLIndex<FLSrcLoc> getSrcLoc() const {
+    return FLIndex<FLSrcLoc>::fromRaw(SubclassData32);
+  }
+  FLIndex<FLInlinedCall> getInlinedAt() const {
+    return FLIndex<FLInlinedCall>::fromRaw(SubclassData16);
+  }
+  uint16_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
+  FLDebugLoc getFLDebugLoc() const {
+    return FLDebugLoc(getSrcLoc(), getInlinedAt(), AtomGroup, AtomRank);
+  }
+  Metadata *getRawFLContext() const { return getOperand(0); }
+  MDFunctionLocalContext *getFLContext() const {
+    return cast<MDFunctionLocalContext>(getOperand(0));
+  }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIDbgLocKind;
   }
 };
 
