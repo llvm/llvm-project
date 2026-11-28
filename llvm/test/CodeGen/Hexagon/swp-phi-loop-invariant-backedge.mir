@@ -29,7 +29,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:intregs = PHI [[A2_addi]], %bb.3, %3, %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:intregs = PHI [[A2_tfrsi1]], %bb.3, [[A2_tfrsi1]], %bb.1
-  ; CHECK-NEXT:   [[A2_add:%[0-9]+]]:intregs = A2_add [[PHI]], [[PHI1]]
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:intregs = PHI [[A2_tfrsi]], %bb.3, [[PHI1]], %bb.1
+  ; CHECK-NEXT:   [[A2_add:%[0-9]+]]:intregs = A2_add [[PHI]], [[PHI2]]
   ; CHECK-NEXT:   [[A2_addi1:%[0-9]+]]:intregs = A2_addi [[A2_tfrsi]], 1
   ; CHECK-NEXT:   ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
   ; CHECK-NEXT:   J2_jump %bb.5, implicit-def $pc
@@ -37,9 +38,9 @@ body:             |
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:intregs = PHI [[A2_addi1]], %bb.1
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:intregs = PHI [[A2_tfrsi1]], %bb.1
-  ; CHECK-NEXT:   [[A2_add1:%[0-9]+]]:intregs = A2_add [[PHI2]], [[PHI3]]
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:intregs = PHI [[A2_addi1]], %bb.1
+  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:intregs = PHI [[PHI1]], %bb.1
+  ; CHECK-NEXT:   [[A2_add1:%[0-9]+]]:intregs = A2_add [[PHI3]], [[PHI4]]
   ; CHECK-NEXT:   J2_jump %bb.4, implicit-def $pc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
