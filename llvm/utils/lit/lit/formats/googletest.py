@@ -16,7 +16,8 @@ kIsWindows = sys.platform in ["win32", "cygwin"]
 class GoogleTest(TestFormat):
     def __init__(self, test_sub_dirs, test_suffix, run_under=[], test_prefix=None):
         self.seen_executables = set()
-        self.test_sub_dirs = str(test_sub_dirs).split(";")
+        raw_sub_dirs = "" if test_sub_dirs is None else str(test_sub_dirs)
+        self.test_sub_dirs = raw_sub_dirs.split(";")
 
         # On Windows, assume tests will also end in '.exe'.
         exe_suffix = str(test_suffix)
@@ -27,6 +28,10 @@ class GoogleTest(TestFormat):
         self.test_suffixes = {exe_suffix, test_suffix + ".py"}
         self.test_prefixes = {test_prefix} if test_prefix else None
         self.run_under = run_under
+
+    def _make_test_path(self, path_in_suite, subdir, fn, *extra):
+        components = (subdir,) if subdir else ()
+        return path_in_suite + components + (fn,) + extra
 
     def get_num_tests(self, path, litConfig, localConfig):
         list_test_cmd = self.prepareCmd(
@@ -80,11 +85,8 @@ class GoogleTest(TestFormat):
 
                         # Create one lit test for each shard.
                         for idx in range(nshard):
-                            testPath = path_in_suite + (
-                                subdir,
-                                fn,
-                                str(idx),
-                                str(nshard),
+                            testPath = self._make_test_path(
+                                path_in_suite, subdir, fn, str(idx), str(nshard)
                             )
                             json_file = (
                                 "-".join(
@@ -106,7 +108,7 @@ class GoogleTest(TestFormat):
                                 gtest_json_file=json_file,
                             )
                     else:
-                        testPath = path_in_suite + (subdir, fn)
+                        testPath = self._make_test_path(path_in_suite, subdir, fn)
                         json_file = (
                             "-".join(
                                 [
@@ -132,10 +134,8 @@ class GoogleTest(TestFormat):
                     # directory.  If we don't return a test here, then no
                     # failures will get reported, so return a dummy test name
                     # so that the failure is reported later.
-                    testPath = path_in_suite + (
-                        subdir,
-                        fn,
-                        "failed_to_discover_tests_from_gtest",
+                    testPath = self._make_test_path(
+                        path_in_suite, subdir, fn, "failed_to_discover_tests_from_gtest"
                     )
                     yield lit.Test.Test(
                         testSuite, testPath, localConfig, file_path=execpath
