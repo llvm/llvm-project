@@ -32,6 +32,8 @@ add_header_library(
   HDRS
     sanitizer.h
   DEPENDS
+    .attributes
+    .config
     libc.src.__support.macros.properties.compiler
 )
 
