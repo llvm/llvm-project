@@ -199,6 +199,9 @@ public:
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
+
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
   bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,

@@ -1,0 +1,39 @@
+# These pseudos emit no code. The TBZ is at the end of its narrowed range, so
+# counting any one of them as 4 bytes would relax it.
+# RUN: llc -mtriple=aarch64 -run-pass branch-relaxation \
+# RUN:     -aarch64-tbz-offset-bits=3 %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: zero_size
+# CHECK:     TBZW renamable $w0, 0, %bb.2
+# CHECK-NOT: TBNZW
+
+--- |
+  define void @zero_size(i32 %x, ptr %p) {
+    ret void
+  }
+...
+---
+name:            zero_size
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $x1
+    TBZW renamable $w0, 0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    liveins: $x1
+    renamable $x2 = LDRXui renamable $x1, 0
+    frame-setup EMITBKEY
+    frame-setup EMITMTETAGGED
+    frame-setup EMITNONHINTED
+    $x3 = INIT_UNDEF
+    LOCAL_ESCAPE <mcsymbol .Lzero_size$frame_escape_0>, %stack.0
+    B %bb.2
+
+  bb.2:
+    RET undef $lr
+...

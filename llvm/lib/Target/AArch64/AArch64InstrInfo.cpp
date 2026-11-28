@@ -219,8 +219,8 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
       return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
-  // Meta-instructions emit no code.
-  if (MI.isMetaInstruction())
+  // Meta-instructions and SEH pseudos emit no code.
+  if (MI.isMetaInstruction() || isSEHInstruction(MI))
     return 0;
 
   // FIXME: We currently only handle pseudoinstructions that don't get expanded
@@ -307,6 +307,14 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
+  case AArch64::EMITBKEY:
+  case AArch64::EMITMTETAGGED:
+  case AArch64::EMITNONHINTED:
+  case TargetOpcode::INIT_UNDEF:
+  case TargetOpcode::LOCAL_ESCAPE:
+    // These emit no code.
+    NumBytes = 0;
+    break;
   case AArch64::MOVaddr:
   case AArch64::MOVaddrJT:
   case AArch64::MOVaddrCP:
@@ -338,6 +346,40 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
   }
 
   return NumBytes;
+}
+
+TargetInstrInfo::InstSizeVerifyMode
+AArch64InstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
+  // The LFI rewriter sizes are upper bounds, see getLFIInstSizeInBytes.
+  if (Subtarget.isLFI())
+    return InstSizeVerifyMode::AllowOverEstimate;
+
+  switch (MI.getOpcode()) {
+  default:
+    return InstSizeVerifyMode::ExactSize;
+  // Their sizes are upper bounds, as the expansion or the padding varies.
+  case AArch64::AUTH_TCRETURN:
+  case AArch64::AUTH_TCRETURN_BTI:
+  case AArch64::AUTPAC:
+  case AArch64::AUTPCPAC:
+  case AArch64::AUTRELLOADPAC:
+  case AArch64::AUTx16x17:
+  case AArch64::AUTxMxN:
+  case AArch64::BLRA:
+  case AArch64::BR_JumpTable:
+  case AArch64::BRA:
+  case AArch64::LOADgotAUTH:
+  case AArch64::LOADgotPAC:
+  case AArch64::MOVaddrPAC:
+  case AArch64::PAC:
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+  case TargetOpcode::STACKMAP:
+  // SPACE is emitted as a fill fragment, which the check measures as 0 bytes.
+  case AArch64::SPACE:
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
