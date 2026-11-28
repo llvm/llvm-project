@@ -40,8 +40,10 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -75,6 +77,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -93,6 +96,10 @@ struct ArgPart {
   /// A representative guaranteed-executed load or store instruction for use by
   /// metadata transfer.
   Instruction *MustExecInstr;
+  Constant *ConstantValue = nullptr;
+  /// Direct replacement must not discard metadata that can turn the loaded
+  /// value into poison, such as !range or !nonnull.
+  bool HasPoisonGeneratingMetadata = false;
 };
 
 using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
@@ -621,6 +628,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     }
 
     Part.Alignment = std::max(Part.Alignment, I->getAlign());
+    if (auto *Load = dyn_cast<LoadInst>(I))
+      Part.HasPoisonGeneratingMetadata |= Load->hasPoisonGeneratingMetadata();
     return true;
   };
 
@@ -797,12 +806,298 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
   });
 }
 
+/// Return true if every value passed for Arg is private caller stack storage
+/// whose address does not escape except through the corresponding call.
+/// Reject anything that could change a field before or during the call.
+static bool isIsolatedCallerStorage(Argument &Arg,
+                                    FunctionAnalysisManager &FAM) {
+  Function &F = *Arg.getParent();
+  for (User *U : F.users()) {
+    auto *Call = cast<CallBase>(U);
+    Value *Root = getUnderlyingObject(Call->getArgOperand(Arg.getArgNo()));
+    if (!isa<AllocaInst>(Root))
+      return false;
+
+    SmallVector<Value *, 8> Worklist(1, Root);
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+      for (Use &Use : V->uses()) {
+        User *Usr = Use.getUser();
+        if (isa<GetElementPtrInst>(Usr) || isa<BitCastInst>(Usr) ||
+            isa<AddrSpaceCastInst>(Usr)) {
+          Worklist.push_back(cast<Value>(Usr));
+          continue;
+        }
+        if (isa<LoadInst>(Usr))
+          continue;
+        if (isa<StoreInst>(Usr) &&
+            Use.getOperandNo() == StoreInst::getPointerOperandIndex())
+          continue;
+        if (auto *StorageCall = dyn_cast<CallBase>(Usr)) {
+          if (StorageCall->getCalledFunction() == &F &&
+              Use.getOperandNo() == Arg.getArgNo())
+            continue;
+        }
+        if (auto *I = dyn_cast<Instruction>(Usr))
+          if (I->isLifetimeStartOrEnd())
+            continue;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+// Tracks constant and alloca values while walking MemorySSA.
+struct UnanimousValueState {
+  Constant *Value = nullptr;
+  // True while all relevant stores yield the same constant.
+  bool IsConstant = true;
+  // True while all relevant stores contain alloca pointers.
+  bool IsAlloca = true;
+  // True if we encounter a relevant store.
+  bool SawStore = false;
+};
+
+/// This function handles three cases:
+///
+/// - If Access is a MemoryPhi, recurse into each incoming memory access.
+/// - If Access is a MemoryDef that stores a constant, update Value and mark
+///   IsConstant as false if the constants disagree.
+/// - If Access is a MemoryDef that stores an alloca pointer, update
+///   IsAlloca.
+static bool findUnanimousValueFromMemoryAccess(
+    MemoryAccess *Access, const MemoryLocation &Loc, Type *LoadTy,
+    const DataLayout &DL, MemorySSA &MSSA, BatchAAResults &BAA,
+    SmallPtrSetImpl<MemoryAccess *> &Visited,
+    UnanimousValueState &UnanimousState) {
+
+  // Limit compile time for large memory graphs.
+  constexpr unsigned MaxMemoryAccesses = 1000;
+  if (!Access || !Visited.insert(Access).second)
+    return Access != nullptr;
+  if (MSSA.isLiveOnEntryDef(Access) || Visited.size() > MaxMemoryAccesses)
+    return false;
+
+  // Recurse through the incoming accesses of a MemoryPhi.
+  if (auto *Phi = dyn_cast<MemoryPhi>(Access)) {
+    for (Use &U : Phi->incoming_values()) {
+      auto *Incoming = cast<MemoryAccess>(U.get());
+      MemoryAccess *Clobber =
+          MSSA.getWalker()->getClobberingMemoryAccess(Incoming, Loc, BAA);
+      if (!findUnanimousValueFromMemoryAccess(Clobber, Loc, LoadTy, DL, MSSA,
+                                              BAA, Visited, UnanimousState))
+        return false;
+    }
+    return true;
+  }
+
+  auto *Def = dyn_cast<MemoryDef>(Access);
+  if (!Def)
+    return false;
+  auto *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
+  if (!Store)
+    return false;
+
+  MemoryLocation StoreLoc = MemoryLocation::get(Store);
+  AliasResult AR = BAA.alias(StoreLoc, Loc);
+  // Look past unrelated stores.
+  if (AR == AliasResult::NoAlias) {
+    MemoryAccess *Clobber = MSSA.getWalker()->getClobberingMemoryAccess(
+        Def->getDefiningAccess(), Loc, BAA);
+    return findUnanimousValueFromMemoryAccess(Clobber, Loc, LoadTy, DL, MSSA,
+                                              BAA, Visited, UnanimousState);
+  }
+
+  // This is a store to Loc. Get the unanimous constant or alloca pointer.
+  UnanimousState.SawStore = true;
+  std::optional<int64_t> Offset =
+      Loc.Ptr->getPointerOffsetFrom(StoreLoc.Ptr, DL);
+
+  if (UnanimousState.IsConstant) {
+    Constant *LoadedValue = nullptr;
+    if (Offset && *Offset >= 0 && StoreLoc.Size.hasValue() &&
+        Loc.Size.hasValue()) {
+      uint64_t RelativeOffset = *Offset;
+      uint64_t StoreSize = StoreLoc.Size.getValue();
+      uint64_t LoadSize = Loc.Size.getValue();
+      // Check the constant's bounds are within the store.
+      if (RelativeOffset <= StoreSize && LoadSize <= StoreSize - RelativeOffset)
+        if (auto *StoredValue = dyn_cast<Constant>(Store->getValueOperand()))
+          LoadedValue = ConstantFoldLoadFromConst(
+              StoredValue, LoadTy,
+              APInt(DL.getIndexTypeSizeInBits(Loc.Ptr->getType()),
+                    RelativeOffset),
+              DL);
+    }
+    if (!LoadedValue ||
+        (UnanimousState.Value && UnanimousState.Value != LoadedValue))
+      UnanimousState.IsConstant = false;
+    else
+      UnanimousState.Value = LoadedValue;
+  }
+
+  if (UnanimousState.IsAlloca) {
+    bool IsExactFieldStore = Offset && *Offset == 0 &&
+                             StoreLoc.Size.hasValue() && Loc.Size.hasValue() &&
+                             StoreLoc.Size == Loc.Size;
+    bool StoresAllocaPointer =
+        Store->getValueOperand()->getType() == LoadTy &&
+        isa<AllocaInst>(getUnderlyingObject(Store->getValueOperand()));
+
+    UnanimousState.IsAlloca = IsExactFieldStore && StoresAllocaPointer;
+  }
+  return UnanimousState.IsConstant || UnanimousState.IsAlloca;
+}
+
+/// To prove that a caller C is passing in a constant struct,
+/// first use findUnanimousValueFromMemoryAccess to check that every
+/// basic block internal to C converges to the same constant for each arg part
+/// when F is called.
+///
+/// Do this for each caller of F and ensure all fields of the struct are
+/// unanimous.
+///
+///  Allocas are permitted as they can be promoted through ordinary
+/// argument promotion.
+static bool findUnanimousValuesFromArg(Argument &Arg,
+                                       SmallVectorImpl<OffsetAndArgPart> &Parts,
+                                       FunctionAnalysisManager &FAM,
+                                       unsigned &NumAllocaParts) {
+  const DataLayout &DL = Arg.getParent()->getDataLayout();
+  for (auto &[Offset, Part] : Parts) {
+    TypeSize Size = DL.getTypeStoreSize(Part.Ty);
+    Constant *UnanimousValue = nullptr;
+    bool IsUnanimousConstant = true;
+    bool IsUnanimousAlloca = Part.Ty->isPointerTy();
+
+    for (User *U : Arg.getParent()->users()) {
+      auto *Call = cast<CallBase>(U);
+      Function &Caller = *Call->getFunction();
+      AAResults &AA = FAM.getResult<AAManager>(Caller);
+      BatchAAResults BAA(AA);
+      MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(Caller).getMSSA();
+
+      // Walk backwards through the memory state immediately before the call
+      // and search for stores and allocas to the ArgPart's Loc.
+      IRBuilder<> Builder(Call);
+      GetElementPtrInst *TemporaryGEP =
+          cast<GetElementPtrInst>(Builder.CreatePtrAdd(
+              Call->getArgOperand(Arg.getArgNo()), Builder.getInt64(Offset)));
+      MemoryLocation Loc(TemporaryGEP, LocationSize::precise(Size),
+                         AAMDNodes{});
+      MemoryAccess *CallAccess = MSSA.getMemoryAccess(Call);
+      if (!CallAccess) {
+        TemporaryGEP->eraseFromParent();
+        return false;
+      }
+
+      MemoryAccess *Start =
+          cast<MemoryUseOrDef>(CallAccess)->getDefiningAccess();
+      MemoryAccess *Clobber =
+          MSSA.getWalker()->getClobberingMemoryAccess(Start, Loc, BAA);
+      SmallPtrSet<MemoryAccess *, 32> Visited;
+      UnanimousValueState UnanimousState{nullptr, true, Part.Ty->isPointerTy(),
+                                         false};
+      bool Found = findUnanimousValueFromMemoryAccess(
+          Clobber, Loc, Part.Ty, DL, MSSA, BAA, Visited, UnanimousState);
+
+      if (!Found || !UnanimousState.SawStore) {
+        TemporaryGEP->eraseFromParent();
+        return false;
+      }
+
+      if (UnanimousState.IsConstant) {
+        if (UnanimousValue && UnanimousValue != UnanimousState.Value)
+          IsUnanimousConstant = false;
+        if (!UnanimousValue)
+          UnanimousValue = UnanimousState.Value;
+      } else {
+        IsUnanimousConstant = false;
+      }
+
+      if (!UnanimousState.IsAlloca)
+        IsUnanimousAlloca = false;
+
+      TemporaryGEP->eraseFromParent();
+    }
+
+    if (IsUnanimousConstant)
+      Part.ConstantValue = UnanimousValue;
+    else if (IsUnanimousAlloca)
+      ++NumAllocaParts;
+    else {
+      LLVM_DEBUG(
+          dbgs() << "Constant Propagation of " << Arg << " failed: part at "
+                 << Offset << " in " << Arg.getParent()->getName()
+                 << " is neither a unanimous constant or stored alloca\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool propagateConstantParts(Argument &Arg,
+                                   ArrayRef<OffsetAndArgPart> Parts) {
+  const DataLayout &DL = Arg.getParent()->getDataLayout();
+
+  SmallVector<std::pair<LoadInst *, Constant *>, 16> LoadsToReplace;
+  SmallVector<WeakTrackingVH, 16> DeadLoads;
+
+  for (BasicBlock &BB : *Arg.getParent()) {
+    for (Instruction &I : BB) {
+      auto *Load = dyn_cast<LoadInst>(&I);
+      if (!Load)
+        continue;
+      APInt Offset(
+          DL.getIndexTypeSizeInBits(Load->getPointerOperand()->getType()), 0);
+      Value *Base =
+          Load->getPointerOperand()->stripAndAccumulateConstantOffsets(
+              DL, Offset, /*AllowNonInbounds=*/true);
+      if (Base != &Arg || Offset.getSignificantBits() >= 64)
+        continue;
+      Constant *C = nullptr;
+      for (const auto &[PartOffset, Part] : Parts) {
+        if (PartOffset == Offset.getSExtValue()) {
+          C = Part.ConstantValue;
+          break;
+        }
+      }
+      if (!C)
+        continue;
+      assert(C->getType() == Load->getType() &&
+             "constant type does not match promotable load");
+
+      // Propagating a constant that references a defined function creates a
+      // reference edge in the lazy call graph, which this pass does not
+      // update.
+      SmallVector<Constant *, 1> Worklist(1, C);
+      SmallPtrSet<Constant *, 4> Visited;
+      Visited.insert(C);
+      bool ReferencesFunction = false;
+      LazyCallGraph::visitReferences(
+          Worklist, Visited, [&](Function &) { ReferencesFunction = true; });
+      if (ReferencesFunction)
+        return false;
+      LoadsToReplace.emplace_back(Load, C);
+    }
+  }
+
+  for (auto [Load, C] : LoadsToReplace) {
+    Load->replaceAllUsesWith(C);
+    DeadLoads.push_back(Load);
+  }
+  RecursivelyDeleteTriviallyDeadInstructions(DeadLoads);
+  return true;
+}
+
 /// PromoteArguments - This method checks the specified function to see if there
 /// are any promotable arguments and if it is safe to promote the function (for
 /// example, all callers are direct).  If safe to promote some arguments, it
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
-                                  unsigned MaxElements, bool IsRecursive) {
+                                  unsigned MaxElements, bool IsRecursive,
+                                  bool &CopiedConstants) {
   // Don't rewrite the signature of functions whose ABI must be preserved. For
   // naked functions we can end up removing parameters that are seemingly 'not
   // used' as they are referred to in the assembly.
@@ -866,6 +1161,57 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   auto &AAR = FAM.getResult<AAManager>(*F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 
+  // Aggregates with more than MaxElements parts aren't scalarized.
+  // Propagate their constant parts first and leave alloca fields for ordinary
+  // promotion. To avoid blowing up compile time, bail if we have greater than
+  // 10 callers or greater than 20 promotable aggregate fields.
+  SmallVector<std::pair<Argument *, SmallVector<OffsetAndArgPart, 4>>, 2>
+      ConstantAggregates;
+  constexpr unsigned MaxConstantPropagationCalls = 10;
+  constexpr unsigned MaxConstantPropagationFields = 20;
+  if (!F->use_empty() && !F->hasNUsesOrMore(MaxConstantPropagationCalls + 1)) {
+    for (Argument *PtrArg : PointerArgs) {
+      if (PtrArg->getParamByValType() || !isIsolatedCallerStorage(*PtrArg, FAM))
+        continue;
+
+      SmallVector<OffsetAndArgPart, 4> Parts;
+      if (!findArgParts(PtrArg, DL, AAR, MaxConstantPropagationFields,
+                        IsRecursive, Parts, FAM))
+        continue;
+
+      // Only propagate constants in functions rejected for having too many
+      // promotable fields.
+      if (MaxElements == 0 || Parts.size() <= MaxElements)
+        continue;
+
+      // Avoid propagating constants that can generate poison from metadata
+      // constraints.
+      if (any_of(Parts, [](const OffsetAndArgPart &Part) {
+            return Part.second.HasPoisonGeneratingMetadata;
+          }))
+        continue;
+
+      unsigned NumAllocaParts = 0;
+      if (!findUnanimousValuesFromArg(*PtrArg, Parts, FAM, NumAllocaParts))
+        continue;
+
+      // Constants do not consume ABI parameters. Apply the normal limit only
+      // to the alloca fields that will actually be passed, and avoid this
+      // when it would propagate no constants.
+      if (NumAllocaParts > MaxElements || NumAllocaParts == Parts.size())
+        continue;
+
+      ConstantAggregates.emplace_back(PtrArg, std::move(Parts));
+    }
+  }
+
+  if (!ConstantAggregates.empty()) {
+    for (auto &[Arg, Parts] : ConstantAggregates)
+      CopiedConstants |= propagateConstantParts(*Arg, Parts);
+    if (CopiedConstants)
+      return nullptr;
+  }
+
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
@@ -926,10 +1272,17 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
     bool IsRecursive = C.size() > 1;
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
-      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive);
-      if (!NewF)
+      bool CopiedConstants = false;
+      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive,
+                                        CopiedConstants);
+      if (!NewF && !CopiedConstants)
         continue;
       LocalChange = true;
+
+      if (CopiedConstants) {
+        FAM.invalidate(OldF, PreservedAnalyses::none());
+        continue;
+      }
 
       // Directly substitute the functions in the call graph. Note that this
       // requires the old function to be completely dead and completely
