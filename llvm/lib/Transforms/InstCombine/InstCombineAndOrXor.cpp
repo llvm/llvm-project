@@ -3479,6 +3479,88 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
       Other);
 }
 
+/// Fold an and/or of an unsigned and a signed relational compare of the same
+/// two operands into tests of their sign bits, for example:
+///   (icmp ult A, B) & (icmp sge A, B) --> (icmp sgt A, -1) & (icmp slt B, 0)
+///   (icmp uge A, B) | (icmp slt A, B) --> (icmp slt A, 0) | (icmp sgt B, -1)
+///
+/// If A and B have the same sign, the signed and the unsigned order agree. If
+/// they differ, the unsigned order is the reverse of the signed one. When the
+/// combined predicate is constant for equal signs, the result depends only on
+/// the signs of A and B.
+static Value *foldAndOrOfMixedSignICmps(CmpPredicate PredL, Value *LHS0,
+                                        Value *LHS1, bool LHSOneUse,
+                                        CmpPredicate PredR, Value *RHS0,
+                                        Value *RHS1, bool RHSOneUse, bool IsAnd,
+                                        InstCombiner::BuilderTy &Builder) {
+  if (!LHSOneUse || !RHSOneUse || PredL.hasSameSign() || PredR.hasSameSign())
+    return nullptr;
+  ICmpInst::Predicate PL = PredL, PR = PredR;
+  if (LHS0 == RHS1 && LHS1 == RHS0)
+    PR = ICmpInst::getSwappedPredicate(PR);
+  else if (LHS0 != RHS0 || LHS1 != RHS1)
+    return nullptr;
+  if (!LHS0->getType()->isIntOrIntVectorTy() || ICmpInst::isEquality(PL) ||
+      ICmpInst::isEquality(PR) ||
+      ICmpInst::isSigned(PL) == ICmpInst::isSigned(PR))
+    return nullptr;
+  // Make PL the unsigned and PR the signed predicate.
+  if (ICmpInst::isSigned(PL))
+    std::swap(PL, PR);
+
+  // The set of orderings (less, equal, greater) that a predicate accepts.
+  enum { LT = 1, EQ = 2, GT = 4 };
+  auto Accepts = [](ICmpInst::Predicate P) -> unsigned {
+    switch (P) {
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SLT:
+      return LT;
+    case ICmpInst::ICMP_ULE:
+    case ICmpInst::ICMP_SLE:
+      return LT | EQ;
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SGT:
+      return GT;
+    default:
+      return GT | EQ;
+    }
+  };
+  unsigned U = Accepts(PL), S = Accepts(PR);
+  auto Combine = [&](bool X, bool Y) { return IsAnd ? X && Y : X || Y; };
+
+  // With equal signs both orders are the same, so the result is determined by
+  // the orderings both predicates accept (and) or either one does (or).
+  // Only handle the cases where that is never true or always true.
+  unsigned Same = IsAnd ? U & S : U | S;
+  if (Same != 0 && Same != (LT | EQ | GT))
+    return nullptr;
+  // A is non-negative and B is negative: A <u B and A >s B.
+  bool NonNegNeg = Combine(U & LT, S & GT);
+  // A is negative and B is non-negative: A >u B and A <s B.
+  bool NegNonNeg = Combine(U & GT, S & LT);
+
+  // If the result is always true for equal signs, compute when it is false.
+  bool Invert = Same != 0;
+  if (Invert) {
+    NonNegNeg = !NonNegNeg;
+    NegNonNeg = !NegNonNeg;
+  }
+  // Both predicates cannot accept the "less" ordering for A non-negative and B
+  // negative and also the "greater" one for A negative and B non-negative:
+  // exactly one of the cases remains.
+  assert(NonNegNeg != NegNonNeg && "Unexpected sign combination");
+
+  // Without inversion, the result is (A < 0) & (B >= 0) or (A >= 0) & (B < 0).
+  // The inverted result is the complement of that, by De Morgan's laws.
+  bool ANeg = NegNonNeg != Invert;
+  Value *TestA =
+      ANeg ? Builder.CreateIsNeg(LHS0) : Builder.CreateIsNotNeg(LHS0);
+  Value *TestB =
+      ANeg ? Builder.CreateIsNotNeg(LHS1) : Builder.CreateIsNeg(LHS1);
+  return Invert ? Builder.CreateOr(TestA, TestB)
+                : Builder.CreateAnd(TestA, TestB);
+}
+
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
@@ -3514,6 +3596,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
   }
+
+  if (Value *V =
+          foldAndOrOfMixedSignICmps(PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0,
+                                    RHS1, RHSOneUse, IsAnd, Builder))
+    return V;
 
   if (Value *V = foldAndOrOfICmpEqConstantAndICmp(PredL, LHS0, LHS1, LHSOneUse,
                                                   PredR, RHS0, RHS1, RHSOneUse,
