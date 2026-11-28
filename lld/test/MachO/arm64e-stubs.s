@@ -33,7 +33,7 @@
 # CHECK-LABEL: Contents of (__TEXT,__objc_stubs) section
 # CHECK-NEXT:  _objc_msgSend$foo:
 # CHECK-NEXT:  adrp x1
-# CHECK-NEXT:  ldr x1, [x1
+# CHECK-NEXT:  ldr x1, {{.*}} ; Objc selector ref: foo
 # CHECK-NEXT:  adrp x17, {{.*}} ; 0x[[#GOT]]
 # CHECK-NEXT:  add x17, x17, #{{[0-9]+}} ; literal pool symbol address: _objc_msgSend
 # CHECK-NEXT:  ldr x16, [x17]
@@ -51,13 +51,17 @@
 # RUN: %lld -arch arm64e -platform_version macos 13.0 13.0 %t/test.o \
 # RUN:   %t/libfoo.dylib -objc_stubs_small -o %t/small
 # RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn \
-# RUN:   --section=__TEXT,__objc_stubs %t/small | FileCheck %s --check-prefix=SMALL
+# RUN:   --section=__TEXT,__auth_stubs --section=__TEXT,__objc_stubs %t/small \
+# RUN:   | FileCheck %s --check-prefix=SMALL
 
+# SMALL-LABEL: Contents of (__TEXT,__auth_stubs) section
+# SMALL-NEXT:  [[#%x,MSGSEND_STUB:]]: adrp x17
+# SMALL-NEXT:  add x17, x17, #{{[0-9]+}} ; literal pool symbol address: _objc_msgSend
 # SMALL-LABEL: Contents of (__TEXT,__objc_stubs) section
 # SMALL-NEXT:  _objc_msgSend$foo:
 # SMALL-NEXT:  adrp x1
-# SMALL-NEXT:  ldr x1, [x1
-# SMALL-NEXT:  b {{.*}} ; symbol stub for: _objc_msgSend
+# SMALL-NEXT:  ldr x1, {{.*}} ; Objc selector ref: foo
+# SMALL-NEXT:  b 0x[[#%x,MSGSEND_STUB]]
 
 #--- foo.s
 .globl _foo, _objc_msgSend
