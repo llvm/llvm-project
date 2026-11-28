@@ -6,8 +6,9 @@
 ; RUN: opt < %s -S --print-fl-debug-locs=on | FileCheck %s --check-prefix=FL-ON
 ; RUN: opt < %s -S --print-fl-debug-locs=expanded | FileCheck %s --check-prefix=FL-EXP
 
-;; Also test roundtripping to DILocations and back again.
+;; Also test roundtripping to DILocations/expanded dbgLocs and back again.
 ; RUN: opt < %s -S --print-fl-debug-locs=off | opt -S --print-fl-debug-locs=on | FileCheck %s --check-prefix=FL-ON
+; RUN: opt < %s -S --print-fl-debug-locs=expanded | opt -S --print-fl-debug-locs=on | FileCheck %s --check-prefix=FL-ON
 
 
 define i32 @basic(i32 %a, i32 %b) !dbg !4 !flmd !10 {

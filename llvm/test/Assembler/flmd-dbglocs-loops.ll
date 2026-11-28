@@ -7,8 +7,9 @@
 ; RUN: opt < %s -S --print-fl-debug-locs=on | FileCheck %s --check-prefix=FL-ON
 ; RUN: opt < %s -S --print-fl-debug-locs=expanded | FileCheck %s --check-prefix=FL-EXP
 
-;; Also test roundtripping to DILocations and back again.
+;; Also test roundtripping to DILocations/expanded dbgLocs and back again.
 ; RUN: opt < %s -S --print-fl-debug-locs=off | opt -S --print-fl-debug-locs=on | FileCheck %s --check-prefixes=FL-ON
+; RUN: opt < %s -S --print-fl-debug-locs=expanded | opt -S --print-fl-debug-locs=on | FileCheck %s --check-prefixes=FL-ON
 
 ;; NB: The shared_nodebug function contains a content-identical loop node to one
 ;; in `simple`. When produced as DILocations, these would have the same identity
