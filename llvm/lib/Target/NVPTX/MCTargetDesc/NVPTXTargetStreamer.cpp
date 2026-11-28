@@ -235,3 +235,15 @@ void NVPTXAsmTargetStreamer::emitPragmaDirective(StringRef Pragma) {
 void NVPTXAsmTargetStreamer::emitEmptySectionDirective(StringRef Name) {
   OS << "\t.section\t" << Name << "\t{\t}\n";
 }
+
+void NVPTXAsmTargetStreamer::emitDwarfLocIntermediateDirective(
+    unsigned FileNo, unsigned Line, unsigned Column, StringRef FileName) {
+  OS << "\t.loc_intermediate\t" << FileNo << " " << Line << " " << Column;
+  if (getStreamer().isVerboseAsm()) {
+    const MCAsmInfo &MAI = getStreamer().getContext().getAsmInfo();
+    OS.PadToColumn(MAI.getCommentColumn());
+    OS << MAI.getCommentString() << ' ' << FileName << ':' << Line << ':'
+       << Column;
+  }
+  OS << '\n';
+}

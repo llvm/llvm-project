@@ -64,6 +64,12 @@ public:
   /// Emit a section with an empty body.
   virtual void emitEmptySectionDirective(StringRef Name) {}
 
+  /// Emit a PTX '.loc_intermediate' directive for an intermediate-IR layer.
+  /// \p FileName only appears in the verbose-asm comment.
+  virtual void emitDwarfLocIntermediateDirective(unsigned FileNo, unsigned Line,
+                                                 unsigned Column,
+                                                 StringRef FileName) {}
+
   /// Outputs the list of the DWARF '.file' directives to the streamer.
   void outputDwarfFileDirectives();
   /// Close last section.
@@ -122,6 +128,10 @@ public:
   void emitPragmaDirective(StringRef Pragma) override;
 
   void emitEmptySectionDirective(StringRef Name) override;
+
+  void emitDwarfLocIntermediateDirective(unsigned FileNo, unsigned Line,
+                                         unsigned Column,
+                                         StringRef FileName) override;
 };
 
 } // end namespace llvm
