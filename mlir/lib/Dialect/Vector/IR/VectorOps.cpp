@@ -6244,6 +6244,11 @@ public:
       return rewriter.notifyMatchFailure(insertOp,
                                          "use-def chain is rank-reducing");
     }
+    if (extractOp.getSourceType().getRank() !=
+        extractOp.getResultType().getRank()) {
+      return rewriter.notifyMatchFailure(
+          insertOp, "ExtractSliceOp result rank differs from source rank");
+    }
 
     // Fail if tensor::ExtractSliceOp has non-zero offset.
     if (!extractOp.hasZeroOffset()) {

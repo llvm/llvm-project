@@ -2459,6 +2459,23 @@ func.func @do_not_swap_extract_slice_transfer_write(%arg0 : vector<8xf32>,
 
 // -----
 
+// CHECK-LABEL: func @negative_swap_extract_slice_transfer_write_rank_reducing
+//       CHECK:   %[[T0:.*]] = vector.transfer_write
+//       CHECK:   %[[T1:.*]] = tensor.extract_slice %[[T0]]
+//       CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1]]
+//       CHECK:   return %[[T2]]
+func.func @negative_swap_extract_slice_transfer_write_rank_reducing(
+    %arg0 : vector<8x4xf32>, %arg1 : tensor<1x8x4xf32>,
+    %arg2 : tensor<4x64x64xf32>, %iv : index, %sz : index) -> tensor<4x64x64xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.transfer_write %arg0, %arg1[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<8x4xf32>, tensor<1x8x4xf32>
+  %1 = tensor.extract_slice %0[0, 0, 0] [1, %sz, 4] [1, 1, 1] : tensor<1x8x4xf32> to tensor<?x4xf32>
+  %2 = tensor.insert_slice %1 into %arg2[%iv, 0, 16] [1, %sz, 4] [1, 1, 1] : tensor<?x4xf32> into tensor<4x64x64xf32>
+  func.return %2 : tensor<4x64x64xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_multi_reduction_single_parallel(
 //  CHECK-SAME:     %[[v:.*]]: vector<2xf32>,
 func.func @vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
