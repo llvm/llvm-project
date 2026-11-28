@@ -7498,7 +7498,7 @@ def int_hexagon_M8_mxclracc_hf :
 Hexagon___Intrinsic<"HEXAGON_M8_mxclracc_hf", []>;
 
 def int_hexagon_M8_mxmem2_bias :
-Hexagon__ptr_Intrinsic<"HEXAGON_M8_mxmem2_bias", [IntrWriteMem, IntrHasSideEffects]>;
+Hexagon__ptr_Intrinsic<"HEXAGON_M8_mxmem2_bias", [IntrHasSideEffects]>;
 
 def int_hexagon_M8_mxmem2_st_bias :
 Hexagon__ptr_Intrinsic<"HEXAGON_M8_mxmem2_st_bias", [IntrWriteMem, IntrHasSideEffects]>;
