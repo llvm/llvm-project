@@ -1993,14 +1993,17 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultZeroingOp();
 
   case Intrinsic::aarch64_sve_and_z:
-    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
-        Instruction::And);
+    return SVEIntrinsicInfo::defaultZeroingOp()
+        .setMatchingUndefIntrinsic(Intrinsic::aarch64_sve_and_u)
+        .setMatchingIROpcode(Instruction::And);
   case Intrinsic::aarch64_sve_orr_z:
-    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
-        Instruction::Or);
+    return SVEIntrinsicInfo::defaultZeroingOp()
+        .setMatchingUndefIntrinsic(Intrinsic::aarch64_sve_orr_u)
+        .setMatchingIROpcode(Instruction::Or);
   case Intrinsic::aarch64_sve_eor_z:
-    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
-        Instruction::Xor);
+    return SVEIntrinsicInfo::defaultZeroingOp()
+        .setMatchingUndefIntrinsic(Intrinsic::aarch64_sve_eor_u)
+        .setMatchingIROpcode(Instruction::Xor);
 
   case Intrinsic::aarch64_sve_cmpeq:
   case Intrinsic::aarch64_sve_cmpeq_wide:

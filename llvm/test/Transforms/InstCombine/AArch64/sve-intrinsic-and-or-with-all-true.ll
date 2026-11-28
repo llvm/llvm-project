@@ -207,7 +207,7 @@ define <vscale x 16 x i1> @test_eor_convert_all_true(<vscale x 8 x i1> %x) #0 {
 ; CHECK-SAME: <vscale x 8 x i1> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CONV_X:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[X]])
 ; CHECK-NEXT:    [[CONV_TRUE:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.eor.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_TRUE]])
+; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.eor.u.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_TRUE]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RESULT]]
 ;
   %conv_x = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %x)
@@ -222,7 +222,7 @@ define <vscale x 16 x i1> @test_and_convert_poison(<vscale x 8 x i1> %x) #0 {
 ; CHECK-SAME: <vscale x 8 x i1> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CONV_X:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[X]])
 ; CHECK-NEXT:    [[CONV_POISON:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> poison)
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_POISON]])
+; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.u.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_POISON]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RESULT]]
 ;
   %conv_x = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %x)
@@ -237,7 +237,7 @@ define <vscale x 16 x i1> @test_and_convert_different_granularities(<vscale x 8 
 ; CHECK-SAME: <vscale x 8 x i1> [[X:%.*]], <vscale x 4 x i1> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CONV_X:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[X]])
 ; CHECK-NEXT:    [[CONV_Y:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[Y]])
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.u.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_Y]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RESULT]]
 ;
   %conv_x = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %x)
@@ -252,7 +252,7 @@ define <vscale x 16 x i1> @test_and_convert_no_all_true(<vscale x 8 x i1> %x, <v
 ; CHECK-SAME: <vscale x 8 x i1> [[X:%.*]], <vscale x 8 x i1> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CONV_X:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[X]])
 ; CHECK-NEXT:    [[CONV_Y:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[Y]])
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.u.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[CONV_X]], <vscale x 16 x i1> [[CONV_Y]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RESULT]]
 ;
   %conv_x = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %x)
