@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
@@ -280,6 +281,14 @@ LogicalResult SwitchOp::verify() {
     return emitOpError() << "number of literals (" << literals->size()
                          << ") should match number of targets ("
                          << targets.size() << ")";
+
+  // "It is invalid for any two literal to be equal to each other."
+  if (literals) {
+    llvm::SmallDenseSet<APInt> seenLiterals;
+    for (const APInt &value : literals->getValues<APInt>())
+      if (!seenLiterals.insert(value).second)
+        return emitOpError("literals cannot repeat");
+  }
   return success();
 }
 
