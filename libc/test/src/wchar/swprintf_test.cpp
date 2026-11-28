@@ -3098,19 +3098,23 @@ TEST_F(LlvmLibcSwprintfTest, CutOff) {
 
   written = LIBC_NAMESPACE::swprintf(buff, 16,
                                      L"A simple string with no conversions.");
-  EXPECT_EQ(written, 36);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
   ASSERT_STREQ(buff, L"A simple string");
 
   written = LIBC_NAMESPACE::swprintf(buff, 5, L"%s", "1234567890");
-  EXPECT_EQ(written, 10);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
   ASSERT_STREQ(buff, L"1234");
 
   written = LIBC_NAMESPACE::swprintf(buff, 5, L"%ls", L"1234567890");
-  EXPECT_EQ(written, 10);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
   ASSERT_STREQ(buff, L"1234");
 
   written = LIBC_NAMESPACE::swprintf(buff, 67, L"%-101c", 'a');
-  EXPECT_EQ(written, 101);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
   ASSERT_STREQ(buff, L"a "
                      L"        " // Each of these is 8 spaces, and there are 8.
                      L"        " // In total there are 65 spaces
@@ -3123,10 +3127,17 @@ TEST_F(LlvmLibcSwprintfTest, CutOff) {
 
   // passing null as the output pointer is allowed as long as bufsz is 0.
   written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"%s and more", "1234567890");
-  EXPECT_EQ(written, 19);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
 
   written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"%*s", INT_MIN, "nothing");
-  EXPECT_EQ(written, INT_MAX);
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
+
+  written = LIBC_NAMESPACE::swprintf(buff, 5, L"12345");
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
+  ASSERT_STREQ(buff, L"1234");
 }
 
 TEST_F(LlvmLibcSwprintfTest, NoCutOff) {

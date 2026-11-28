@@ -58,7 +58,8 @@ LLVM_LIBC_FUNCTION(int, swprintf,
     wb.buff[wb.buff_cur] = L'\0';
   }
 
-  if (ret_val.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+  if (ret_val.value() > static_cast<size_t>(cpp::numeric_limits<int>::max()) ||
+      ret_val.value() >= bufsz) {
     libc_errno =
         printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;
