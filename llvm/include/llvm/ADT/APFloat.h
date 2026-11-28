@@ -1102,6 +1102,34 @@ struct fltSemantics {
   APInt (*bitcastToAPInt)(FloatRepr) = nullptr;
 };
 
+/// The bit layout of the IEEE-style encoding of a format, computed from its
+/// fltSemantics.
+struct fltBitLayout {
+  /// Includes the integer bit if it is explicit (x87DoubleExtended).
+  unsigned TrailingSignificandBits;
+  unsigned ExponentBits;
+  /// A normal value with exponent E has the biased exponent E + ExponentBias.
+  int ExponentBias;
+
+  constexpr uint64_t getExponentMask() const {
+    assert(ExponentBits < 64 && "the exponent mask must fit in 64 bits");
+    return (uint64_t{1} << ExponentBits) - 1;
+  }
+
+  /// Sem must use the IEEE-style encoding: not the PPC double-double
+  /// semantics, nor user-provided bit conversions with a different layout.
+  static constexpr fltBitLayout get(const fltSemantics &Sem) {
+    unsigned TrailingSignificandBits =
+        Sem.precision - 1 + Sem.hasExplicitIntegerBit;
+    // Without a zero or denormals, exponent 0 is a regular exponent.
+    bool IsZeroExpReserved = Sem.hasDenormals || Sem.hasZero;
+    return {TrailingSignificandBits,
+            Sem.sizeInBits - (Sem.hasSignedRepr ? 1 : 0) -
+                TrailingSignificandBits,
+            -(Sem.minExponent - (IsZeroExpReserved ? 1 : 0))};
+  }
+};
+
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
 class APFloat : public APFloatBase {
