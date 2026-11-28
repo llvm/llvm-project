@@ -24,6 +24,7 @@ add_clang_unittest(ASTTests
   DeclBaseTest.cpp
   DeclPrinterTest.cpp
   DeclTest.cpp
+  DocCommentGroupsTest.cpp
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
   FunctionFeatureMapTest.cpp

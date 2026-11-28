@@ -15,7 +15,12 @@
 #include "clang/AST/CommentParser.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 using namespace clang;
 
@@ -355,6 +360,144 @@ unsigned RawCommentList::getCommentEndOffset(RawComment *C) const {
       SourceMgr.getDecomposedLoc(C->getSourceRange().getEnd()).second;
   CommentEndOffset[C] = Offset;
   return Offset;
+}
+
+StringRef DocCommentGroup::getKindName() const {
+  switch (Kind) {
+  case GK_Unnamed:
+    return "unnamed";
+  case GK_Member:
+    return "name";
+  case GK_DefGroup:
+    return "defgroup";
+  case GK_AddToGroup:
+    return "addtogroup";
+  case GK_WeakGroup:
+    return "weakgroup";
+  }
+  llvm_unreachable("unknown DocCommentGroup kind");
+}
+
+/// Maps a grouping command to the kind of group an opening marker after it
+/// creates.
+static std::optional<DocCommentGroup::GroupKind>
+getGroupKindForCommand(StringRef CommandName) {
+  return llvm::StringSwitch<std::optional<DocCommentGroup::GroupKind>>(
+             CommandName)
+      .Case("name", DocCommentGroup::GK_Member)
+      .Case("defgroup", DocCommentGroup::GK_DefGroup)
+      .Case("addtogroup", DocCommentGroup::GK_AddToGroup)
+      .Case("weakgroup", DocCommentGroup::GK_WeakGroup)
+      .Default(std::nullopt);
+}
+
+SmallVector<const DocCommentGroup *, 0> RawCommentList::computeDocCommentGroups(
+    FileID File, const comments::CommandTraits &Traits,
+    llvm::BumpPtrAllocator &Allocator) const {
+  SmallVector<const DocCommentGroup *, 0> Groups;
+  const std::map<unsigned, RawComment *> *CommentsInFile =
+      getCommentsInFile(File);
+  if (!CommentsInFile)
+    return Groups;
+
+  // The scan lexes comments that are not attached to any declaration, so
+  // their diagnostics (for example, unknown commands) would be new. Send them
+  // to a private engine that drops them.
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
+                          new IgnoringDiagConsumer());
+  llvm::BumpPtrAllocator ScratchAllocator;
+
+  SmallVector<DocCommentGroup *, 4> OpenGroups;
+  for (const auto &[Offset, RC] : *CommentsInFile) {
+    if (!RC->isDocumentation())
+      continue;
+    StringRef RawText = RC->getRawText(SourceMgr);
+    if (RawText.find_first_of("{}") == StringRef::npos)
+      continue;
+
+    comments::Lexer L(ScratchAllocator, Diags, Traits, RC->getBeginLoc(),
+                      RawText.begin(), RawText.end());
+
+    // The most recent grouping command in this comment that no opening
+    // marker used yet.
+    std::optional<DocCommentGroup::GroupKind> PendingKind;
+    StringRef PendingText;
+    bool ExpectGroupText = false;
+
+    // A one-character "\" or "@" text token directly before the current
+    // token. The lexer produces one when a backslash or at sign is not
+    // followed by a command name, as in "\{" and "@}". Escaped backslashes
+    // ("\\") produce a two-character token and are not markers.
+    std::optional<SourceLocation> MarkerLoc;
+
+    comments::Token Tok;
+    do {
+      L.lex(Tok);
+      std::optional<SourceLocation> PrevMarkerLoc = MarkerLoc;
+      MarkerLoc.reset();
+
+      switch (Tok.getKind()) {
+      case comments::tok::verbatim_line_name:
+        // Other verbatim line commands, such as \ingroup, leave a pending
+        // grouping command in place.
+        ExpectGroupText = false;
+        if (auto Kind = getGroupKindForCommand(
+                Traits.getCommandInfo(Tok.getVerbatimLineID())->Name)) {
+          PendingKind = Kind;
+          PendingText = StringRef();
+          ExpectGroupText = true;
+        }
+        continue;
+
+      case comments::tok::verbatim_line_text:
+        if (ExpectGroupText)
+          PendingText = Tok.getVerbatimLineText().trim();
+        ExpectGroupText = false;
+        continue;
+
+      case comments::tok::text: {
+        StringRef Text = Tok.getText();
+        if (Tok.getLength() == 1 && (Text == "\\" || Text == "@")) {
+          MarkerLoc = Tok.getLocation();
+          continue;
+        }
+        if (!PrevMarkerLoc || Text.empty())
+          continue;
+
+        if (Text.front() == '{') {
+          DocCommentGroup::GroupKind Kind = DocCommentGroup::GK_Unnamed;
+          StringRef Name, Title;
+          if (PendingKind) {
+            Kind = *PendingKind;
+            if (Kind == DocCommentGroup::GK_Member) {
+              Name = PendingText;
+            } else {
+              size_t IdEnd = PendingText.find_first_of(" \t");
+              Name = PendingText.substr(0, IdEnd);
+              Title = PendingText.substr(Name.size()).trim();
+            }
+            PendingKind.reset();
+          }
+          auto *G = new (Allocator) DocCommentGroup(
+              Kind, Name.copy(Allocator), Title.copy(Allocator), *PrevMarkerLoc,
+              OpenGroups.empty() ? nullptr : OpenGroups.back());
+          Groups.push_back(G);
+          OpenGroups.push_back(G);
+        } else if (Text.front() == '}' && !OpenGroups.empty()) {
+          OpenGroups.pop_back_val()->setCloseLoc(*PrevMarkerLoc);
+        }
+        continue;
+      }
+
+      default:
+        ExpectGroupText = false;
+        continue;
+      }
+    } while (Tok.isNot(comments::tok::eof));
+  }
+
+  return Groups;
 }
 
 std::string RawComment::getFormattedText(const SourceManager &SourceMgr,

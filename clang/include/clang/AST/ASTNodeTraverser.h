@@ -44,6 +44,7 @@ struct {
   template <typename Fn> void AddChild(StringRef Label, Fn DoAddChild);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
+  void Visit(const DocCommentGroup *G);
   void Visit(const Attr *A);
   void Visit(const TemplateArgument &TA, SourceRange R = {},
              const Decl *From = nullptr, StringRef Label = {});
@@ -118,6 +119,10 @@ public:
       if (const comments::FullComment *Comment =
               D->getASTContext().getLocalCommentForDeclUncached(D))
         Visit(Comment, Comment);
+
+      if (const DocCommentGroup *Group =
+              D->getASTContext().getDocCommentGroupForDecl(D))
+        Visit(Group);
 
       // Decls within functions are visited by the body.
       if (!isa<FunctionDecl, ObjCMethodDecl, BlockDecl>(*D)) {
@@ -309,6 +314,15 @@ public:
                                              E = C->child_end();
            I != E; ++I)
         Visit(*I, FC);
+    });
+  }
+
+  /// Visits a Doxygen group and, as its child, the group enclosing it.
+  void Visit(const DocCommentGroup *G) {
+    getNodeDelegate().AddChild([=] {
+      getNodeDelegate().Visit(G);
+      if (const DocCommentGroup *Parent = G->getParent())
+        Visit(Parent);
     });
   }
 

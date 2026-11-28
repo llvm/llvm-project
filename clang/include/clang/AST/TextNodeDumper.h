@@ -170,6 +170,8 @@ public:
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
 
+  void Visit(const DocCommentGroup *G);
+
   void Visit(const Attr *A);
 
   void Visit(const TemplateArgument &TA, SourceRange R,

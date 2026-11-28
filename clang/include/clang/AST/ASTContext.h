@@ -1079,6 +1079,18 @@ public:
   /// redeclaration.
   mutable llvm::DenseMap<const Decl *, comments::FullComment *> ParsedComments;
 
+  /// Doxygen groups of a file, and the state of the file's comment list they
+  /// were computed from.
+  struct DocCommentGroupsInFile {
+    size_t NumComments = 0;
+    SourceLocation LastCommentEnd;
+    SmallVector<const DocCommentGroup *, 0> Groups;
+  };
+
+  /// Mapping from file to its Doxygen groups. Populated lazily and recomputed
+  /// when comments were added to the file since.
+  mutable llvm::DenseMap<FileID, DocCommentGroupsInFile> DocCommentGroups;
+
   /// Attaches \p Comment to \p Original (a declaration or macro), and to its
   /// redeclaration chain when \p Original is a declaration. Removes the
   /// redeclaration chain from the set of commentless chains.
@@ -1146,6 +1158,21 @@ public:
   /// Returns nullptr if no comment is attached. Does not look at any
   /// redeclarations of the declaration.
   comments::FullComment *getLocalCommentForDeclUncached(const Decl *D) const;
+
+  /// Return the Doxygen groups delimited by \c \\{ and \c \\} markers in the
+  /// documentation comments of \p File, ordered by their opening markers.
+  ///
+  /// The groups are computed on the first request for a file and cached.
+  ArrayRef<const DocCommentGroup *>
+  getDocCommentGroupsInFile(FileID File) const;
+
+  /// Return the innermost Doxygen group that encloses \p D, or nullptr.
+  ///
+  /// A declaration belongs to a group if it starts between the group's
+  /// opening and closing markers. A member of a class, function or other
+  /// non-namespace context only belongs to groups opened inside that context,
+  /// so a group around a class does not contain the class's members.
+  const DocCommentGroup *getDocCommentGroupForDecl(const Decl *D) const;
 
   comments::FullComment *cloneFullComment(comments::FullComment *FC,
                                          const Decl *D) const;

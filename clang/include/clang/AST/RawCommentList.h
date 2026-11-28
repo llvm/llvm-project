@@ -13,6 +13,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include <map>
 
@@ -26,7 +27,8 @@ class Preprocessor;
 class SourceManager;
 
 namespace comments {
-  class FullComment;
+class CommandTraits;
+class FullComment;
 } // end namespace comments
 
 class RawComment {
@@ -207,6 +209,82 @@ private:
   friend class ASTReader;
 };
 
+/// A Doxygen group opened by a \c \\{ (or \c \@{) marker and closed by a
+/// \c \\} (or \c \@}) marker in documentation comments, for example:
+/// \code
+///   /// \name Accessors
+///   /// \{
+///   int getX() const;
+///   int getY() const;
+///   /// \}
+/// \endcode
+///
+/// Groups are computed from the documentation comments of a file, using only
+/// the positions of the markers. A group can be nested in another group.
+class DocCommentGroup {
+public:
+  enum GroupKind {
+    /// An opening marker without a grouping command before it in the same
+    /// comment.
+    GK_Unnamed,
+    /// \c \\name followed by an opening marker (a Doxygen member group).
+    GK_Member,
+    /// \c \\defgroup followed by an opening marker.
+    GK_DefGroup,
+    /// \c \\addtogroup followed by an opening marker.
+    GK_AddToGroup,
+    /// \c \\weakgroup followed by an opening marker.
+    GK_WeakGroup
+  };
+
+  DocCommentGroup(GroupKind Kind, StringRef Name, StringRef Title,
+                  SourceLocation OpenLoc, const DocCommentGroup *Parent)
+      : Kind(Kind), Name(Name), Title(Title), OpenLoc(OpenLoc), Parent(Parent) {
+  }
+
+  GroupKind getKind() const { return Kind; }
+
+  /// Returns the spelling of the grouping command for this kind of group
+  /// ("name", "defgroup", "addtogroup", "weakgroup"), or "unnamed".
+  StringRef getKindName() const;
+
+  /// For \c \\name, the header text. For \c \\defgroup, \c \\addtogroup and
+  /// \c \\weakgroup, the group identifier. Empty for unnamed groups.
+  StringRef getName() const { return Name; }
+
+  /// For \c \\defgroup, \c \\addtogroup and \c \\weakgroup, the optional
+  /// title after the group identifier. Empty otherwise.
+  StringRef getTitle() const { return Title; }
+
+  /// Location of the opening marker.
+  SourceLocation getOpenLoc() const { return OpenLoc; }
+
+  /// Location of the closing marker, or an invalid location if the group is
+  /// not closed before the end of the file.
+  SourceLocation getCloseLoc() const { return CloseLoc; }
+
+  bool isTerminated() const { return CloseLoc.isValid(); }
+
+  /// Range from the opening marker to the closing marker, or only the
+  /// opening marker if the group is not terminated.
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(OpenLoc, isTerminated() ? CloseLoc : OpenLoc);
+  }
+
+  /// The group that encloses this group, if any.
+  const DocCommentGroup *getParent() const { return Parent; }
+
+  void setCloseLoc(SourceLocation Loc) { CloseLoc = Loc; }
+
+private:
+  GroupKind Kind;
+  StringRef Name;
+  StringRef Title;
+  SourceLocation OpenLoc;
+  SourceLocation CloseLoc;
+  const DocCommentGroup *Parent;
+};
+
 /// This class represents all comments included in the translation unit,
 /// sorted in order of appearance in the translation unit.
 class RawCommentList {
@@ -225,6 +303,14 @@ public:
   unsigned getCommentBeginLine(RawComment *C, FileID File,
                                unsigned Offset) const;
   unsigned getCommentEndOffset(RawComment *C) const;
+
+  /// Computes the Doxygen groups delimited by \c \\{ and \c \\} markers in
+  /// the documentation comments of \p File, ordered by their opening
+  /// markers. Unmatched closing markers are ignored. The groups and their
+  /// strings are allocated in \p Allocator.
+  SmallVector<const DocCommentGroup *, 0>
+  computeDocCommentGroups(FileID File, const comments::CommandTraits &Traits,
+                          llvm::BumpPtrAllocator &Allocator) const;
 
 private:
   SourceManager &SourceMgr;

@@ -584,6 +584,95 @@ comments::FullComment *ASTContext::getLocalCommentForDeclUncached(const Decl *D)
   return RC ? RC->parse(*this, nullptr, D) : nullptr;
 }
 
+ArrayRef<const DocCommentGroup *>
+ASTContext::getDocCommentGroupsInFile(FileID File) const {
+  if (File.isInvalid())
+    return {};
+
+  if (ExternalSource && !CommentsLoaded) {
+    ExternalSource->ReadComments();
+    CommentsLoaded = true;
+  }
+
+  const std::map<unsigned, RawComment *> *CommentsInFile =
+      Comments.getCommentsInFile(File);
+  if (!CommentsInFile || CommentsInFile->empty())
+    return {};
+
+  // Comments are added while parsing, and the last one can grow when the next
+  // comment is merged into it, so recompute when either has changed.
+  const size_t NumComments = CommentsInFile->size();
+  const SourceLocation LastCommentEnd =
+      CommentsInFile->rbegin()->second->getEndLoc();
+
+  auto [It, Inserted] = DocCommentGroups.try_emplace(File);
+  DocCommentGroupsInFile &Entry = It->second;
+  if (Inserted || Entry.NumComments != NumComments ||
+      Entry.LastCommentEnd != LastCommentEnd) {
+    Entry.NumComments = NumComments;
+    Entry.LastCommentEnd = LastCommentEnd;
+    Entry.Groups = Comments.computeDocCommentGroups(
+        File, getCommentCommandTraits(), BumpAlloc);
+  }
+  return Entry.Groups;
+}
+
+const DocCommentGroup *
+ASTContext::getDocCommentGroupForDecl(const Decl *D) const {
+  if (!D || D->isImplicit())
+    return nullptr;
+  D = &adjustDeclToTemplate(*D);
+
+  auto GetFileLoc = [this](const Decl *D) -> std::optional<FileIDAndOffset> {
+    SourceLocation Loc = D->getBeginLoc();
+    if (Loc.isInvalid())
+      Loc = D->getLocation();
+    if (Loc.isInvalid())
+      return std::nullopt;
+    return SourceMgr.getDecomposedLoc(SourceMgr.getExpansionLoc(Loc));
+  };
+
+  std::optional<FileIDAndOffset> DeclLoc = GetFileLoc(D);
+  if (!DeclLoc)
+    return nullptr;
+  ArrayRef<const DocCommentGroup *> Groups =
+      getDocCommentGroupsInFile(DeclLoc->first);
+
+  // Groups are ordered by their opening markers and nest properly, so the
+  // last group that opens before the declaration and is not yet closed is the
+  // innermost enclosing one.
+  const DocCommentGroup *Innermost = nullptr;
+  unsigned InnermostOpenOffset = 0;
+  for (const DocCommentGroup *G : Groups) {
+    unsigned OpenOffset = SourceMgr.getFileOffset(G->getOpenLoc());
+    if (OpenOffset >= DeclLoc->second)
+      break;
+    if (G->isTerminated() &&
+        SourceMgr.getFileOffset(G->getCloseLoc()) < DeclLoc->second)
+      continue;
+    Innermost = G;
+    InnermostOpenOffset = OpenOffset;
+  }
+  if (!Innermost)
+    return nullptr;
+
+  // A declaration inside a class, function, enumeration or similar context
+  // only belongs to groups opened inside that context. Namespaces, linkage
+  // specifications and export declarations do not limit groups.
+  const DeclContext *DC = D->getDeclContext();
+  while (DC && isa<LinkageSpecDecl, ExportDecl>(DC))
+    DC = DC->getParent();
+  if (DC && !DC->isFileContext()) {
+    std::optional<FileIDAndOffset> OwnerLoc = GetFileLoc(cast<Decl>(DC));
+    // Outer groups open even earlier than the innermost one, so none of them
+    // can be inside the owner either.
+    if (!OwnerLoc || OwnerLoc->first != DeclLoc->first ||
+        InnermostOpenOffset <= OwnerLoc->second)
+      return nullptr;
+  }
+  return Innermost;
+}
+
 comments::FullComment *ASTContext::getCommentForDecl(
                                               const Decl *D,
                                               const Preprocessor *PP) const {
