@@ -75,8 +75,16 @@ inline bool ShouldCheckMisplacedLifetimebound(Sema &S, const Decl *D) {
 }
 
 inline bool ShouldCheckInapplicableLifetimebound(Sema &S, const Decl *D) {
-  return !S.getDiagnostics().isIgnored(
-      diag::warn_lifetime_safety_inapplicable_lifetimebound, D->getBeginLoc());
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_inapplicable_lifetimebound,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound_return,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound_ctor_return,
+      diag::warn_lifetime_safety_strict_lifetimebound_return};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
 }
 
 inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
@@ -520,6 +528,21 @@ public:
     S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_inapplicable_lifetimebound)
         << PVD->getType() << Attr->getRange();
+  }
+
+  void reportLifetimeboundReturn(const LifetimeBoundAttr &Attr, QualType Type,
+                                 bool isCtor, bool IsStrict) override {
+    if (IsStrict) {
+      S.Diag(Attr.getLocation(),
+             diag::warn_lifetime_safety_strict_lifetimebound_return)
+          << isCtor << Type << Attr.getRange();
+      return;
+    }
+    unsigned DiagID =
+        isCtor
+            ? diag::warn_lifetime_safety_inapplicable_lifetimebound_ctor_return
+            : diag::warn_lifetime_safety_inapplicable_lifetimebound_return;
+    S.Diag(Attr.getLocation(), DiagID) << Type << Attr.getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,

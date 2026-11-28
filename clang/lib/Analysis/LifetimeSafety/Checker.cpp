@@ -678,11 +678,30 @@ public:
         FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return;
 
+    const auto &OriginMgr = FactMgr.getOriginMgr();
+    const auto *Ctor = dyn_cast<CXXConstructorDecl>(FDef);
+    const QualType ReturnTy = Ctor ? AST.getCanonicalTagType(Ctor->getParent())
+                                   : FDef->getReturnType();
+    const bool HasIntrinsic =
+        OriginMgr.hasOrigins(ReturnTy, /*IntrinsicOnly=*/true);
+    // Calls and constructions can register the result type for origin tracking.
+    const bool IsStrict = !HasIntrinsic && OriginMgr.hasOrigins(ReturnTy);
+    auto ReportReturn = [&](const LifetimeBoundAttr &Attr) {
+      if (!HasIntrinsic)
+        SemaHelper->reportLifetimeboundReturn(Attr, ReturnTy, Ctor != nullptr,
+                                              IsStrict);
+    };
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FDef))
+      if (const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(MD))
+        ReportReturn(*Attr);
+
     for (const auto &PVD : FDef->parameters())
-      if (PVD->hasAttr<LifetimeBoundAttr>() &&
-          !FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
-                                             /*IntrinsicOnly=*/true))
-        SemaHelper->reportInapplicableLifetimebound(PVD);
+      if (const auto *Attr = PVD->getAttr<LifetimeBoundAttr>()) {
+        if (!OriginMgr.hasOrigins(PVD->getType(), /*IntrinsicOnly=*/true))
+          SemaHelper->reportInapplicableLifetimebound(PVD);
+        ReportReturn(*Attr);
+      }
   }
 
   void inferAnnotations() {

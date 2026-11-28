@@ -34,6 +34,7 @@
 #include <memory>
 
 namespace clang {
+class LifetimeBoundAttr;
 class LifetimeCaptureByAttr;
 } // namespace clang
 
@@ -190,6 +191,9 @@ public:
                                             const ParmVarDecl *PVDDecl) {}
 
   virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
+  virtual void reportLifetimeboundReturn(const LifetimeBoundAttr &Attr,
+                                         QualType Type, bool isCtor,
+                                         bool IsStrict) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
