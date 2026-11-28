@@ -2429,7 +2429,6 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
       "}\n");
 
   const FPClassTest SqrtMask = fcPosInf | fcPosNormal | fcZero | fcNan;
-  const FPClassTest NszSqrtMask = fcPosInf | fcPosNormal | fcPosZero | fcNan;
 
   {
     KnownFPClass UseInstrInfo =
@@ -2449,7 +2448,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.getKnownFPClasses());
+    EXPECT_EQ(SqrtMask, UseInstrInfoNSZ.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZ =
@@ -2479,7 +2478,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
+    EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               UseInstrInfoNSZNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.getSignBit());
 
