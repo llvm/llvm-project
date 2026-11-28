@@ -26,8 +26,9 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static TimerGroup OffloadBundlerTimerGroup("Offload Bundler Timer Group",
-                                           "Timer group for offload bundler");
+static constexpr StringLiteral TimerGroupName = "Offload Bundler Timer Group";
+static constexpr StringLiteral TimerGroupDescription =
+    "Timer group for offload bundler";
 
 // Returns the on-disk size recorded in the compressed offload bundle header at
 // the start of \p Blob, or std::nullopt if the header carries no size field.
@@ -343,6 +344,8 @@ CompressedOffloadBundle::compress(compression::Params P,
                                   raw_ostream *VerboseStream) {
   if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
     return createStringError("compression not supported.");
+  TimerGroup OffloadBundlerTimerGroup(TimerGroupName, TimerGroupDescription,
+                                      /*PrintOnExit=*/false);
   Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
                   OffloadBundlerTimerGroup);
   if (VerboseStream)
@@ -439,6 +442,7 @@ CompressedOffloadBundle::compress(compression::Params P,
                    << format("%.2lf MB/s", CompressionSpeedMBs) << "\n"
                    << "Truncated MD5 hash: " << format_hex(TruncatedHash, 16)
                    << "\n";
+    OffloadBundlerTimerGroup.print(*VerboseStream);
   }
 
   return MemoryBuffer::getMemBufferCopy(
@@ -575,6 +579,8 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
   size_t UncompressedSize = Normalized.UncompressedFileSize;
   auto StoredHash = Normalized.Hash;
 
+  TimerGroup OffloadBundlerTimerGroup(TimerGroupName, TimerGroupDescription,
+                                      /*PrintOnExit=*/false);
   Timer DecompressTimer("Decompression Timer", "Decompression time",
                         OffloadBundlerTimerGroup);
   if (VerboseStream)
@@ -634,6 +640,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
         << "Stored hash: " << format_hex(StoredHash, 16) << "\n"
         << "Recalculated hash: " << format_hex(RecalculatedHash, 16) << "\n"
         << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
+    OffloadBundlerTimerGroup.print(*VerboseStream);
   }
 
   return MemoryBuffer::getMemBufferCopy(toStringRef(DecompressedData));
