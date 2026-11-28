@@ -183,6 +183,13 @@ public:
       return true;
     }
 
+    // "RF" - flat memory operand (flat_load / flat_store address).
+    if (S == "RF") {
+      Name++;
+      Info.setAllowsMemory();
+      return true;
+    }
+
     bool HasLeftParen = S.consume_front("{");
     if (S.empty())
       return false;
@@ -241,7 +248,7 @@ public:
   std::string convertConstraint(const char *&Constraint) const override {
 
     StringRef S(Constraint);
-    if (S == "DA" || S == "DB") {
+    if (S == "DA" || S == "DB" || S == "RF") {
       return std::string("^") + std::string(Constraint++, 2);
     }
 

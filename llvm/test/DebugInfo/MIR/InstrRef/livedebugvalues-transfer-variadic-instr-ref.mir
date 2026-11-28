@@ -70,7 +70,7 @@
   source_filename = "test.cpp"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   ; Function Attrs: mustprogress uwtable
   define dso_local noundef i32 @_Z3fooii(i32 noundef %a, i32 noundef %b) local_unnamed_addr !dbg !9 {
   entry:
@@ -78,10 +78,10 @@
     call void @llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %call, i32 %b), metadata !17, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_constu, 6, DW_OP_minus, DW_OP_stack_value)), !dbg !19
     %cmp19 = icmp sgt i32 %b, %a, !dbg !20
     br i1 %cmp19, label %while.body.preheader, label %while.end, !dbg !21
-  
+
   while.body.preheader:                             ; preds = %entry
     br label %while.body, !dbg !21
-  
+
   while.body:                                       ; preds = %while.body.preheader, %while.body
     %a.addr.021 = phi i32 [ %mul3, %while.body ], [ %a, %while.body.preheader ]
     %b.addr.020 = phi i32 [ %add2, %while.body ], [ %b, %while.body.preheader ]
@@ -92,7 +92,7 @@
     call void @llvm.dbg.value(metadata !DIArgList(i32 %mul3, i32 %call, i32 %add2), metadata !17, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_constu, 6, DW_OP_minus, DW_OP_stack_value)), !dbg !19
     %cmp = icmp sgt i32 %add2, %mul3, !dbg !20
     br i1 %cmp, label %while.body, label %while.end, !dbg !21, !llvm.loop !28
-  
+
   while.end:                                        ; preds = %while.body, %entry
     %b.addr.0.lcssa = phi i32 [ %b, %entry ], [ %add2, %while.body ]
     %a.addr.0.lcssa = phi i32 [ %a, %entry ], [ %mul3, %while.body ]
@@ -100,16 +100,16 @@
     %sub8 = add i32 %add7, %a.addr.0.lcssa, !dbg !32
     ret i32 %sub8, !dbg !33
   }
-  
+
   declare !dbg !34 noundef i32 @_Z3bazv() local_unnamed_addr
-  
+
   ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
   !llvm.ident = !{!8}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.cpp", directory: "/")
   !2 = !{i32 7, !"Dwarf Version", i32 5}
@@ -153,7 +153,6 @@
 ---
 name:            _Z3fooii
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 debugInstrRef: true
 liveins:
@@ -171,33 +170,33 @@ frameInfo:
   savePoint:       []
   restorePoint:    []
 fixedStack:
-  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default, 
-      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default, 
-      callee-saved-register: '$r12', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r12', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default, 
-      callee-saved-register: '$r13', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r13', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default, 
-      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default, 
-      callee-saved-register: '$r15', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r15', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default, 
-      callee-saved-register: '$rbp', callee-saved-restored: true, debug-info-variable: '', 
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rbp', callee-saved-restored: true, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
 stack:
-  - { id: 0, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 0, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: '', type: spill-slot, offset: -64, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 1, name: '', type: spill-slot, offset: -64, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: spill-slot, offset: -68, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 2, name: '', type: spill-slot, offset: -68, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:       []
 debugValueSubstitutions: []
@@ -207,7 +206,7 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x78e38e39), %bb.3(0x071c71c7)
     liveins: $edi, $esi, $rbp, $r15, $r14, $r13, $r12, $rbx
-  
+
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
     frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
@@ -237,15 +236,15 @@ body:             |
     DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 3, DW_OP_minus, DW_OP_stack_value), dbg-instr-ref(3, 0), dbg-instr-ref(4, 6), dbg-instr-ref(5, 0), 6, debug-location !19
     CMP32rr renamable $ebx, renamable $ebp, implicit-def $eflags, debug-location !20
     JCC_1 %bb.3, 14, implicit $eflags, debug-location !21
-  
+
   bb.1.while.body (align 16):
     successors: %bb.1(0x78e38e39), %bb.3(0x071c71c7)
     liveins: $ebp, $ebx
-  
+
     MOV32mr $rsp, 1, $noreg, 16, $noreg, killed renamable $ebp :: (store (s32) into %stack.1)
     MOV32mr $rsp, 1, $noreg, 20, $noreg, killed renamable $ebx :: (store (s32) into %stack.0)
     CALL64pcrel32 target-flags(x86-plt) @_Z3bazv, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !22
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !25, debug-location !24
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags, !25, debug-location !24
     renamable $ebp = MOV32rm $rsp, 1, $noreg, 16, $noreg :: (load (s32) from %stack.1)
     renamable $ebx = MOV32rm $rsp, 1, $noreg, 20, $noreg :: (load (s32) from %stack.0)
     MOV32mi $rsp, 1, $noreg, 20, $noreg, 0 :: (store (s32) into %stack.0)
@@ -255,10 +254,10 @@ body:             |
     DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 3, DW_OP_minus, DW_OP_stack_value), dbg-instr-ref(1, 0), dbg-instr-ref(4, 6), dbg-instr-ref(2, 0), 6, debug-location !19
     CMP32rr renamable $ebx, renamable $ebp, implicit-def $eflags, debug-location !20
     JCC_1 %bb.1, 15, implicit $eflags, debug-location !21
-  
+
   bb.3.while.end:
     liveins: $ebp, $ebx
-  
+
     renamable $ebx = SUB32rm killed renamable $ebx, $rsp, 1, $noreg, 12, $noreg, implicit-def dead $eflags, debug-location !31 :: (load (s32) from %stack.2)
     renamable $ebx = ADD32rr killed renamable $ebx, killed renamable $ebp, implicit-def dead $eflags, debug-location !32
     $eax = MOV32rr killed $ebx, debug-location !33

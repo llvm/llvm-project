@@ -40,12 +40,6 @@ FOREACH_OMPT_TARGET_CALLBACK(defineOmptCallback)
 using namespace llvm::omp::target::ompt;
 using namespace llvm::omp::target::debug;
 
-/// Forward declaration
-class LibomptargetRtlFinalizer;
-
-/// Object that will maintain the RTL finalizer from the plugin
-LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
-
 thread_local Interface llvm::omp::target::ompt::RegionInterface;
 
 thread_local void *llvm::omp::target::ompt::ReturnAddress = nullptr;
@@ -469,30 +463,6 @@ void Interface::endTargetRegion() {
   TargetData = ompt_data_none;
 }
 
-/// Used to maintain the finalization functions that are received
-/// from the plugins during connect.
-/// Note: Currently, there are no plugin-specific finalizations, so each plugin
-/// will call the same (empty) function.
-class LibomptargetRtlFinalizer {
-public:
-  LibomptargetRtlFinalizer() {}
-
-  void registerRtl(ompt_finalize_t FinalizationFunction) {
-    if (FinalizationFunction) {
-      RtlFinalizationFunctions.emplace_back(FinalizationFunction);
-    }
-  }
-
-  void finalize() {
-    for (auto FinalizationFunction : RtlFinalizationFunctions)
-      FinalizationFunction(/*tool_data=*/nullptr);
-    RtlFinalizationFunctions.clear();
-  }
-
-private:
-  llvm::SmallVector<ompt_finalize_t> RtlFinalizationFunctions;
-};
-
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
@@ -516,23 +486,24 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   assert(ompt_get_task_data_fn && "ompt_get_task_data_fn should be non-null");
   assert(ompt_get_target_task_data_fn &&
          "ompt_get_target_task_data_fn should be non-null");
-  assert(LibraryFinalizer == nullptr &&
-         "LibraryFinalizer should not be initialized yet");
-
-  LibraryFinalizer = new LibomptargetRtlFinalizer();
 
   Initialized = true;
 
   return 0;
 }
 
-void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
-  ODBG(ODT_Tool) << "Executing finalizeLibrary";
-  // Before disabling OMPT, call the (plugin) finalizations that were registered
-  // with this library
-  LibraryFinalizer->finalize();
-  delete LibraryFinalizer;
+void llvm::omp::target::ompt::disconnectLibrary() {
+  // This can be reached from both libomptarget's deinitialization and libomp's
+  // ompt_fini (via finalizeLibrary); only the first call does the work.
+  if (!Initialized)
+    return;
+
+  ODBG(ODT_Tool) << "Executing disconnectLibrary";
   Initialized = false;
+}
+
+void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
+  disconnectLibrary();
 }
 
 void llvm::omp::target::ompt::connectLibrary() {

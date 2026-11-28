@@ -89,6 +89,14 @@ jobs:
             linker: lld-24
             target: armv6m-none-eabi
             testing: SKIP
+          - name: baremetal-armv6m-testing
+            os: ubuntu-26.04
+            build_type: MinSizeRel
+            c_compiler: clang-24
+            cpp_compiler: clang++-24
+            linker: lld-24
+            target: arm-testing/armv6m-none-eabi
+            build_builtins: ON
           - name: baremetal-armv7m
             os: ubuntu-26.04
             build_type: MinSizeRel
@@ -121,6 +129,14 @@ jobs:
             linker: lld-24
             target: armv8m.main-none-eabihf
             testing: SKIP
+          - name: baremetal-armv8m-hard-testing
+            os: ubuntu-26.04
+            build_type: MinSizeRel
+            c_compiler: clang-24
+            cpp_compiler: clang++-24
+            linker: lld-24
+            target: arm-testing/armv8m.main-none-eabihf
+            build_builtins: ON
           - name: baremetal-armv8.1m
             os: ubuntu-26.04
             build_type: MinSizeRel

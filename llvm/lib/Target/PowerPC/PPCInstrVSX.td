@@ -3921,6 +3921,10 @@ def : Pat<(f128 (any_uint_to_fp i64:$src)),
           (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
 def : Pat<(f128 (any_uint_to_fp (i64 (PPCmfvsr f64:$src)))),
           (f128 (XSCVUDQP $src))>;
+// The word is in word element 1 of the VSR in either endianness.
+def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
+          (f128 (XSCVUDQP
+                  (XXEXTRACTUW (SUBREG_TO_REG $src, sub_64), 4)))>;
 
 // Convert (Un)Signed Word -> QP.
 def : Pat<(f128 (any_sint_to_fp i32:$src)),
@@ -4486,11 +4490,6 @@ foreach Idx = 0-15 in {
                             (VEXTSH2D (VEXTRACTUB !add(Idx, Idx), $src)),
                             sub_64)))>;
 }
-
-// Unsiged int in vsx register -> QP
-def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
-          (f128 (XSCVUDQP
-                  (XXEXTRACTUW (SUBREG_TO_REG $src, sub_64), 4)))>;
 } // HasVSX, HasP9Vector, IsBigEndian, IsPPC64
 
 // Little endian Power9 subtarget.
@@ -4801,11 +4800,6 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
                                       (VEXTRACTUH !head(!tail(Idx)), $src)),
                                     sub_64)))>;
 }
-
-// Unsiged int in vsx register -> QP
-def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
-          (f128 (XSCVUDQP
-                  (XXEXTRACTUW (SUBREG_TO_REG $src, sub_64), 8)))>;
 } // HasVSX, HasP9Vector, IsLittleEndian
 
 // Any Power9 VSX subtarget that supports Power9 Altivec.

@@ -3,7 +3,6 @@
 
 ---
 name: vopd_fmac_fmac
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vopd_fmac_fmac
@@ -27,7 +26,6 @@ body: |
 ...
 ---
 name: vopd_dot2c_dot2c
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vopd_dot2c_dot2c

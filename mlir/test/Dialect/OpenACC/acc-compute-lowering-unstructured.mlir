@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering))' | FileCheck %s
 
 // CHECK-LABEL: func.func @parallel_unstructured_loop
 func.func @parallel_unstructured_loop(%buf: memref<10xi32>) {

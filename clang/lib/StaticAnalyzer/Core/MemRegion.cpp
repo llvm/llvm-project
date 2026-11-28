@@ -1756,9 +1756,11 @@ static RegionOffset calculateOffset(const MemRegion *R) {
 }
 
 RegionOffset MemRegion::getAsOffset() const {
-  if (!cachedOffset)
+  if (!cachedOffset.isValid()) {
     cachedOffset = calculateOffset(this);
-  return *cachedOffset;
+    assert(cachedOffset.isValid());
+  }
+  return cachedOffset;
 }
 
 //===----------------------------------------------------------------------===//

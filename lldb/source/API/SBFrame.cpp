@@ -685,7 +685,8 @@ const char *SBFrame::Disassemble() const {
   }
 
   if (auto *frame = exe_ctx->GetFramePtr())
-    return ConstString(frame->Disassemble()).GetCString();
+    return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+        .Intern(frame->Disassemble());
 
   return nullptr;
 }
@@ -1288,7 +1289,8 @@ const char *SBFrame::GetFunctionName() const {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    return frame->GetFunctionName();
+    return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+        .Intern(frame->GetFunctionName());
   return nullptr;
 }
 
@@ -1303,6 +1305,7 @@ const char *SBFrame::GetDisplayFunctionName() {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    return frame->GetDisplayFunctionName();
+    return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+        .Intern(frame->GetDisplayFunctionName());
   return nullptr;
 }

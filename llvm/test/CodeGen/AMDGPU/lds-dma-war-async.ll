@@ -13,6 +13,7 @@ define i32 @lds_then_dma.global.singlethread(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    ds_load_b32 v2, v3
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -30,6 +31,7 @@ define i32 @lds_then_dma.global.wave(ptr addrspace(1) %g, ptr addrspace(3) inreg
 ; CHECK-NEXT:    ds_load_b32 v2, v3
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -47,6 +49,7 @@ define i32 @lds_then_dma.global.wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %
 ; CHECK-NEXT:    ds_load_b32 v2, v3
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -64,6 +67,7 @@ define i32 @lds_then_dma.global.agent(ptr addrspace(1) %g, ptr addrspace(3) inre
 ; CHECK-NEXT:    ds_load_b32 v2, v3
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -81,6 +85,7 @@ define i32 @lds_then_dma.global.system(ptr addrspace(1) %g, ptr addrspace(3) inr
 ; CHECK-NEXT:    ds_load_b32 v2, v3
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -99,6 +104,7 @@ define i32 @lds_then_dma.global.singlethread.partial(ptr addrspace(1) %g, ptr ad
 ; CHECK-NEXT:    ds_load_b32 v3, v3
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v4, v3
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v1 = load i32, ptr addrspace(3) %lds, align 4
@@ -119,6 +125,7 @@ define i32 @lds_then_dma.global.wave.partial(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    ds_load_b32 v3, v3
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v4, v3
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v1 = load i32, ptr addrspace(3) %lds, align 4
@@ -140,6 +147,7 @@ define i32 @lds_then_dma.global.wg.partial(ptr addrspace(1) %g, ptr addrspace(3)
 ; CHECK-NEXT:    ds_load_b32 v4, v4
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v3, v4
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v1 = load i32, ptr addrspace(3) %lds, align 4
@@ -161,6 +169,7 @@ define i32 @lds_then_dma.global.agent.partial(ptr addrspace(1) %g, ptr addrspace
 ; CHECK-NEXT:    ds_load_b32 v4, v4
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v3, v4
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v1 = load i32, ptr addrspace(3) %lds, align 4
@@ -182,6 +191,7 @@ define i32 @lds_then_dma.global.system.partial(ptr addrspace(1) %g, ptr addrspac
 ; CHECK-NEXT:    ds_load_b32 v4, v4
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v3, v4
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v1 = load i32, ptr addrspace(3) %lds, align 4

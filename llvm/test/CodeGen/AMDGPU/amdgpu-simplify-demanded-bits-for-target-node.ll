@@ -37,6 +37,7 @@ define i16 @readfirstlane_demanded_i16_zext(i16 %src) nounwind {
 ; GCN-LABEL: readfirstlane_demanded_i16_zext:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -50,6 +51,7 @@ define i16 @readfirstlane_demanded_i16_sext(i16 %src) nounwind {
 ; GCN-LABEL: readfirstlane_demanded_i16_sext:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -95,6 +97,7 @@ define i16 @readlane_demanded_i16_zext(i16 %src) nounwind {
 ; GCN-LABEL: readlane_demanded_i16_zext:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    v_readlane_b32 s4, v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -108,6 +111,7 @@ define i16 @readlane_demanded_i16_sext(i16 %src) nounwind {
 ; GCN-LABEL: readlane_demanded_i16_sext:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GCN-NEXT:    v_readlane_b32 s4, v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -174,6 +178,7 @@ define i16 @wwm_demanded_i16_zext(i16 %src) nounwind {
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -196,6 +201,7 @@ define i16 @wwm_demanded_i16_sext(i16 %src) nounwind {
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -242,8 +248,9 @@ define void @set.inactive_demanded_i8_sext_store(i8 %src, ptr addrspace(1) %ptr)
 define i16 @set.inactive_demanded_i16_zext(i16 %src) nounwind {
 ; GCN-LABEL: set.inactive_demanded_i16_zext:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %zext = zext i16 %src to i32
   %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %zext, i32 0)
@@ -254,8 +261,9 @@ define i16 @set.inactive_demanded_i16_zext(i16 %src) nounwind {
 define i16 @set.inactive_demanded_i16_sext(i16 %src) nounwind {
 ; GCN-LABEL: set.inactive_demanded_i16_sext:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %sext = sext i16 %src to i32
   %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %sext, i32 0)

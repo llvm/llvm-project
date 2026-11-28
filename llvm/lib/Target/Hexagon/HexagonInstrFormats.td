@@ -173,8 +173,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bit isHVXALU2SRC = 0;
   let TSFlags{61} = isHVXALU2SRC;
 
-  bit hasUnaryRestriction = 0;
-  let TSFlags{62} = hasUnaryRestriction;
+  bit isHVXVS3SRC = 0;
+  let TSFlags{62} = isHVXVS3SRC;
 
   bit isHLX = 0;
   let TSFlags{63} = isHLX;

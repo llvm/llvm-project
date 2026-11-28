@@ -89,6 +89,9 @@ public:
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
 
+  /// Move segment boundaries off erased instructions, ahead of compaction.
+  LLVM_ABI void canonicalizeIndexes(const SlotIndexes &SI);
+
   LLVM_ABI void releaseMemory();
   /// init - analysis entry point
   LLVM_ABI void init(MachineFunction &MF);

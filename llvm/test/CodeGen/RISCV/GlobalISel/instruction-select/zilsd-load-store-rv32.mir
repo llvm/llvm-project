@@ -27,10 +27,10 @@ body:             |
     ; CHECK-NEXT: $x11 = COPY [[COPY2]]
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s64), align 8)
-    %2:gprb(s32), %3:gprb(s32) = G_UNMERGE_VALUES %1(s64)
-    $x10 = COPY %2(s32)
-    $x11 = COPY %3(s32)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s64), align 8)
+    %2:gprb(i32), %3:gprb(i32) = G_UNMERGE_VALUES %1(i64)
+    $x10 = COPY %2(i32)
+    $x11 = COPY %3(i32)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -59,10 +59,10 @@ body:             |
     ; CHECK-NEXT: SD_RV32 [[REG_SEQUENCE]], [[COPY]], 0 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = COPY $x12
-    %3:gprb(s64) = G_MERGE_VALUES %1(s32), %2(s32)
-    G_STORE %3(s64), %0(p0) :: (store (s64), align 8)
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = COPY $x12
+    %3:gprb(i64) = G_MERGE_VALUES %1(i32), %2(i32)
+    G_STORE %3(i64), %0(p0) :: (store (s64), align 8)
     PseudoRET
 
 ...

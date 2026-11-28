@@ -51,7 +51,8 @@ def main(argv):
         help='Path where the resulting LNT JSON report is written. It is an error for the file to '
              'already exist.')
     parser.add_argument('--main-branch', type=str, default='origin/main',
-        help='The main branch of the repository. Only commits on that branch are given an ordinal.')
+        help='The main branch of the repository. Only commits on that branch are given an ordinal, and reported '
+             'as being on the `main` branch in LNT.')
     parser.add_argument('--run-parameter', type=common.key_value, action='append', default=[], metavar='KEY=VALUE',
         help='Additional information about the run to include in the report (e.g. the URL of the CI job). '
              'This can be passed multiple times.')

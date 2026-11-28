@@ -761,7 +761,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
 StackFrameSP
 StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   // First try assuming the unwind index is the same as the frame index. The
-  // unwind index is always greater than or equal to the frame index, so it is
+  // frame index is always greater than or equal to the unwind index, so it is
   // a good place to start. If we have inlined frames we might have 5 concrete
   // frames (frame unwind indexes go from 0-4), but we might have 15 frames
   // after we make all the inlined frames. Most of the time the unwind frame
@@ -769,7 +769,12 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   uint32_t frame_idx = unwind_idx;
   StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
   while (frame_sp) {
-    if (frame_sp->GetFrameIndex() == unwind_idx)
+    // The artificial frames for a tail call have the concrete frame index of
+    // the next unwound frame and come before it, so skip them. A scripted
+    // frame can be artificial too, but it has a concrete frame index of its
+    // own.
+    if (frame_sp->GetConcreteFrameIndex() == unwind_idx &&
+        (frame_sp->IsSynthetic() || !frame_sp->IsArtificial()))
       break;
     frame_sp = GetFrameAtIndex(++frame_idx);
   }
@@ -785,14 +790,14 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
       llvm::sys::ScopedReader guard(m_list_mutex);
-      // Do a binary search in case the stack frame is already in our cache
-      Process &process = *m_thread.GetProcess();
-      collection::const_iterator pos = llvm::lower_bound(
-          m_frames, stack_id,
-          [&](const StackFrameSP &frame_sp, const StackID &other) {
-            return frame_sp->GetStackID().IsYoungerThan(other, process);
+      // Look for the stack frame in our cache. Ordering frames can require the
+      // language runtimes (see StackID::IsYoungerThan()), so compare them for
+      // equality instead of doing a binary search.
+      collection::const_iterator pos =
+          llvm::find_if(m_frames, [&](const StackFrameSP &frame_sp) {
+            return frame_sp->GetStackID() == stack_id;
           });
-      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+      if (pos != m_frames.end())
         return *pos;
     }
     // If we needed to add more frames, we would get to here.

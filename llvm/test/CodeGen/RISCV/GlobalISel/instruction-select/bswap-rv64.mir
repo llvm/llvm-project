@@ -18,9 +18,9 @@ body:             |
     ; CHECK-NEXT: [[REV8_RV64_:%[0-9]+]]:gpr = REV8_RV64 [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[REV8_RV64_]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_BSWAP %0
-    $x10 = COPY %1(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_BSWAP %0
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...

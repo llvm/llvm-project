@@ -136,7 +136,7 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
-      : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
+      : SCEVUseT(Other, Other.getPointer()) {}
 
   operator SCEVPtrT() const { return getPointer(); }
   SCEVPtrT operator->() const { return getPointer(); }
@@ -190,7 +190,18 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   void dump() const;
 
 private:
+  /// Construct a use of \p S with the use flags of \p Other, which must be a
+  /// use of the same expression.
+  template <typename OtherPtrT>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other, SCEVPtrT S)
+      : Base(S, Other.getInt()) {
+    assert(S == Other.getPointer() && "Other must be a use of S");
+  }
+
+  using Base::getInt;
   using Base::setFromOpaqueValue;
+  template <typename> friend struct SCEVUseT;
+  friend struct CastInfo<SCEVUseT, SCEVUseT<const SCEV *>>;
   friend struct PointerLikeTypeTraits<SCEVUseT>;
 };
 
@@ -230,7 +241,7 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 
 template <> struct DenseMapInfo<SCEVUse> {
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getOpaqueValue());
+    return DenseMapInfo<void *>::getHashValue(U.getOpaqueValue());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
@@ -256,7 +267,7 @@ struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
 
   static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
   static CastReturnType doCast(const SCEVUse &U) {
-    return CastReturnType(cast<To>(U.getPointer()), U.getUseNoWrapFlags());
+    return CastReturnType(U, cast<To>(U.getPointer()));
   }
   static CastReturnType castFailed() { return CastReturnType(nullptr); }
   static CastReturnType doCastIfPossible(const SCEVUse &U) {
@@ -1330,8 +1341,9 @@ public:
                                     SCEVUse RHS);
 
   /// Test if the given expression is known to satisfy the condition described
-  /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
+  /// by Pred, LHS, and RHS. \p Depth is the current recursion depth.
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                 unsigned Depth = 0);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
@@ -2420,8 +2432,8 @@ private:
 
   /// Try to split Pred LHS RHS into logical conjunctions (and's) and try to
   /// prove them individually.
-  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
-                                    SCEVUse RHS);
+  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                    unsigned Depth);
 
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R, SCEVFlags &Flags);

@@ -121,7 +121,6 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
       const char *error = result.GetError(/*only_if_no_immediate=*/true);
       return llvm::make_error<DAPError>(
           error ? std::string(error) : "error: evaluate failed",
-          /**error_code=*/llvm::inconvertibleErrorCode(),
           /**show_user= */ false);
     }
 
@@ -134,7 +133,6 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     return llvm::make_error<DAPError>(
         "Cannot evaluate expressions while the process is running. Pause "
         "the process and try again.",
-        /**error_code=*/llvm::inconvertibleErrorCode(),
         /**show_user=*/false);
 
   // If the user expression is empty, evaluate the last valid variable

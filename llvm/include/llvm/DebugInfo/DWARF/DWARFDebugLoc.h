@@ -89,23 +89,6 @@ protected:
 
 class LLVM_ABI DWARFDebugLoc final : public DWARFLocationTable {
 public:
-  /// A list of locations that contain one variable.
-  struct LocationList {
-    /// The beginning offset where this location list is stored in the debug_loc
-    /// section.
-    uint64_t Offset;
-    /// All the locations in which the variable is stored.
-    SmallVector<DWARFLocationEntry, 2> Entries;
-  };
-
-private:
-  using LocationLists = SmallVector<LocationList, 4>;
-
-  /// A list of all the variables in the debug_loc section, each one describing
-  /// the locations in which the variable is stored.
-  LocationLists Locations;
-
-public:
   DWARFDebugLoc(DWARFDataExtractor Data)
       : DWARFLocationTable(std::move(Data)) {}
 

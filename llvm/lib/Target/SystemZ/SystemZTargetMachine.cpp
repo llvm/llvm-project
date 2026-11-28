@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -31,21 +32,12 @@
 
 using namespace llvm;
 
-cl::opt<bool>
-    EnableMachineCombinerPass("systemz-machine-combiner",
-                              cl::desc("Enable the machine combiner pass"),
-                              cl::init(true), cl::Hidden);
-
-static cl::opt<bool> GenericSched(
-    "generic-sched", cl::Hidden, cl::init(false),
-    cl::desc("Run the generic pre-ra scheduler instead of the SystemZ "
-             "scheduler."));
-
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
+  static opt::RegisterLibraryOptions<SystemZOptions> O;
   auto &PR = *PassRegistry::getPassRegistry();
   initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
@@ -146,6 +138,8 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
           T, TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(TT, RM), JIT),
           OL),
+      CLOpts(cl::LibraryOptionsContext::get<SystemZOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
@@ -154,24 +148,35 @@ SystemZTargetMachine::~SystemZTargetMachine() = default;
 
 const SystemZSubtarget *
 SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const SystemZSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.BackChain = FnAttrs.getAttribute("backchain");
+
+  if (const SystemZSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString().str() : CPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether the soft float and backchain flags are set on the
   // function, so we can enable them as subtarget features.
-  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = Attrs.SoftFloat.getValueAsBool();
   if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
-  bool BackChain = F.hasFnAttribute("backchain");
+  bool BackChain = Attrs.BackChain.isValid();
   if (BackChain)
     FS += FS.empty() ? "+backchain" : ",+backchain";
 
@@ -181,6 +186,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
                                            *this);
   }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -188,7 +194,7 @@ ScheduleDAGInstrs *
 SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   // Use GenericScheduler if requested on CL or for Z10 which has no sched
   // model.
-  if (GenericSched ||
+  if (CLOpts.generic_sched ||
       !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
     return nullptr;
 
@@ -249,7 +255,7 @@ bool SystemZPassConfig::addInstSelector() {
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
 
-  if (EnableMachineCombinerPass)
+  if (getSystemZTargetMachine().getCLOpts().machine_combiner)
     addPass(&MachineCombinerID);
 
   return true;

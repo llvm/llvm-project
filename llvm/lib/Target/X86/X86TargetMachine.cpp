@@ -384,12 +384,12 @@ public:
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
-  bool addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteFast() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreSched2() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -525,10 +525,9 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86FastPreTileConfigLegacyPass());
 }
 
-bool X86PassConfig::addRegAssignAndRewriteFast() {
-  bool ToReturn = TargetPassConfig::addRegAssignAndRewriteFast();
+void X86PassConfig::addRegAssignAndRewriteFast() {
+  TargetPassConfig::addRegAssignAndRewriteFast();
   addPass(createX86FastTileConfigLegacyPass());
-  return ToReturn;
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
@@ -647,12 +646,12 @@ static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
   return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
 }
 
-bool X86PassConfig::addRegAssignAndRewriteOptimized() {
+void X86PassConfig::addRegAssignAndRewriteOptimized() {
   // Don't support tile RA when RA is specified by command line "-regalloc".
   if (!isCustomizedRegAlloc() && getX86TargetMachine().getCLOpts().tile_ra) {
     // Allocate tile register first.
     addPass(createGreedyRegisterAllocator(onlyAllocateTileRegisters));
     addPass(createX86TileConfigLegacyPass());
   }
-  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+  TargetPassConfig::addRegAssignAndRewriteOptimized();
 }

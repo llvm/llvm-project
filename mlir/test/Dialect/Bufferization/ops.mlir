@@ -84,6 +84,19 @@ func.func @test_dealloc_op(%arg0: memref<2xf32>, %arg1: memref<4xi32>,
   return %0#0, %0#1 : i1, i1
 }
 
+// CHECK-LABEL: func @test_buffer_like_clone_and_dealloc
+func.func @test_buffer_like_clone_and_dealloc(
+    %arg0: !test.test_memref<[4], f32>, %arg1: i1,
+    %arg2: !test.test_memref<[8], i32>) -> (!test.test_memref<[4], f32>, i1) {
+  // CHECK: bufferization.clone %{{.*}} : !test.test_memref<[4], f32> to !test.test_memref<[4], f32>
+  %0 = bufferization.clone %arg0
+    : !test.test_memref<[4], f32> to !test.test_memref<[4], f32>
+  // CHECK: bufferization.dealloc (%{{.*}} : !test.test_memref<[4], f32>) if (%{{.*}}) retain (%{{.*}} : !test.test_memref<[8], i32>)
+  %1 = bufferization.dealloc (%arg0 : !test.test_memref<[4], f32>) if (%arg1)
+    retain (%arg2 : !test.test_memref<[8], i32>)
+  return %0, %1 : !test.test_memref<[4], f32>, i1
+}
+
 // CHECK: func.func @test_builtin_custom_builtin_type_conversion
 // CHECK-SAME: (%[[t:.*]]: tensor<42xf32>) -> tensor<42xf32>
 func.func @test_builtin_custom_builtin_type_conversion(%t: tensor<42xf32>)

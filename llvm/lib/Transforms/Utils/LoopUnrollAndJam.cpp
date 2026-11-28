@@ -427,13 +427,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     }
 
     // Remap all instructions in the most recent iteration
-    remapInstructionsInBlocks(NewBlocks, LastValueMap);
-    for (BasicBlock *NewBlock : NewBlocks) {
-      for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<AssumeInst>(&I))
-          AC->registerAssumption(II);
-      }
-    }
+    remapInstructionsInBlocks(NewBlocks, LastValueMap, AC);
 
     // Alter the ForeBlocks phi's, pointing them at the latest version of the
     // value from the previous iteration's phis

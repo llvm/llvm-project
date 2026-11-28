@@ -122,7 +122,7 @@ extern "C" void foo10(data_t data) {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_ZN1SC1Ev(
-// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -132,7 +132,7 @@ extern "C" void foo10(data_t data) {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_ZN1SC2Ev(
-// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I2:%.*]] = alloca ptr, align 8
@@ -833,7 +833,7 @@ extern "C" void foo10(data_t data) {
 //
 //
 // CHECK1-LABEL: define internal void @foo6.omp_outlined(
-// CHECK1-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK1-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -936,7 +936,7 @@ extern "C" void foo10(data_t data) {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_Z4foo7IiTnT_Li3ETnS0_Li5EEvS0_S0_(
-// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]]) #[[ATTR2]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4

@@ -239,6 +239,10 @@ public:
 
 private:
   void LowerCompactBranch(MCInst& Inst) const;
+
+  void expandGOTLoad(const MCInst &MI, SmallVectorImpl<char> &CB,
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     const MCSubtargetInfo &STI) const;
 };
 
 } // end namespace llvm

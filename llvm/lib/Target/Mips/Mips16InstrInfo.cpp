@@ -34,7 +34,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mips16-instrinfo"
 
 Mips16InstrInfo::Mips16InstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, RI, Mips::Bimm16), RI(STI) {}
+    : MipsInstrInfo(STI, RI, Mips::Bimm16) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of

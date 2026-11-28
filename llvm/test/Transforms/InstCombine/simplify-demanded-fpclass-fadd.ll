@@ -1486,9 +1486,7 @@ define nofpclass(nan) half @ret_nonan_fneg_fabs_fadd_known_negative_or_nan_sourc
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN0:%.*]] = call half @returns_negative_or_nan()
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN1:%.*]] = call half @returns_negative_or_nan()
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_ADD:%.*]] = fadd nnan half [[NEGATIVE_OR_NAN0]], [[NEGATIVE_OR_NAN1]]
-; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[KNOWN_NEGATIVE_ADD]])
-; CHECK-NEXT:    [[NEG_FABS:%.*]] = fneg half [[FABS]]
-; CHECK-NEXT:    ret half [[NEG_FABS]]
+; CHECK-NEXT:    ret half [[KNOWN_NEGATIVE_ADD]]
 ;
   %negative.or.nan0 = call half @returns_negative_or_nan()
   %negative.or.nan1 = call half @returns_negative_or_nan()
@@ -1503,9 +1501,7 @@ define nofpclass(nan) half @ret_nonan_fneg_fabs_fadd_known_negative_sources() {
 ; CHECK-NEXT:    [[NEGATIVE0:%.*]] = call half @returns_negative()
 ; CHECK-NEXT:    [[NEGATIVE1:%.*]] = call half @returns_negative()
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_OP:%.*]] = fadd nnan half [[NEGATIVE0]], [[NEGATIVE1]]
-; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[KNOWN_NEGATIVE_OP]])
-; CHECK-NEXT:    [[NEG_FABS:%.*]] = fneg half [[FABS]]
-; CHECK-NEXT:    ret half [[NEG_FABS]]
+; CHECK-NEXT:    ret half [[KNOWN_NEGATIVE_OP]]
 ;
   %negative0 = call half @returns_negative()
   %negative1 = call half @returns_negative()

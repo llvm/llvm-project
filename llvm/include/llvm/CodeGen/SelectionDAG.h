@@ -40,6 +40,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/UndefPoison.h"
@@ -756,6 +757,9 @@ public:
                                  bool isTarget = false);
   LLVM_ABI SDValue getConstantFP(const APFloat &Val, const SDLoc &DL, EVT VT,
                                  bool isTarget = false);
+  /// Return the folded constant, or an empty SDValue if folding failed.
+  LLVM_ABI SDValue getConstFP(std::optional<FPFoldResult> Result,
+                              const SDLoc &DL, EVT VT, bool isTarget = false);
   LLVM_ABI SDValue getConstantFP(const ConstantFP &V, const SDLoc &DL, EVT VT,
                                  bool isTarget = false);
   SDValue getTargetConstantFP(double Val, const SDLoc &DL, EVT VT) {
@@ -1725,8 +1729,10 @@ public:
                                     unsigned SrcAS, unsigned DestAS,
                                     const SDNodeFlags Flags = SDNodeFlags());
 
-  /// Return a freeze using the SDLoc of the value operand.
-  LLVM_ABI SDValue getFreeze(SDValue V);
+  /// Return a freeze of \p V using the SDLoc of the value operand.
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
   /// \p Kind can be used to selectively freeze poison and/or undef bits only.

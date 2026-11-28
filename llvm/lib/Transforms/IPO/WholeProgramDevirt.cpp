@@ -102,7 +102,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -138,56 +137,6 @@ STATISTIC(NumVirtConstProp1Bit,
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
 DEBUG_COUNTER(CallsToDevirt, "calls-to-devirt",
               "Controls how many calls should be devirtualized.");
-
-namespace llvm {
-
-static cl::opt<bool>
-    PrintSummaryDevirt("wholeprogramdevirt-print-index-based", cl::Hidden,
-                       cl::desc("Print index-based devirtualization messages"));
-
-/// Provide a way to force enable whole program visibility in tests.
-/// This is needed to support legacy tests that don't contain
-/// !vcall_visibility metadata (the mere presense of type tests
-/// previously implied hidden visibility).
-static cl::opt<bool>
-    WholeProgramVisibility("whole-program-visibility", cl::Hidden,
-                           cl::desc("Enable whole program visibility"));
-
-/// Provide a way to force disable whole program for debugging or workarounds,
-/// when enabled via the linker.
-static cl::opt<bool> DisableWholeProgramVisibility(
-    "disable-whole-program-visibility", cl::Hidden,
-    cl::desc("Disable whole program visibility (overrides enabling options)"));
-
-/// Provide way to prevent certain function from being devirtualized
-static cl::list<std::string>
-    SkipFunctionNames("wholeprogramdevirt-skip",
-                      cl::desc("Prevent function(s) from being devirtualized"),
-                      cl::Hidden, cl::CommaSeparated);
-
-} // end namespace llvm
-
-/// With Clang, a pure virtual class's deleting destructor is emitted as a
-/// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
-/// context of whole program devirtualization, the deleting destructor of a pure
-/// virtual class won't be invoked by the source code so safe to skip as a
-/// devirtualize target.
-///
-/// However, not all unreachable functions are safe to skip. In some cases, the
-/// program intends to run such functions and terminate, for instance, a unit
-/// test may run a death test. A non-test program might (or allowed to) invoke
-/// such functions to report failures (whether/when it's a good practice or not
-/// is a different topic).
-///
-/// This option is enabled to keep an unreachable function as a possible
-/// devirtualize target to conservatively keep the program behavior.
-///
-/// TODO: Make a pure virtual class's deleting destructor precisely identifiable
-/// in Clang's codegen for more devirtualization in LLVM.
-static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
-    "wholeprogramdevirt-keep-unreachable-function",
-    cl::desc("Regard unreachable functions as possible devirtualize targets."),
-    cl::Hidden, cl::init(true));
 
 namespace {
 struct PatternList {
@@ -365,9 +314,6 @@ template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
 //   2) All function summaries indicate it's unreachable
 //   3) There is no non-function with the same GUID (which is rare)
 static bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
-  if (WholeProgramDevirtKeepUnreachableFunction)
-    return false;
-
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
     // (e.g., function declarations).
@@ -584,9 +530,11 @@ struct DevirtModule {
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
         }),
-        DevirtSpeculatively(DevirtSpeculatively) {
+        DevirtSpeculatively(
+            DevirtSpeculatively ||
+            (ImportSummary && ImportSummary->withSpeculativeDevirt())) {
     assert(!(ExportSummary && ImportSummary));
-    FunctionsToSkip.init(SkipFunctionNames);
+    FunctionsToSkip.init(Opts.wholeprogramdevirt_skip);
   }
 
   bool areRemarksEnabled();
@@ -703,6 +651,7 @@ struct DevirtModule {
 };
 
 struct DevirtIndex {
+  const IPOOptions &Opts;
   ModuleSummaryIndex &ExportSummary;
   // The set in which to record GUIDs exported from their module by
   // devirtualization, used by client to ensure they are not internalized.
@@ -721,20 +670,20 @@ struct DevirtIndex {
 
   PatternList FunctionsToSkip;
 
-  bool DevirtSpeculatively = false;
+  // Whether speculative devirtualization is enabled, as recorded in the
+  // combined index by runWholeProgramDevirtOnIndex.
+  const bool DevirtSpeculatively;
 
   DevirtIndex(
-      ModuleSummaryIndex &ExportSummary,
+      const IPOOptions &Opts, ModuleSummaryIndex &ExportSummary,
       std::set<GlobalValue::GUID> &ExportedGUIDs,
       std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-      DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
-      const LLVMContext *Ctx)
-      : ExportSummary(ExportSummary), ExportedGUIDs(ExportedGUIDs),
+      DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr)
+      : Opts(Opts), ExportSummary(ExportSummary), ExportedGUIDs(ExportedGUIDs),
         LocalWPDTargetsMap(LocalWPDTargetsMap),
-        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr) {
-    FunctionsToSkip.init(SkipFunctionNames);
-    if (Ctx)
-      DevirtSpeculatively = getIPOOptions(*Ctx).devirtualize_speculatively;
+        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr),
+        DevirtSpeculatively(ExportSummary.withSpeculativeDevirt()) {
+    FunctionsToSkip.init(Opts.wholeprogramdevirt_skip);
   }
 
   bool tryFindVirtualCallTargets(std::vector<ValueInfo> &TargetsForSlot,
@@ -757,10 +706,15 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   const bool DevirtualizeSpeculatively =
       DevirtSpeculatively || getIPOOptions(M).devirtualize_speculatively;
 
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
+  PreservedAnalyses ChangedPA;
+  ChangedPA.preserve<FunctionAnalysisManagerModuleProxy>();
+
   if (UseCommandLine) {
     if (!DevirtModule::runForTesting(M, MAM, DevirtualizeSpeculatively))
       return PreservedAnalyses::all();
-    return PreservedAnalyses::none();
+    return ChangedPA;
   }
 
   // FIXME: The state of a run should not be kept in the pass. A more resilient
@@ -777,14 +731,18 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
            .run())
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  return ChangedPA;
 }
 
 // Enable whole program visibility if enabled by client (e.g. linker) or
 // internal option, and not force disabled.
-bool llvm::hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
-  return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
-         !DisableWholeProgramVisibility;
+bool llvm::hasWholeProgramVisibility(
+    const cl::LibraryOptionsContext &LibraryOptions,
+    bool WholeProgramVisibilityEnabledInLTO) {
+  const IPOOptions &Opts = LibraryOptions.get<IPOOptions>();
+  return (WholeProgramVisibilityEnabledInLTO ||
+          Opts.whole_program_visibility) &&
+         !Opts.disable_whole_program_visibility;
 }
 
 static bool
@@ -833,7 +791,8 @@ void llvm::updateVCallVisibilityInModule(
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
     bool ValidateAllVtablesHaveTypeInfos,
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
-  if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
+  if (!hasWholeProgramVisibility(M.getContext().getLibraryOptions(),
+                                 WholeProgramVisibilityEnabledInLTO))
     return;
 
   for (GlobalVariable &GV : M.globals()) {
@@ -856,13 +815,15 @@ void llvm::updateVCallVisibilityInModule(
 }
 
 void llvm::updatePublicTypeTestCalls(Module &M,
-                                     bool WholeProgramVisibilityEnabledInLTO) {
+                                     bool WholeProgramVisibilityEnabledInLTO,
+                                     bool DevirtSpeculativelyInIndex) {
   llvm::TimeTraceScope timeScope("Update public type test calls");
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
     return;
-  if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
+  if (hasWholeProgramVisibility(M.getContext().getLibraryOptions(),
+                                WholeProgramVisibilityEnabledInLTO)) {
     Function *TypeTestFunc =
         Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
@@ -873,11 +834,12 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
-  }
-  // TODO: With distributed ThinLTO, the type tests are still dropped here
-  // even when devirtualize-speculatively is used, because the distributed
-  // backends don't see this option.
-  else if (!getIPOOptions(M).devirtualize_speculatively) {
+  } else if (!DevirtSpeculativelyInIndex &&
+             !getIPOOptions(M).devirtualize_speculatively) {
+    // Keep the public type tests when speculative devirtualization is enabled,
+    // either via the option or as recorded in the combined index by the thin
+    // link (needed by distributed ThinLTO backends, which don't see the
+    // option), since WPD uses them to find the call sites to devirtualize.
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -904,10 +866,12 @@ void llvm::getVisibleToRegularObjVtableGUIDs(
 /// visibility metadata on vtable definition summaries to linkage unit
 /// visibility in Module summary index (for ThinLTO).
 void llvm::updateVCallVisibilityInIndex(
-    ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
+    bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
     const DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols) {
-  if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
+  if (!hasWholeProgramVisibility(LibraryOptions,
+                                 WholeProgramVisibilityEnabledInLTO))
     return;
   for (auto &P : Index) {
     // Don't upgrade the visibility for symbols exported to the dynamic
@@ -931,12 +895,19 @@ void llvm::updateVCallVisibilityInIndex(
 }
 
 void llvm::runWholeProgramDevirtOnIndex(
+    const cl::LibraryOptionsContext &LibraryOptions,
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
-    const LLVMContext *Ctx) {
-  DevirtIndex(Summary, ExportedGUIDs, LocalWPDTargetsMap,
-              ExternallyVisibleSymbolNamesPtr, Ctx)
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
+  const IPOOptions &Opts = LibraryOptions.get<IPOOptions>();
+  // Record in the combined index whether speculative devirtualization is
+  // enabled. This is consulted by the index-based WPD below, and by the
+  // backends (in particular distributed ThinLTO backends, which do not see the
+  // option) so that they apply the speculative resolutions.
+  if (Opts.devirtualize_speculatively)
+    Summary.setWithSpeculativeDevirt();
+  DevirtIndex(Opts, Summary, ExportedGUIDs, LocalWPDTargetsMap,
+              ExternallyVisibleSymbolNamesPtr)
       .run();
 }
 
@@ -1114,7 +1085,8 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // We can disregard unreachable functions as possible call targets, as
     // unreachable functions shouldn't be called.
-    if (mustBeUnreachableFunction(Fn, ExportSummary))
+    if (!Opts.wholeprogramdevirt_keep_unreachable_function &&
+        mustBeUnreachableFunction(Fn, ExportSummary))
       continue;
 
     // Save the symbol used in the vtable to use as the devirtualization
@@ -1199,7 +1171,8 @@ bool DevirtIndex::tryFindVirtualCallTargets(
       if (VTP.VTableOffset != P.AddressPointOffset + ByteOffset)
         continue;
 
-      if (mustBeUnreachableFunction(VTP.FuncVI))
+      if (!Opts.wholeprogramdevirt_keep_unreachable_function &&
+          mustBeUnreachableFunction(VTP.FuncVI))
         continue;
 
       TargetsForSlot.push_back(VTP.FuncVI);
@@ -1448,7 +1421,7 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
     return false;
 
   // Collect functions devirtualized at least for one call site for stats.
-  if (PrintSummaryDevirt || AreStatisticsEnabled())
+  if (Opts.wholeprogramdevirt_print_index_based || AreStatisticsEnabled())
     DevirtTargets.insert(TheFn);
 
   auto &S = TheFn.getSummaryList()[0];
@@ -2457,8 +2430,6 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
 
 bool DevirtModule::mustBeUnreachableFunction(
     Function *const F, ModuleSummaryIndex *ExportSummary) {
-  if (WholeProgramDevirtKeepUnreachableFunction)
-    return false;
   // First, learn unreachability by analyzing function IR.
   if (!F->isDeclaration()) {
     // A function must be unreachable if its entry block ends with an
@@ -2776,7 +2747,7 @@ void DevirtIndex::run() {
 
   // Optionally have the thin link print message for each devirtualized
   // function.
-  if (PrintSummaryDevirt)
+  if (Opts.wholeprogramdevirt_print_index_based)
     for (const auto &DT : DevirtTargets)
       errs() << "Devirtualized call to " << DT << "\n";
 

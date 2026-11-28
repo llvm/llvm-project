@@ -12,6 +12,7 @@
 
 #include "CodeGenPGO.h"
 #include "CGDebugInfo.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -19,19 +20,9 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
 #include <optional>
-
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
-
-static llvm::cl::opt<bool>
-    EnableValueProfiling("enable-value-profiling",
-                         llvm::cl::desc("Enable value profiling"),
-                         llvm::cl::Hidden, llvm::cl::init(false));
 
 using namespace clang;
 using namespace CodeGen;
@@ -952,7 +943,7 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
     return;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
-  if (!llvm::coverage::SystemHeadersCoverage &&
+  if (!CGM.getCLOpts().system_headers_coverage &&
       SM.isInSystemHeader(D->getLocation()))
     return;
 
@@ -1029,7 +1020,7 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getBeginLoc();
-  return !llvm::coverage::SystemHeadersCoverage && SM.isInSystemHeader(Loc);
+  return !CGM.getCLOpts().system_headers_coverage && SM.isInSystemHeader(Loc);
 }
 
 void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
@@ -1143,7 +1134,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
       NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
       Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
-  if (llvm::EnableSingleByteCoverage) {
+  if (CGM.getCLOpts().single_byte_coverage) {
     assert(!StepV && "StepV is not supported in single byte counter mode");
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
@@ -1298,12 +1289,12 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
 void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {
   if (CGM.getCodeGenOpts().hasProfileClangInstr())
     M.addModuleFlag(llvm::Module::Warning, "EnableValueProfiling",
-                    uint32_t(EnableValueProfiling));
+                    uint32_t(CGM.getCLOpts().value_profiling));
 }
 
 void CodeGenPGO::setProfileVersion(llvm::Module &M) {
   if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
-      llvm::EnableSingleByteCoverage) {
+      CGM.getCLOpts().single_byte_coverage) {
     const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
     llvm::Type *IntTy64 = llvm::Type::getInt64Ty(M.getContext());
     uint64_t ProfileVersion =
@@ -1333,7 +1324,7 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
 void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
     llvm::Instruction *ValueSite, llvm::Value *ValuePtr) {
 
-  if (!EnableValueProfiling)
+  if (!CGM.getCLOpts().value_profiling)
     return;
 
   if (!ValuePtr || !ValueSite || !Builder.GetInsertBlock())

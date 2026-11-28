@@ -292,7 +292,7 @@ cir.func @sret_and_expand(%arg0: !rec_TwoLong) -> !rec_TwoLong
     requires_call_conv_lowering attributes { test_classify = #sret_expand } {
   %0 = cir.alloca "s" align(8) init : !cir.ptr<!rec_TwoLong>
   cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
-  %1 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_TwoLong>
+  %1 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_TwoLong>
   %z = cir.const #cir.zero : !rec_TwoLong
   cir.store %z, %1 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
   %2 = cir.load %1 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong

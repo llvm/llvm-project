@@ -13,7 +13,7 @@
 using olRegisterRPCCallbackTest = OffloadPlatformTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olRegisterRPCCallbackTest);
 
-static unsigned callback(void *Raw, unsigned NumLanes) {}
+static unsigned callback(void *, unsigned) { return 0; }
 
 TEST_P(olRegisterRPCCallbackTest, SuccessBackend) {
   ASSERT_SUCCESS(olPlatformRegisterRPCCallback(Platform, &callback));

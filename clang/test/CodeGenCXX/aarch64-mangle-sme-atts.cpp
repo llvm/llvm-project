@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -target-feature +sme2 %s -emit-llvm -o - | FileCheck %s
-// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -target-feature +sme2 %s -emit-llvm -o - | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fno-clangir-call-conv-lowering -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -target-feature +sme2 %s -emit-llvm -o - | FileCheck %s %}
+
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove -fno-clangir-call-conv-lowering
+// once those types are supported.
 
 typedef __attribute__((neon_vector_type(2))) int int32x2_t;
 

@@ -1680,8 +1680,7 @@ SIScheduler::scheduleVariant(SISchedulerBlockCreatorVariant BlockVariant,
 
 SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
   ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C)) {
-  SITII = static_cast<const SIInstrInfo*>(TII);
-  SITRI = static_cast<const SIRegisterInfo*>(TRI);
+  SITII = static_cast<const SIInstrInfo *>(TII);
 }
 
 SIScheduleDAGMI::~SIScheduleDAGMI() = default;
@@ -1811,9 +1810,9 @@ void SIScheduleDAGMI::schedule()
   postProcessDAG();
 
   LLVM_DEBUG(dump());
-  if (PrintDAGs)
+  if (shouldPrintMISchedDAGs(MF))
     dump();
-  if (ViewMISchedDAGs)
+  if (shouldViewMISchedDAGs(MF))
     viewGraph();
 
   topologicalSort();

@@ -915,6 +915,18 @@ func.func @test_tile_unknown_multiples(%arg0 : tensor<2x3x?xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_tile_invalid_multiples
+func.func @test_tile_invalid_multiples(%arg0 : tensor<2x3x4x5xi32>) {
+  // Invalid multiples must not produce invalid dimensions during inference.
+  // CHECK: %[[CST:.*]] = tosa.const_shape values(dense<[2, 0, -2, -1]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  // CHECK: tosa.tile %arg0, %[[CST]] : (tensor<2x3x4x5xi32>, !tosa.shape<4>) -> tensor<4x?x?x?xi32>
+  %cst = tosa.const_shape values(dense<[2, 0, -2, -1]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.tile %arg0, %cst : (tensor<2x3x4x5xi32>, !tosa.shape<4>) -> tensor<?x?x?x?xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_transpose_static
 func.func @test_transpose_static(%arg0 : tensor<3x4x5xi32>) -> () {
   // CHECK: tosa.transpose %arg0 perms([2, 1, 0]) : (tensor<3x4x5xi32>) -> tensor<5x4x3xi32>

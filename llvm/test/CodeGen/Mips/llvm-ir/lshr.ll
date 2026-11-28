@@ -778,11 +778,11 @@ define signext i64 @lshr_i64_mask(i64 signext %b) {
 ; MIPS32R6-NEXT:    srl $1, $1, 5
 ; MIPS32R6-NEXT:    addiu $2, $zero, -1
 ; MIPS32R6-NEXT:    seleqz $2, $2, $1
-; MIPS32R6-NEXT:    addiu $4, $zero, 1
-; MIPS32R6-NEXT:    selnez $3, $4, $1
+; MIPS32R6-NEXT:    addiu $3, $zero, 1
+; MIPS32R6-NEXT:    selnez $3, $3, $1
 ; MIPS32R6-NEXT:    or $3, $3, $2
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    seleqz $2, $4, $1
+; MIPS32R6-NEXT:    xori $2, $1, 1
 ;
 ; MIPS3-LABEL: lshr_i64_mask:
 ; MIPS3:       # %bb.0: # %entry
@@ -850,10 +850,10 @@ define signext i64 @lshr_i64_mask(i64 signext %b) {
 ; MMR6-NEXT:    srl16 $2, $2, 5
 ; MMR6-NEXT:    li16 $3, -1
 ; MMR6-NEXT:    seleqz $1, $3, $2
-; MMR6-NEXT:    li16 $4, 1
-; MMR6-NEXT:    selnez $3, $4, $2
+; MMR6-NEXT:    li16 $3, 1
+; MMR6-NEXT:    selnez $3, $3, $2
 ; MMR6-NEXT:    or $3, $3, $1
-; MMR6-NEXT:    seleqz $2, $4, $2
+; MMR6-NEXT:    xori $2, $2, 1
 ; MMR6-NEXT:    jrc $ra
 entry:
   %m = and i64 %b, 32
@@ -1023,14 +1023,15 @@ define signext i128 @lshr_i128_mask(i128 signext %b) {
 ; MIPS64R6-NEXT:    sll $1, $5, 0
 ; MIPS64R6-NEXT:    andi $1, $1, 64
 ; MIPS64R6-NEXT:    srl $1, $1, 6
-; MIPS64R6-NEXT:    sll $1, $1, 0
-; MIPS64R6-NEXT:    daddiu $2, $zero, -1
-; MIPS64R6-NEXT:    seleqz $2, $2, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    daddiu $3, $zero, -1
+; MIPS64R6-NEXT:    seleqz $3, $3, $2
 ; MIPS64R6-NEXT:    daddiu $4, $zero, 1
-; MIPS64R6-NEXT:    selnez $3, $4, $1
-; MIPS64R6-NEXT:    or $3, $3, $2
+; MIPS64R6-NEXT:    selnez $2, $4, $2
+; MIPS64R6-NEXT:    or $3, $2, $3
+; MIPS64R6-NEXT:    xori $1, $1, 1
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    seleqz $2, $4, $1
+; MIPS64R6-NEXT:    dext $2, $1, 0, 32
 ;
 ; MMR3-LABEL: lshr_i128_mask:
 ; MMR3:       # %bb.0: # %entry

@@ -1970,8 +1970,12 @@ class FILL_FD_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<vsplatf64, MSA128D, FGR64>;
 class FLOG2_W_DESC : MSA_2RF_DESC_BASE<"flog2.w", flog2, MSA128WOpnd>;
 class FLOG2_D_DESC : MSA_2RF_DESC_BASE<"flog2.d", flog2, MSA128DOpnd>;
 
-class FMADD_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.w", fma, MSA128WOpnd>;
-class FMADD_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.d", fma, MSA128DOpnd>;
+// fmadd computes `wd + ws*wt`, which is `fma(ws, wt, wd)`.
+def fmadd_frag : PatFrag<(ops node:$wd, node:$ws, node:$wt),
+                         (fma node:$ws, node:$wt, node:$wd)>;
+
+class FMADD_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.w", fmadd_frag, MSA128WOpnd>;
+class FMADD_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.d", fmadd_frag, MSA128DOpnd>;
 
 class FMAX_W_DESC : MSA_3RF_DESC_BASE<"fmax.w", int_mips_fmax_w, MSA128WOpnd>;
 class FMAX_D_DESC : MSA_3RF_DESC_BASE<"fmax.d", int_mips_fmax_d, MSA128DOpnd>;

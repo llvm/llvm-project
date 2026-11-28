@@ -70,7 +70,9 @@ entry:
 ; CHECK-LABEL: f128_compare:
 ; HARD:       fcmpq
 ; HARD-NEXT:  nop
-; SOFT:       _Q_cmp
+; SOFT:       call _Q_fge
+; SOFT:       cmp %o0, 0
+; SOFT-NEXT:  be
 
 define i32 @f128_compare(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) {
 entry:
@@ -84,8 +86,9 @@ entry:
 ; CHECK-LABEL: f128_compare2:
 ; HARD:        fcmpq
 ; HARD:        fb{{ule|g}}
-; SOFT:       _Q_cmp
-; SOFT:       cmp
+; SOFT:       call _Q_fgt
+; SOFT:       cmp %o0, 0
+; SOFT-NEXT:  be
 
 define i32 @f128_compare2(ptr byval(fp128) %f0) {
 entry:

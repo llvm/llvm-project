@@ -1266,7 +1266,7 @@ int init_catch_param_with_type_int() {
 }
 
 // CIR: cir.func {{.*}} @_Z30init_catch_param_with_type_intv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
@@ -1401,7 +1401,7 @@ int init_catch_param_with_type_int_ptr() {
 }
 
 // CIR: cir.func {{.*}} @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
@@ -1536,7 +1536,7 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 }
 
 // CIR: cir.func {{.*}} @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>

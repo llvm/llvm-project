@@ -34,6 +34,7 @@ enum class TypeKind {
   Integer,
   Float,
   OpaqueFloat8,
+  SveCount,
   Pointer,
   Array,
   Vector,
@@ -109,6 +110,7 @@ public:
   bool isInteger() const { return Kind == TypeKind::Integer; }
   bool isFloat() const { return Kind == TypeKind::Float; }
   bool isOpaqueFloat8() const { return Kind == TypeKind::OpaqueFloat8; }
+  bool isSveCount() const { return Kind == TypeKind::SveCount; }
   bool isPointer() const { return Kind == TypeKind::Pointer; }
   bool isArray() const { return Kind == TypeKind::Array; }
   bool isVector() const { return Kind == TypeKind::Vector; }
@@ -214,6 +216,19 @@ public:
   }
 };
 
+/// The AArch64 __SVCount_t (svcount_t) predicate-as-counter type. Such a value
+/// contains information about the number of active lanes, the element width,
+/// and a bit that indicates whether the generated mask should be inverted.
+class SveCountType : public Type {
+public:
+  explicit SveCountType(Align ABIAlign)
+      : Type(TypeKind::SveCount, TypeSize::getScalable(16), ABIAlign) {}
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::SveCount;
+  }
+};
+
 class PointerLikeType : public Type {
 protected:
   unsigned AddrSpace;
@@ -238,10 +253,7 @@ public:
               bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
                         AddressSpace),
-        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
-    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
-           "an unqualified pointer is in address space 0");
-  }
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {}
 
   bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
@@ -305,12 +317,7 @@ enum class VectorKind {
   /// fixed-length arm_sve_vector_bits form keeps unsigned char (i8)
   /// elements, matching the Clang AST. Both use this kind. Tuples of
   /// these vectors use TupleType.
-  SVEPredicate,
-
-  /// The AArch64 __SVCount_t type. It is opaque rather than a real vector,
-  /// but it occupies a predicate register, so it is given the same shape as
-  /// svbool_t.
-  SVECount,
+  SVEPredicate
 };
 
 class VectorType : public Type {
@@ -346,7 +353,6 @@ public:
 
   bool isSVEData() const { return VecKind == VectorKind::SVEData; }
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
-  bool isSVECount() const { return VecKind == VectorKind::SVECount; }
 
   bool isFixedLengthSVEData() const { return isFixedLength() && isSVEData(); }
   bool isFixedLengthSVEPredicate() const {
@@ -570,17 +576,16 @@ public:
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
-  /// Creates a scalable predicate or count vector.
-  /// Note: The AArch64 __SVCount_t type is opaque, so it is modeled with the
-  /// shape of svbool_t: a scalable vector of 16 one-bit elements.
-  const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
-                                                          VectorKind Kind) {
-    assert((Kind == VectorKind::SVEPredicate || Kind == VectorKind::SVECount) &&
-           "expected predicate or count vector kind");
+  /// Creates a scalable SVE predicate vector: 16 one-bit elements per granule.
+  const VectorType *getScalablePredicateVectorType(Align ABIAlign) {
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
-                         Kind);
+                         VectorKind::SVEPredicate);
+  }
+
+  const SveCountType *getSveCountType(Align Align) {
+    return new (Allocator.Allocate<SveCountType>()) SveCountType(Align);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,

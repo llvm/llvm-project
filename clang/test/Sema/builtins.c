@@ -5,14 +5,14 @@ int test1(float a, int b) {
   return __builtin_isless(a, b);
 }
 int test2(int a, int b) {
-  return __builtin_islessequal(a, b);  // expected-error {{floating point type}}
+  return __builtin_islessequal(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int' and 'int')}}
 }
 
 int test3(double a, float b) {
   return __builtin_isless(a, b);
 }
 int test4(int* a, double b) {
-  return __builtin_islessequal(a, b);  // expected-error {{floating point type}}
+  return __builtin_islessequal(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int *' and 'double')}}
 }
 
 int test5(float a, long double b) {
@@ -20,6 +20,9 @@ int test5(float a, long double b) {
 }
 int test6(float a, long double b) {
   return __builtin_islessequal(a);  // expected-error {{too few arguments}}
+}
+int test6a(int a, int b) {
+  return __builtin_isunordered(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int' and 'int')}}
 }
 
 

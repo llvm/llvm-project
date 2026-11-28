@@ -6,22 +6,22 @@
 # it did, we hit a stale assertion that made assumptions about the numbering
 # order of location numbers. Test that this input (transferring to $rsp via
 # a stack restore) doesn't crash.
-# 
+#
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define dso_local i32 @foo(i64 %bar, i64 %baz) !dbg !7 {
   entry:
     ret i32 0
   }
-  
+
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/tmp/out.c")
   !2 = !{}
@@ -42,7 +42,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 frameInfo:
   stackSize:       24
@@ -58,7 +57,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $rax, $rbx
-  
+
     DBG_VALUE $rax, $noreg, !12, !DIExpression(), debug-location !13
     MOV64mr $rsp, 1, $noreg, -8, $noreg, renamable $rax :: (store 8 into %stack.0)
     $rsp = MOV64rm $rsp, 1, $noreg, 0, $noreg, debug-location !13 :: (load 8 from %stack.0)

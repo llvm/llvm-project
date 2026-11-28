@@ -577,7 +577,7 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
 ; CHECK-NEXT:    pxor %xmm0, %xmm3
-; CHECK-NEXT:    psubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; CHECK-NEXT:    psubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm3, %xmm5
 ; CHECK-NEXT:    pand %xmm4, %xmm5
@@ -604,7 +604,7 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    pxor %xmm0, %xmm7
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [157,157,157,157]
 ; CHECK-NEXT:    psubd %xmm5, %xmm4
-; CHECK-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
+; CHECK-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [8,8,8,8]
 ; CHECK-NEXT:    pslld $23, %xmm5
 ; CHECK-NEXT:    paddd %xmm6, %xmm5
 ; CHECK-NEXT:    cvttps2dq %xmm5, %xmm5

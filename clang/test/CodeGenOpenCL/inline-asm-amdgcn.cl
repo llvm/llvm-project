@@ -50,3 +50,15 @@ kernel void test_constraint_DB() {
   // CHECK: call{{.*}} i32 asm sideeffect "v_mov_b32 $0, $1 & 0xFFFFFFFF", "=v,^DB"(i64 8589934593)
   __asm volatile("v_mov_b32 %0, %1 & 0xFFFFFFFF" : "=v"(res) : "DB"(x));
 }
+
+kernel void test_RF_m(__global int *p, int v) {
+  int r;
+  // CHECK: call{{.*}} i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(1) elementtype(i32)
+  __asm volatile("flat_load_dword %0, %1" : "=v"(r) : "RF"(*p));
+  // CHECK: call{{.*}} i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(1) elementtype(i32)
+  __asm volatile("flat_load_dword %0, %1" : "=v"(r) : "m"(*p));
+  // CHECK: call{{.*}} void asm sideeffect "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(1) elementtype(i32)
+  __asm volatile("flat_store_dword %0, %1" : "=RF"(*p) : "v"(v));
+  // CHECK: call{{.*}} void asm sideeffect "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(1) elementtype(i32)
+  __asm volatile("flat_store_dword %0, %1" : "=m"(*p) : "v"(v));
+}

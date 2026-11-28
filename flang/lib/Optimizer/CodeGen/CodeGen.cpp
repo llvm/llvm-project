@@ -57,7 +57,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -1804,7 +1805,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::SymbolTableCollection *symbolTables) {
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>()) {
     auto fn = flc.getFilename().str() + '\0';
     std::string globalName = fir::factory::uniqueCGIdent("cl", fn);
 
@@ -1840,7 +1841,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
 
 static mlir::Value genSourceLine(mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>())
     return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
                                           flc.getLine());
   return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
@@ -4467,7 +4468,8 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
         // must therefore stay within the storage.
         mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
         mlir::LLVM::GEPOp rankAddr =
-            genGEP(loc, llvmBoxTy, rewriter, storage, 0, kRankPosInBox);
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0,
+                   static_cast<int32_t>(kRankPosInBox));
         mlir::Value zero = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
         auto storeOp =

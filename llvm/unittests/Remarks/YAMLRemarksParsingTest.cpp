@@ -96,6 +96,40 @@ TEST(YAMLRemarks, ParsingEmpty) {
   EXPECT_TRUE(parseExpectError("\n\n", "document root is not of mapping type."));
 }
 
+TEST(YAMLRemarks, Parsing64BitHotness) {
+  for (uint64_t Hotness : {uint64_t(1) << 32, UINT64_MAX}) {
+    std::string Buf = "--- !Passed\nPass: inline\nName: Inlined\n"
+                      "Function: caller\nHotness: " +
+                      std::to_string(Hotness) + "\n";
+    auto Parser = remarks::createRemarkParser(remarks::Format::YAML, Buf);
+    if (!Parser) {
+      ADD_FAILURE() << toString(Parser.takeError());
+      continue;
+    }
+    auto Remark = (*Parser)->next();
+    if (!Remark) {
+      ADD_FAILURE() << toString(Remark.takeError());
+      continue;
+    }
+    ASSERT_TRUE((*Remark)->Hotness);
+    EXPECT_EQ(*(*Remark)->Hotness, Hotness);
+  }
+}
+
+TEST(YAMLRemarks, ParsingHotnessOverflow) {
+  EXPECT_TRUE(parseExpectError(
+      "--- !Passed\nPass: inline\nName: Inlined\nFunction: caller\n"
+      "Hotness: 18446744073709551616\n",
+      "expected a value of integer type."));
+}
+
+TEST(YAMLRemarks, ParsingDebugLocationOverflow) {
+  EXPECT_TRUE(parseExpectError(
+      "--- !Passed\nPass: inline\nName: Inlined\nFunction: caller\n"
+      "DebugLoc: { File: file.c, Line: 4294967296, Column: 1 }\n",
+      "expected a value of integer type."));
+}
+
 TEST(YAMLRemarks, ParsingNotYAML) {
   EXPECT_TRUE(
       parseExpectError("\x01\x02\x03\x04\x05\x06", "Got empty plain scalar"));

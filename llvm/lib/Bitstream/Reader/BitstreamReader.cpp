@@ -9,6 +9,7 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <cstring>
 #include <optional>
 #include <string>
 
@@ -24,31 +25,22 @@ static Error error(const char *Message) {
 
 Expected<SimpleBitstreamCursor::word_t>
 SimpleBitstreamCursor::readSlow(unsigned NumBits) {
-  static const unsigned BitsInWord = sizeof(word_t) * 8;
-  static const unsigned Mask = sizeof(word_t) > 4 ? 0x3f : 0x1f;
-
-  word_t R = BitsInCurWord ? CurWord : 0;
-  unsigned BitsLeft = NumBits - BitsInCurWord;
-
-  if (Error fillResult = fillCurWord())
-    return std::move(fillResult);
-
-  // If we run out of data, abort.
-  if (BitsLeft > BitsInCurWord)
+  if (NumBits > sizeInBits() - std::min(BitNo, sizeInBits()))
     return createStringError(std::errc::io_error,
-                             "Unexpected end of file reading %u of %u bits",
-                             BitsInCurWord, BitsLeft);
+                             "Unexpected end of file reading %u bits at bit "
+                             "%" PRIu64 " of %" PRIu64,
+                             NumBits, BitNo, sizeInBits());
 
-  word_t R2 = CurWord & (~word_t(0) >> (BitsInWord - BitsLeft));
-
-  // Use a mask to avoid undefined behavior.
-  CurWord >>= (BitsLeft & Mask);
-
-  BitsInCurWord -= BitsLeft;
-
-  R |= R2 << (NumBits - BitsLeft);
-
-  return R;
+  // Copy the rest of the stream into a zero-padded buffer to read from.
+  uint8_t Buf[2 * sizeof(word_t)] = {};
+  size_t ByteNo = BitNo / 8;
+  std::memcpy(Buf, BitcodeBytes.data() + ByteNo,
+              std::min(sizeof(Buf), BitcodeBytes.size() - ByteNo));
+  word_t R =
+      support::endian::readAtBitAlignment<word_t, llvm::endianness::little,
+                                          support::unaligned>(Buf, BitNo % 8);
+  BitNo += NumBits;
+  return R & (~word_t(0) >> (BitsInWord - NumBits));
 }
 
 /// Having read the ENTER_SUBBLOCK abbrevid, enter the block.

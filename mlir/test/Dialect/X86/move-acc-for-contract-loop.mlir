@@ -320,3 +320,43 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// The final acc write is masked by an enclosing vector.mask: the accumulator
+// is not moved.
+
+#mapA = affine_map<(d0, d1) -> (d1)>
+#mapB = affine_map<(d0, d1) -> (d0, d1)>
+#mapC = affine_map<(d0, d1) -> (d0)>
+func.func @negative_masked(%A: vector<2xf32>, %B: vector<4x2xf32>,
+    %dst: memref<4xf32>, %mask: vector<4xi1>, %lb: index, %ub: index,
+    %step: index) {
+  %c0 = arith.constant 0 : index
+  %acc = vector.load %dst[%c0] : memref<4xf32>, vector<4xf32>
+  %res = scf.for %i = %lb to %ub step %step iter_args(%a = %acc) -> (vector<4xf32>) {
+    %c = vector.contract {indexing_maps = [#mapA, #mapB, #mapC],
+      iterator_types = ["parallel", "reduction"], kind = #vector.kind<add>}
+      %A, %B, %a : vector<2xf32>, vector<4x2xf32> into vector<4xf32>
+    scf.yield %c : vector<4xf32>
+  }
+  vector.mask %mask {
+    vector.transfer_write %res, %dst[%c0]
+      : vector<4xf32>, memref<4xf32>
+  } : vector<4xi1>
+  return
+}
+
+// CHECK-LABEL: @negative_masked
+// CHECK-NOT: arith.addf
+// CHECK: vector.mask
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
+    } : !transform.any_op
+    transform.yield
+  }
+}

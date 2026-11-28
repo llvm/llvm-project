@@ -613,7 +613,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         ArchName = "mips64";
       else
         ArchName = "mips";
-      // CPUNames as defined in MipsTargetInfo::getISARev()
+      // CPUs that implement MIPS R6.
       if (CPUName == "mips32r6" || CPUName == "mips64r6" ||
           CPUName == "i6400" || CPUName == "i6500")
         ArchName += "r6";
@@ -978,6 +978,8 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
   // and libgcc since 9.3.1
   assert(getTriple().isAArch64() && "expected AArch64 target!");
   ToolChain::RuntimeLibType RtLib = GetRuntimeLibType(Args);
+  if (RtLib == ToolChain::RLT_None)
+    return false;
   if (RtLib == ToolChain::RLT_CompilerRT)
     return true;
   assert(RtLib == ToolChain::RLT_Libgcc && "unexpected runtime library type!");

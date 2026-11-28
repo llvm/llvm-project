@@ -7,11 +7,6 @@
 
 template <unsigned Order>
 void test_atomic_store_hint_template_order(int *ptr, int val) {
-// CHECK-LABEL: define weak_odr void @_Z37test_atomic_store_hint_template_orderILj3EEvPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] release, align 4, !mem.cache_hint [[META4:![0-9]+]]
-// CHECK-NEXT:    ret void
   __builtin_arm_atomic_store_with_hint(ptr, val, Order, 0);
 }
 
@@ -19,11 +14,6 @@ template void test_atomic_store_hint_template_order<__ATOMIC_RELEASE>(int *, int
 
 template <unsigned Hint>
 void test_atomic_store_hint_template_hint(int *ptr, int val) {
-// CHECK-LABEL: define weak_odr void @_Z36test_atomic_store_hint_template_hintILj1EEvPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] seq_cst, align 4, !mem.cache_hint [[META6:![0-9]+]]
-// CHECK-NEXT:    ret void
   __builtin_arm_atomic_store_with_hint(ptr, val, __ATOMIC_SEQ_CST, Hint);
 }
 
@@ -34,11 +24,6 @@ struct MemVal {
 };
 
 void test_atomic_store_hint_array_consexpr_order(int *ptr, int value) {
-// CHECK-LABEL: define dso_local void @_Z43test_atomic_store_hint_array_consexpr_orderPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META4]]
-// CHECK-NEXT:    ret void
   __builtin_arm_atomic_store_with_hint(ptr, value, MemVal{}, 0);
 }
 
@@ -47,21 +32,11 @@ struct HintVal {
 };
 
 void test_atomic_store_hint_array_consexpr_hint(int *ptr, int value) {
-// CHECK-LABEL: define dso_local void @_Z42test_atomic_store_hint_array_consexpr_hintPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META6]]
-// CHECK-NEXT:    ret void
   __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, HintVal{});
 }
 
 template <unsigned Order>
 int test_atomic_fetch_hint_template_order(int *ptr, int val) {
-// CHECK-LABEL: define weak_odr noundef i32 @_Z37test_atomic_fetch_hint_template_orderILj2EEiPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[PTR]], i32 [[VAL]] acquire, align 4, !mem.cache_hint [[META8:![0-9]+]]
-// CHECK-NEXT:    ret i32 [[TMP0]]
   return __arm_atomic_fetch_add_with_hint(ptr, val, Order, 3);
 }
 
@@ -69,16 +44,52 @@ template int test_atomic_fetch_hint_template_order<__ATOMIC_ACQUIRE>(int *, int)
 
 template <unsigned Hint>
 int test_atomic_fetch_hint_template_hint(int *ptr, int val) {
-// CHECK-LABEL: define weak_odr noundef i32 @_Z36test_atomic_fetch_hint_template_hintILj4EEiPii(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw xor ptr [[PTR]], i32 [[VAL]] seq_cst, align 4, !mem.cache_hint [[META10:![0-9]+]]
-// CHECK-NEXT:    ret i32 [[TMP0]]
   return __arm_atomic_fetch_xor_with_hint(ptr, val, __ATOMIC_SEQ_CST, Hint);
 }
 
 template int test_atomic_fetch_hint_template_hint<4>(int *, int);
 
+// CHECK-LABEL: define weak_odr void @_Z37test_atomic_store_hint_template_orderILj3EEvPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] release, align 4, !mem.cache_hint [[META4:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define weak_odr void @_Z36test_atomic_store_hint_template_hintILj1EEvPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] seq_cst, align 4, !mem.cache_hint [[META6:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z43test_atomic_store_hint_array_consexpr_orderPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META4]]
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z42test_atomic_store_hint_array_consexpr_hintPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META6]]
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define weak_odr noundef i32 @_Z37test_atomic_fetch_hint_template_orderILj2EEiPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[PTR]], i32 [[VAL]] acquire, align 4, !mem.cache_hint [[META8:![0-9]+]]
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+//
+// CHECK-LABEL: define weak_odr noundef i32 @_Z36test_atomic_fetch_hint_template_hintILj4EEiPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw xor ptr [[PTR]], i32 [[VAL]] seq_cst, align 4, !mem.cache_hint [[META10:![0-9]+]]
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
 //.
 // CHECK: [[META4]] = !{i32 1, [[META5:![0-9]+]]}
 // CHECK: [[META5]] = !{!"aarch64.mem_hint", i32 0}

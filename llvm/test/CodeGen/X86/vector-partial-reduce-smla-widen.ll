@@ -4,10 +4,13 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avxvnni | FileCheck %s --check-prefixes=VNNI,AVXVNNI
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vnni | FileCheck %s --check-prefixes=VNNI,AVX512VNNI
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl,+avx512vnni | FileCheck %s --check-prefixes=VNNI,AVX512VNNI-VLX
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx10.2 | FileCheck %s --check-prefixes=VNNI,AVX10
 
 ; i16 partial reductions whose <4 x i16> inputs need widening while the
 ; <4 x i32> accumulator is legal.
-; TODO: Add VNNI targets once the type legalizer can widen these inputs.
 
 define <4 x i32> @partial_reduce_smla_i16_v4i32_v4i16(<4 x i32> %acc, <4 x i16> %a, <4 x i16> %b) {
 ; SSE2-LABEL: partial_reduce_smla_i16_v4i32_v4i16:
@@ -34,6 +37,35 @@ define <4 x i32> @partial_reduce_smla_i16_v4i32_v4i16(<4 x i32> %acc, <4 x i16> 
 ; AVX-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVXVNNI-LABEL: partial_reduce_smla_i16_v4i32_v4i16:
+; AVXVNNI:       # %bb.0:
+; AVXVNNI-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; AVXVNNI-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVXVNNI-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0
+; AVXVNNI-NEXT:    retq
+;
+; AVX512VNNI-LABEL: partial_reduce_smla_i16_v4i32_v4i16:
+; AVX512VNNI:       # %bb.0:
+; AVX512VNNI-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; AVX512VNNI-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512VNNI-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX512VNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512VNNI-NEXT:    retq
+;
+; AVX512VNNI-VLX-LABEL: partial_reduce_smla_i16_v4i32_v4i16:
+; AVX512VNNI-VLX:       # %bb.0:
+; AVX512VNNI-VLX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; AVX512VNNI-VLX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512VNNI-VLX-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX512VNNI-VLX-NEXT:    retq
+;
+; AVX10-LABEL: partial_reduce_smla_i16_v4i32_v4i16:
+; AVX10:       # %bb.0:
+; AVX10-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; AVX10-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX10-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX10-NEXT:    retq
   %a.ext = sext <4 x i16> %a to <4 x i32>
   %b.ext = sext <4 x i16> %b to <4 x i32>
   %mul = mul nsw <4 x i32> %a.ext, %b.ext
@@ -60,6 +92,12 @@ define <4 x i32> @partial_reduce_sadd_i16_v4i32_v4i16(<4 x i32> %acc, <4 x i16> 
 ; AVX-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; VNNI-LABEL: partial_reduce_sadd_i16_v4i32_v4i16:
+; VNNI:       # %bb.0:
+; VNNI-NEXT:    vpmovsxwd %xmm1, %xmm1
+; VNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; VNNI-NEXT:    retq
   %a.ext = sext <4 x i16> %a to <4 x i32>
   %res = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> %acc, <4 x i32> %a.ext)
   ret <4 x i32> %res

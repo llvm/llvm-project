@@ -838,6 +838,8 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
   Flags<[HelpHidden]>;
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
+defm pass_plugin_arg: EEq<"pass-plugin-arg", "Pass <arg> to the pass plugin named <plugin>">,
+  MetaVarName<"<plugin>,<arg>">;
 
 // Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
 // to designate what kinds of memory (stack/heap) should be protected using

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-compute-lowering=device-type=nvidia | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering{device-type=nvidia}))' | FileCheck %s
 
 // Default num_gangs, nvidia vector_length: with device-type=nvidia only vector applies.
 // CHECK-LABEL: func.func @parallel_default_gangs_nvidia_vector_length

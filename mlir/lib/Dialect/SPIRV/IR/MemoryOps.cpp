@@ -160,15 +160,21 @@ static void printMemoryAccessAttribute(
 template <typename LoadStoreOpTy>
 static LogicalResult verifyLoadStorePtrAndValTypes(LoadStoreOpTy op, Value ptr,
                                                    Value val) {
-  // ODS already checks ptr is spirv::PointerType. Just check that the pointee
-  // type of the pointer and the type of the value are the same
+  // ODS already checks ptr is a pointer. For a typed pointer, just check that
+  // the pointee type of the pointer and the type of the value are the same
   //
   // TODO: Check that the value type satisfies restrictions of
   // SPIR-V OpLoad/OpStore operations
-  if (val.getType() !=
-      cast<spirv::PointerType>(ptr.getType()).getPointeeType()) {
-    return op.emitOpError("mismatch in result type and pointer type");
+  if (auto ptrType = dyn_cast<spirv::PointerType>(ptr.getType())) {
+    if (val.getType() != ptrType.getPointeeType())
+      return op.emitOpError("mismatch in result type and pointer type");
+    return success();
   }
+  // Untyped pointers must still not access types like none that no typed
+  // pointer can point to.
+  if (!isa<spirv::SPIRVType>(val.getType()))
+    return op.emitOpError("cannot access a value of type ")
+           << val.getType() << " through an untyped pointer";
   return success();
 }
 
@@ -366,10 +372,27 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Value basePtr,
 }
 
 ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Parse the storage class specification
-  spirv::StorageClass storageClass;
   OpAsmParser::UnresolvedOperand ptrInfo;
   Type elementType;
+
+  // Untyped pointer form spells out the pointer type instead of the storage
+  // class.
+  OptionalParseResult untypedPtr = parser.parseOptionalOperand(ptrInfo);
+  if (untypedPtr.has_value()) {
+    spirv::UntypedPointerType ptrType;
+    if (failed(*untypedPtr) ||
+        parseMemoryAccessAttributes<LoadOp>(parser, result) ||
+        parser.parseOptionalAttrDict(result.attributes) ||
+        parser.parseColonType(ptrType) || parser.parseArrow() ||
+        parser.parseType(elementType) ||
+        parser.resolveOperand(ptrInfo, ptrType, result.operands))
+      return failure();
+    result.addTypes(elementType);
+    return success();
+  }
+
+  // Parse the storage class specification
+  spirv::StorageClass storageClass;
   if (parseEnumStrAttr(storageClass, parser) || parser.parseOperand(ptrInfo) ||
       parseMemoryAccessAttributes<LoadOp>(parser, result) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
@@ -388,15 +411,20 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void LoadOp::print(OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
-  StringRef sc = stringifyStorageClass(
-      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
-  printer << " \"" << sc << "\" " << getPtr();
+  auto ptrType = dyn_cast<spirv::PointerType>(getPtr().getType());
+  if (ptrType)
+    printer << " \"" << stringifyStorageClass(ptrType.getStorageClass())
+            << "\"";
+  printer << " " << getPtr();
 
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
 
   printer.printOptionalAttrDict(
       (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
-  printer << " : " << getType();
+  printer << " : ";
+  if (!ptrType)
+    printer << getPtr().getType() << " -> ";
+  printer << getType();
 }
 
 LogicalResult LoadOp::verify() {
@@ -414,11 +442,31 @@ LogicalResult LoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Parse the storage class specification
-  spirv::StorageClass storageClass;
   SmallVector<OpAsmParser::UnresolvedOperand, 2> operandInfo;
   auto loc = parser.getCurrentLocation();
   Type elementType;
+
+  // Untyped pointer form spells out the pointer type instead of the storage
+  // class.
+  OpAsmParser::UnresolvedOperand ptrInfo;
+  OptionalParseResult untypedPtr = parser.parseOptionalOperand(ptrInfo);
+  if (untypedPtr.has_value()) {
+    OpAsmParser::UnresolvedOperand valueInfo;
+    spirv::UntypedPointerType ptrType;
+    if (failed(*untypedPtr) || parser.parseComma() ||
+        parser.parseOperand(valueInfo) ||
+        parseMemoryAccessAttributes<StoreOp>(parser, result) ||
+        parser.parseColonType(ptrType) || parser.parseComma() ||
+        parser.parseType(elementType) ||
+        parser.parseOptionalAttrDict(result.attributes) ||
+        parser.resolveOperands({ptrInfo, valueInfo}, {ptrType, elementType},
+                               loc, result.operands))
+      return failure();
+    return success();
+  }
+
+  // Parse the storage class specification
+  spirv::StorageClass storageClass;
   if (parseEnumStrAttr(storageClass, parser) ||
       parser.parseOperandList(operandInfo, 2) ||
       parseMemoryAccessAttributes<StoreOp>(parser, result) ||
@@ -436,20 +484,26 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void StoreOp::print(OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
-  StringRef sc = stringifyStorageClass(
-      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
-  printer << " \"" << sc << "\" " << getPtr() << ", " << getValue();
+  auto ptrType = dyn_cast<spirv::PointerType>(getPtr().getType());
+  if (ptrType)
+    printer << " \"" << stringifyStorageClass(ptrType.getStorageClass())
+            << "\"";
+  printer << " " << getPtr() << ", " << getValue();
 
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
 
-  printer << " : " << getValue().getType();
+  printer << " : ";
+  if (!ptrType)
+    printer << getPtr().getType() << ", ";
+  printer << getValue().getType();
   printer.printOptionalAttrDict(
       (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
 }
 
 LogicalResult StoreOp::verify() {
-  // SPIR-V spec : "Pointer is the pointer to store through. Its type must be an
-  // OpTypePointer whose Type operand is the same as the type of Object."
+  // SPIR-V spec : "Pointer is the pointer to store through. Its type must be a
+  // pointer type. If its type is OpTypePointer, the Type operand must be the
+  // same as the type of Object."
   if (failed(verifyLoadStorePtrAndValTypes(*this, getPtr(), getValue())))
     return failure();
   return verifyMemoryAccessAttribute(*this, MemoryAccessKind::Write);

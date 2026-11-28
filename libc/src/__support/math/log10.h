@@ -1,16 +1,21 @@
-//===-- Double-precision log10(x) function --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Double-precision log10 function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG10_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG10_H
 
-#include "common_constants.h"
-#include "log_range_reduction.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -21,6 +26,9 @@
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/common_constants.h"
+#include "src/__support/math/log_range_reduction.h"
+#include "src/__support/sign.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -761,19 +769,27 @@ LIBC_INLINE double log10(double x) {
 
   if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::min_normal().uintval() ||
                     xbits.uintval() > FPBits_t::max_normal().uintval())) {
+    if (xbits.is_inf_or_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits_t::quiet_nan().get_val();
+      }
+      if (xbits.is_neg() && !xbits.is_nan()) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits_t::quiet_nan().get_val();
+      }
+      return x;
+    }
     if (x == 0.0) {
-      // return -Inf and raise FE_DIVBYZERO.
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits_t::inf(Sign::NEG).get_val();
     }
-    if (xbits.is_neg() && !xbits.is_nan()) {
+    if (xbits.is_neg()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits_t::quiet_nan().get_val();
-    }
-    if (xbits.is_inf_or_nan()) {
-      return x;
     }
     // Normalize denormal inputs.
     xbits = FPBits_t(x * 0x1.0p52);

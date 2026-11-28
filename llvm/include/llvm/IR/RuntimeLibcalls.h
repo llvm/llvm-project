@@ -29,6 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <string>
 
 /// TableGen will produce 2 enums, RTLIB::Libcall and
 /// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
@@ -85,6 +86,18 @@ private:
 
   unsigned WCharSize;
   LongDoubleFormat LongDoubleFmt;
+
+  /// Whether math library calls may write errno.
+  bool MathErrno = true;
+
+  std::string ABIName;
+
+  /// Lower a returned C struct of two \p EltTy values for the target ABI.
+  /// \returns the IR return type, and the struct type if the struct is
+  /// returned through an sret argument (in which case the IR return type is
+  /// void), or nullptr if it is returned in registers.
+  std::pair<Type *, Type *> lowerCPairReturn(const Triple &TT,
+                                             Type *EltTy) const;
 
 public:
   friend class llvm::LibcallLoweringInfo;
@@ -305,23 +318,6 @@ private:
   /// the value \p StrOffset.
   static inline iota_range<RTLIB::LibcallImpl>
   libcallImplNameHit(uint16_t NameOffsetEntry, uint16_t StrOffset);
-
-  static bool darwinHasSinCosStret(const Triple &TT) {
-    if (!TT.isOSDarwin())
-      return false;
-
-    // Don't bother with 32 bit x86.
-    if (TT.getArch() == Triple::x86)
-      return false;
-    // Macos < 10.9 has no sincos_stret.
-    if (TT.isMacOSX())
-      return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
-    // iOS < 7.0 has no sincos_stret.
-    if (TT.isiOS())
-      return !TT.isOSVersionLT(7, 0);
-    // Any other darwin such as WatchOS/TvOS is new enough.
-    return true;
-  }
 
   LLVM_READONLY
   static bool isAAPCS_ABI(const Triple &TT, StringRef ABIName);

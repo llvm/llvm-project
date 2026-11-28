@@ -24,10 +24,12 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -102,6 +104,10 @@ public:
   /// Set the state of an SSA value
   mlir::ChangeResult set(mlir::Value value, AllocationState state);
 
+  /// Set the state of the allocated values satisfying \p predicate to Unknown
+  mlir::ChangeResult
+  setAllocatedToUnknownIf(llvm::function_ref<bool(mlir::Value)> predicate);
+
   /// Get fir.allocmem ops which were allocated in this function and always
   /// freed before the function returns, plus whre to insert replacement
   /// fir.alloca ops
@@ -115,7 +121,9 @@ class AllocationAnalysis
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AllocationAnalysis)
 
-  using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
+  AllocationAnalysis(mlir::DataFlowSolver &solver,
+                     mlir::DominanceInfo &dominanceInfo)
+      : DenseForwardDataFlowAnalysis(solver), dominanceInfo(dominanceInfo) {}
 
   mlir::LogicalResult visitOperation(mlir::Operation *op,
                                      const LatticePoint &before,
@@ -129,6 +137,9 @@ protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
   mlir::LogicalResult processOperation(mlir::Operation *op) override;
+
+private:
+  mlir::DominanceInfo &dominanceInfo;
 };
 
 class StackArraysPass : public fir::impl::StackArraysBase<StackArraysPass> {
@@ -227,6 +238,17 @@ mlir::ChangeResult LatticePoint::set(mlir::Value value, AllocationState state) {
   return mlir::ChangeResult::Change;
 }
 
+mlir::ChangeResult LatticePoint::setAllocatedToUnknownIf(
+    llvm::function_ref<bool(mlir::Value)> predicate) {
+  mlir::ChangeResult changed = mlir::ChangeResult::NoChange;
+  for (auto &[value, state] : stateMap)
+    if (state == AllocationState::Allocated && predicate(value)) {
+      state = AllocationState::Unknown;
+      changed = mlir::ChangeResult::Change;
+    }
+  return changed;
+}
+
 /// Get values which were allocated in this function and always freed before
 /// the function returns
 void LatticePoint::appendFreedValues(llvm::DenseSet<mlir::Value> &out) const {
@@ -308,6 +330,18 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
       // don't think they are candidates for moving to the stack
       changed |= after->set(operand, AllocationState::Freed);
     }
+  } else if (auto restore = mlir::dyn_cast<mlir::LLVM::StackRestoreOp>(op)) {
+    // The stack storage allocated since the matching llvm.stacksave is
+    // reclaimed here. A replacement fir.alloca is created where the
+    // fir.allocmem was or earlier, so an allocation that is still live here
+    // can only be moved to the stack if it is made before the llvm.stacksave.
+    // Lowering frees the temporaries created inside a stacksave/stackrestore
+    // pair before the stackrestore, so other cases are simply left on the heap.
+    auto save = restore.getPtr().getDefiningOp<mlir::LLVM::StackSaveOp>();
+    changed |= after->setAllocatedToUnknownIf([&](mlir::Value value) {
+      return !save ||
+             !dominanceInfo.properlyDominates(value.getDefiningOp(), save);
+    });
   } else if (mlir::isa<fir::ResultOp>(op)) {
     mlir::Operation *parent = op->getParentOp();
     LatticePoint *parentLattice = getLattice(getProgramPointAfter(parent));
@@ -373,6 +407,7 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     return mlir::success();
   }
 
+  mlir::DominanceInfo dominanceInfo(func);
   mlir::DataFlowSolver solver;
   // constant propagation is required for dead code analysis, dead code analysis
   // is required to mark blocks live (required for mlir dense dfa)
@@ -382,7 +417,7 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   auto [it, inserted] = funcMaps.try_emplace(func);
   AllocMemMap &candidateOps = it->second;
 
-  solver.load<AllocationAnalysis>();
+  solver.load<AllocationAnalysis>(dominanceInfo);
   if (failed(solver.initializeAndRun(func))) {
     llvm::errs() << "DataFlowSolver failed!";
     return mlir::failure();
@@ -663,10 +698,10 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
 /// reclaiming pre-existing stack storage or interfering with another stack
 /// scope. The stack storage allocated inside an llvm.stacksave/
 /// llvm.stackrestore pair of the block, like the ones lowering emits around
-/// calls with a runtime-sized result, is reclaimed by that pair, assuming that
-/// the pairs are properly nested. These pairs are added to \p pairs when
-/// provided. Nested heap allocations are analyzed independently and either
-/// stay on the heap or receive a safe allocation scope of their own.
+/// calls with a runtime-sized result, is reclaimed by that pair. These pairs
+/// are added to \p pairs when provided. Nested heap allocations are analyzed
+/// independently and either stay on the heap or receive a safe allocation scope
+/// of their own.
 static bool canAddBlockStackScope(
     mlir::Block &block,
     llvm::SmallVectorImpl<std::pair<mlir::Operation *, mlir::Operation *>>
@@ -718,16 +753,12 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaLoopInsertionPoint(
   if (!it->second.canSaveRestore)
     return {nullptr};
   // An existing stack scope reclaims the allocations made inside it, so an
-  // allocation made inside one must be freed before the scope ends, and does
-  // not need a scope of its own.
-  bool saveRestoreStack = true;
-  for (auto [save, restore] : it->second.pairs)
-    if (save->isBeforeInBlock(oldAlloc) && oldAlloc->isBeforeInBlock(restore)) {
-      for (mlir::Operation *free : freeOps)
-        if (!free->isBeforeInBlock(restore))
-          return {nullptr};
-      saveRestoreStack = false;
-    }
+  // allocation made inside one does not need a scope of its own. The
+  // AllocationAnalysis ensures that it is freed before the scope ends.
+  bool saveRestoreStack = llvm::none_of(it->second.pairs, [&](auto pair) {
+    return pair.first->isBeforeInBlock(oldAlloc) &&
+           oldAlloc->isBeforeInBlock(pair.second);
+  });
   return InsertionPoint{oldAlloc.getOperation(), saveRestoreStack};
 }
 

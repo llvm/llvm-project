@@ -6,7 +6,6 @@
 
 ---
 name:            test_kernel
-tracksRegLiveness: true
 registers:
   - { id: 107, class: sreg_32, preferred-register: '$vcc' }
   - { id: 108, class: sreg_32, preferred-register: '$vcc' }

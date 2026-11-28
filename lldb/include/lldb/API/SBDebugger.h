@@ -28,8 +28,8 @@ namespace lldb {
 #ifndef SWIG
 class LLDB_API SBInputReader {
 public:
-  SBInputReader() = default;
-  ~SBInputReader() = default;
+  SBInputReader();
+  ~SBInputReader();
 
   SBError Initialize(lldb::SBDebugger &sb_debugger,
                      unsigned long (*callback)(void *, lldb::SBInputReader *,
@@ -134,6 +134,10 @@ public:
   ///
   /// Similar to Initialize(), but returns an error if initialization fails.
   static lldb::SBError InitializeWithErrorHandling();
+
+  /// InitializeWithErrorHandling() with options. LLDB is left uninitialized if
+  /// one cannot be honored.
+  static lldb::SBError Initialize(const lldb::SBInitializationOptions &options);
 
   /// Configure LLDB to print a stack trace when it crashes.
   static void PrintStackTraceOnError();

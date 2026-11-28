@@ -830,14 +830,18 @@ private:
              m_packed ? "packed" : "not packed");
 
     for (uint32_t i = 0; i < n; i++) {
-      std::string name;
-      uint32_t size;
-      (void)GetChildType(i, name, size);
-      // NOTE: the offset returned by GetChildCompilerTypeAtIndex()
-      //       can't be used because it never considers alignment bytes
-      //       between struct fields.
-      LLDB_LOG(m_log, LOG_PREFIX "field={0}, size={1}", name, size);
-      if (!ExtractField(size))
+      llvm::Expected<ChildTypeInfo> child_or_err = GetChild(i);
+      if (!child_or_err) {
+        LLDB_LOG_ERROR(m_log, child_or_err.takeError(),
+                       LOG_PREFIX "GetChild failed: {0}");
+        return ValueObjectSP();
+      }
+      const ChildTypeInfo &child = *child_or_err;
+      // NOTE: the offset returned by GetChildAtIndex() can't be used because
+      //       it never considers alignment bytes between struct fields.
+      LLDB_LOG(m_log, LOG_PREFIX "field={0}, size={1}", child.name,
+               child.byte_size);
+      if (!ExtractField(child.byte_size))
         return ValueObjectSP();
     }
 
@@ -899,28 +903,18 @@ private:
   }
 
   // get child
-  llvm::Expected<CompilerType> GetChildType(uint32_t i, std::string &name,
-                                            uint32_t &size) {
+  llvm::Expected<ChildTypeInfo> GetChild(uint32_t i) {
     // GetChild constant inputs
     const bool transparent_pointers = false;
     const bool omit_empty_base_classes = true;
     const bool ignore_array_bounds = false;
-    // GetChild output params
-    int32_t child_offs;
-    uint32_t child_bitfield_bit_size;
-    uint32_t child_bitfield_bit_offset;
-    bool child_is_base_class;
-    bool child_is_deref_of_parent;
     ValueObject *valobj = nullptr;
-    uint64_t language_flags;
     ExecutionContext exe_ctx;
     m_thread.CalculateExecutionContext(exe_ctx);
 
-    return m_type.GetChildCompilerTypeAtIndex(
-        &exe_ctx, i, transparent_pointers, omit_empty_base_classes,
-        ignore_array_bounds, name, size, child_offs, child_bitfield_bit_size,
-        child_bitfield_bit_offset, child_is_base_class,
-        child_is_deref_of_parent, valobj, language_flags);
+    return m_type.GetChildAtIndex(&exe_ctx, i, transparent_pointers,
+                                  omit_empty_base_classes, ignore_array_bounds,
+                                  valobj);
   }
 };
 

@@ -66,10 +66,6 @@ private:
   }
 
 public:
-  /// Decides whether a '.section' directive should be printed before the
-  /// section name
-  LLVM_ABI bool shouldOmitSectionDirective(StringRef Name) const;
-
   unsigned getCharacteristics() const { return Characteristics; }
   MCSymbol *getCOMDATSymbol() const { return COMDATSymbol; }
   int getSelection() const { return Selection; }

@@ -17,9 +17,13 @@
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+
 class SemaHexagon : public SemaBase {
 public:
   SemaHexagon(Sema &S);
+
+  void handleHLXVectorStackLimitAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckHexagonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);

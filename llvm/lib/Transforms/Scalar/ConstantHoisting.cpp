@@ -922,7 +922,6 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->DL = &Fn.getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
-  this->PSI = PSI;
   this->OptForSize = llvm::shouldOptimizeForSize(
       Entry.getParent(), PSI,
       PSI && PSI->hasProfileSummary() ? GetBFI() : nullptr,

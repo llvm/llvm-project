@@ -20,6 +20,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
@@ -66,15 +67,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-
-namespace clang {
-// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
-//       by -fsanitize-skip-hot-cutoff
-llvm::cl::opt<bool> ClSanitizeGuardChecks(
-    "ubsan-guard-checks",
-    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
-
-} // namespace clang
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
@@ -4060,23 +4052,24 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // isIntegerType() never holds for scoped enums, and getAs<BitIntType> can't
   // see through the EnumType node to a __BitInt underlying type even for
   // unscoped enums.
-  QualType BackupT = T;
+  QualType UnderlyingT = T;
   if (const EnumType *ET = T->getAs<EnumType>())
     if (ET->getDecl()->isComplete())
-      T = ET->getDecl()->getIntegerType();
+      UnderlyingT = ET->getDecl()->getIntegerType();
 
-  if (T->isIntegerType()) {
+  if (UnderlyingT->isIntegerType()) {
     TypeKind = TK_Integer;
-    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
-               (T->isSignedIntegerType() ? 1 : 0);
+    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(UnderlyingT)) << 1) |
+               (UnderlyingT->isSignedIntegerType() ? 1 : 0);
     // Follow suggestion from discussion of issue 64100.
     // So we can write the exact amount of bits in TypeName after '\0'
     // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+    if (UnderlyingT->isSignedIntegerType() &&
+        UnderlyingT->getAs<BitIntType>()) {
       // Do a sanity checks as we are using 32-bit type to store bit length.
-      assert(getContext().getTypeSize(T) > 0 &&
+      assert(getContext().getTypeSize(UnderlyingT) > 0 &&
              " non positive amount of bits in __BitInt type");
-      assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
+      assert(getContext().getTypeSize(UnderlyingT) <= 0xFFFFFFFF &&
              " too many bits in __BitInt type");
 
       // Redefine TypeKind with the actual __BitInt type if we have signed
@@ -4084,23 +4077,23 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
       TypeKind = TK_BitInt;
       IsBitInt = true;
     }
-  } else if (T->isFloatingType()) {
+  } else if (UnderlyingT->isFloatingType()) {
     TypeKind = TK_Float;
-    TypeInfo = getContext().getTypeSize(T);
+    TypeInfo = getContext().getTypeSize(UnderlyingT);
   }
 
   // Format the type name as if for a diagnostic, including quotes and
   // optionally an 'aka'.
   SmallString<32> Buffer;
   CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
-                                    (intptr_t)BackupT.getAsOpaquePtr(),
-                                    StringRef(), StringRef(), {}, Buffer, {});
+                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
+                                    StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
     // endianness, zero.
     char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
-    const auto *EIT = T->castAs<BitIntType>();
+    const auto *EIT = UnderlyingT->castAs<BitIntType>();
     uint32_t Bits = EIT->getNumBits();
     llvm::support::endian::write32(S + 1, Bits,
                                    getTarget().isBigEndian()
@@ -4123,7 +4116,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   CGM.getSanitizerMetadata()->disableSanitizerForGlobal(GV);
 
   // Remember the descriptor for this type.
-  CGM.setTypeDescriptorInMap(BackupT, GV);
+  CGM.setTypeDescriptorInMap(T, GV);
 
   return GV;
 }
@@ -4215,6 +4208,21 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
                             Builder.getInt32(Column)};
 
   return llvm::ConstantStruct::getAnon(Data);
+}
+
+llvm::GlobalVariable *
+CodeGenFunction::EmitCheckStaticData(ArrayRef<llvm::Constant *> StaticArgs) {
+  llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+  auto *InfoPtr = new llvm::GlobalVariable(
+      CGM.getModule(), Info->getType(),
+      // Non-constant global is used in a handler to deduplicate reports.
+      // TODO: change deduplication logic and make it constant.
+      /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+      nullptr, llvm::GlobalVariable::NotThreadLocal,
+      CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+  InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+  return InfoPtr;
 }
 
 namespace {
@@ -4336,7 +4344,7 @@ void CodeGenFunction::EmitCheck(
   // LowerAllowCheckPass.
   for (auto &[Check, Ord] : Checked) {
     llvm::Value *GuardedCheck = Check;
-    if (ClSanitizeGuardChecks ||
+    if (CGM.getCLOpts().ubsan_guard_checks ||
         (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] > 0)) {
       llvm::Value *Allow = Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
@@ -4403,16 +4411,7 @@ void CodeGenFunction::EmitCheck(
 
   // Emit handler arguments and create handler function type.
   if (!StaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr = new llvm::GlobalVariable(
-        CGM.getModule(), Info->getType(),
-        // Non-constant global is used in a handler to deduplicate reports.
-        // TODO: change deduplication logic and make it constant.
-        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
-        nullptr, llvm::GlobalVariable::NotThreadLocal,
-        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
     Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
     ArgTypes.push_back(CGM.VoidPtrTy);
   }
@@ -4468,18 +4467,15 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::CallInst *CheckCall;
   llvm::FunctionCallee SlowPathFn;
   if (WithDiag) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr =
-        new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
-                                 llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
 
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath_diag",
         llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy},
                                 false));
-    CheckCall = Builder.CreateCall(SlowPathFn, {TypeId, Ptr, InfoPtr});
+    CheckCall = Builder.CreateCall(
+        SlowPathFn,
+        {TypeId, Ptr, Builder.CreateAddrSpaceCast(InfoPtr, Int8PtrTy)});
   } else {
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath",
@@ -4492,6 +4488,16 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   CheckCall->setDoesNotThrow();
 
   EmitBlock(Cont);
+}
+
+std::array<llvm::Constant *, 3>
+CodeGenFunction::EmitCFICheckFailStaticArgs(CFITypeCheckKind CheckKind,
+                                            SourceLocation Loc, QualType Type) {
+  return {
+      llvm::ConstantInt::get(Int8Ty, CheckKind),
+      EmitCheckSourceLocation(Loc),
+      EmitCheckTypeDescriptor(Type),
+  };
 }
 
 // Emit a stub for __cfi_check function so that the linker knows about this
@@ -5484,6 +5490,22 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
     BaseInfo.mergeForCast(TypeBaseInfo);
     TBAAInfo = CGF.CGM.mergeTBAAInfoForCast(TBAAInfo, TypeTBAAInfo);
     return Address(CGF.Builder.CreateLoad(BaseLVal.getAddress()),
+                   CGF.ConvertTypeForMem(ElTy), Align);
+  }
+  if (auto *OAShE =
+          dyn_cast<OMPArrayShapingExpr>(Base->IgnoreParenImpCasts())) {
+    // The shaped pointer is the address of the array; capture the variable
+    // dimensions of the shape first.
+    QualType ShapedTy = OAShE->getShapedType();
+    if (ShapedTy->isVariablyModifiedType())
+      CGF.EmitVariablyModifiedType(ShapedTy);
+    LValueBaseInfo TypeBaseInfo;
+    TBAAAccessInfo TypeTBAAInfo;
+    CharUnits Align =
+        CGF.CGM.getNaturalTypeAlignment(ElTy, &TypeBaseInfo, &TypeTBAAInfo);
+    BaseInfo.mergeForCast(TypeBaseInfo);
+    TBAAInfo = CGF.CGM.mergeTBAAInfoForCast(TBAAInfo, TypeTBAAInfo);
+    return Address(CGF.EmitScalarExpr(OAShE->getBase()),
                    CGF.ConvertTypeForMem(ElTy), Align);
   }
   return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
@@ -7235,11 +7257,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         CGM.getIntrinsic(llvm::Intrinsic::type_test), {CalleePtr, TypeId});
 
     auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-    llvm::Constant *StaticData[] = {
-        llvm::ConstantInt::get(Int8Ty, CFITCK_ICall),
-        EmitCheckSourceLocation(E->getBeginLoc()),
-        EmitCheckTypeDescriptor(QualType(FnType, 0)),
-    };
+    auto StaticData = EmitCFICheckFailStaticArgs(CFITCK_ICall, E->getBeginLoc(),
+                                                 QualType(FnType, 0));
     if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
       EmitCfiSlowPathCheck(CheckOrdinal, TypeTest, CrossDsoTypeId, CalleePtr,
                            StaticData);

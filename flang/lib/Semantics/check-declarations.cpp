@@ -351,6 +351,14 @@ void CheckHelper::Check(const Symbol &symbol) {
     return; // following checks do not apply
   }
 
+  if (IsDummy(symbol) && IsProcedure(symbol) && !IsPointer(symbol) &&
+      symbol.attrs().HasAny(
+          {Attr::INTENT_IN, Attr::INTENT_OUT, Attr::INTENT_INOUT})) {
+    // F2018 C843 applies to both procedure entities and interface bodies.
+    messages_.Say("A dummy procedure without the POINTER attribute"
+                  " may not have an INTENT attribute"_err_en_US);
+  }
+
   if (symbol.attrs().test(Attr::PROTECTED)) {
     if (symbol.owner().kind() != Scope::Kind::Module) { // C854
       messages_.Say(
@@ -1300,11 +1308,16 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     }
-    if (subpDetails /* not a module variable */ && IsSaved(symbol) &&
-        !inDeviceSubprogram && !IsAllocatable(symbol) &&
-        attr == common::CUDADataAttr::Device) {
+    // Managed objects are only rejected for an explicit SAVE attribute; a
+    // blanket SAVE statement or -fno-automatic does not make them an error.
+    if (subpDetails /* not a module variable */ && !inDeviceSubprogram &&
+        !IsAllocatable(symbol) &&
+        ((attr == common::CUDADataAttr::Device &&
+             symbol.attrs().test(Attr::SAVE)) ||
+            (attr == common::CUDADataAttr::Managed &&
+                symbol.attrs().test(Attr::SAVE)))) {
       messages_.Say(
-          "Saved object '%s' in host code may not have ATTRIBUTES(DEVICE) unless allocatable"_err_en_US,
+          "Saved object '%s' in host code may not have ATTRIBUTES(%s) unless allocatable"_err_en_US,
           symbol.name(),
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
@@ -1515,12 +1528,6 @@ void CheckHelper::CheckProcEntity(
   CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
-    if (!symbol.attrs().test(Attr::POINTER) && // C843
-        symbol.attrs().HasAny(
-            {Attr::INTENT_IN, Attr::INTENT_OUT, Attr::INTENT_INOUT})) {
-      messages_.Say("A dummy procedure without the POINTER attribute"
-                    " may not have an INTENT attribute"_err_en_US);
-    }
     if (InElemental()) { // C15100
       messages_.Say(
           "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);

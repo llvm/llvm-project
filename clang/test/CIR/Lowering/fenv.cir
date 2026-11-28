@@ -49,7 +49,7 @@ module {
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
     %0 = cir.fadd %a, %b : !cir.float fenv<strict_except = true>
-    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
     %1 = cir.fadd %a, %b : !cir.float fenv<strict_except = false>
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
@@ -58,6 +58,26 @@ module {
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
     %3 = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest>
+    // Strict exceptions stay strict when masked.
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %4 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked, strict_except = true>
+    // Exceptions that are unmasked or unknown, and not strict, may trap.
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %5 = cir.fadd %a, %b : !cir.float fenv<except_mode = unmasked>
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %6 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown>
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %7 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown, strict_except = false>
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %8 = cir.fadd %a, %b : !cir.float fenv<except_mode = unmasked, strict_except = true>
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %9 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown, strict_except = true>
     cir.return
   }
 
@@ -241,16 +261,16 @@ module {
     // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
     // CHECK: %[[CMP:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED]], %[[EB]]) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
     // CHECK: llvm.sext %[[CMP]] : vector<4xi1> to vector<4xi32>
-    %0 = cir.vec.cmp(gt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-         fenv<strict_except = true>
+    %0 = cir.vec.fcmp(ogt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+         signaling fenv<strict_except = true>
     // CHECK: %[[PRED_EQ:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"oeq">
     // CHECK: %[[CMP_EQ:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_EQ]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
     // CHECK: llvm.sext %[[CMP_EQ]] : vector<4xi1> to vector<4xi32>
-    %1 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    %1 = cir.vec.fcmp(oeq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
          fenv<strict_except = true>
     // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
     // CHECK: llvm.sext %{{.*}} : vector<4xi1> to vector<4xi32>
-    %2 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    %2 = cir.vec.fcmp(olt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
     cir.return
   }
 

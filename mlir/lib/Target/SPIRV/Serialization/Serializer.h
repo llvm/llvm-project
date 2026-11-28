@@ -42,8 +42,8 @@ void encodeInstructionInto(SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
 /// the SPIR-V spec.
 class Serializer {
 public:
-  /// Creates a serializer for the given SPIR-V `module`.
-  explicit Serializer(spirv::ModuleOp module,
+  /// Creates a serializer for the given SPIR-V `moduleOp`.
+  explicit Serializer(spirv::ModuleOp moduleOp,
                       const SerializationOptions &options);
 
   /// Serializes the remembered SPIR-V module.
@@ -399,7 +399,7 @@ private:
 
 private:
   /// The SPIR-V module to be serialized.
-  spirv::ModuleOp module;
+  spirv::ModuleOp moduleOp;
 
   /// An MLIR builder for getting MLIR constructs.
   mlir::Builder mlirBuilder;

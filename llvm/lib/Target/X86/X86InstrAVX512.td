@@ -2633,8 +2633,9 @@ defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, SchedWriteFCmp>, E
 //
 multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                           string OpcodeStr, RegisterClass KRC, ValueType vvt,
-                          X86MemOperand x86memop, string Suffix = ""> {
-  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove],
+                          X86MemOperand x86memop, string Suffix = "",
+                          bit IsMoveReg = 1> {
+  let isMoveReg = IsMoveReg, hasSideEffects = 0, SchedRW = [WriteMove],
       explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in
     def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
                       !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
@@ -2662,12 +2663,13 @@ multiclass avx512_mask_mov_gpr<bits<8> opc_kr, bits<8> opc_rk,
   }
 }
 
+// KMOVB and KMOVD zero the upper mask bits, so they are not copies.
 let Predicates = [HasDQI, NoEGPR] in
-  defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem>,
+  defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem, "", 0>,
                avx512_mask_mov_gpr<0x92, 0x93, "kmovb", VK8, GR32>,
                VEX, TB, PD;
 let Predicates = [HasDQI, HasEGPR, In64BitMode] in
-  defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem, "_EVEX">,
+  defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem, "_EVEX", 0>,
                avx512_mask_mov_gpr<0x92, 0x93, "kmovb", VK8, GR32, "_EVEX">,
                EVEX, TB, PD;
 
@@ -2681,7 +2683,7 @@ let Predicates = [HasAVX512, HasEGPR, In64BitMode] in
                EVEX, TB;
 
 let Predicates = [HasBWI, NoEGPR] in {
-  defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem>,
+  defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem, "", 0>,
                VEX, TB, PD, REX_W;
   defm KMOVD : avx512_mask_mov_gpr<0x92, 0x93, "kmovd", VK32, GR32>,
                VEX, TB, XD;
@@ -2691,7 +2693,7 @@ let Predicates = [HasBWI, NoEGPR] in {
                VEX, TB, XD, REX_W;
 }
 let Predicates = [HasBWI, HasEGPR, In64BitMode] in {
-  defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem, "_EVEX">,
+  defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem, "_EVEX", 0>,
                EVEX, TB, PD, REX_W;
   defm KMOVD : avx512_mask_mov_gpr<0x92, 0x93, "kmovd", VK32, GR32, "_EVEX">,
                EVEX, TB, XD;

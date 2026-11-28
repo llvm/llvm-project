@@ -104,3 +104,80 @@ define float @load_extract_narrow_unsigned_dynamic_unprofitable(ptr %p, i2 nound
   %sum = fadd float %x, %y
   ret float %sum
 }
+
+; The per-lane loads keep the access metadata of the vector load.
+define void @load_extract_mmra(ptr %p, ptr %q) {
+; CHECK-LABEL: @load_extract_mmra(
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[P:%.*]], align 8, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP1]], align 4, !mmra [[META0]]
+; CHECK-NEXT:    store i32 [[E0]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 4
+; CHECK-NEXT:    store i32 [[E1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load <2 x i32>, ptr %p, align 8, !mmra !0
+  %e0 = extractelement <2 x i32> %v, i64 0
+  %e1 = extractelement <2 x i32> %v, i64 1
+  store i32 %e0, ptr %q, align 4
+  %q1 = getelementptr inbounds nuw i8, ptr %q, i64 4
+  store i32 %e1, ptr %q1, align 4
+  ret void
+}
+
+define void @load_extract_nontemporal(ptr %p, ptr %q) {
+; CHECK-LABEL: @load_extract_nontemporal(
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[P:%.*]], align 8, !nontemporal [[META1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP1]], align 4, !nontemporal [[META1]]
+; CHECK-NEXT:    store i32 [[E0]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 4
+; CHECK-NEXT:    store i32 [[E1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load <2 x i32>, ptr %p, align 8, !nontemporal !1
+  %e0 = extractelement <2 x i32> %v, i64 0
+  %e1 = extractelement <2 x i32> %v, i64 1
+  store i32 %e0, ptr %q, align 4
+  %q1 = getelementptr inbounds nuw i8, ptr %q, i64 4
+  store i32 %e1, ptr %q1, align 4
+  ret void
+}
+
+define void @load_extract_mem_cache_hint(ptr %p, ptr %q) {
+; CHECK-LABEL: @load_extract_mem_cache_hint(
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[P:%.*]], align 8, !mem.cache_hint [[META2:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP1]], align 4, !mem.cache_hint [[META2]]
+; CHECK-NEXT:    store i32 [[E0]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 4
+; CHECK-NEXT:    store i32 [[E1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load <2 x i32>, ptr %p, align 8, !mem.cache_hint !2
+  %e0 = extractelement <2 x i32> %v, i64 0
+  %e1 = extractelement <2 x i32> %v, i64 1
+  store i32 %e0, ptr %q, align 4
+  %q1 = getelementptr inbounds nuw i8, ptr %q, i64 4
+  store i32 %e1, ptr %q1, align 4
+  ret void
+}
+
+define i32 @load_extract_mmra_dynamic(ptr %p, i32 noundef %idx) {
+; CHECK-LABEL: @load_extract_mmra_dynamic(
+; CHECK-NEXT:    [[BOUNDED:%.*]] = and i32 [[IDX:%.*]], 3
+; CHECK-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i32 [[BOUNDED]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[BOUNDED_GEPIDX]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[TMP1]], align 4, !mmra [[META0]]
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %bounded = and i32 %idx, 3
+  %v = load <4 x i32>, ptr %p, align 16, !mmra !0
+  %x = extractelement <4 x i32> %v, i32 %bounded
+  ret i32 %x
+}
+
+!0 = !{!"foo", !"bar"}
+!1 = !{i32 1}
+!2 = !{i32 0, !3}
+!3 = !{!"foo.key", !"value"}

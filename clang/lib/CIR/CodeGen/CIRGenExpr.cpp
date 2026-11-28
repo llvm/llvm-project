@@ -328,6 +328,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
 
   mlir::Value srcVal = src.getValue();
   Address dstAddr = dst.getExtVectorAddress();
+  mlir::Location loc = dst.getExtVectorPointer().getLoc();
   if (getScalarSizeInBits(dstAddr.getElementType()) >
       getScalarSizeInBits(srcVal.getType())) {
     cgm.errorNYI(
@@ -337,6 +338,12 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
   }
 
   if (getLangOpts().HLSL) {
+    mlir::Type destAddrTy = dstAddr.getElementType();
+    if (!mlir::isa<cir::MatrixType, cir::VectorType>(destAddrTy)) {
+      builder.createStore(loc, srcVal, dstAddr);
+      return;
+    }
+
     cgm.errorNYI(dst.getPointer().getLoc(),
                  "emitStoreThroughExtVectorComponentLValue: HLSL");
     return;
@@ -344,10 +351,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
 
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
-  mlir::Location loc = dst.getExtVectorPointer().getLoc();
-
   mlir::ArrayAttr elts = dst.getExtVectorElts();
-
   mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
   if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
     unsigned numSrcElts = vecTy->getNumElements();
@@ -875,7 +879,8 @@ int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
 // appropriate shufflevector.
 RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   mlir::Location loc = lv.getExtVectorPointer().getLoc();
-  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+  mlir::Value vec =
+      builder.createLoad(loc, lv.getExtVectorAddress(), lv.isVolatile());
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
@@ -898,13 +903,11 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
   if (!exprVecTy) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
-    cir::ConstantOp index =
-        builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
+    cir::ConstantOp index = builder.getConstInt(loc, cgm.sizeTy, indexValue);
     if (mlir::isa<cir::VectorType>(vec.getType()))
       return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
 
-    cir::ConstantOp columnIdx =
-        builder.getConstInt(loc, builder.getSInt64Ty(), 0);
+    cir::ConstantOp columnIdx = builder.getConstInt(loc, cgm.sizeTy, 0);
     mlir::Value element =
         cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
     return RValue::get(element);
@@ -2730,6 +2733,13 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
 RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
+
+  // Builtins never have block type.
+  if (e->getCallee()->getType()->isBlockPointerType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCallExpr: block pointer type"));
+    return getUndefRValue(e->getType());
+  }
 
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);

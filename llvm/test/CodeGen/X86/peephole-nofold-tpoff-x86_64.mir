@@ -31,11 +31,6 @@
 ---
 name:            foo
 alignment:       16
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr8 }
-  - { id: 3, class: gr32 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

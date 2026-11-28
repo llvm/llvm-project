@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s --implicit-check-not='section "llvm.metadata"'
-// RUN: %clang_cc1 %s -triple r600 -emit-llvm -o - | FileCheck %s --check-prefix AS1-GLOBALS
+// RUN: %clang_cc1 %s -triple amdgpu -emit-llvm -o - | FileCheck %s --check-prefix AS1-GLOBALS
 // END.
 
 static __attribute((annotate("sfoo_0"))) __attribute((annotate("sfoo_1"))) char sfoo;
@@ -44,7 +44,7 @@ __attribute((address_space(1))) __attribute__((annotate("addrspace1_ann"))) char
 // CHECK-SAME: { ptr @a,
 // CHECK-SAME: }], section "llvm.metadata"
 
-// AS1-GLOBALS: target datalayout = "{{.+}}-A5-G1"
+// AS1-GLOBALS: target datalayout = "{{.+}}-A5-G1{{.*}}"
 // AS1-GLOBALS: @llvm.global.annotations = appending addrspace(1) global [11 x { ptr addrspace(1), ptr addrspace(4), ptr addrspace(4), i32, ptr addrspace(4) }]
 // AS1-GLOBALS-SAME: { ptr addrspace(1) @a.bar,
 // AS1-GLOBALS-SAME: { ptr addrspace(1) @addrspace1_var,

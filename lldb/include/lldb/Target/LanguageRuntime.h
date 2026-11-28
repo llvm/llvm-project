@@ -18,6 +18,7 @@
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
+#include "lldb/Target/StackID.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
@@ -342,6 +343,17 @@ public:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
 
+  /// Compares the frames identified by \p lhs and \p rhs, if a language
+  /// runtime of \p process can order them. For example, a runtime whose unwind
+  /// plans produce call frame addresses that aren't stack addresses knows how
+  /// those frames relate.
+  ///
+  /// \return
+  ///     Younger if \p lhs is younger than \p rhs, Older if it is older, and
+  ///     NoOpinion if no language runtime orders the frames.
+  static CFAComparison CompareCFAs(Process &process, const StackID &lhs,
+                                   const StackID &rhs);
+
   /// Language runtime plugins can use this API to report
   /// language-specific runtime information about this compile unit,
   /// such as additional language version details or feature flags.
@@ -356,6 +368,13 @@ protected:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame) {
     return lldb::UnwindPlanSP();
+  }
+
+  // The static CompareCFAs method above is only implemented in the base
+  // class; subclasses may override this protected member if they can order
+  // frames that StackID::IsYoungerThan() can't.
+  virtual CFAComparison CompareCFAs(const StackID &lhs, const StackID &rhs) {
+    return CFAComparison::NoOpinion;
   }
 
   LanguageRuntime(Process *process);

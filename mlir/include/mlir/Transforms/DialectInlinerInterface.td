@@ -181,11 +181,11 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
       [{}]
     >,
     InterfaceMethod<[{
-        Returns true if the inliner can assume a fast path of not creating a new
-        block, if there is only one block.
+        Returns true if the inliner can use the fast path for the given inlined
+        block. Only called when exactly one block was inlined.
       }],
       "bool", "allowSingleBlockOptimization",
-      (ins "::mlir::iterator_range<::mlir::Region::iterator>":$inlinedBlocks),
+      (ins "::mlir::Block *":$inlinedBlock),
       [{
         return true;
       }]

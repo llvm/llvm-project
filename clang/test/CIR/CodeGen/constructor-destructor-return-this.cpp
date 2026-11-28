@@ -29,7 +29,7 @@ B::~B() { }
 // CIRRET-LABEL: cir.func {{.*}} @_ZN1BC2EPi(
 // CIRRET-SAME:    %[[THIS_ARG:[^:]*]]: !cir.ptr<!rec_B> {{{[^}]*}}llvm.returned{{[^}]*}}}
 // CIRRET-SAME:    -> (!cir.ptr<!rec_B> {llvm.noundef})
-// CIRRET:         %[[RETVAL:.*]] = cir.alloca "__retval"
+// CIRRET:         %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot
 // CIRRET:         %[[THIS_ADDR:.*]] = cir.alloca "this"
 // CIRRET:         cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIRRET:         %[[THIS:.*]] = cir.load %[[THIS_ADDR]]

@@ -97,6 +97,77 @@ struct CtorPointerField {
   CtorPointerField(Dummy<2> ok, std::string_view view) : ptr(view.data()) {}
 };
 
+// A base or delegating initializer stores into the object being constructed.
+struct [[gsl::Pointer]] ViewHolder {
+  std::string_view view;
+  ViewHolder(std::string_view v [[clang::lifetimebound]]) : view(v) {}
+  ViewHolder(std::string s, int) : ViewHolder(s) {} // expected-warning {{parameter 's' does not live long enough}} \
+                                                    // expected-note {{parameter 's' is destroyed here}} \
+                                                    // expected-note {{later used here}}
+  ViewHolder() : ViewHolder(std::string("temp")) {} // expected-warning {{temporary object does not live long enough}} \
+                                                    // expected-note {{temporary object is destroyed here}} \
+                                                    // expected-note {{later used here}}
+  ViewHolder(Dummy<1> ok, const std::string &s) : ViewHolder(s) {}
+};
+
+struct [[gsl::Pointer]] DerivedViewHolder : ViewHolder {
+  DerivedViewHolder() : ViewHolder(std::string("temp")) {} // expected-warning {{temporary object does not live long enough}} \
+                                                           // expected-note {{temporary object is destroyed here}} \
+                                                           // expected-note {{later used here}}
+  DerivedViewHolder(std::string s) : ViewHolder(s) {} // expected-warning {{parameter 's' does not live long enough}} \
+                                                      // expected-note {{parameter 's' is destroyed here}} \
+                                                      // expected-note {{later used here}}
+  DerivedViewHolder(const std::string &s) : ViewHolder(s) {}
+};
+
+struct PtrHolder {
+  const char *ptr;
+  PtrHolder(const char *p [[clang::lifetimebound]]) : ptr(p) {}
+};
+struct DerivedPtrHolder : PtrHolder {
+  DerivedPtrHolder(std::string s) : PtrHolder(s.c_str()) {} // expected-warning {{parameter 's' does not live long enough}} \
+                                                            // expected-note {{result of call to 'c_str' aliases the storage of parameter 's'}} \
+                                                            // expected-note {{parameter 's' is destroyed here}} \
+                                                            // expected-note {{later used here}}
+  DerivedPtrHolder(Dummy<1> ok, const char *p) : PtrHolder(p) {}
+};
+
+struct NoBorrowBase {
+  NoBorrowBase(int);
+};
+struct DerivedNoBorrow : NoBorrowBase {
+  DerivedNoBorrow(int x) : NoBorrowBase(x) {}
+};
+
+struct TwoBases : ViewHolder, PtrHolder {
+  TwoBases(std::string a, const char *b) : ViewHolder(a), PtrHolder(b) {} // expected-warning {{parameter 'a' does not live long enough}} \
+                                                                          // expected-note {{parameter 'a' is destroyed here}} \
+                                                                          // expected-note {{later used here}}
+};
+
+struct VirtualDerived : virtual ViewHolder {
+  VirtualDerived(std::string s) : ViewHolder(s) {} // expected-warning {{parameter 's' does not live long enough}} \
+                                                   // expected-note {{parameter 's' is destroyed here}} \
+                                                   // expected-note {{later used here}}
+};
+
+struct DerivedFromViewParam : ViewHolder {
+  DerivedFromViewParam(std::string_view sv) : ViewHolder(sv) {}
+  DerivedFromViewParam(const DerivedFromViewParam &o) : ViewHolder(o) {}
+  DerivedFromViewParam(DerivedFromViewParam &&o) : ViewHolder(std::move(o)) {}
+  DerivedFromViewParam(const DerivedFromViewParam &o, int) : DerivedFromViewParam(o) {}
+};
+
+struct OwnerBase : std::string {
+  OwnerBase() : std::string(std::string("tmp")) {}
+};
+
+struct InheritsCtor : PtrHolder {
+  using PtrHolder::PtrHolder;
+  int x = 0;
+};
+void useInherits(const char *p) { InheritsCtor ic(p); (void)ic; }
+
 struct MemberSetters {
   std::string_view view;  // expected-note 6 {{this field dangles}}
   const char* p;          // expected-note 6 {{this field dangles}}

@@ -47,7 +47,9 @@ extern "C" {
 /// This struct defines the core interface for pass plugins and is supposed to
 /// be filled out by plugin implementors. Unused function pointers can be set to
 /// nullptr. LLVM-side users of a plugin are expected to use the \c PassPlugin
-/// class below to interface with it.
+/// class below to interface with it. Hosts may invoke callbacks concurrently,
+/// e.g. for parallel ThinLTO backends, so plugins must guard any state they
+/// share between invocations.
 struct PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
@@ -71,6 +73,10 @@ struct PassPluginLibraryInfo {
   /// The parameters match those of \c llvm::runCodeGenPipeline(), so the
   /// callback can forward them to run an LLVM-based pipeline of its own.
   /// Both signatures must be kept in lockstep.
+  ///
+  /// The callback might be invoked from a worker thread, so exiting inside the
+  /// callback is unsafe. Failures should be reported through the module's
+  /// context instead and return false.
   bool (*PreCodeGenCallback)(TargetMachine &TM, Module &M,
                              raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
                              CodeGenFileType CGFT, bool DisableVerify,

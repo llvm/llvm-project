@@ -20,6 +20,7 @@ unittest("X86Tests") {
   ]
   include_dirs = [ "//llvm/lib/Target/X86" ]
   sources = [
+    "InlineAsmOperandCommentTest.cpp",
     "MachineSizeOptsTest.cpp",
     "TernlogTest.cpp",
     "X86SelectionDAGTest.cpp",

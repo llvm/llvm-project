@@ -614,6 +614,61 @@ TEST_F(VectorUtilsTest, isSplatValue_Select_NotOp2) {
   EXPECT_FALSE(isSplatValue(A));
 }
 
+TEST_F(VectorUtilsTest, isSplatValue_Select_ScalarCond) {
+  parseAssembly("define <2 x i8> @test(i1 %c, <2 x i8> %y, <2 x i8> %z) {\n"
+                "  %v1 = shufflevector <2 x i8> %y, <2 x i8> undef, <2 x i32> "
+                "<i32 0, i32 0>\n"
+                "  %v2 = shufflevector <2 x i8> %z, <2 x i8> undef, <2 x i32> "
+                "<i32 1, i32 1>\n"
+                "  %A = select i1 %c, <2 x i8> %v1, <2 x i8> %v2\n"
+                "  ret <2 x i8> %A\n"
+                "}\n");
+  EXPECT_TRUE(isSplatValue(A));
+  // Preserve the existing conservative Index handling for shuffles.
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Select_ScalarCond_Index0) {
+  parseAssembly("define <2 x i8> @test(i1 %c, <2 x i8> %y, <2 x i8> %z) {\n"
+                "  %v1 = shufflevector <2 x i8> %y, <2 x i8> undef, <2 x i32> "
+                "<i32 0, i32 0>\n"
+                "  %v2 = shufflevector <2 x i8> %z, <2 x i8> undef, <2 x i32> "
+                "<i32 0, i32 0>\n"
+                "  %A = select i1 %c, <2 x i8> %v1, <2 x i8> %v2\n"
+                "  ret <2 x i8> %A\n"
+                "}\n");
+  EXPECT_TRUE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Select_ScalarCond_ConstantOps) {
+  parseAssembly("define <2 x i1> @test(i1 %c) {\n"
+                "  %A = select i1 %c, <2 x i1> splat (i1 true), <2 x i1> "
+                "zeroinitializer\n"
+                "  ret <2 x i1> %A\n"
+                "}\n");
+  EXPECT_TRUE(isSplatValue(A));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Select_ScalarCond_NotOp1) {
+  parseAssembly("define <2 x i8> @test(i1 %c, <2 x i8> %y, <2 x i8> %z) {\n"
+                "  %v2 = shufflevector <2 x i8> %z, <2 x i8> undef, <2 x i32> "
+                "<i32 1, i32 1>\n"
+                "  %A = select i1 %c, <2 x i8> %y, <2 x i8> %v2\n"
+                "  ret <2 x i8> %A\n"
+                "}\n");
+  EXPECT_FALSE(isSplatValue(A));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Select_ScalarCond_NotOp2) {
+  parseAssembly("define <2 x i8> @test(i1 %c, <2 x i8> %y, <2 x i8> %z) {\n"
+                "  %v1 = shufflevector <2 x i8> %y, <2 x i8> undef, <2 x i32> "
+                "<i32 0, i32 0>\n"
+                "  %A = select i1 %c, <2 x i8> %v1, <2 x i8> %z\n"
+                "  ret <2 x i8> %A\n"
+                "}\n");
+  EXPECT_FALSE(isSplatValue(A));
+}
+
 TEST_F(VectorUtilsTest, isSplatValue_SelectBinop) {
   parseAssembly(
       "define <2 x i8> @test(<2 x i1> %x, <2 x i8> %y, <2 x i8> %z) {\n"

@@ -16,20 +16,6 @@
 ---
 name:            foo
 alignment:       16
-registers:
-  - { id: 1, class: tile }
-  - { id: 2, class: tile }
-  - { id: 3, class: tile }
-  - { id: 4, class: tile }
-  - { id: 12, class: gr32 }
-  - { id: 13, class: gr32 }
-  - { id: 16, class: gr8 }
-  - { id: 17, class: gr16 }
-  - { id: 18, class: gr16 }
-  - { id: 19, class: gr64_nosp }
-  - { id: 22, class: gr32 }
-  - { id: 23, class: gr16 }
-  - { id: 24, class: gr16 }
 liveins:
   - { reg: '$edi', virtual-reg: '%12' }
 frameInfo:
@@ -77,9 +63,9 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr16 = PHI %c0, %bb.0, %24, %bb.3
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gr16 = PHI %r0, %bb.0, %23, %bb.3
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gr64_nosp = PHI [[LEA64r]], %bb.0, %22, %bb.3
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr16 = PHI %c0, %bb.0, %22, %bb.3
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gr16 = PHI %r0, %bb.0, %21, %bb.3
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gr64_nosp = PHI [[LEA64r]], %bb.0, %20, %bb.3
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[MOV64ri2:%[0-9]+]]:gr64_nosp = MOV64ri 64
   ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, [[MOV64ri2]], 0, $noreg

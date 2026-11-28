@@ -378,8 +378,8 @@ mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      ordering, cir::SyncScopeKind::System, false, /* is volatile */
-      true);                                       /* fetch first */
+      ordering, cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false, /*fetch_first=*/true);
   return rmwi->getResult(0);
 }
 
@@ -439,7 +439,8 @@ static RValue emitAtomicXchg(CIRGenFunction &cgf, const CallExpr *e,
 
   auto xchg = cir::AtomicXchgOp::create(
       builder, cgf.getLoc(e->getSourceRange()), destValue, val, ordering,
-      cir::SyncScopeKind::System, /*is_volatile=*/false);
+      cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false);
   return RValue::get(xchg.getResult());
 }
 
@@ -470,7 +471,8 @@ static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
         cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
   };
 
-  cgf.emitAtomicExprWithMemOrder(expr->getArg(0), /*isStore*/ false,
+  CIRGenFunction::EmittedOrderOrScope order(cgf, expr->getArg(0));
+  cgf.emitAtomicExprWithMemOrder(order, /*isStore*/ false,
                                  /*isLoad*/ false, /*isFence*/ true,
                                  emitAtomicOpCallBackFn);
 }
@@ -1979,22 +1981,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value cmpResult;
     switch (builtinID) {
     case Builtin::BI__builtin_isgreater:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::gt, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::ogt, lhs, rhs);
       break;
     case Builtin::BI__builtin_isgreaterequal:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::ge, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::oge, lhs, rhs);
       break;
     case Builtin::BI__builtin_isless:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::lt, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::olt, lhs, rhs);
       break;
     case Builtin::BI__builtin_islessequal:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::le, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::ole, lhs, rhs);
       break;
     case Builtin::BI__builtin_islessgreater:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::one, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::one, lhs, rhs);
       break;
     case Builtin::BI__builtin_isunordered:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::uno, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::uno, lhs, rhs);
       break;
     default:
       llvm_unreachable("Unknown ordered comparison");

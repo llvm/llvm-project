@@ -90,15 +90,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: vr128, preferred-register: '' }
-  - { id: 1, class: vr128, preferred-register: '' }
-  - { id: 2, class: vr128, preferred-register: '' }
-  - { id: 3, class: vr128, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: gr64, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

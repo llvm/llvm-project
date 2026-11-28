@@ -7,7 +7,6 @@
 
 ---
 name:            split_critical_edge_subranges
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: split_critical_edge_subranges
   ; CHECK: bb.0:
@@ -75,7 +74,6 @@ body:             |
 
 ---
 name: split_critical_edge_nonoverlapping_subrange
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: split_critical_edge_nonoverlapping_subrange
   ; CHECK: bb.0:

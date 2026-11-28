@@ -56,14 +56,12 @@ public:
   public:
     typedef poisson_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(double __mean = 1.0);
+    explicit param_type(double __mean = 1.0);
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double mean() const { return __mean_; }
+    [[__nodiscard__]] double mean() const { return __mean_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
-      return __x.__mean_ == __y.__mean_;
-    }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator==(const param_type& __x, const param_type& __y) { return __x.__mean_ == __y.__mean_; }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
 
     friend class poisson_distribution;
   };
@@ -74,37 +72,35 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI poisson_distribution() : poisson_distribution(1.0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit poisson_distribution(double __mean) : __p_(__mean) {}
+  poisson_distribution() : poisson_distribution(1.0) {}
+  explicit poisson_distribution(double __mean) : __p_(__mean) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit poisson_distribution(double __mean = 1.0) : __p_(__mean) {}
+  explicit poisson_distribution(double __mean = 1.0) : __p_(__mean) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit poisson_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit poisson_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double mean() const { return __p_.mean(); }
+  [[__nodiscard__]] double mean() const { return __p_.mean(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::max(); }
+  [[__nodiscard__]] result_type min() const { return 0; }
+  [[__nodiscard__]] result_type max() const { return numeric_limits<result_type>::max(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const poisson_distribution& __x, const poisson_distribution& __y) {
+  friend bool operator==(const poisson_distribution& __x, const poisson_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const poisson_distribution& __x, const poisson_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const poisson_distribution& __x, const poisson_distribution& __y) { return !(__x == __y); }
 };
 
 template <class _IntType>
@@ -216,7 +212,7 @@ _IntType poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_t
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const poisson_distribution<_IntType>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -225,8 +221,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const poisson_distribution<_Int
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, poisson_distribution<_IntType>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, poisson_distribution<_IntType>& __x) {
   typedef poisson_distribution<_IntType> _Eng;
   typedef typename _Eng::param_type param_type;
   __save_flags<_CharT, _Traits> __lx(__is);

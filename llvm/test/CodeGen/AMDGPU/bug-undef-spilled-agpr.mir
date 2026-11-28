@@ -3,7 +3,6 @@
 
 ---
 name:            widget
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

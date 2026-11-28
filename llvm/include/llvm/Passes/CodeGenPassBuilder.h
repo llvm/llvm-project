@@ -371,11 +371,9 @@ protected:
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized);
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting. addRegAssignAndRewriteOptimized should return true if any
-  /// passes were added.
+  /// and rewriting.
   virtual Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW);
-  virtual Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW);
+  virtual Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW);
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.

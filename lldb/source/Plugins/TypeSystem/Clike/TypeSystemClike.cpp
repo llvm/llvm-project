@@ -359,15 +359,11 @@ llvm::Expected<CompilerType> TypeSystemClike::GetDereferencedType(
   return CompilerType();
 }
 
-llvm::Expected<CompilerType> TypeSystemClike::GetChildCompilerTypeAtIndex(
+llvm::Expected<ChildTypeInfo> TypeSystemClike::GetChildAtIndex(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
-    bool ignore_array_bounds, std::string &child_name,
-    uint32_t &child_byte_size, int32_t &child_byte_offset,
-    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, bool &child_is_deref_of_parent,
-    ValueObject *valobj, uint64_t &language_flags) {
-  return CompilerType();
+    bool ignore_array_bounds, ValueObject *valobj) {
+  return ChildTypeInfo();
 }
 
 llvm::Expected<uint32_t>

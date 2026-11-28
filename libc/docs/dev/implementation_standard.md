@@ -62,7 +62,9 @@ LLVM_LIBC_FUNCTION(int, isalpha, (int c)) {
 
 Notice the use of the macro `LLVM_LIBC_FUNCTION`. This macro helps us define
 a C alias symbol for the C++ implementation. For example, for a library build,
-the macro is defined as follows:
+the macro expands to roughly the following. The full definition, including the
+optional fourth argument that names the C alias, is in
+`src/__support/common.h`.
 
 ```
 #define LLVM_LIBC_FUNCTION(type, name, arglist)

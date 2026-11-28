@@ -137,6 +137,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Description
    * - ``SPV_EXT_arithmetic_fence``
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
    * - ``SPV_EXT_long_vector``
@@ -161,8 +163,6 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
-   * - ``SPV_INTEL_bfloat16_arithmetic``
-     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -242,6 +242,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the quad vote instruction for HLSL `QuadAll` and the
        `QuadDerivativesKHR` and `RequireFullQuadsKHR` execution modes.
        These features also require `SPV_KHR_maximal_reconvergence`.
+       Without `SPV_KHR_quad_control`, `QuadAll` uses quad-read emulation.
+       This path requires SPIR-V 1.3 but not maximal reconvergence.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
@@ -397,6 +399,30 @@ This will be lowered to:
 
 See [Target Extension Types for Inline SPIR-V and Decorated Types] for further details.
 
+### Dynamic Workgroup Memory
+
+SPIR-V objects can use the `Workgroup` storage class to be visible to all invocations
+within a workgroup (see [SPIR-V specification, section 3.2.6](https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Storage_Class)).
+The equivalent address space in LLVM IR is `addrspace(3)`.
+Use of this address space is closely tied to the target runtime because dynamically
+sized objects require an API to specify their size. For example:
+
+`@buf = external addrspace(3) global [0 x i32], align 4`
+
+Not all runtimes support the same APIs for this purpose. OpenCL and Level Zero
+runtimes only allow the size of such objects to be specified through kernel
+arguments in the `Workgroup` storage class. For this reason, the SPIR-V backend
+implements an additional pass that lowers unsized external arrays to an
+OpenCL-compatible trailing `ptr addrspace(3)` argument on every kernel in the
+lowered module, including kernels that do not use dynamic local memory.
+When a module containing such an object is lowered, all operations on the array
+are translated into indirect reads
+and writes through a global slot containing a pointer to a `Workgroup` memory area.
+Whenever a kernel from the module is run, the global slot is initialized with the
+value passed through the trailing kernel argument. Runtimes can detect whether
+the pass was used by checking the module for the
+`__spirv_dynamic_local_memory_present` global variable.
+
 (spirv-intrinsics)=
 
 ### Target Intrinsics
@@ -550,6 +576,18 @@ SPIR-V backend, along with their descriptions and argument details.
        If `arraySize > 1`, then the binding represents an array of resources
        of the given size, and the handle for the resource at the given index is returned.
        If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_resource_handlefrombinding_mdname`
+     - Resource type
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, metadata name]`
+     - Backend form of `int_spv_resource_handlefrombinding`, produced by resource
+       name lowering. The name is a metadata string
+       literal as to not emit a real spirv constant.
+   * - `int_spv_resource_handlefromimplicitbinding_mdname`
+     - Resource type
+     - `[32-bit Integer orderId, 32-bit Integer space, 32-bit Integer arraySize, 32-bit Integer index, metadata name]`
+     - Backend form of `int_spv_resource_handlefromimplicitbinding`, produced by
+       name lowering. The name is a metadata string
+       literal as to not emit a real spirv constant.
    * - `int_spv_typeBufferLoad`
      - Scalar or vector
      - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`

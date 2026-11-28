@@ -2911,7 +2911,8 @@ private:
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
             replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
-        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
+        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert &&
+                   BeforeRBrace->isNot(TT_TrailingCommaVaOptRParen)) {
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }

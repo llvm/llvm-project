@@ -297,14 +297,14 @@ define i64 @return64_arg2(i64 %x, i64 %y, i64 %z) {
 ; AVR-NEXT:    push r29
 ; AVR-NEXT:    in r28, 61
 ; AVR-NEXT:    in r29, 62
-; AVR-NEXT:    ldd r18, Y+5
-; AVR-NEXT:    ldd r19, Y+6
-; AVR-NEXT:    ldd r20, Y+7
-; AVR-NEXT:    ldd r21, Y+8
-; AVR-NEXT:    ldd r22, Y+9
-; AVR-NEXT:    ldd r23, Y+10
-; AVR-NEXT:    ldd r24, Y+11
-; AVR-NEXT:    ldd r25, Y+12
+; AVR-NEXT:    ldd r18, Y+6
+; AVR-NEXT:    ldd r19, Y+7
+; AVR-NEXT:    ldd r20, Y+8
+; AVR-NEXT:    ldd r21, Y+9
+; AVR-NEXT:    ldd r22, Y+10
+; AVR-NEXT:    ldd r23, Y+11
+; AVR-NEXT:    ldd r24, Y+12
+; AVR-NEXT:    ldd r25, Y+13
 ; AVR-NEXT:    pop r29
 ; AVR-NEXT:    pop r28
 ; AVR-NEXT:    ret
@@ -390,10 +390,10 @@ define i32 @return64_trunc(i32 %a, i32 %b, i32 %c, i64 %d) {
 ; AVR-NEXT:    push r29
 ; AVR-NEXT:    in r28, 61
 ; AVR-NEXT:    in r29, 62
-; AVR-NEXT:    ldd r22, Y+5
-; AVR-NEXT:    ldd r23, Y+6
-; AVR-NEXT:    ldd r24, Y+7
-; AVR-NEXT:    ldd r25, Y+8
+; AVR-NEXT:    ldd r22, Y+6
+; AVR-NEXT:    ldd r23, Y+7
+; AVR-NEXT:    ldd r24, Y+8
+; AVR-NEXT:    ldd r25, Y+9
 ; AVR-NEXT:    pop r29
 ; AVR-NEXT:    pop r28
 ; AVR-NEXT:    ret

@@ -14,6 +14,9 @@ llvm_tablegen(HexagonGenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(HexagonGenSDNodeInfo.inc -gen-sd-node-info)
 llvm_tablegen(HexagonGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS HexagonOptions.td)
+llvm_tablegen(HexagonOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(HexagonCommonTableGen)
 
 add_llvm_target(HexagonCodeGen
@@ -59,6 +62,7 @@ add_llvm_target(HexagonCodeGen
   HexagonMachineScheduler.cpp
   HexagonMask.cpp
   HexagonMCInstLower.cpp
+  HexagonMergeActivateWeight.cpp
   HexagonNewValueJump.cpp
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
@@ -98,6 +102,7 @@ add_llvm_target(HexagonCodeGen
   IPO
   MC
   MIRParser
+  Option
   Scalar
   SelectionDAG
   Support

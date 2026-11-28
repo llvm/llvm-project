@@ -12203,7 +12203,6 @@ namespace {
 class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineFunction *MF;
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   MachineRegisterInfo &MRI;
 
   /// The block of the loop
@@ -12233,8 +12232,7 @@ public:
                            Register Init, bool IsUpdatePriorComp,
                            const SmallVectorImpl<MachineOperand> &Cond)
       : MF(Comp->getParent()->getParent()),
-        TII(MF->getSubtarget().getInstrInfo()),
-        TRI(MF->getSubtarget().getRegisterInfo()), MRI(MF->getRegInfo()),
+        TII(MF->getSubtarget().getInstrInfo()), MRI(MF->getRegInfo()),
         LoopBB(LoopBB), CondBranch(CondBranch), Comp(Comp),
         CompCounterOprNum(CompCounterOprNum), Update(Update),
         UpdateCounterOprNum(UpdateCounterOprNum), Init(Init),

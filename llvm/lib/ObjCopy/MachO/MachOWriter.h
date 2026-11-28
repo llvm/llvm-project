@@ -25,7 +25,6 @@ class MachOWriter {
   Object &O;
   bool Is64Bit;
   bool IsLittleEndian;
-  uint64_t PageSize;
   std::unique_ptr<WritableMemoryBuffer> Buf;
   raw_ostream &Out;
   MachOLayoutBuilder LayoutBuilder;
@@ -33,7 +32,6 @@ class MachOWriter {
   size_t headerSize() const;
   size_t loadCommandsSize() const;
   size_t symTableSize() const;
-  size_t strTableSize() const;
 
   void writeHeader();
   void writeLoadCommands();
@@ -61,8 +59,7 @@ class MachOWriter {
 public:
   MachOWriter(Object &O, bool Is64Bit, bool IsLittleEndian,
               StringRef OutputFileName, uint64_t PageSize, raw_ostream &Out)
-      : O(O), Is64Bit(Is64Bit), IsLittleEndian(IsLittleEndian),
-        PageSize(PageSize), Out(Out),
+      : O(O), Is64Bit(Is64Bit), IsLittleEndian(IsLittleEndian), Out(Out),
         LayoutBuilder(O, Is64Bit, OutputFileName, PageSize) {}
 
   size_t totalSize() const;

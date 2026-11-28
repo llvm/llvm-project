@@ -230,6 +230,9 @@ bool isCompound(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isConstExtended(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCVINew(MCInstrInfo const &MCII, MCInst const &MCI);
 
+bool isHVXALU2SRC(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isHVXVS3SRC(MCInstrInfo const &MCII, MCInst const &MCI);
+
 // Is this double register suitable for use in a duplex subinst
 bool isDblRegForSubInst(MCRegister Reg);
 

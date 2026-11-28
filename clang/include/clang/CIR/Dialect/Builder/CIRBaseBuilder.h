@@ -115,6 +115,8 @@ public:
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
+    if (cir::isAnyOpaqueFloatingPointType(ty))
+      return cir::ZeroAttr::get(ty);
     if (auto complexType = mlir::dyn_cast<cir::ComplexType>(ty))
       return cir::ZeroAttr::get(complexType);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
@@ -957,28 +959,31 @@ public:
     return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
+  cir::FCmpOp createFCompare(mlir::Location loc, cir::FCmpOpKind kind,
+                             mlir::Value lhs, mlir::Value rhs,
+                             bool signaling = false) {
+    cir::FenvAttr fenv;
+    fenv = getConstrainedFPAttr();
+    return cir::FCmpOp::create(*this, loc, kind, lhs, rhs, signaling, fenv);
+  }
+
   /// Compares \p lhs and \p rhs element-wise.  Each result element is a
-  /// signed integer of the operand element's bit width.  That is not the
-  /// result an FP80 element needs, so an FP80 compare names its result type
-  /// with the overload below.
+  /// signed integer of the operand element's bit width.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
                                  mlir::Value lhs, mlir::Value rhs) {
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
     mlir::Type elemTy = vecCast.getElementType();
-    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
-             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
-                 &llvm::APFloat::x87DoubleExtended()) &&
-           "an FP80 vector compare must name its result type");
     IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
-    return createVecCompare(loc,
-                            cir::VectorType::get(integralTy, vecCast.getSize()),
-                            kind, lhs, rhs);
+    return createVecCompare(
+        loc,
+        cir::VectorType::get(integralTy, vecCast.getSize(), vecCast.getKind()),
+        kind, lhs, rhs);
   }
 
   /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
   /// must be a vector of integers or bools with as many elements as \p lhs.
   /// The result element width can then differ from the operand element's
-  /// bit width, as for FP80, whose result elements are 128 bits.
+  /// bit width.
   cir::VecCmpOp createVecCompare(mlir::Location loc, VectorType resultTy,
                                  cir::CmpOpKind kind, mlir::Value lhs,
                                  mlir::Value rhs) {
@@ -987,10 +992,7 @@ public:
            cir::isIntOrBoolType(resultTy.getElementType()) &&
            "vector compare result must be an int or bool vector of the "
            "operand length");
-    cir::FenvAttr fenv;
-    if (cir::isFPOrVectorOfFPType(lhs.getType()))
-      fenv = getConstrainedFPAttr();
-    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
+    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs);
   }
 
   /// Compares \p lhs and \p rhs element-wise.  Each result element is a
@@ -1007,7 +1009,8 @@ public:
                  &llvm::APFloat::x87DoubleExtended()) &&
            "an FP80 vector compare must name its result type");
     IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
-    auto resTy = cir::VectorType::get(integralTy, vecCast.getSize());
+    auto resTy =
+        cir::VectorType::get(integralTy, vecCast.getSize(), vecCast.getKind());
     return cir::VecFCmpOp::create(*this, loc, resTy, kind, lhs, rhs, signaling,
                                   getConstrainedFPAttr());
   }
@@ -1029,7 +1032,7 @@ public:
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
-    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+    return createFCompare(loc, cir::FCmpOpKind::uno, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

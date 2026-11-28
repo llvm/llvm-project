@@ -215,4 +215,5 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.clock_getres
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.time.linux.cpu_clock
 )

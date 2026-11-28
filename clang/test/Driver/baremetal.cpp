@@ -185,6 +185,12 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -rtlib=none %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-NONE
+// CHECK-RTLIB-NONE: {{ld(.exe)?"}}
+// CHECK-RTLIB-NONE-NOT: libclang_rt
+// CHECK-RTLIB-NONE-NOT: -lgcc
+
 // RUN: %clang --sysroot= -### --target=arm-none-eabi -rtlib=compiler-rt \
 // RUN:   -fprofile-instr-generate %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE

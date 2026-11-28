@@ -21,7 +21,7 @@ define void @memset_len_overflow() {
 
 ; COPY: Entering function: main
 ; COPY: Entering function: memcpy_len_overflow
-; COPY: Immediate UB detected: Memory transfer intrinsic length overflows uint64_t.
+; COPY: Immediate UB detected: memcpy called with length overflows uint64_t.
 ; COPY: error: Execution of function 'main' failed.
 
 ; SET: Entering function: main

@@ -140,11 +140,11 @@ private:
   using LCDeclInfo = std::pair<unsigned, VarDecl *>;
   using LoopControlVariablesMapTy =
       llvm::SmallDenseMap<const ValueDecl *, LCDeclInfo, 8>;
-  /// Struct that associates a component with the clause kind where they are
-  /// found.
+  /// Struct that associates component lists with the clause kinds where they
+  /// are found.
   struct MappedExprComponentTy {
     OMPClauseMappableExprCommon::MappableExprComponentLists Components;
-    OpenMPClauseKind Kind = OMPC_unknown;
+    SmallVector<OpenMPClauseKind, 8> Kinds;
   };
   using MappedExprComponentsTy =
       llvm::DenseMap<const ValueDecl *, MappedExprComponentTy>;
@@ -1083,9 +1083,9 @@ public:
     for (; SI != SE; ++SI) {
       auto MI = SI->MappedExprComponents.find(VD);
       if (MI != SI->MappedExprComponents.end())
-        for (OMPClauseMappableExprCommon::MappableExprComponentListRef L :
-             MI->second.Components)
-          if (Check(L, MI->second.Kind))
+        for (auto [L, K] :
+             llvm::zip_equal(MI->second.Components, MI->second.Kinds))
+          if (Check(L, K))
             return true;
     }
     return false;
@@ -1105,9 +1105,9 @@ public:
     const SharingMapTy &StackElem = getStackElemAtLevel(Level);
     auto MI = StackElem.MappedExprComponents.find(VD);
     if (MI != StackElem.MappedExprComponents.end())
-      for (OMPClauseMappableExprCommon::MappableExprComponentListRef L :
-           MI->second.Components)
-        if (Check(L, MI->second.Kind))
+      for (auto [L, K] :
+           llvm::zip_equal(MI->second.Components, MI->second.Kinds))
+        if (Check(L, K))
           return true;
     return false;
   }
@@ -1122,7 +1122,7 @@ public:
     // Create new entry and append the new components there.
     MEC.Components.resize(MEC.Components.size() + 1);
     MEC.Components.back().append(Components.begin(), Components.end());
-    MEC.Kind = WhereFoundClauseKind;
+    MEC.Kinds.push_back(WhereFoundClauseKind);
   }
 
   unsigned getNestingLevel() const {
@@ -3767,6 +3767,9 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPAllocateDirective(
     Vars.push_back(RefExpr);
     applyOMPAllocateAttribute(SemaRef, VD, AllocatorKind, Allocator, Alignment,
                               DE->getSourceRange());
+    // A jump over the allocation must be diagnosed, as for cleanup variables.
+    if (VD->hasLocalStorage())
+      SemaRef.setFunctionHasBranchProtectedScope();
   }
   if (Vars.empty())
     return nullptr;
@@ -11433,10 +11436,11 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     PrevEUB =
         SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue=*/false);
 
-    // Build IV <= PrevUB or IV < PrevUB + 1 for unsigned IV to be used in
-    // parallel for is in combination with a distribute directive with
-    // schedule(static, 1)
-    Expr *BoundPrevUB = PrevUB.get();
+    // Build IV <= PrevUB (or IV < PrevUB + 1 for unsigned IV) for a parallel
+    // for combined with a distribute directive with schedule(static, 1). Use
+    // PrevUB converted to the loop upper-bound type to avoid widening IV or
+    // changing its signedness in the comparison.
+    Expr *BoundPrevUB = NewPrevUB.get();
     if (UseStrictCompare) {
       BoundPrevUB =
           SemaRef
@@ -24018,7 +24022,6 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
 
   SmallVector<Expr *, 8> Vars;
   DSAStackTy::OperatorOffsetTy OpsOffs;
-  llvm::APSInt DepCounter(/*BitWidth=*/32);
   llvm::APSInt TotalDepCount(/*BitWidth=*/32);
 
   if (const Expr *OrderedCountExpr =
@@ -24026,6 +24029,8 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     TotalDepCount = OrderedCountExpr->EvaluateKnownConstInt(SemaRef.Context);
     TotalDepCount.setIsUnsigned(/*Val=*/true);
   }
+  llvm::APSInt DepCounter(TotalDepCount.getBitWidth(),
+                          TotalDepCount.isUnsigned());
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP doacross clause.");
@@ -24507,6 +24512,45 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   return ConstLength.getSExtValue() != 1;
 }
 
+/// Return true if it can be proven that the provided array section refers to
+/// the whole dimension of the array whose base type is \a BaseQTy.
+static bool checkArrayExpressionRefersToWholeSize(Sema &SemaRef,
+                                                  const ArraySectionExpr *OASE,
+                                                  QualType BaseQTy) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  auto EvaluatesTo = [&Ctx](const Expr *E, const llvm::APSInt &Value) {
+    Expr::EvalResult Result;
+    return !E->isValueDependent() && E->EvaluateAsInt(Result, Ctx) &&
+           llvm::APSInt::isSameValue(Result.Val.getInt(), Value);
+  };
+
+  if (OASE->getColonLocFirst().isInvalid()) {
+    const auto *CATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr());
+    return CATy && CATy->getSize().isOne();
+  }
+
+  const Expr *Stride = OASE->getStride();
+  if (Stride && !EvaluatesTo(Stride, llvm::APSInt::get(1)))
+    return false;
+  const Expr *LowerBound = OASE->getLowerBound();
+  if (LowerBound && !EvaluatesTo(LowerBound, llvm::APSInt::get(0)))
+    return false;
+
+  if (!BaseQTy->isConstantArrayType() && !BaseQTy->isVariableArrayType())
+    return false;
+
+  // Without a length the section covers the rest of the dimension.
+  const Expr *Length = OASE->getLength();
+  if (!Length)
+    return true;
+
+  // The size expression of a variable length array may have changed since the
+  // declaration, so only a constant size can be compared with the length.
+  const auto *CATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr());
+  return CATy && EvaluatesTo(Length, llvm::APSInt(CATy->getSize(),
+                                                  /*isUnsigned=*/true));
+}
+
 // The base of elements of list in a map clause have to be either:
 //  - a reference to variable or field.
 //  - a member expression.
@@ -24804,14 +24848,21 @@ public:
       // If this array section refers to the whole dimension we can still
       // accept other array sections before this one, except if the base is a
       // pointer. Otherwise, only unitary sections are accepted.
-      if (NotWhole || IsPointer)
+      //
+      // 'target update' transfers non-contiguous sections, so a section that
+      // is not provably whole (e.g. of a variable length array) is treated as
+      // partial there: a descriptor is correct either way, whole rows are not.
+      if (NotWhole || IsPointer ||
+          (DKind == OMPD_target_update && SemaRef.getLangOpts().OpenMP >= 50 &&
+           !checkArrayExpressionRefersToWholeSize(SemaRef, OASE, CurType)))
         AllowWholeSizeArraySection = false;
     } else if (DKind == OMPD_target_update &&
                SemaRef.getLangOpts().OpenMP >= 50) {
       if (IsPointer && !AllowAnotherPtr)
         SemaRef.Diag(ELoc, diag::err_omp_section_length_undefined)
             << /*array of unknown bound */ 1;
-      else
+      // A single element (no colon) keeps the storage contiguous.
+      else if (OASE->getColonLocFirst().isValid())
         IsNonContiguous = true;
     } else if (AllowUnitySizeArraySection && NotUnity) {
       // A unity or whole array section is not allowed and that is not
@@ -24858,10 +24909,25 @@ public:
   bool VisitOMPArrayShapingExpr(OMPArrayShapingExpr *E) {
     Expr *Base = E->getBase();
 
+    // OpenMP 5.0 [2.1.4, Array Shaping, Restrictions]: the shape-operator may
+    // appear only in clauses that explicitly allow it. As the base of array
+    // sections only the motion clauses do (OpenMP 5.0 [2.12.6]).
+    if (!Components.empty() && CKind != OMPC_to && CKind != OMPC_from) {
+      if (!NoDiagnose)
+        SemaRef.Diag(E->getBeginLoc(), diag::err_omp_array_shaping_use);
+      return false;
+    }
+
+    // The shaped 'this' pointer is the base of the list item.
+    if (const auto *TE = dyn_cast<CXXThisExpr>(Base->IgnoreParenCasts())) {
+      assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
+      RelevantExpr = TE;
+    }
+
     // Record the component - we don't have any declaration associated.
     Components.emplace_back(E, nullptr, IsNonContiguous);
 
-    return Visit(Base->IgnoreParenImpCasts());
+    return RelevantExpr || Visit(Base->IgnoreParenImpCasts());
   }
 
   bool VisitUnaryOperator(UnaryOperator *UO) {
@@ -24945,17 +25011,20 @@ static const Expr *checkMapClauseExpressionBase(
     // Check if the highest dimension array section has length specified
     if (SemaRef.getLangOpts().OpenMP >= 50 && !CurComponents.empty() &&
         (CKind == OMPC_to || CKind == OMPC_from)) {
-      auto CI = CurComponents.rbegin();
-      auto CE = CurComponents.rend();
-      for (; CI != CE; ++CI) {
-        const auto *OASE =
-            dyn_cast<ArraySectionExpr>(CI->getAssociatedExpression());
-        if (!OASE)
-          continue;
-        if (OASE && OASE->getLength())
-          break;
-        SemaRef.Diag(ELoc, diag::err_array_section_does_not_specify_length)
-            << ERange;
+      // The outermost dimension is the last array expression of the leading
+      // run; a subscript in the base (e.g. 'pp[3]') is not a dimension.
+      auto It = llvm::find_if_not(
+          CurComponents,
+          [](const OMPClauseMappableExprCommon::MappableComponent &C) {
+            return isa<ArraySectionExpr, ArraySubscriptExpr>(
+                C.getAssociatedExpression());
+          });
+      if (It != CurComponents.begin()) {
+        const auto *OASE = dyn_cast<ArraySectionExpr>(
+            std::prev(It)->getAssociatedExpression());
+        if (OASE && OASE->getColonLocFirst().isValid() && !OASE->getLength())
+          SemaRef.Diag(ELoc, diag::err_array_section_does_not_specify_length)
+              << ERange;
       }
     }
     return Checker.getFoundBase();
@@ -25017,7 +25086,8 @@ static bool checkMapConflicts(
           // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.3]
           //  At most one list item can be an array item derived from a given
           //  variable in map clauses of the same construct.
-          if (CurrentRegionOnly &&
+          // Dropped in OpenMP 5.0.
+          if (CurrentRegionOnly && SemaRef.LangOpts.OpenMP < 50 &&
               (isa<ArraySubscriptExpr>(CI->getAssociatedExpression()) ||
                isa<ArraySectionExpr>(CI->getAssociatedExpression()) ||
                isa<OMPArrayShapingExpr>(CI->getAssociatedExpression())) &&
@@ -25054,9 +25124,6 @@ static bool checkMapConflicts(
                          SI->getAssociatedExpression())) {
             const Expr *E = OASE->getBase()->IgnoreParenImpCasts();
             Type = ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
-          } else if (const auto *OASE = dyn_cast<OMPArrayShapingExpr>(
-                         SI->getAssociatedExpression())) {
-            Type = OASE->getBase()->getType()->getPointeeType();
           }
           if (Type.isNull() || Type->isAnyPointerType() ||
               checkArrayExpressionDoesNotReferToWholeSize(
@@ -25089,15 +25156,20 @@ static bool checkMapConflicts(
           return false;
         }
 
-        QualType DerivedType =
-            std::prev(CI)->getAssociatedDeclaration()->getType();
+        // The last matching component has no declaration when both
+        // expressions section the same array (OpenMP 5.0 motion clauses).
+        QualType DerivedType;
+        if (const ValueDecl *DerivedDecl =
+                std::prev(CI)->getAssociatedDeclaration())
+          DerivedType = DerivedDecl->getType();
         SourceLocation DerivedLoc =
             std::prev(CI)->getAssociatedExpression()->getExprLoc();
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
         //  If the type of a list item is a reference to a type T then the type
         //  will be considered to be T for all purposes of this clause.
-        DerivedType = DerivedType.getNonReferenceType();
+        if (!DerivedType.isNull())
+          DerivedType = DerivedType.getNonReferenceType();
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.1]
         //  A variable for which the type is pointer and an array section
@@ -25110,7 +25182,7 @@ static bool checkMapConflicts(
         //  storage in the device data environment, all of the original storage
         //  must have corresponding storage in the device data environment.
         //
-        if (DerivedType->isAnyPointerType()) {
+        if (!DerivedType.isNull() && DerivedType->isAnyPointerType()) {
           if (CI == CE || SI == SE) {
             SemaRef.Diag(
                 DerivedLoc,
@@ -25930,7 +26002,7 @@ static void checkMappableExpressionList(
     // Store the components in the stack so that they can be used to check
     // against other clauses later on.
     DSAS->addMappableExpressionComponents(CurDeclaration, CurComponents,
-                                          /*WhereFoundClauseKind=*/OMPC_map);
+                                          /*WhereFoundClauseKind=*/CKind);
 
     // Save the components and declaration to create the clause. For purposes of
     // the clause creation, any component list that has base 'this' uses
@@ -28331,8 +28403,11 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
     SourceLocation ColonLocFirst, SourceLocation ColonLocSecond, Expr *Length,
     Expr *Stride, SourceLocation RBLoc) {
   ASTContext &Context = getASTContext();
+  // OpenMP 5.0 [2.1.4, Array Shaping]: the result of the shape-operator is an
+  // lvalue of n-dimensional array type, so it can be the base of a section.
+  bool IsShapedBase = Base->hasPlaceholderType(BuiltinType::OMPArrayShaping);
   if (Base->hasPlaceholderType() &&
-      !Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+      !Base->hasPlaceholderType(BuiltinType::ArraySection) && !IsShapedBase) {
     ExprResult Result = SemaRef.CheckPlaceholderExpr(Base);
     if (Result.isInvalid())
       return ExprError();
@@ -28501,7 +28576,7 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
     }
   }
 
-  if (!Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+  if (!Base->hasPlaceholderType(BuiltinType::ArraySection) && !IsShapedBase) {
     ExprResult Result = SemaRef.DefaultFunctionArrayLvalueConversion(Base);
     if (Result.isInvalid())
       return ExprError();
@@ -28529,11 +28604,14 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
   // Delay analysis of the types/expressions if instantiation/specialization is
   // required.
   if (!BaseTy->isPointerType() && Base->isTypeDependent())
-    return OMPArrayShapingExpr::Create(Context, Context.DependentTy, Base,
-                                       LParenLoc, RParenLoc, Dims, Brackets);
+    return OMPArrayShapingExpr::Create(Context, Context.DependentTy,
+                                       Context.DependentTy, Base, LParenLoc,
+                                       RParenLoc, Dims, Brackets);
   if (!BaseTy->isPointerType() ||
       (!Base->isTypeDependent() &&
-       BaseTy->getPointeeType()->isIncompleteType()))
+       (BaseTy->getPointeeType()->isIncompleteType() ||
+        BaseTy->getPointeeType()->isSizelessType() ||
+        BaseTy->getPointeeType()->isFunctionType())))
     return ExprError(Diag(Base->getExprLoc(),
                           diag::err_omp_non_pointer_type_array_shaping_base)
                      << Base->getSourceRange());
@@ -28583,8 +28661,36 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
   }
   if (ErrorFound)
     return ExprError();
-  return OMPArrayShapingExpr::Create(Context, Context.OMPArrayShapingTy, Base,
-                                     LParenLoc, RParenLoc, NewDims, Brackets);
+
+  // OpenMP 5.0 [2.1.4, Array Shaping]: the result has n-dimensional array type
+  // s1 x ... x sn of T; build it like the type of a declared array.
+  QualType ShapedTy = BaseTy->getPointeeType();
+  for (size_t I = NewDims.size(); I > 0; --I) {
+    Expr *Dim = NewDims[I - 1];
+    if (Dim->isTypeDependent() || Dim->isValueDependent()) {
+      ShapedTy = Context.getDependentSizedArrayType(
+          ShapedTy, Dim, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+      continue;
+    }
+    std::optional<llvm::APSInt> Size;
+    // An array of variable length arrays is itself a variable length array.
+    if (ShapedTy->isDependentType() || ShapedTy->isConstantSizeType())
+      Size = Dim->getIntegerConstantExpr(Context);
+    if (Size) {
+      if (SemaRef.checkArrayTooLarge(ShapedTy, *Size, Dim->getExprLoc(),
+                                     Brackets[I - 1]))
+        return ExprError();
+      ShapedTy = Context.getConstantArrayType(ShapedTy, *Size, Dim,
+                                              ArraySizeModifier::Normal,
+                                              /*IndexTypeQuals=*/0);
+    } else {
+      ShapedTy = Context.getVariableArrayType(
+          ShapedTy, Dim, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+    }
+  }
+  return OMPArrayShapingExpr::Create(Context, Context.OMPArrayShapingTy,
+                                     ShapedTy, Base, LParenLoc, RParenLoc,
+                                     NewDims, Brackets);
 }
 
 ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,

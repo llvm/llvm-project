@@ -40,6 +40,18 @@ void HexagonMCChecker::init() {
   // Initialize read-only registers set.
   ReadOnly.insert(Hexagon::PC);
   ReadOnly.insert(Hexagon::C9_8);
+  ReadOnly.insert(Hexagon::UPMUCNT0);
+  ReadOnly.insert(Hexagon::UPMUCNT1);
+  ReadOnly.insert(Hexagon::UPMUCNT2);
+  ReadOnly.insert(Hexagon::UPMUCNT3);
+  ReadOnly.insert(Hexagon::UPMUCNT4);
+  ReadOnly.insert(Hexagon::UPMUCNT5);
+  ReadOnly.insert(Hexagon::UPMUCNT6);
+  ReadOnly.insert(Hexagon::UPMUCNT7);
+  ReadOnly.insert(Hexagon::C21_20);
+  ReadOnly.insert(Hexagon::C23_22);
+  ReadOnly.insert(Hexagon::C25_24);
+  ReadOnly.insert(Hexagon::C27_26);
 
   // Figure out the loop-registers definitions.
   if (HexagonMCInstrInfo::isInnerLoop(MCB)) {
@@ -230,10 +242,12 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
+  bool ChkHVXRestrictions = checkHVXRestrictions();
   bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
              chkAXOK && chkCofMax1 && chkHWLoop && chkHMX && chkValidTmpDst &&
-             chkLegalVecRegPair && ChkHVXAccum && ChkHLX64BitRegUse;
+             chkLegalVecRegPair && ChkHVXAccum && ChkHVXRestrictions &&
+             ChkHLX64BitRegUse;
 
   return chk;
 }
@@ -842,6 +856,55 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
     return false;
   }
   return true;
+}
+
+bool HexagonMCChecker::checkHVXRestrictions() {
+  const MCInst *VS3SRC = nullptr;
+  bool PacketHasNonUnaryALU = false;
+  bool PacketHasVP = false;
+  bool PacketHasAnotherVS = false;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!VS3SRC && HexagonMCInstrInfo::isHVXVS3SRC(MCII, I)) {
+      VS3SRC = &I;
+      continue; // Do not count itself as the other VS.
+    }
+    if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+      PacketHasNonUnaryALU = true;
+    if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+      PacketHasVP = true;
+    // V79 allows a shift to execute on the permute resource. If this happens
+    // the same 3SRC restriction must be checked against that shift.
+    if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VS)
+      PacketHasAnotherVS = true;
+  }
+  if (!VS3SRC)
+    return true;
+  bool ret = !PacketHasNonUnaryALU && !PacketHasVP && !PacketHasAnotherVS;
+  if (!ret) {
+    reportError("invalid instruction packet: HVX resource use violation");
+    if (PacketHasNonUnaryALU)
+      reportNote(VS3SRC->getLoc(),
+                 "This instruction cannot be paired with an HVX "
+                 "non-unary instruction");
+    if (PacketHasVP)
+      reportNote(VS3SRC->getLoc(),
+                 "This instruction cannot be paired with an HVX "
+                 "permute instruction");
+    if (PacketHasAnotherVS)
+      reportNote(VS3SRC->getLoc(),
+                 "This instruction cannot be paired with another HVX "
+                 "shift instruction");
+    for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+      if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+        reportNote(I.getLoc(), "HVX non-unary instruction");
+      if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+        reportNote(I.getLoc(), "HVX permute instruction");
+      if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VS &&
+          &I != VS3SRC)
+        reportNote(I.getLoc(), "another HVX shift instruction");
+    }
+  }
+  return ret;
 }
 
 // Vd.tmp can't be accumulated

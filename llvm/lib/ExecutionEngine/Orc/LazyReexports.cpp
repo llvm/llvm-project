@@ -144,6 +144,10 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
     return LocalLazyCallThroughManager::Create<OrcRiscv64>(ES,
                                                            ErrorHandlerAddr);
 
+  case Triple::systemz:
+    return LocalLazyCallThroughManager::Create<OrcSystemZ>(ES,
+                                                           ErrorHandlerAddr);
+
   case Triple::x86_64:
     if (T.getOS() == Triple::OSType::Win32)
       return LocalLazyCallThroughManager::Create<OrcX86_64_Win32>(
@@ -277,9 +281,6 @@ public:
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;

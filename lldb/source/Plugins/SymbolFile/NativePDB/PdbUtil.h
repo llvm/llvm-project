@@ -113,7 +113,7 @@ struct VariableInfo {
   llvm::StringRef name;
   llvm::codeview::TypeIndex type;
   DWARFExpressionList location;
-  bool is_param;
+  bool is_param = false;
 };
 
 llvm::pdb::PDB_SymType CVSymToPDBSym(llvm::codeview::SymbolKind kind);

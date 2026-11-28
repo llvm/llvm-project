@@ -3,7 +3,6 @@
 
 ---
 name: spill_a64_kill
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name: spill_a64_undef_sub1_killed
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -55,7 +53,6 @@ body:             |
 
 ---
 name: spill_a64_undef_sub0_killed
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -80,7 +77,6 @@ body:             |
 
 ---
 name: spill_a32_undef
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -99,7 +95,6 @@ body:             |
 
 ---
 name: spill_a64_undef
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:

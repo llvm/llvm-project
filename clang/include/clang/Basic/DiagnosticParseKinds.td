@@ -1625,11 +1625,6 @@ def err_pragma_pipeline_invalid_keyword : Error<
 // API notes.
 def err_type_unparsed : Error<"unparsed tokens following type">;
 
-// Pragma unroll support.
-def warn_pragma_unroll_cuda_value_in_parens : Warning<
-  "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
-  InGroup<CudaCompat>;
-
 def err_ptrauth_qualifier_bad_arg_count : Error<
   "'__ptrauth' qualifier must take between 1 and 3 arguments">;
 

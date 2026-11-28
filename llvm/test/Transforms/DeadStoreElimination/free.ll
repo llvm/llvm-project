@@ -3,7 +3,7 @@
 
 target datalayout = "e-p:64:64:64"
 
-declare void @free(ptr nocapture) allockind("free")
+declare void @free(ptr allocptr nocapture) allockind("free")
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized")
 
 define void @test(ptr %Q, ptr %P) {

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -90,9 +89,6 @@ void registerFromLLVMIRTranslation() {
             preferUnregisteredIntrinsics, importStructsAsLiterals);
       },
       [](DialectRegistry &registry) {
-        // Register the DLTI dialect used to express the data layout
-        // specification of the imported module.
-        registry.insert<DLTIDialect>();
         // Register all dialects that implement the LLVMImportDialectInterface
         // including the LLVM dialect.
         registerAllFromLLVMIRTranslations(registry);

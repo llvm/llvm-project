@@ -63,8 +63,8 @@ define <2 x i32> @pm4adda_shared(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b, ptr %o
 ; RV32-NEXT:    pm4add.b a3, a3, a5
 ; RV32-NEXT:    pm4add.b a2, a2, a4
 ; RV32-NEXT:    padd.dw a0, a0, a2
-; RV32-NEXT:    sw a2, 0(a6)
 ; RV32-NEXT:    sw a3, 4(a6)
+; RV32-NEXT:    sw a2, 0(a6)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: pm4adda_shared:

@@ -18,9 +18,12 @@ CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp)
 void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
   bigEndian = false;
   bitIntMaxAlignBits = cir::IntType::getBitIntMaxAlignBits({});
+  vectorMaxAlignBits = 0;
   if (spec) {
     bitIntMaxAlignBits = cir::IntType::getBitIntMaxAlignBits(
         spec.getSpecForType(cir::IntType::getTypeID()));
+    vectorMaxAlignBits = cir::VectorType::getMaxAlignBits(
+        spec.getSpecForType(cir::VectorType::getTypeID()));
 
     mlir::StringAttr key = mlir::StringAttr::get(
         spec.getContext(), mlir::DLTIDialect::kDataLayoutEndiannessKey);
@@ -70,6 +73,18 @@ uint64_t CIRDataLayout::getTypeLanguageAlignment(mlir::Type ty) const {
         if (recTy.getPacked())
           return 1;
         return maxMemberAlignment(recTy.getMembers());
+      })
+      .Case([&](cir::VectorType vecTy) -> uint64_t {
+        // An SVE data vector is 16-byte aligned and an SVE predicate is
+        // 2-byte aligned, regardless of its length.
+        if (vecTy.getKind() == cir::VectorAbiKind::SVEData)
+          return 16;
+        if (vecTy.getKind() == cir::VectorAbiKind::SVEPredicate)
+          return 2;
+        uint64_t align = layout.getTypeABIAlignment(vecTy);
+        if (vectorMaxAlignBits)
+          return std::min(align, vectorMaxAlignBits / 8);
+        return align;
       })
       .Case<cir::ArrayType, cir::ComplexType, cir::MatrixType>(
           [&](auto elementsTy) -> uint64_t {

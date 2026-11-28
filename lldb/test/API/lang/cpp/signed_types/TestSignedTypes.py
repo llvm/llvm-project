@@ -17,12 +17,6 @@ class SignedTypesTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Set break point at this line.")
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        archs=["i[3-6]86", "aarch64"],
-        bugnumber="llvm.org/pr24489",
-    )
     def test(self):
         """Test that variables with signed types display correctly."""
         self.build()

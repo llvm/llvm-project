@@ -70,14 +70,6 @@ def R14 : MSP430RegWithSubregs<14, "r14", [R14B]>, DwarfRegNum<[14]>;
 def R15 : MSP430RegWithSubregs<15, "r15", [R15B]>, DwarfRegNum<[15]>;
 }
 
-def GR8 : RegisterClass<"MSP430", [i8], 8,
-   // Volatile registers
-  (add R12B, R13B, R14B, R15B, R11B, R10B, R9B, R8B, R7B, R6B, R5B,
-   // Frame pointer, sometimes allocable
-   R4B,
-   // Volatile, but not allocable
-   PCB, SPB, SRB, CGB)>;
-
 def GR16 : RegisterClass<"MSP430", [i16], 16,
    // Volatile registers
   (add R12, R13, R14, R15, R11, R10, R9, R8, R7, R6, R5,
@@ -85,3 +77,13 @@ def GR16 : RegisterClass<"MSP430", [i16], 16,
    R4,
    // Volatile, but not allocable
    PC, SP, SR, CG)>;
+
+def GR8 : RegisterClass<"MSP430", [i8], 8,
+   // Volatile registers
+  (add R12B, R13B, R14B, R15B, R11B, R10B, R9B, R8B, R7B, R6B, R5B,
+   // Frame pointer, sometimes allocable
+   R4B,
+   // Volatile, but not allocable
+   PCB, SPB, SRB, CGB)> {
+  let CoerceFromRegClass = GR16;
+}

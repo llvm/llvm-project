@@ -185,6 +185,32 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+// ld-prime's names for arm64e subtypes. Anything else is "unknown".
+static StringRef getArm64eArchName(uint32_t cpuSubtype) {
+  const std::pair<uint32_t, StringRef> names[] = {
+      {CPU_SUBTYPE_ARM64E, "arm64e.old"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false), "arm64e"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false), "arm64e.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true), "arm64e.kernel"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, true), "arm64e.kernel.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(2, true), "arm64e.kernel.v2"},
+  };
+  for (auto [subtype, name] : names)
+    if (subtype == cpuSubtype)
+      return name;
+  return "unknown";
+}
+
+// As in ld-prime: userland version 0 only, plus unversioned and kernel
+// version 0 with -static or -preload.
+static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return true;
+  return (config->staticLink || config->preload) &&
+         (cpuSubtype == CPU_SUBTYPE_ARM64E ||
+          cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true));
+}
+
 template <class Header>
 static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
@@ -193,18 +219,22 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
   // needs a newer CPU, so neither takes it.
   uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
-  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
+  bool isArm64e =
+      hdr->cputype == CPU_TYPE_ARM64 && subtype == CPU_SUBTYPE_ARM64E;
   if (hdr->cputype != cpuType ||
       (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
        (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-        isArm64e != (config->arch() == AK_arm64e)))) {
+        isArm64e != (config->arch() == AK_arm64e))) ||
+      (isArm64e && !hasCompatiblePtrAuthABI(hdr->cpusubtype))) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+    StringRef archName = isArm64e ? getArm64eArchName(hdr->cpusubtype)
+                                  : getArchitectureName(arch);
     auto msg = config->errorForArchMismatch
                    ? static_cast<void (*)(const Twine &)>(error)
                    : warn;
 
-    msg(toString(file) + " has architecture " + getArchitectureName(arch) +
+    msg(toString(file) + " has architecture " + archName +
         " which is incompatible with target architecture " +
         getArchitectureName(config->arch()));
     return false;
@@ -527,50 +557,105 @@ struct AuthEmbeddedPointer {
 
 template <class SectionHeader>
 static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
-                                   relocation_info rel) {
+                                   relocation_info rel,
+                                   SmallVectorImpl<std::string> &errors) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(rel.r_type);
   bool valid = true;
-  auto message = [relocAttrs, file, sec, rel, &valid](const Twine &diagnostic) {
+  auto addError = [&](const Twine &diagnostic) {
     valid = false;
-    return (relocAttrs.name + " relocation " + diagnostic + " at offset " +
-            std::to_string(rel.r_address) + " of " + sec.segname + "," +
-            sec.sectname + " in " + toString(file))
-        .str();
+    errors.push_back((relocAttrs.name + " relocation " + diagnostic +
+                      " at offset " + std::to_string(rel.r_address) + " of " +
+                      sec.segname + "," + sec.sectname + " in " +
+                      toString(file))
+                         .str());
   };
 
   if (!relocAttrs.hasAttr(RelocAttrBits::LOCAL) && !rel.r_extern)
-    error(message("must be extern"));
+    addError("must be extern");
   if (relocAttrs.hasAttr(RelocAttrBits::PCREL) != rel.r_pcrel)
-    error(message(Twine("must ") + (rel.r_pcrel ? "not " : "") +
-                  "be PC-relative"));
+    addError(Twine("must ") + (rel.r_pcrel ? "not " : "") + "be PC-relative");
   if (isThreadLocalVariables(sec.flags) &&
       !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
-    error(message("not allowed in thread-local section, must be UNSIGNED"));
+    addError("not allowed in thread-local section, must be UNSIGNED");
   if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
-    error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
-                  " bytes"));
+    addError("has invalid width of " + std::to_string(1 << rel.r_length) +
+             " bytes");
   }
   if (valid && relocAttrs.hasAttr(RelocAttrBits::AUTH)) {
     auto ptr = bit_cast<AuthEmbeddedPointer>(
         read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
     if (!ptr.auth)
-      error(message("requires bit 63 to be set"));
+      addError("requires bit 63 to be set");
     if (ptr.reserved)
-      error(message("requires bits 51..62 to be zero"));
+      addError("requires bits 51..62 to be zero");
   }
   return valid;
 }
 
+// Parse relocations and assign them to their respective subsections.
+//
+// All of the section's relocations go into one array, and that array is sliced
+// into contiguous ranges, each containing one subsection's relocations. This is
+// cheaper than allocating one array per subsection. Moreover, we store the
+// relocations in ascending address order, just like the subsections are
+// ordered. Operations like scanRelocations and thunk emission iterate through
+// relocations in subsection order, and this layout ensures that these
+// operations can take advantage of the prefetcher.
 template <class SectionHeader>
 void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                                const SectionHeader &sec, Section &section) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<relocation_info> relInfos(
       reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
+  if (relInfos.empty())
+    return;
+
+  // N relocation_infos generate at most N Relocations (fewer if there are
+  // ADDEND relocation_infos). Allocate a buffer big enough for all of them.
+  MutableArrayRef<Relocation> sectionRelocs(
+      bAllocThreadLocal().Allocate<Relocation>(relInfos.size()),
+      relInfos.size());
+  // Most object files list relocation_infos in descending address order, so we
+  // optimize for that case by filling in sectionRelocs from the back. We call
+  // each subsection's slice of the array a "run". `tail` is the subsection
+  // whose relocations are currently being parsed.
+  Relocation *runEnd = sectionRelocs.end();
+  Relocation *runBegin = sectionRelocs.end();
+  InputSection *tail = nullptr;
+  // Hands the current run to its subsection and makes `next` the current one.
+  auto switchRun = [&](InputSection *next) {
+    if (tail) {
+      tail->relocs.borrow({runBegin, runEnd});
+      runEnd = runBegin;
+    }
+    assert((!next || next->relocs.empty()) && "relocations are not sorted");
+    tail = next;
+  };
 
   Subsections &subsections = section.subsections;
   auto subsecIt = subsections.rbegin();
+  SmallVector<std::string, 0> errors;
+  SmallVector<relocation_info, 0> sortedInfos;
+  int32_t prevAddress = std::numeric_limits<int32_t>::max();
   for (size_t i = 0; i < relInfos.size(); i++) {
+    if (LLVM_UNLIKELY(relInfos[i].r_address > prevAddress)) {
+      // ld64 -r can emit relocations out of address order; sort them and start
+      // over.
+      sortedInfos.assign(relInfos.begin(), relInfos.end());
+      llvm::stable_sort(sortedInfos,
+                        [](const relocation_info &a, const relocation_info &b) {
+                          return a.r_address > b.r_address;
+                        });
+      relInfos = sortedInfos;
+      for (Subsection &sub : subsections)
+        sub.isec->relocs.borrow({});
+      runEnd = runBegin = sectionRelocs.end();
+      tail = nullptr;
+      subsecIt = subsections.rbegin();
+      errors.clear(); // We don't want duplicate errors for a given relocation.
+      i = 0;
+    }
+    prevAddress = relInfos[i].r_address;
     // Paired relocations serve as Mach-O's method for attaching a
     // supplemental datum to a primary relocation record. ELF does not
     // need them because the *_RELOC_RELA records contain the extra
@@ -604,7 +689,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       relInfo = relInfos[++i];
     }
     assert(i < relInfos.size());
-    if (!validateRelocationInfo(this, sec, relInfo))
+    if (!validateRelocationInfo(this, sec, relInfo, errors))
       continue;
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
@@ -653,27 +738,20 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       r.setAddend(referentOffset);
     }
 
-    // Find the subsection that this relocation belongs to.
-    // Though not required by the Mach-O format, clang and gcc seem to emit
-    // relocations in order, so let's take advantage of it. However, ld64 emits
-    // unsorted relocations (in `-r` mode), so we have a fallback for that
-    // uncommon case.
-    InputSection *subsec;
+    // Find the subsection that this relocation belongs to. Addresses only
+    // descend, so the search continues from the previous relocation's
+    // subsection.
     while (subsecIt != subsections.rend() && subsecIt->offset > r.offset)
       ++subsecIt;
-    if (subsecIt == subsections.rend() ||
-        subsecIt->offset + subsecIt->isec->getSize() <= r.offset) {
-      subsec = findContainingSubsection(section, &r.offset);
-      // Now that we know the relocs are unsorted, avoid trying the 'fast path'
-      // for the other relocations.
-      subsecIt = subsections.rend();
-    } else {
-      subsec = subsecIt->isec;
-      r.offset -= subsecIt->offset;
-    }
-    subsec->relocs.push_back(r);
+    assert(subsecIt != subsections.rend());
+    InputSection *subsec = subsecIt->isec;
+    r.offset -= subsecIt->offset;
+    if (subsec != tail)
+      switchRun(subsec);
 
-    if (isSubtrahend) {
+    if (!isSubtrahend) {
+      new (--runBegin) Relocation(r);
+    } else {
       relocation_info minuendInfo = relInfos[++i];
       // SUBTRACTOR relocations should always be followed by an UNSIGNED one
       // attached to the same address.
@@ -694,9 +772,15 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
         p.setAddend(referentOffset);
       }
-      subsec->relocs.push_back(p);
+      // Ensure parsed relocations still have SUBTRACTOR preceding UNSIGNED.
+      runBegin -= 2;
+      new (runBegin) Relocation(r);
+      new (runBegin + 1) Relocation(p);
     }
   }
+  switchRun(nullptr);
+  for (const std::string &msg : errors)
+    error(msg);
 }
 
 // ld64 never turns these labels into named atoms or symbol table entries.
@@ -1362,10 +1446,6 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
       // distinct functions (if the CUEs are otherwise identical).
       // UnwindInfoSection takes care of this by re-duplicating the CUEs so that
       // each one can hold a distinct functionAddress value.
-      //
-      // Given that clang emits relocations in reverse order of address, this
-      // relocation should be at the end of the vector for most of our input
-      // object files, so this erase() is typically an O(1) operation.
       it = isec->relocs.erase(it);
     }
   }
@@ -1486,9 +1566,8 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
 // If `Invert` is set, then we instead expect `target_addr - PC` to be written
 // to `PC`.
 template <bool Invert = false>
-Defined *
-targetSymFromCanonicalSubtractor(const InputSection *isec,
-                                 std::vector<Relocation>::iterator relocIt) {
+Defined *targetSymFromCanonicalSubtractor(const InputSection *isec,
+                                          Relocation *relocIt) {
   Relocation &subtrahend = *relocIt;
   Relocation &minuend = *std::next(relocIt);
   assert(target->hasAttr(subtrahend.type, RelocAttrBits::SUBTRAHEND));

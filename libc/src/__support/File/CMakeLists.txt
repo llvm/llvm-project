@@ -43,6 +43,24 @@ add_object_library(
 )
 
 add_header_library(
+  line_reader
+  HDRS
+    line_reader.h
+  DEPENDS
+    .file
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.span
+    libc.src.__support.dynamic_buffer
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   dir_scan_result
   HDRS
     dir_scan_result.h

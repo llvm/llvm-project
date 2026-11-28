@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -enable-save-restore-long -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-save-restore-long -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Check that the -long-calls feature is supported by the backend.
 
@@ -31,7 +31,7 @@ entry:
 
 ; CHECK: call foo
 ; CHECK: jump ##__restore
-; The restore call will still be long because of the enable-save-restore-long
+; The restore call will still be long because of the hexagon-save-restore-long
 ; option being used.
 define i64 @test_shortcall(i32 %x, i32 %y) #3 {
 entry:

@@ -130,10 +130,12 @@ def gather_commit_information(args: argparse.Namespace) -> dict:
         return commit
 
     # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
-    # can exist, but they are not totally ordered with the rest.
+    # can exist, but they are not totally ordered with the rest. Also specify that the ordinals are for
+    # the `main` branch.
     ancestor = subprocess.run(['git', '-C', args.git_repo, 'merge-base', '--is-ancestor', sha, args.main_branch])
     if ancestor.returncode == 0:
         commit['ordinal'] = int(git(args.git_repo, 'rev-list', '--count', sha))
+        commit['branch'] = 'main'
     elif ancestor.returncode == 1:
         logging.info(f'{sha} is not on {args.main_branch}: not giving it an ordinal')
     else:
@@ -171,7 +173,8 @@ def main(argv: List[str]) -> int:
     ordinal = parser.add_mutually_exclusive_group()
     ordinal.add_argument('--main-branch', type=str, default='origin/main',
         help='The main branch of the repository. Only commits on that branch are given an ordinal, which is '
-             'computed from the history of that branch.')
+             'computed from the history of that branch. Commits on that branch are reported as being on the '
+             '`main` branch in LNT.')
     ordinal.add_argument('--no-ordinal', action='store_true',
         help='Never give the commit an ordinal. This is useful for results that are not meant to be part of a '
              'time series, and required when the repository does not have the full history (e.g. a shallow clone).')

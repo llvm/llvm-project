@@ -14,6 +14,7 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -158,7 +159,7 @@ mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
 }
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
-                            TypedAttr padAttr, OpBuilder &rewriter) {
+                            OpFoldResult paddingValue, OpBuilder &rewriter) {
   // Input should be padded only if necessary.
   if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
     return input;
@@ -183,7 +184,11 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
     highIndices.push_back(rewriter.getIndexAttr(highPad));
   }
 
-  Value padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
+  Value padValue = dyn_cast<Value>(paddingValue);
+  if (!padValue) {
+    auto padAttr = cast<TypedAttr>(cast<Attribute>(paddingValue));
+    padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
+  }
 
   return tensor::PadOp::create(rewriter, loc,
                                RankedTensorType::get(paddedShape, inputETy),
@@ -365,8 +370,27 @@ static void createDepthwiseConvCollapseMap(
       rewriter.getAffineDimExpr(outputRank));
 }
 
-namespace {
+static void createZeroPointAssertionIfNonI8(PatternRewriter &rewriter,
+                                            Location loc, Value zeroPoint,
+                                            StringRef message) {
+  Type zeroPointType = zeroPoint.getType();
+  if (zeroPointType.isSignlessInteger(8))
+    return;
 
+  Value zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(zeroPointType));
+  Value isZero;
+  if (isa<FloatType>(zeroPointType)) {
+    isZero = arith::CmpFOp::create(rewriter, loc, arith::CmpFPredicate::OEQ,
+                                   zeroPoint, zero);
+  } else {
+    isZero = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                   zeroPoint, zero);
+  }
+  cf::AssertOp::create(rewriter, loc, isZero, rewriter.getStringAttr(message));
+}
+
+namespace {
 template <typename TosaConvOp, typename LinalgConvOp, typename LinalgConvQOp>
 class ConvConverter : public OpConversionPattern<TosaConvOp> {
 public:
@@ -395,27 +419,52 @@ public:
 
     // Get and verify zero points.
     FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
-    if (failed(maybeIZp))
-      return rewriter.notifyMatchFailure(
-          op, "input zero point cannot be statically determined");
-
     FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
-    if (failed(maybeWZp))
-      return rewriter.notifyMatchFailure(
-          op, "weight zero point cannot be statically determined");
 
-    const int64_t inputZpVal = *maybeIZp;
-    const int64_t weightZpVal = *maybeWZp;
+    bool isInputZpConstant = succeeded(maybeIZp);
+    bool isWeightZpConstant = succeeded(maybeWZp);
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed())
-      return rewriter.notifyMatchFailure(
-          op, "input zero point must be zero for non-int8 integer types");
+    Value nonConstantInputZpScalar;
+    Value nonConstantWeightZpScalar;
 
-    if (op.verifyWeightZeroPoint(weightZpVal).failed())
-      return rewriter.notifyMatchFailure(
-          op, "weight zero point must be zero for non-int8 integer types");
+    if (isInputZpConstant) {
+      const int64_t inputZpConstant = *maybeIZp;
+      if (op.verifyInputZeroPoint(inputZpConstant).failed())
+        return rewriter.notifyMatchFailure(
+            op, "input zero point must be zero for non-int8 integer types");
+    } else {
+      Value index0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      nonConstantInputZpScalar = tensor::ExtractOp::create(
+          rewriter, loc, adaptor.getInputZp(), ValueRange{index0});
+      createZeroPointAssertionIfNonI8(
+          rewriter, loc, nonConstantInputZpScalar,
+          "tosa.conv input zero point must be zero for non-int8 types");
+    }
 
-    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
+    if (isWeightZpConstant) {
+      const int64_t weightZpConstant = *maybeWZp;
+      if (op.verifyWeightZeroPoint(weightZpConstant).failed())
+        return rewriter.notifyMatchFailure(
+            op, "weight zero point must be zero for non-int8 integer types");
+    } else {
+      Value index0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      nonConstantWeightZpScalar = tensor::ExtractOp::create(
+          rewriter, loc, adaptor.getWeightZp(), ValueRange{index0});
+      createZeroPointAssertionIfNonI8(
+          rewriter, loc, nonConstantWeightZpScalar,
+          "tosa.conv weight zero point must be zero for non-int8 types");
+    }
+
+    // Use the quantized op if either zero point is:
+    // - Constant and non-zero, or
+    // - Non-constant and of type i8.
+    bool useConvQOp =
+        (isInputZpConstant && *maybeIZp != 0) ||
+        (isWeightZpConstant && *maybeWZp != 0) ||
+        (!isInputZpConstant &&
+         nonConstantInputZpScalar.getType().isSignlessInteger(8)) ||
+        (!isWeightZpConstant &&
+         nonConstantWeightZpScalar.getType().isSignlessInteger(8));
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -440,34 +489,29 @@ public:
     auto weightShape = weightTy.getShape();
 
     // Apply padding as necessary.
-    TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (hasZp) {
-      int64_t intMin =
-          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
-              .getSExtValue();
-      int64_t intMax =
-          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
-              .getSExtValue();
-
-      if (inputZpVal < intMin || inputZpVal > intMax)
-        return rewriter.notifyMatchFailure(
-            op, "tosa.conv op quantization has zp outside of input range");
-
-      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
-    }
-
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
     llvm::append_range(pad, padAttr.asArrayRef());
     pad.resize(pad.size() + 2, 0);
-    input = applyPad(loc, input, pad, zeroAttr, rewriter);
+
+    if (isInputZpConstant) {
+      const int64_t inputZpConstant = *maybeIZp;
+      TypedAttr padValue = rewriter.getZeroAttr(inputETy);
+      if (inputZpConstant != 0)
+        padValue = rewriter.getIntegerAttr(inputETy, inputZpConstant);
+      input = applyPad(loc, input, pad, padValue, rewriter);
+    } else {
+      // The non-constant input zero point already has the input's element type,
+      // so it can be used directly as the padding value.
+      input = applyPad(loc, input, pad, nonConstantInputZpScalar, rewriter);
+    }
 
     if (4 == inputTy.getRank()) {
       // For 2D convolutions, we need to check if the target convolution op
       // wants a HWCF kernel layout.
       bool wantHwcf =
-          hasZp ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
-                : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
+          useConvQOp ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
+                     : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
       if (wantHwcf) {
         // Transpose the kernel to match dimension ordering of the linalg
         // convolution operation.
@@ -524,12 +568,24 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExt(rewriter, loc, bias, biasEmptyTensor);
 
-    if (hasZp) {
-      auto iZp = rewriter.getI32IntegerAttr(inputZpVal);
-      auto kZp = rewriter.getI32IntegerAttr(weightZpVal);
+    if (useConvQOp) {
+      auto getQConvZpAsI32 = [&](FailureOr<int64_t> maybeZp,
+                                 Value nonConstantZpScalar) -> Value {
+        if (succeeded(maybeZp))
+          return arith::ConstantOp::create(
+              rewriter, loc, rewriter.getI32IntegerAttr(*maybeZp));
+        assert(nonConstantZpScalar &&
+               "expected a scalar for a non-constant zero point");
+        if (nonConstantZpScalar.getType().isSignlessInteger(8))
+          return arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(),
+                                        nonConstantZpScalar);
+        // Non-int8 non-constant zero points were asserted to be zero above.
+        return arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getI32IntegerAttr(0));
+      };
 
-      auto iZpVal = arith::ConstantOp::create(rewriter, loc, iZp);
-      auto kZpVal = arith::ConstantOp::create(rewriter, loc, kZp);
+      Value iZpVal = getQConvZpAsI32(maybeIZp, nonConstantInputZpScalar);
+      Value kZpVal = getQConvZpAsI32(maybeWZp, nonConstantWeightZpScalar);
 
       Value conv = LinalgConvQOp::create(
                        rewriter, loc, resultTy,

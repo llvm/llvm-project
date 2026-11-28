@@ -16,6 +16,7 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "ubsan_diag.h"
+#include "ubsan_flags.h"
 #include "ubsan_init.h"
 
 // Interception of signals breaks too many things on Android.
@@ -71,6 +72,7 @@ void InitializeDeadlySignals() {
   if (!REAL(sigaction_symname))
     return;
 #endif
+  InitializeFlags();
   InstallDeadlySignalHandlers(&UBsanOnDeadlySignal);
 }
 

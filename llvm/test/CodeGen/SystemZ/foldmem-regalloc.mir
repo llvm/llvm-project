@@ -17,35 +17,6 @@ noPhis:          true
 isSSA:           false
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: vr64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: vr64bit }
-  - { id: 3, class: fp64bit }
-  - { id: 4, class: fp64bit }
-  - { id: 5, class: fp64bit }
-  - { id: 6, class: fp64bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: vr64bit }
-  - { id: 9, class: vr64bit }
-  - { id: 10, class: vr64bit }
-  - { id: 11, class: grx32bit }
-  - { id: 12, class: fp64bit }
-  - { id: 13, class: addr64bit }
-  - { id: 14, class: vr64bit }
-  - { id: 15, class: fp64bit }
-  - { id: 16, class: grx32bit }
-  - { id: 17, class: fp64bit }
-  - { id: 18, class: fp64bit }
-  - { id: 19, class: vr64bit }
-  - { id: 20, class: fp64bit }
-  - { id: 21, class: vr64bit }
-  - { id: 22, class: addr64bit }
-  - { id: 23, class: vr64bit }
-  - { id: 24, class: vr64bit }
-  - { id: 25, class: fp64bit }
-  - { id: 26, class: fp64bit }
-  - { id: 27, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%3' }
   - { reg: '$f2d', virtual-reg: '%4' }

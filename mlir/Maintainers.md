@@ -145,7 +145,7 @@ Named maintainers, if available, should be contacted first, as they're more acti
 #### Type Dialects
 * ‘tensor’ Dialect (tensor)
 * ‘memref’ Dialect (tensor)
-* ‘vector’ Dialect (tensor + [@dcaballe](https://github.com/dcaballe), [@Groverkss](https://github.com/Groverkss))
+* ‘vector’ Dialect (tensor + [@dcaballe](https://github.com/dcaballe), [@FedericoBruzzone](https://github.com/federicobruzzone), [@Groverkss](https://github.com/Groverkss))
 * ‘sparse_tensor’ Dialect ([@aartbik](https://github.com/aartbik), [@matthias-springer](https://github.com/matthias-springer))
 
 #### Accessory Dialects

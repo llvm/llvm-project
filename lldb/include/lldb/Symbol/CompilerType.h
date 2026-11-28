@@ -23,6 +23,7 @@ namespace lldb_private {
 
 class DataExtractor;
 class TypeSystem;
+struct ChildTypeInfo;
 
 /// Generic representation of a type in a programming language.
 ///
@@ -126,8 +127,6 @@ public:
   bool IsVectorType(CompilerType *element_type = nullptr,
                     uint64_t *size = nullptr) const;
 
-  bool IsArrayOfScalarType() const;
-
   bool IsAggregateType() const;
 
   bool IsAnonymousType() const;
@@ -182,8 +181,6 @@ public:
   /// \param target_type    Can pass nullptr.
   bool IsPossibleDynamicType(CompilerType *target_type, bool check_cplusplus,
                              bool check_objc) const;
-
-  bool IsPointerToScalarType() const;
 
   bool IsRuntimeGeneratedType() const;
 
@@ -464,14 +461,11 @@ public:
                       uint32_t &deref_byte_size, int32_t &deref_byte_offset,
                       ValueObject *valobj, uint64_t &language_flags) const;
 
-  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
-      ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
-      bool omit_empty_base_classes, bool ignore_array_bounds,
-      std::string &child_name, uint32_t &child_byte_size,
-      int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-      uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-      bool &child_is_deref_of_parent, ValueObject *valobj,
-      uint64_t &language_flags) const;
+  /// Get the child at \p idx, such as a field, a base class or a pointee.
+  llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(ExecutionContext *exe_ctx, size_t idx,
+                  bool transparent_pointers, bool omit_empty_base_classes,
+                  bool ignore_array_bounds, ValueObject *valobj) const;
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
@@ -582,6 +576,19 @@ bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 struct CompilerType::IntegralTemplateArgument {
   Scalar value;
   CompilerType type;
+};
+
+/// A child of a type, as returned by CompilerType::GetChildAtIndex.
+struct ChildTypeInfo {
+  CompilerType type;
+  std::string name;
+  uint32_t byte_size = 0;
+  int32_t byte_offset = 0;
+  uint32_t bitfield_bit_size = 0;
+  uint32_t bitfield_bit_offset = 0;
+  bool is_base_class = false;
+  bool is_deref_of_parent = false;
+  uint64_t language_flags = 0;
 };
 
 } // namespace lldb_private

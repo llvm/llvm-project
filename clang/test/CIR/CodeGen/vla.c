@@ -325,7 +325,7 @@ int f5(unsigned long len) {
 }
 
 // CIR: cir.func{{.*}} @f5(%[[LEN_ARG:.*]]: !u64i {{.*}}) -> !s32i
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]

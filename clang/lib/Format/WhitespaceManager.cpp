@@ -1135,7 +1135,9 @@ void WhitespaceManager::alignTrailingComments() {
 
       while (Tok->Previous && Tok->Previous->is(tok::r_brace))
         Tok = Tok->Previous;
-      return Tok->NewlinesBefore > 0;
+      // Use the formatted line break when one has been decided.
+      return Tok->getDecision() == FD_Break ||
+             (Tok->getDecision() == FD_Unformatted && Tok->NewlinesBefore > 0);
     };
 
     if (I > 0 && C.NewlinesBefore == 0 &&

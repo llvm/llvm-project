@@ -24,8 +24,11 @@ class BreakpointHitCountTestCase(TestBase):
         target = self.createTestTarget()
 
         self.runCmd("tb a")
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error)
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(

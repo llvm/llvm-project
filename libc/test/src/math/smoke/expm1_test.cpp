@@ -1,14 +1,18 @@
-//===-- Unittests for e^x - 1 ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Smoke tests for expm1.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
-#include "hdr/math_macros.h"
-#include "hdr/stdint_proxy.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -17,10 +21,20 @@
 using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
+  const double neg_sNaN = LIBC_NAMESPACE::testing::opaque(
+      FPBits::signaling_nan(Sign::NEG).get_val());
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expm1(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::expm1(sNaN)).is_quiet_nan());
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1(aNaN));
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expm1(neg_sNaN),
+                              FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::expm1(neg_sNaN)).is_quiet_nan());
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expm1(aNaN), 0);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_aNaN, LIBC_NAMESPACE::expm1(neg_aNaN), 0);
   EXPECT_MATH_ERRNO(0);
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::expm1(inf));
   EXPECT_MATH_ERRNO(0);
@@ -31,9 +45,19 @@ TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
                               FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
+  // Near-overflow input with hi == 1024 must not raise spurious FE_INVALID.
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      0x1.fffcd1fb6a8dap+1023, LIBC_NAMESPACE::expm1(0x1.62e42f2421d7dp+9),
+      FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_FP_EQ_ALL_ROUNDING(0x1.fffcd1fb6a8dap+1023, 0x1.fffcd1fb6a8dap+1023,
+                            0x1.fffcd1fb6a8d9p+1023, 0x1.fffcd1fb6a8d9p+1023,
+                            LIBC_NAMESPACE::expm1(0x1.62e42f2421d7dp+9));
+
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::expm1(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::expm1(neg_zero));
-  // |x| < 2^-53, expm1(x) = x
+
+  // |x| < 2^-53, expm1(x) ~ x.
   EXPECT_FP_EQ(-0x1.23456789abcdep-55,
                LIBC_NAMESPACE::expm1(-0x1.23456789abcdep-55));
   EXPECT_FP_EQ(0x1.23456789abcdep-55,

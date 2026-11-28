@@ -159,6 +159,7 @@ define_selector(0x25, "get_pointee_type")
 define_selector(0x26, "get_byte_size")
 define_selector(0x27, "create_child_at_offset")
 define_selector(0x28, "get_byte_stride")
+define_selector(0x29, "create_value_from_address")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -828,6 +829,12 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 name = data.pop()
                 valobj = data.pop()
                 data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
+            elif sel == sel_create_value_from_address:
+                sbtype = data.pop()
+                address = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateValueFromAddress(name, address, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -870,6 +877,7 @@ _BUILTINS = {
     "Cast": "@cast",
     "Clone": "@clone",
     "CreateChildAtOffset": "@create_child_at_offset",
+    "CreateValueFromAddress": "@create_value_from_address",
     "GetByteSize": "@get_byte_size",
     "GetByteStride": "@get_byte_stride",
     "GetChildAtIndex": "@get_child_at_index",

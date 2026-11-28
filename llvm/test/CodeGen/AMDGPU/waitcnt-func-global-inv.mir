@@ -11,7 +11,6 @@
 # Test 1: Only GLOBAL_INV, no VGPR loads - should NOT need S_WAIT_LOADCNT
 # before return because GLOBAL_INV doesn't write to VGPRs.
 name: func_global_inv_only
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
 body: |
@@ -35,7 +34,6 @@ body: |
 ---
 # Test 2: GLOBAL_INV with actual VGPR load - MUST wait for loadcnt
 name: func_global_inv_with_vgpr_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
 body: |
@@ -61,7 +59,6 @@ body: |
 ---
 # Test 3: Only VGPR load (no GLOBAL_INV) - MUST wait for loadcnt
 name: func_vgpr_load_no_global_inv
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
 body: |
@@ -86,7 +83,6 @@ body: |
 # Test 4: GLOBAL_INV with load already waited on - should NOT need S_WAIT_LOADCNT at return
 # The load was waited on when $vgpr0 was used, so only GLOBAL_INV is pending at return.
 name: func_global_inv_load_already_waited
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
 body: |

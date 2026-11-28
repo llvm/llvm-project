@@ -368,10 +368,11 @@ entry:
   ret float %result
 }
 
-; Verify that fpext(42.1) isn't simplified when the rounding mode is
-; unknown.
+; Verify that fpext(42.0) is simplified. fpext is exact, so it does not
+; depend on the rounding mode and raises no exception.
 ; CHECK-LABEL: f21
-; CHECK: call double @llvm.experimental.constrained.fpext
+; CHECK-NOT: call double @llvm.experimental.constrained.fpext
+; CHECK: ret double 4.200000e+01
 define double @f21() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.fpext.f64.f32(float 42.0,

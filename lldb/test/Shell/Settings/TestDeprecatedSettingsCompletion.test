@@ -1,0 +1,9 @@
+# REQUIRES: asserts, python
+#
+# Deprecated settings can be completed, and their completion descriptions say
+# that they are deprecated.
+#
+# RUN: %lldb -x -b \
+# RUN:   -o 'script line = "settings set testing.deprecated-sett"; matches = lldb.SBStringList(); descriptions = lldb.SBStringList(); lldb.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(line, len(line), 0, -1, matches, descriptions); print("match:", repr(matches.GetStringAtIndex(1)), repr(descriptions.GetStringAtIndex(1)))' \
+# RUN:   2>&1 | FileCheck %s
+# CHECK: match: 'testing.deprecated-setting' '(deprecated) Used for testing LLDB only. This setting has no effect.

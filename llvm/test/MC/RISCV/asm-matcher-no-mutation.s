@@ -11,10 +11,10 @@
 
 # VMADOT:      Trying to match opcode SMT_VMADOT1
 # VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 0
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 58
 # VMADOT:      Trying to match opcode SMT_VMADOT1vtype
 # VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 0
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 58
 smt.vmadot1 v0, v3, v4
 
 # YADD:      Trying to match opcode YADD

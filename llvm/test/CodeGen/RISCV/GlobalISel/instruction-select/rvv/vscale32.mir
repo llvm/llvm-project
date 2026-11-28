@@ -13,10 +13,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 3
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 3
-    %0:gprb(s32) = G_LSHR %1, %2(s32)
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 3
+    %0:gprb(i32) = G_LSHR %1, %2(i32)
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -31,10 +31,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 2
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 2
-    %0:gprb(s32) = G_LSHR %1, %2(s32)
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 2
+    %0:gprb(i32) = G_LSHR %1, %2(i32)
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -51,12 +51,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 3
-    %3:gprb(s32) = G_LSHR %1, %2(s32)
-    %4:gprb(s32) = G_CONSTANT i32 3
-    %0:gprb(s32) = G_MUL %3, %4
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 3
+    %3:gprb(i32) = G_LSHR %1, %2(i32)
+    %4:gprb(i32) = G_CONSTANT i32 3
+    %0:gprb(i32) = G_MUL %3, %4
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -71,10 +71,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 1
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 1
-    %0:gprb(s32) = G_LSHR %1, %2(s32)
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 1
+    %0:gprb(i32) = G_LSHR %1, %2(i32)
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -88,8 +88,8 @@ body:             |
     ; CHECK: [[PseudoReadVLENB:%[0-9]+]]:gpr = PseudoReadVLENB
     ; CHECK-NEXT: $x10 = COPY [[PseudoReadVLENB]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_READ_VLENB
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_READ_VLENB
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -104,10 +104,10 @@ body:             |
     ; CHECK-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[PseudoReadVLENB]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 1
-    %0:gprb(s32) = G_SHL %1, %2(s32)
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 1
+    %0:gprb(i32) = G_SHL %1, %2(i32)
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -123,10 +123,10 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[PseudoReadVLENB]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:gprb(s32) = G_READ_VLENB
-    %2:gprb(s32) = G_CONSTANT i32 5
-    %0:gprb(s32) = G_MUL %1, %2
-    $x10 = COPY %0(s32)
+    %1:gprb(i32) = G_READ_VLENB
+    %2:gprb(i32) = G_CONSTANT i32 5
+    %0:gprb(i32) = G_MUL %1, %2
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -143,12 +143,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 1
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 1
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -165,12 +165,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 2
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 2
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -187,12 +187,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 3
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 3
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -209,12 +209,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 4
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 4
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -231,12 +231,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 8
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 8
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -253,12 +253,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 16
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 16
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...
@@ -275,12 +275,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %17:gprb(s32) = G_READ_VLENB
-    %18:gprb(s32) = G_CONSTANT i32 3
-    %2:gprb(s32) = G_LSHR %17, %18(s32)
-    %15:gprb(s32) = G_CONSTANT i32 40
-    %9:gprb(s32) = G_MUL %2, %15
-    $x10 = COPY %9(s32)
+    %17:gprb(i32) = G_READ_VLENB
+    %18:gprb(i32) = G_CONSTANT i32 3
+    %2:gprb(i32) = G_LSHR %17, %18(i32)
+    %15:gprb(i32) = G_CONSTANT i32 40
+    %9:gprb(i32) = G_MUL %2, %15
+    $x10 = COPY %9(i32)
     PseudoRET implicit $x10
 
 ...

@@ -7,7 +7,7 @@
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define dso_local noundef i32 @test_function(i32 noundef %a) {
   entry:
     ret i32 %a
@@ -16,13 +16,12 @@
 ---
 name:            test_function
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
 body:             |
   bb.0.entry:
     liveins: $edi
-  
+
     %0:gr32 = COPY $edi
     $eax = COPY %0
     RET 0, $eax

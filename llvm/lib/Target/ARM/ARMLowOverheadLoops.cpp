@@ -63,7 +63,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -468,8 +467,7 @@ namespace {
     MachineFunction           *MF = nullptr;
     MachineLoopInfo           *MLI = nullptr;
     ReachingDefInfo *RDI = nullptr;
-    const ARMBaseInstrInfo    *TII = nullptr;
-    MachineRegisterInfo       *MRI = nullptr;
+    const ARMBaseInstrInfo *TII = nullptr;
     const TargetRegisterInfo  *TRI = nullptr;
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
 
@@ -1306,7 +1304,6 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
   MF->getProperties().setTracksLiveness();
-  MRI = &MF->getRegInfo();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);

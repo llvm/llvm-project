@@ -120,6 +120,9 @@ splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
   // TODO: improve the filtering condition to make it more applicable.
   if (isa<scf::IfOp>(xferOp->getParentOp()))
     return failure();
+  // The split is not supported for transfers under an enclosing vector.mask.
+  if (cast<vector::MaskableOpInterface>(xferOp.getOperation()).isMasked())
+    return failure();
   return success();
 }
 

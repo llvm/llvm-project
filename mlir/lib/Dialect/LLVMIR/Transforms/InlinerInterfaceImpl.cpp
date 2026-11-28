@@ -13,7 +13,17 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMGeneralIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVarArgOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -766,7 +776,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             StringAttr::get(dialect->getContext(), "noduplicate"),
             StringAttr::get(dialect->getContext(), "presplitcoroutine"),
             StringAttr::get(dialect->getContext(), "returns_twice"),
-            StringAttr::get(dialect->getContext(), "strictfp"),
         }) {}
 
   bool isLegalToInline(Operation *call, Operation *callable,
@@ -789,6 +798,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     }
     if (funcOp.isNoInline()) {
       LDBG() << "Cannot inline: function is marked no_inline";
+      return false;
+    }
+    if (funcOp.getStrictfp()) {
+      LDBG() << "Cannot inline: function is marked strictfp";
       return false;
     }
     if (funcOp.isVarArg()) {
@@ -868,10 +881,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     op->erase();
   }
 
-  bool allowSingleBlockOptimization(
-      iterator_range<Region::iterator> inlinedBlocks) const final {
-    return !(!inlinedBlocks.empty() &&
-             isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()));
+  bool allowSingleBlockOptimization(Block *inlinedBlock) const final {
+    return !isa<LLVM::UnreachableOp>(inlinedBlock->getTerminator());
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the

@@ -149,7 +149,7 @@ UPadded ret_union_padded(int b) {
 }
 
 // CIR: cir.func {{.*}}@ret_union_padded(%arg0: !s32i {llvm.noundef}{{.*}}) -> ![[I64PTR]]
-// CIR:   %[[U:.+]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_UPadded>
+// CIR:   %[[U:.+]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_UPadded>
 // CIR:   %[[P:.+]] = cir.get_member %{{.+}}[2] {name = "p"} : !cir.ptr<!rec_IntIntPtr> -> !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:   cir.store align(8) %{{.+}}, %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:   %[[VIEW:.+]] = cir.cast bitcast %[[U]] : !cir.ptr<!rec_UPadded> -> !cir.ptr<![[I64PTR]]>
@@ -181,7 +181,7 @@ UBytes12 ret_union_bytes(char c) {
 
 // CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef}{{.*}}) -> ![[I64I32]]
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<![[I64I32]]>
-// CIR:   %[[U:.+]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_UBytes12>
+// CIR:   %[[U:.+]] = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_UBytes12>
 // CIR:   %[[SLOT_U:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[I64I32]]> -> !cir.ptr<!rec_UBytes12>
 // CIR-NEXT:   cir.copy %[[U]] align(4) to %[[SLOT_U]] align(8) : !cir.ptr<!rec_UBytes12>
 // CIR-NEXT:   %[[RET:.+]] = cir.load align(8) %[[SLOT]] : !cir.ptr<![[I64I32]]>, ![[I64I32]]

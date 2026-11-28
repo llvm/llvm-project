@@ -373,9 +373,11 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     if (CurrentAcc)
       MemInsertPoint = CurrentAcc;
 
-    // Calls that only access inaccessible memory do not block merging
-    // accessible stores.
     if (auto *CB = dyn_cast<CallBase>(BI)) {
+      if (!isGuaranteedToTransferExecutionToSuccessor(CB))
+        break;
+      // Calls that only access inaccessible memory do not block merging
+      // accessible stores.
       if (CB->onlyAccessesInaccessibleMemory())
         continue;
     }

@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>
@@ -36,7 +35,6 @@ namespace {
 
 class OptimizePHIs {
   MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
 
 public:
   bool run(MachineFunction &Fn);
@@ -90,7 +88,6 @@ PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
 
 bool OptimizePHIs::run(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
-  TII = Fn.getSubtarget().getInstrInfo();
 
   // Find dead PHI cycles and PHI cycles that can be replaced by a single
   // value.  InstCombine does these optimizations, but DAG legalization may

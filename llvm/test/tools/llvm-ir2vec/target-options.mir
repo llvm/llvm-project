@@ -5,7 +5,6 @@
 
 ---
 name:            agpr_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

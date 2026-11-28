@@ -71,7 +71,7 @@ tracksRegLiveness: false
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = frame-setup ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
     $d0 = BuildPairF64 $r0, $r0, implicit $r29
@@ -88,7 +88,7 @@ tracksRegLiveness: false
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = frame-setup ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
     $d0_64 = BuildPairF64_64 $r0, $r0, implicit $r29
@@ -139,7 +139,7 @@ tracksRegLiveness: false
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = frame-setup ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
     $r1 = ExtractElementF64 $d6, 1, implicit $r29
@@ -156,7 +156,7 @@ tracksRegLiveness: false
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = frame-setup ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
     $r1 = ExtractElementF64_64 $d12_64, 1, implicit $r29

@@ -1,0 +1,330 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -run-pass hexagon-packetizer %s -o - | FileCheck %s
+
+# Check that the bank conflict mutation also handles accesses whose offset is
+# a global address (memw(Rs+##sym)) and the shifted-register + global form
+# (memw(Rt<<#u2+##sym)).
+#
+# Two loads through the same base register are kept out of the same packet
+# when the bank bits of their offsets match and either they use the same
+# symbol, or both symbols are aligned to at least 32 bytes.
+#
+# The bank bits depend on the access sizes: any pair that includes a double
+# word load is compared on bits 4:3. Pairs of word/half-word/byte loads are
+# compared on bits 4:2. The ur_dw_* and ur_w_* cases cover this rule.
+
+--- |
+  @a128 = external global [128 x float], align 128
+  @b128 = external global [128 x float], align 128
+  @a8 = external global [128 x float], align 8
+  @b8 = external global [128 x float], align 8
+  @t4 = external global [256 x float], align 4
+
+  define void @io_global_aligned() { ret void }
+  define void @io_global_immediate() { ret void }
+  define void @io_global_underaligned() { ret void }
+  define void @ur_global_aligned() { ret void }
+  define void @ur_same_sym() { ret void }
+  define void @ur_same_sym_diff_bank() { ret void }
+  define void @ur_dw_same_bank() { ret void }
+  define void @ur_dw_diff_bit2() { ret void }
+  define void @ur_dw_w_diff_bit2() { ret void }
+  define void @ur_w_diff_bit2() { ret void }
+  define void @ur_w_same_bank() { ret void }
+  define void @ur_w_h_diff_bit2() { ret void }
+  define void @ur_diff_shift() { ret void }
+  define void @store_global_aligned() { ret void }
+  define void @store_ur_same_sym() { ret void }
+  define void @imm_same_line() { ret void }
+  define void @imm_diff_line() { ret void }
+...
+
+# Different symbols, both 128-byte aligned, same offset: split.
+# CHECK-LABEL: name: io_global_aligned
+# CHECK:      L2_loadri_io $r0, @a128
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L2_loadri_io $r0, @b128
+---
+name: io_global_aligned
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L2_loadri_io $r0, @a128
+    $r4 = L2_loadri_io $r0, @b128
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Different symbols with only 8-byte alignment: placement is unknown, so the
+# loads are allowed in the same packet.
+# A 128-byte aligned symbol has known-zero bank bits, just like an immediate
+# offset. The offsets select the same bank but different cache lines: split.
+# CHECK-LABEL: name: io_global_immediate
+# CHECK:      L2_loadri_io $r0, @a128
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L2_loadri_io $r0, 128
+---
+name: io_global_immediate
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L2_loadri_io $r0, @a128
+    $r4 = L2_loadri_io $r0, 128
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# CHECK-LABEL: name: io_global_underaligned
+# CHECK:      BUNDLE
+# CHECK-NEXT: L2_loadri_io $r0, @a8
+# CHECK-NEXT: L2_loadri_io $r0, @b8
+---
+name: io_global_underaligned
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L2_loadri_io $r0, @a8
+    $r4 = L2_loadri_io $r0, @b8
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# memw(Rt<<#2+##sym) with two 128-byte aligned symbols: split.
+# CHECK-LABEL: name: ur_global_aligned
+# CHECK:      L4_loadri_ur $r0, 2, @a128
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 2, @b128
+---
+name: ur_global_aligned
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 2, @a128
+    $r4 = L4_loadri_ur $r0, 2, @b128
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Two members of one 4-byte aligned object, 512 bytes apart: the symbol
+# cancels out, so they always hit the same bank. Split.
+# CHECK-LABEL: name: ur_same_sym
+# CHECK:      L4_loadri_ur $r0, 2, @t4
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 2, @t4 + 512
+---
+name: ur_same_sym
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 2, @t4
+    $r4 = L4_loadri_ur $r0, 2, @t4 + 512
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Same symbol, offsets differ in bit 3: different banks, same packet is fine.
+# CHECK-LABEL: name: ur_same_sym_diff_bank
+# CHECK:      BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 2, @t4
+# CHECK-NEXT: L4_loadri_ur $r0, 2, @t4 + 8
+---
+name: ur_same_sym_diff_bank
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 2, @t4
+    $r4 = L4_loadri_ur $r0, 2, @t4 + 8
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Two double word loads 512 bytes apart: bits 4:3 match. Split.
+# CHECK-LABEL: name: ur_dw_same_bank
+# CHECK:      L4_loadrd_ur $r0, 3, @t4
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadrd_ur $r0, 3, @t4 + 512
+---
+name: ur_dw_same_bank
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $d2 = L4_loadrd_ur $r0, 3, @t4
+    $d3 = L4_loadrd_ur $r0, 3, @t4 + 512
+    S2_storerd_io $r1, 0, killed $d2
+    S2_storerd_io $r1, 8, killed $d3
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Two double word loads whose offsets differ only in bit 2: double word
+# pairs are checked on bits 4:3, which match. Split.
+# CHECK-LABEL: name: ur_dw_diff_bit2
+# CHECK:      L4_loadrd_ur $r0, 3, @t4
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadrd_ur $r0, 3, @t4 + 516
+---
+name: ur_dw_diff_bit2
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $d2 = L4_loadrd_ur $r0, 3, @t4
+    $d3 = L4_loadrd_ur $r0, 3, @t4 + 516
+    S2_storerd_io $r1, 0, killed $d2
+    S2_storerd_io $r1, 8, killed $d3
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# A double word and a word load whose offsets differ only in bit 2: a pair
+# with a double word is checked on bits 4:3, which match. Split.
+# CHECK-LABEL: name: ur_dw_w_diff_bit2
+# CHECK:      L4_loadrd_ur $r0, 3, @t4
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4 + 516
+---
+name: ur_dw_w_diff_bit2
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $d2 = L4_loadrd_ur $r0, 3, @t4
+    $r6 = L4_loadri_ur $r0, 3, @t4 + 516
+    S2_storerd_io $r1, 0, killed $d2
+    S2_storeri_io $r1, 8, killed $r6
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Two word loads whose offsets differ only in bit 2: checked on bits 4:2,
+# so different banks, same packet is fine.
+# CHECK-LABEL: name: ur_w_diff_bit2
+# CHECK:      BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4 + 516
+---
+name: ur_w_diff_bit2
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 3, @t4
+    $r4 = L4_loadri_ur $r0, 3, @t4 + 516
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 8, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Two word loads 512 bytes apart: bits 4:2 match. Split.
+# CHECK-LABEL: name: ur_w_same_bank
+# CHECK:      L4_loadri_ur $r0, 3, @t4
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4 + 512
+---
+name: ur_w_same_bank
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 3, @t4
+    $r4 = L4_loadri_ur $r0, 3, @t4 + 512
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 8, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# A word and a half-word load whose offsets differ only in bit 2: checked on
+# bits 4:2, so different banks, same packet is fine.
+# CHECK-LABEL: name: ur_w_h_diff_bit2
+# CHECK:      BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4
+# CHECK-NEXT: L4_loadrh_ur $r0, 3, @t4 + 516
+---
+name: ur_w_h_diff_bit2
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 3, @t4
+    $r4 = L4_loadrh_ur $r0, 3, @t4 + 516
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 8, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Different shift amounts: the addresses are not related, same packet is fine.
+# CHECK-LABEL: name: ur_diff_shift
+# CHECK:      BUNDLE
+# CHECK-NEXT: L4_loadri_ur $r0, 2, @t4
+# CHECK-NEXT: L4_loadri_ur $r0, 3, @t4
+---
+name: ur_diff_shift
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r3 = L4_loadri_ur $r0, 2, @t4
+    $r4 = L4_loadri_ur $r0, 3, @t4
+    S2_storeri_io $r1, 0, killed $r3
+    S2_storeri_io $r1, 4, killed $r4
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Stores are not checked for bank conflicts.
+# CHECK-LABEL: name: store_global_aligned
+# CHECK:      BUNDLE
+# CHECK-NEXT: S2_storeri_io $r0, @a128, $r1
+# CHECK-NEXT: S2_storeri_io $r0, @b128, $r2
+---
+name: store_global_aligned
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    S2_storeri_io $r0, @a128, $r1
+    S2_storeri_io $r0, @b128, $r2
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# CHECK-LABEL: name: store_ur_same_sym
+# CHECK:      BUNDLE
+# CHECK-NEXT: S4_storeri_ur $r0, 2, @t4, $r1
+# CHECK-NEXT: S4_storeri_ur $r0, 2, @t4 + 512, $r2
+---
+name: store_ur_same_sym
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    S4_storeri_ur $r0, 2, @t4, $r1
+    S4_storeri_ur $r0, 2, @t4 + 512, $r2
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Loads in the same 32-byte block read the same line and cannot conflict.
+# CHECK-LABEL: name: imm_same_line
+# CHECK:      BUNDLE
+# CHECK-NEXT: L2_loadri_io $r0, 8
+# CHECK-NEXT: L2_loadri_io $r0, 12
+---
+name: imm_same_line
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r2 = L2_loadri_io $r0, 8
+    $r3 = L2_loadri_io $r0, 12
+    S2_storeri_io $r1, 0, killed $r2
+    S2_storeri_io $r1, 4, killed $r3
+    PS_jmpret $r31, implicit-def dead $pc
+...
+
+# Plain immediate offsets 128 bytes apart: same bank, different lines. Split.
+# CHECK-LABEL: name: imm_diff_line
+# CHECK:      L2_loadri_io $r0, 0
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: L2_loadri_io $r0, 128
+---
+name: imm_diff_line
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r2 = L2_loadri_io $r0, 0
+    $r3 = L2_loadri_io $r0, 128
+    S2_storeri_io $r1, 0, killed $r2
+    S2_storeri_io $r1, 4, killed $r3
+    PS_jmpret $r31, implicit-def dead $pc
+...

@@ -114,12 +114,6 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
   return !getReservedIdentifiers().contains(CachedHashStringRef(Name.lower()));
 }
 
-bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  // FIXME: Does .section .bss/.data/.text work everywhere??
-  return SectionName == ".text" || SectionName == ".data" ||
-        (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
-}
-
 void MCAsmInfo::initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
   UseAtForSpecifier = true;
@@ -148,10 +142,13 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
 }
 
 void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
-  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
-    printSpecifierExpr(OS, *SE);
-  else
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr)) {
+    assert(SpecifierExprPrintFn &&
+           "need to implement hook if target uses MCSpecifierExpr");
+    SpecifierExprPrintFn(*this, OS, *SE);
+  } else {
     Expr.print(OS, this);
+  }
 }
 
 bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,

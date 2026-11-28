@@ -507,41 +507,20 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
   Value mask = getOrCreateMaskFor(rewriter, linalgOp, maybeMaskingMap);
 
   if (!mask) {
-    LDBG() << "No mask required";
-    if (assumeDynamicDimsMatchVecSizes) {
-      llvm::TypeSwitch<Operation *>(opToMask)
-          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
-              [&](auto xferOp) {
-                // For vector.transfer_read and vector.transfer_write, there is
-                // also the `in-bounds` attribute that has to be set explicitly
-                // to true. Otherwise, "out-of-bounds" access will be assumed
-                // and masks will be generated while lowering these.
-                LDBG() << "Assuming dynamic dimensions match vector sizes and "
-                          "setting their in-bounds to true!";
-                SmallVector<bool> inBoundsMap = xferOp.getInBoundsValues();
-                ShapedType xferType = xferOp.getShapedType();
-                AffineMap permMap = xferOp.getPermutationMap();
-                // Only set the in-bounds values to true for dynamic dims.
-                // Different mechanisms will set these accordingly for the
-                // static dims.
-                for (unsigned i = 0; i < xferOp.getTransferRank(); i++) {
-                  auto dimExpr = dyn_cast<AffineDimExpr>(permMap.getResult(i));
-                  // Skip broadcast dimensions.
-                  if (!dimExpr)
-                    continue;
-                  unsigned pos = dimExpr.getPosition();
-                  if (xferType.isDynamicDim(pos))
-                    inBoundsMap[i] = true;
-                }
-                rewriter.modifyOpInPlace(xferOp, [&]() {
-                  xferOp.setInBoundsAttr(
-                      rewriter.getBoolArrayAttr(inBoundsMap));
-                });
-              })
-          .Default([](Operation *op) {
-            // No-op if the operation is not an xfer read or write.
-          });
-    }
+    LDBG() << "No mask required, make sure that Xfer Ops set in_bounds to true";
+    // TODO: To be removed: https://github.com/llvm/llvm-project/issues/227821
+    llvm::TypeSwitch<Operation *>(opToMask)
+        .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+            [&](auto xferOp) {
+              SmallVector<bool> inBoundsMap =
+                  SmallVector<bool>(xferOp.getInBounds().size(), true);
+              rewriter.modifyOpInPlace(xferOp, [&]() {
+                xferOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBoundsMap));
+              });
+            })
+        .Default([](Operation *op) {
+          // No-op if the operation is not an xfer read or write.
+        });
     return opToMask;
   }
 
@@ -762,6 +741,8 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   // be in-bounds.
   if (auto maskOp = dyn_cast<vector::MaskingOpInterface>(write)) {
     auto maskedWriteOp = cast<vector::TransferWriteOp>(maskOp.getMaskableOp());
+    // TODO: To be removed, see
+    // https://github.com/llvm/llvm-project/issues/227821
     SmallVector<bool> inBounds(maskedWriteOp.getVectorType().getRank(), true);
     maskedWriteOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
   }
@@ -1537,6 +1518,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // 3.b. If masked, set in-bounds to true. Masking guarantees that the access
     // will be in-bounds.
     if (auto maskOp = dyn_cast<vector::MaskingOpInterface>(read)) {
+      // TODO: To be removed, see
+      // https://github.com/llvm/llvm-project/issues/227821
       SmallVector<bool> inBounds(readType.getRank(), true);
       cast<vector::TransferReadOp>(maskOp.getMaskableOp())
           .setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
@@ -2761,7 +2744,7 @@ protected:
 /// sure that the original padding value %cst was never used.
 ///
 /// This rewrite is possible if:
-/// - `xferOp` has no out-of-bounds dims or mask.
+/// - `xferOp` has no out-of-bounds dims and is not masked.
 /// - Low padding is static 0.
 /// - Single, scalar padding value.
 struct PadOpVectorizationWithTransferReadPattern
@@ -2779,7 +2762,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (!padValue)
       return failure();
     // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
+    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask() || xferOp.isMasked())
       return failure();
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
@@ -3070,7 +3053,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       vecType.getRank(), arith::ConstantIndexOp::create(rewriter, loc, 0));
   Value read = mlir::vector::createReadOrMaskedRead(
       rewriter, loc, source, vecType, padValue,
-      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty());
+      /*useInBoundsInsteadOfMasking=*/false);
 
   // Create write
   auto writeIndices =
@@ -3088,7 +3071,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 
   Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, read, sliceOp.getDest(), writeIndices,
-      inputVectorSizes.empty(), writeMap);
+      /*useInBoundsInsteadOfMasking=*/false, writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));

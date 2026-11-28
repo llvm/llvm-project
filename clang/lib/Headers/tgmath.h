@@ -1275,17 +1275,13 @@ static long double
 
 // conj
 
-static float _Complex
-    _TG_ATTRS
-    __tg_conj(float __x) {return __x;}
+static float _Complex _TG_ATTRS __tg_conj(float __x) { return conjf(__x); }
 
-static double _Complex
-    _TG_ATTRS
-    __tg_conj(double __x) {return __x;}
+static double _Complex _TG_ATTRS __tg_conj(double __x) { return conj(__x); }
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_conj(long double __x) {return __x;}
+static long double _Complex _TG_ATTRS __tg_conj(long double __x) {
+  return conjl(__x);
+}
 
 static float _Complex
     _TG_ATTRS

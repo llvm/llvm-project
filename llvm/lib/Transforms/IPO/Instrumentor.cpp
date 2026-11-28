@@ -46,7 +46,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -69,13 +68,6 @@ using namespace llvm::instrumentor;
 #define DEBUG_TYPE "instrumentor"
 
 namespace {
-
-/// The user option to specify input JSON files to read the configuration from.
-static cl::list<std::string>
-    ConfigFiles("instrumentor-read-config-files",
-                cl::desc("Read the instrumentor configuration from the "
-                         "specified JSON files (comma separated)"),
-                cl::CommaSeparated);
 
 /// Set the debug location, if not set, after changing the insertion point of
 /// the IR builder \p IRB.
@@ -552,6 +544,8 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
   // If this is a configuration driven run, iterate over all configurations
   // provided by the user, if not, use the config as is and run the instrumentor
   // once.
+  auto ConfigFiles =
+      to_vector_of<std::string>(Opts.instrumentor_read_config_files);
   if (ReadConfig)
     readConfigPathsFile(Opts.instrumentor_read_config_paths_file, ConfigFiles,
                         IIRB.Ctx, *FS);

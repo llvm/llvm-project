@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _Alignment, class _Tp>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __is_sufficiently_aligned(_Tp* __ptr) {
+[[__nodiscard__]] bool __is_sufficiently_aligned(_Tp* __ptr) {
   static_assert(std::has_single_bit(_Alignment), "alignment must be a power of two.");
 
   return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
@@ -33,7 +33,7 @@ template <size_t _Alignment, class _Tp>
 #  if _LIBCPP_STD_VER >= 26
 
 template <size_t _Alignment, class _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
+[[nodiscard]] bool is_sufficiently_aligned(_Tp* __ptr) {
   return std::__is_sufficiently_aligned<_Alignment>(__ptr);
 }
 

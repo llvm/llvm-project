@@ -124,7 +124,7 @@ static void handleAMDGPUNumSGPRAttr(const FunctionDecl *fd, cir::FuncOp func,
 
   uint32_t numSGPR = attr->getNumSGPR();
   if (numSGPR != 0) {
-    func->setAttr("cir.amdgpu-num-sgpr",
+    func->setAttr(cir::CIRDialect::getAMDGPUNumSGPRAttrName(),
                   builder.getStringAttr(llvm::utostr(numSGPR)));
   }
 }
@@ -139,7 +139,7 @@ static void handleAMDGPUNumVGPRAttr(const FunctionDecl *fd, cir::FuncOp func,
 
   uint32_t numVGPR = attr->getNumVGPR();
   if (numVGPR != 0) {
-    func->setAttr("cir.amdgpu-num-vgpr",
+    func->setAttr(cir::CIRDialect::getAMDGPUNumVGPRAttrName(),
                   builder.getStringAttr(llvm::utostr(numVGPR)));
   }
 }
@@ -169,7 +169,7 @@ static void handleAMDGPUMaxNumWorkGroupsAttr(const FunctionDecl *fd,
   llvm::SmallString<32> attrVal;
   llvm::raw_svector_ostream os(attrVal);
   os << x << ',' << y << ',' << z;
-  func->setAttr("cir.amdgpu-max-num-workgroups",
+  func->setAttr(cir::CIRDialect::getAMDGPUMaxNumWorkGroupsAttrName(),
                 builder.getStringAttr(attrVal.str()));
 }
 
@@ -191,7 +191,7 @@ static void handleAMDGPUClusterDimsAttr(const FunctionDecl *fd,
     llvm::SmallString<32> attrVal;
     llvm::raw_svector_ostream os(attrVal);
     os << x << ',' << y << ',' << z;
-    func->setAttr("cir.amdgpu-cluster-dims",
+    func->setAttr(cir::CIRDialect::getAMDGPUClusterDimsAttrName(),
                   builder.getStringAttr(attrVal.str()));
   }
 
@@ -200,7 +200,8 @@ static void handleAMDGPUClusterDimsAttr(const FunctionDecl *fd,
        targetInfo.hasFeatureEnabled(targetInfo.getTargetOpts().FeatureMap,
                                     "clusters")) ||
       fd->hasAttr<CUDANoClusterAttr>()) {
-    func->setAttr("cir.amdgpu-cluster-dims", builder.getStringAttr("0,0,0"));
+    func->setAttr(cir::CIRDialect::getAMDGPUClusterDimsAttrName(),
+                  builder.getStringAttr("0,0,0"));
   }
 }
 
@@ -208,7 +209,8 @@ static void handleAMDGPUClusterDimsAttr(const FunctionDecl *fd,
 static void handleAMDGPUIEEEAttr(cir::FuncOp func, CIRGenModule &cgm,
                                  CIRGenBuilderTy &builder) {
   if (!cgm.getCodeGenOpts().EmitIEEENaNCompliantInsts)
-    func->setAttr("cir.amdgpu-ieee", builder.getStringAttr("false"));
+    func->setAttr(cir::CIRDialect::getAMDGPUIEEEAttrName(),
+                  builder.getStringAttr("false"));
 }
 
 /// Handle amdgpu-expand-waitcnt-profiling attribute.
@@ -216,7 +218,7 @@ static void handleAMDGPUExpandWaitcntProfilingAttr(cir::FuncOp func,
                                                    CIRGenModule &cgm,
                                                    CIRGenBuilderTy &builder) {
   if (cgm.getCodeGenOpts().AMDGPUExpandWaitcntProfiling)
-    func->setAttr("cir.amdgpu-expand-waitcnt-profiling",
+    func->setAttr(cir::CIRDialect::getAMDGPUExpandWaitcntProfilingAttrName(),
                   builder.getStringAttr(""));
 }
 

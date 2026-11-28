@@ -13,6 +13,19 @@
 #include <cstdint>
 #include <optional>
 
+namespace llvm {
+#ifdef EXPENSIVE_CHECKS
+constexpr bool MachineCombinerVerifyPatternOrderDefault = true;
+#else
+constexpr bool MachineCombinerVerifyPatternOrderDefault = false;
+#endif
+
+namespace MISched {
+enum Direction : unsigned;
+} // namespace MISched
+enum class WindowSchedulingFlag;
+} // namespace llvm
+
 #define OPTIONS_STRUCT_DECL
 #include "CodeGenOptions.inc"
 

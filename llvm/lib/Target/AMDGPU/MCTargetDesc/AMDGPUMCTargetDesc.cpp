@@ -184,6 +184,26 @@ void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst,
     VgprMSBs = 0;
 }
 
+unsigned getMaxInstLength(const MCSubtargetInfo &STI) {
+  if (STI.getTargetTriple().getArch() == Triple::r600)
+    return 16;
+
+  // Maximum for NSA encoded images
+  if (STI.hasFeature(AMDGPU::FeatureNSAEncoding))
+    return 20;
+
+  // VOP3PX/VOP3PX2 encoding.
+  if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) ||
+      STI.hasFeature(AMDGPU::FeatureGFX1250Insts))
+    return 16;
+
+  // 64-bit instruction with 32-bit literal.
+  if (STI.hasFeature(AMDGPU::FeatureVOP3Literal))
+    return 12;
+
+  return 8;
+}
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

@@ -1242,3 +1242,129 @@ define nofpclass(nan zero psub norm) half @ret__inf_nsub__select__fptrunc_rtn_f3
   %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
   ret half %result
 }
+
+;-------------------------------------------------------------------------------
+; Overflow may saturate to max-normal depending on the rounding mode.
+;-------------------------------------------------------------------------------
+
+define nofpclass(zero sub norm) half @ret__nan_inf__fptrunc_rtz_f32_f16__demand_inf(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(zero sub norm) half @ret__nan_inf__fptrunc_rtz_f32_f16__demand_inf(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[INF]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %inf = call float @returns_inf_f32()
+  %select = select i1 %cond, float %inf, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.towardzero")
+  ret half %result
+}
+
+define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtz_f32_f16__no_demand_norm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtz_f32_f16__no_demand_norm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm_f32()
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %norm = call float @returns_norm_f32()
+  %select = select i1 %cond, float %norm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.towardzero")
+  ret half %result
+}
+
+define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtp_f32_f16__demand_pnorm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtp_f32_f16__demand_pnorm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[PNORM:%.*]] = call float @returns_pnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.upward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pnorm = call float @returns_pnorm_f32()
+  %select = select i1 %cond, float %pnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.upward")
+  ret half %result
+}
+
+define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtn_f32_f16__no_demand_norm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rtn_f32_f16__no_demand_norm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm_f32()
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %norm = call float @returns_norm_f32()
+  %select = select i1 %cond, float %norm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
+  ret half %result
+}
+
+define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rna_f32_f16__demand_pnorm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(ninf zero sub norm) half @ret__nan_pinf__fptrunc_rna_f32_f16__demand_pnorm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[PNORM:%.*]] = call float @returns_pnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.tonearestaway")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pnorm = call float @returns_pnorm_f32()
+  %select = select i1 %cond, float %pnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.tonearestaway")
+  ret half %result
+}
+
+define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtz_f32_f16__no_demand_norm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtz_f32_f16__no_demand_norm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm_f32()
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %norm = call float @returns_norm_f32()
+  %select = select i1 %cond, float %norm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.towardzero")
+  ret half %result
+}
+
+define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtp_f32_f16__no_demand_norm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtp_f32_f16__no_demand_norm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm_f32()
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN]], metadata !"round.upward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %norm = call float @returns_norm_f32()
+  %select = select i1 %cond, float %norm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.upward")
+  ret half %result
+}
+
+define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtn_f32_f16__demand_nnorm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rtn_f32_f16__demand_nnorm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nnorm = call float @returns_nnorm_f32()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
+  ret half %result
+}
+
+define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rna_f32_f16__demand_nnorm(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(pinf zero sub norm) half @ret__nan_ninf__fptrunc_rna_f32_f16__demand_nnorm(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.tonearestaway")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nnorm = call float @returns_nnorm_f32()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.tonearestaway")
+  ret half %result
+}

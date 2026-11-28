@@ -26,8 +26,6 @@ class MipsELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit MipsELFMCAsmInfo(const Triple &TheTriple,
                             const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
   bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
@@ -38,8 +36,6 @@ class MipsCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {
 
 public:
   explicit MipsCOFFMCAsmInfo(const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
 };

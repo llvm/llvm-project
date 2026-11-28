@@ -4092,6 +4092,32 @@ def: Pat<(int_hexagon_V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2),
          (V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV83, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
          (V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV83, UseHVX128B]>;
+
+// V68 HMX Instructions.
+
+def: Pat<(int_hexagon_M8_mxclracc_hf ),
+         (M8_mxclracc_hf )>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem2_bias IntRegs:$src1),
+         (M8_mxmem2_bias IntRegs:$src1)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem2_st_bias IntRegs:$src1),
+         (M8_mxmem2_st_bias IntRegs:$src1)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem_blk_sm_act_hf IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmem_blk_sm_act_hf IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem_sm_act_hf IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmem_sm_act_hf IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem_wei_hf IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmem_wei_hf IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmemdp_wei_hf IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmemdp_wei_hf IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV68, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmems_blk_sm_act_hf IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmems_blk_sm_act_hf IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV68, UseHMX]>;
+
+// V73 HMX Instructions.
+
+def: Pat<(int_hexagon_M8_cvt_rs_hf IntRegs:$src1),
+         (M8_cvt_rs_hf IntRegs:$src1)>, Requires<[HasV73, UseHMX]>;
+def: Pat<(int_hexagon_M8_mxmem IntRegs:$src1, IntRegs:$src2),
+         (M8_mxmem IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV73, UseHMX]>;
 def: Pat<(int_hexagon_LX_abs_uh HlxLR:$src1),
          (LX_abs_uh HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
 def: Pat<(int_hexagon_LX_abs_uh_sat HlxLR:$src1),

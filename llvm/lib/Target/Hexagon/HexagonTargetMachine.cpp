@@ -26,9 +26,11 @@
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -187,6 +189,8 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
       C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(
+      std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
@@ -205,6 +209,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
+  static opt::RegisterLibraryOptions<HexagonOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeHexagonAlignGlobalArraysPass(PR);
@@ -223,6 +228,8 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonLowerHLXPairAllocasPass(PR);
+  initializeHexagonMergeActivateWeightPass(PR);
+  initializeHexagonMergeActivateWeight2Pass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -268,6 +275,8 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
+      CLOpts(cl::LibraryOptionsContext::get<HexagonOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
   initAsmInfo();
@@ -515,6 +524,14 @@ void HexagonPassConfig::addMachineSSAOptimization() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
+  // HMX activation/weight pairs must be adjacent before register allocation.
+  // With optimized register allocation, run after the machine scheduler,
+  // which may separate the pairs.
+  if (getOptimizeRegAlloc())
+    insertPass(&MachineSchedulerID, &HexagonMergeActivateWeightID);
+  else
+    insertPass(&PHIEliminationID, &HexagonMergeActivateWeightID);
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
@@ -574,6 +591,8 @@ void HexagonPassConfig::addPreEmitPass() {
     if (!DisableHexagonLiveVars)
       addPass(&HexagonLiveVariablesID);
   }
+
+  addPass(createHexagonMergeActivateWeight2());
 
   // Emit KCFI checks for indirect calls. Must run before packetization so
   // the check and call can be bundled together into a VLIW packet.

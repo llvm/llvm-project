@@ -124,6 +124,7 @@ add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_port_t HDR in_port_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_in_addr HDR struct_in_addr.h DEPENDS .in_addr_t)
 add_header(struct_in6_addr HDR struct_in6_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(struct_in6_pktinfo HDR struct_in6_pktinfo.h DEPENDS .struct_in6_addr)
 add_header(struct_ipv6_mreq HDR struct_ipv6_mreq.h DEPENDS .struct_in6_addr)
 add_header(struct_ip_mreq HDR struct_ip_mreq.h DEPENDS .struct_in_addr)
 add_header(struct_ip_mreq_source HDR struct_ip_mreq_source.h DEPENDS .struct_in_addr)
@@ -325,8 +326,17 @@ add_header(struct_ucred HDR struct_ucred.h DEPENDS .pid_t .uid_t .gid_t)
 add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(struct_mmsghdr HDR struct_mmsghdr.h DEPENDS .struct_msghdr)
+add_header(struct_iphdr HDR struct_iphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_type_header(
+  struct_tcp_info
+  HDR
+    struct_tcp_info.h
+)
 add_header(struct_udphdr HDR struct_udphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_ether_addr HDR struct_ether_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(ns_class HDR ns_class.h)
+add_header(ns_sect HDR ns_sect.h)
+add_header(ns_type HDR ns_type.h)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(VISIT HDR VISIT.h)
@@ -646,6 +656,7 @@ endif()
 add_type_header(mcontext_t HDR mcontext_t.h)
 add_type_header(ucontext_t HDR ucontext_t.h)
 add_type_header(struct_user_regs_struct HDR struct_user_regs_struct.h)
+add_header(struct_ar_hdr HDR struct_ar_hdr.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)

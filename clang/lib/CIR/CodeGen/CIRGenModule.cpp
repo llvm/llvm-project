@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
@@ -123,6 +123,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   doubleTy = cir::DoubleType::get(&getMLIRContext());
   fP80Ty = cir::FP80Type::get(&getMLIRContext());
   fP128Ty = cir::FP128Type::get(&getMLIRContext());
+  mFloat8Ty = cir::MFloat8Type::get(&getMLIRContext());
 
   allocaInt8PtrTy = cir::PointerType::get(uInt8Ty, cirAllocaAddressSpace);
 

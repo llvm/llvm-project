@@ -43,6 +43,7 @@ def SPIRV_EntryPointABIAttr : SPIRV_Attr<"EntryPointABI", "entry_point_abi"> {
     OptionalParameter<"std::optional<int>">:$target_width
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
 }
 
 def SPIRV_ExtensionArrayAttr : TypedArrayAttrBase<

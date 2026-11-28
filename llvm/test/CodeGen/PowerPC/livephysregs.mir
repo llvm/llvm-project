@@ -10,7 +10,6 @@
 # CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
 ---
 name: func
-tracksRegLiveness: true
 fixedStack:      
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x30' }
   - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$x29' }

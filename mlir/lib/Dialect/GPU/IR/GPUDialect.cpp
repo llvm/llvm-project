@@ -156,10 +156,6 @@ void GPUDialect::initialize() {
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addTypes<SparseSpGEMMOpHandleType>();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
-      >();
   // Match addAttributes while keeping the storage and interface instantiations
   // in their respective implementation libraries.
   registerAttributeMetadata<

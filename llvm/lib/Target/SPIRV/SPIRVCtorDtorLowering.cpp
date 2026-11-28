@@ -25,7 +25,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SPIRVAddrSpace.h"
-#include "llvm/Transforms/IPO/OpenMPOpt.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -209,8 +208,9 @@ bool createInitOrFiniKernel(const SPIRVOptions &CLOpts, Module &M,
 }
 
 bool lowerCtorsAndDtors(Module &M) {
-  // Only run this pass for OpenMP offload compilation
-  if (!llvm::omp::isOpenMPDevice(M))
+  // Logical SPIR-V (shader) modules have no notion of function pointers or
+  // device-side init/fini kernels.
+  if (M.getTargetTriple().isSPIRVLogical())
     return false;
 
   const SPIRVOptions &CLOpts =

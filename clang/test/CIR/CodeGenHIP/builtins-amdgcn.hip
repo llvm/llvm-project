@@ -252,6 +252,14 @@ __device__ void test_log_f32(float* out, float a) {
   *out = __builtin_amdgcn_logf(a);
 }
 
+// CIR-LABEL: @_Z18test_log_clamp_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log.clamp" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z18test_log_clamp_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.clamp.f32(float %{{.*}})
+__device__ void test_log_clamp_f32(float* out, float a) {
+  *out = __builtin_amdgcn_log_clampf(a);
+}
+
 // CIR-LABEL: @_Z19test_frexp_mant_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff
@@ -450,4 +458,26 @@ __device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src
 __device__ void test_wave_shuffle(int* out, int a, int b)
 {
   *out = __builtin_amdgcn_wave_shuffle(a, b);
+}
+
+// CIR-LABEL: @_Z14test_ds_appendPiS_(
+// CIR: [[APPEND_FALSE:%.+]] = cir.const #false
+// CIR: cir.call_llvm_intrinsic "amdgcn.ds.append" %{{[^, ]+}}, [[APPEND_FALSE]]
+// CIR-SAME: : (!cir.ptr<!s32i, target_address_space(3)>, !cir.bool) -> !s32i
+// LLVM-LABEL: define{{.*}} void @_Z14test_ds_appendPiS_(
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %{{[^, ]+}}, i1 false)
+__device__ void test_ds_append(int *out, int *ptr) 
+{
+  *out = __builtin_amdgcn_ds_append(ptr);
+}
+
+// CIR-LABEL: @_Z15test_ds_consumePiS_(
+// CIR: [[CONSUME_FALSE:%.+]] = cir.const #false
+// CIR: cir.call_llvm_intrinsic "amdgcn.ds.consume" %{{[^, ]+}}, [[CONSUME_FALSE]]
+// CIR-SAME: : (!cir.ptr<!s32i, target_address_space(3)>, !cir.bool) -> !s32i
+// LLVM-LABEL: define{{.*}} void @_Z15test_ds_consumePiS_(
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %{{[^, ]+}}, i1 false)
+__device__ void test_ds_consume(int *out, int *ptr) 
+{
+  *out = __builtin_amdgcn_ds_consume(ptr);
 }

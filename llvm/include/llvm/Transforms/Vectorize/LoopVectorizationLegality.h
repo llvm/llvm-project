@@ -60,6 +60,14 @@ struct VectorizeOptions;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
+public:
+  enum ForceKind {
+    FK_Undefined = -1, ///< Not selected.
+    FK_Disabled = 0,   ///< Forcing disabled.
+    FK_Enabled = 1,    ///< Forcing enabled.
+  };
+
+private:
   enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED };
 
   /// Hint - associates name and validation with the hint value.
@@ -96,6 +104,12 @@ class LoopVectorizeHints {
   /// a plain value because the enable/disable pair has no operand to validate.
   unsigned Scalable;
 
+  /// Unsafe FP hint from llvm.loop.vectorize.fp_unsafe.{enable,disable}.
+  ///   FK_Undefined : not specified
+  ///   FK_Disabled  : result-changing FP vectorization suppressed
+  ///   FK_Enabled   : result-changing FP vectorization allowed
+  ForceKind FPUnsafe;
+
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
 
@@ -103,12 +117,6 @@ class LoopVectorizeHints {
   bool PotentiallyUnsafe = false;
 
 public:
-  enum ForceKind {
-    FK_Undefined = -1, ///< Not selected.
-    FK_Disabled = 0,   ///< Forcing disabled.
-    FK_Enabled = 1,    ///< Forcing enabled.
-  };
-
   enum ScalableForceKind {
     /// Not selected.
     SK_Unspecified = -1,
@@ -185,6 +193,12 @@ public:
     // IEEE 754 FP ops properly, or bad single-to-double promotions.
     // Otherwise, a sequence of vectorized loops, even without reduction,
     // could lead to different end results on the destination vectors.
+    //
+    // An explicit fp_unsafe hint takes precedence over the vectorize.enable
+    // default.
+    if (FPUnsafe != FK_Undefined)
+      return FPUnsafe != FK_Enabled && PotentiallyUnsafe;
+
     return getForce() != LoopVectorizeHints::FK_Enabled && PotentiallyUnsafe;
   }
 

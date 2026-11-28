@@ -5,8 +5,6 @@
 ---
 name:            foo
 alignment:       16
-registers:
-  - { id: 0, class: vr128 }
 frameInfo:
   maxAlignment:    16
 stack:

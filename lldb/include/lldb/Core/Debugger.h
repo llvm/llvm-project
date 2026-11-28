@@ -637,6 +637,9 @@ public:
   /// diagnostics.suggest-bugreport is on.
   bool ShouldSuggestBugReport(llvm::StringRef failure);
 
+  /// Writes the 'bugreport' note to \p strm if ShouldSuggestBugReport.
+  void SuggestBugReport(llvm::StringRef failure, Stream &strm);
+
   /// Report info events.
   ///
   /// Unlike warning and error events, info events are not broadcast but are

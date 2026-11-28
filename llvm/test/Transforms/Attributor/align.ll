@@ -1214,6 +1214,29 @@ define ptr @infer_align_cmpxchg_ptr(ptr align 4 %p, ptr %cmp0, ptr %cmp1) {
 
 declare void @implicit_cast_callee(i64)
 
+; The definition of a linkonce_odr function might be replaced by another one,
+; e.g. one without the load, so the alignment of its argument must not be
+; derived from its body.
+define linkonce_odr void @align_from_load_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@align_from_load_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, ptr %a, align 8
+  ret void
+}
+
+define void @call_align_from_load_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@call_align_from_load_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_load_non_exact(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  call void @align_from_load_non_exact(ptr %a)
+  ret void
+}
+
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
 attributes #2 = { null_pointer_is_valid }

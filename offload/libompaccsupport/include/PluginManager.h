@@ -33,6 +33,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -52,7 +53,11 @@ struct PluginManager {
 
   void init();
 
+  /// Deinitialize devices and release liboffload. Idempotent.
   void deinit();
+
+  /// Deinitialize devices and drop platforms, without olShutDown. Idempotent.
+  void deinitDevices();
 
   // Register a shared library with all (compatible) RTLs.
   void registerLib(__tgt_bin_desc *Desc);
@@ -148,6 +153,7 @@ private:
   bool RTLsLoaded = false;
   // Whether init() called olInit, so deinit() must call olShutDown.
   bool LibOffloadInitialized = false;
+  std::atomic<bool> DevicesDeinitialized{false};
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // Platforms reported by liboffload, indexed by their handle.

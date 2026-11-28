@@ -264,7 +264,8 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
     Address allocaAddr = Address::invalid();
-    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    returnValue = createMemTemp(type, alignment, loc, "", &allocaAddr);
+    mlir::cast<cir::AllocaOp>(allocaAddr.getDefiningOp()).setReturnSlot(true);
     fnRetAlloca = allocaAddr.getPointer();
   }
 }
@@ -381,7 +382,7 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
 
   if (!fn.getFunctionType().hasVoidReturn()) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
+    // Load the value from the return slot and return it via `cir.return`.
     auto value = cir::LoadOp::create(
         builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return cir::ReturnOp::create(builder, loc,
@@ -1237,8 +1238,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   assert(!cir::MissingFeatures::generateDebugInfo());
   switch (e->getStmtClass()) {
   default:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: unsupported l-value class");
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitLValue: unsupported l-value class: ") +
+                     e->getStmtClassName());
     return LValue();
 
   case Expr::ObjCPropertyRefExprClass:

@@ -2,12 +2,15 @@
 
 // DEFINE: %{optimize} = opt -passes=mem2reg,instcombine,tailcallelim -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove
+// -fno-clangir-call-conv-lowering once those types are supported.
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
 // RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
@@ -54,7 +57,7 @@ int8_t test_svandv_s8(svbool_t pg, svint8_t op) MODE_ATTR
 int16_t test_svandv_s16(svbool_t pg, svint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s16i
 
@@ -70,7 +73,7 @@ int16_t test_svandv_s16(svbool_t pg, svint16_t op) MODE_ATTR
 int32_t test_svandv_s32(svbool_t pg, svint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s32i
 
@@ -86,7 +89,7 @@ int32_t test_svandv_s32(svbool_t pg, svint32_t op) MODE_ATTR
 int64_t test_svandv_s64(svbool_t pg, svint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s64i
 
@@ -115,7 +118,7 @@ uint8_t test_svandv_u8(svbool_t pg, svuint8_t op) MODE_ATTR
 uint16_t test_svandv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u16i
 
@@ -131,7 +134,7 @@ uint16_t test_svandv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
 uint32_t test_svandv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u32i
 
@@ -147,7 +150,7 @@ uint32_t test_svandv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
 uint64_t test_svandv_u64(svbool_t pg, svuint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.andv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u64i
 

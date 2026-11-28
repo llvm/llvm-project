@@ -1338,11 +1338,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     // Remap all instructions in the most recent iteration.
     // Key Instructions: Nothing to do - we've already remapped the atoms.
-    remapInstructionsInBlocks(NewBlocks, LastValueMap);
-    for (BasicBlock *NewBlock : NewBlocks)
-      for (Instruction &I : *NewBlock)
-        if (auto *II = dyn_cast<AssumeInst>(&I))
-          AC->registerAssumption(II);
+    remapInstructionsInBlocks(NewBlocks, LastValueMap, AC);
 
     {
       // Identify what other metadata depends on the cloned version. After
@@ -1620,7 +1616,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
-          RdxPart->dropPoisonGeneratingFlags();
+          RdxPart->dropPoisonGeneratingAnnotations();
       }
 
       Phi.replaceAllUsesWith(RdxResult);

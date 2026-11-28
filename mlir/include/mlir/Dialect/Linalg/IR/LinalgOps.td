@@ -25,7 +25,9 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
 class Linalg_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Linalg_Dialect, mnemonic, traits>;
+    Op<Linalg_Dialect, mnemonic, traits> {
+  let partition = Linalg_CorePartition;
+}
 
 def Linalg_YieldOp : Linalg_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {

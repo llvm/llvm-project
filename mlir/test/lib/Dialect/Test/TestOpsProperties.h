@@ -10,6 +10,7 @@
 #define MLIR_TEST_DIALECT_TEST_TESTOPSPROPERTIES_H
 
 #include "TestDialect.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 

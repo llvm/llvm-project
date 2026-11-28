@@ -11,6 +11,8 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "clang/AST/RecordLayout.h"
+#include "llvm/Demangle/MicrosoftDemangle.h"
+#include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
 #include <deque>
 #include <mutex>
@@ -75,30 +77,27 @@ TypeAndOrName MicrosoftABIRuntime::GetTypeInfo(
   if (!vtable_info.addr.IsSectionOffset() || !vtable_info.symbol)
     return {};
 
-  // See if we have cached info for this type already
+  // See if we have cached info for this type already.
   TypeAndOrName type_info = GetDynamicTypeInfo(vtable_info.addr);
   if (type_info)
     return type_info;
 
   Log *log = GetLog(LLDBLog::Object);
-  llvm::StringRef symbol_name =
-      vtable_info.symbol->GetMangled().GetDemangledName().GetStringRef();
+  Mangled &mangled = vtable_info.symbol->GetMangled();
+  llvm::StringRef symbol_name = mangled.GetDemangledName().GetStringRef();
   if (!SplitVTableComponents(symbol_name, vtable_components)) {
     LLDB_LOG(log, "{0:x16}: '{1}' is not a valid vtable symbol",
              in_value.GetPointerValue().address, symbol_name);
     return {};
   }
 
-  llvm::StringRef class_name = StripDemangledVTableSuffix(symbol_name);
-
-  type_info.SetName(class_name);
   bool any_found = false;
-  TypeSP type_sp = LookupTypeByName(
-      class_name, vtable_info.symbol->CalculateSymbolContextModule(),
-      any_found);
+  auto [type_sp, class_name] = LookupTypeByMangled(
+      mangled, vtable_info.symbol->CalculateSymbolContextModule(), any_found);
   if (!any_found)
     return TypeAndOrName(); // Type is not dynamic.
 
+  type_info.SetName(class_name);
   if (type_sp) {
     LLDB_LOG(log,
              "static-type = '{0}' has dynamic type: uid={1:x}, type-name='{2}'",
@@ -420,4 +419,58 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTopFromAST(
   }
 
   return offset;
+}
+
+std::pair<lldb::TypeSP, ConstString> MicrosoftABIRuntime::LookupTypeByMangled(
+    Mangled &mangled, lldb::ModuleSP preferred_module, bool &any_found) {
+  llvm::StringRef preferred_name = mangled.GetDemangledName().GetStringRef();
+  llvm::StringRef class_name = StripDemangledVTableSuffix(preferred_name);
+
+  bool has_nested_template = class_name.contains(">>");
+  bool has_typename_list = class_name.contains(", ");
+
+  if (!has_nested_template && !has_typename_list) {
+    TypeSP type_sp = LookupTypeByName(class_name, preferred_module, any_found);
+    if (any_found)
+      return {type_sp, ConstString(class_name)};
+  }
+
+  std::string_view mangled_name = mangled.GetMangledName().GetStringRef();
+
+  // We need to match the way the compiler spelled the types when it put them
+  // into the TPI stream. For PDB, it does not insert spaces between template
+  // arguments and nested closing braces have a space in-between.
+  llvm::MSDemangleFlags flags = llvm::MSDemangleFlags(
+      llvm::MSDF_CompactTemplateLists | llvm::MSDF_SplitTemplateClosers |
+      llvm::MSDF_NoTagSpecifier);
+  char *demangled =
+      llvm::microsoftDemangle(mangled_name, nullptr, nullptr, flags);
+  if (!demangled)
+    return {};
+  llvm::scope_exit guard([&] { std::free(demangled); });
+
+  llvm::StringRef demangled_ref = StripDemangledVTableSuffix(demangled);
+  TypeSP type_sp = LookupTypeByName(demangled_ref, preferred_module, any_found);
+  if (any_found)
+    return {type_sp, ConstString(demangled_ref)};
+
+  if (!has_typename_list)
+    return {};
+
+  // DWARF has spaces between template
+  // parameters, so try again but with spaces.
+  flags = llvm::MSDemangleFlags(flags & ~llvm::MSDF_CompactTemplateLists);
+  std::free(demangled);
+  demangled = llvm::microsoftDemangle(mangled_name, nullptr, nullptr, flags);
+  if (!demangled)
+    return {};
+
+  demangled_ref = StripDemangledVTableSuffix(demangled);
+
+  type_sp = LookupTypeByName(llvm::StringRef(demangled_ref), preferred_module,
+                             any_found);
+  if (any_found)
+    return {type_sp, ConstString(demangled_ref)};
+
+  return {};
 }

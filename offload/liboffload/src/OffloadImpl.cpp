@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <mutex>
 
-using namespace llvm::omp::target;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload;
+using namespace llvm::offload::plugin;
 using namespace error;
 
 struct ol_platform_impl_t {
@@ -341,6 +341,11 @@ struct OffloadContext {
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   size_t RefCount;
 
+  // Cleanup routines to run, in reverse order, before the platforms are
+  // deinitialized.
+  std::mutex ShutdownCallbacksMutex;
+  SmallVector<std::pair<ol_shutdown_cb_t, void *>> ShutdownCallbacks;
+
   static OffloadContext &get() {
     assert(OffloadContextVal);
     return *OffloadContextVal;
@@ -433,6 +438,21 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   return InitResult;
 }
 
+// Run the registered cleanup routines. The context is still published here so
+// callbacks can use the API. Callbacks may register further callbacks.
+static void runShutdownCallbacks(OffloadContext &Context) {
+  while (true) {
+    std::pair<ol_shutdown_cb_t, void *> Entry;
+    {
+      std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+      if (Context.ShutdownCallbacks.empty())
+        return;
+      Entry = Context.ShutdownCallbacks.pop_back_val();
+    }
+    Entry.first(Entry.second);
+  }
+}
+
 static Error destroyContext(OffloadContext *Context) {
   Error Result = Error::success();
   for (auto &Platform : Context->Platforms)
@@ -458,7 +478,16 @@ Error olShutDown_impl() {
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
+  runShutdownCallbacks(OffloadContext::get());
   return destroyContext(OffloadContextVal.exchange(nullptr));
+}
+
+Error olRegisterShutdownCallback_impl(ol_shutdown_cb_t Callback,
+                                      void *UserData) {
+  OffloadContext &Context = OffloadContext::get();
+  std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+  Context.ShutdownCallbacks.emplace_back(Callback, UserData);
+  return Error::success();
 }
 
 // Vendor libraries have specific teardown orders but can be initialized lazily.
@@ -467,8 +496,11 @@ Error olShutDown_impl() {
 static void shutDownAtExit() {
   std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
   ShutDownAtExit = true;
-  if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
+  if (OffloadContext *Context = OffloadContextVal.load()) {
+    runShutdownCallbacks(*Context);
+    OffloadContextVal.store(nullptr);
     consumeError(destroyContext(Context));
+  }
 }
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
@@ -978,8 +1010,11 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
-      return Err;
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false)) {
+      // This only fails after a fatal device error on the destroyed queue.
+      return createOffloadError(ErrorCode::UNKNOWN, std::move(Err),
+                                "failed to reuse a destroyed queue");
+    }
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
                  *Device->Device, &(CreatedQueue->AsyncInfo))) {
@@ -1198,14 +1233,25 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
   return Error::success();
 }
 
+// A null device handle means the pointer belongs to the host.
+static bool isHostDevice(ol_device_handle_t Device) {
+  return !Device || Device->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+}
+
+// Whether two non-host devices can exchange data directly.
+static bool canExchangeData(ol_device_handle_t SrcDevice,
+                            ol_device_handle_t DstDevice) {
+  return SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
+         SrcDevice->Platform.Plugin->isDataExchangable(
+             SrcDevice->Device->getDeviceId(),
+             DstDevice->Device->getDeviceId());
+}
+
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  // A null device handle means the pointer belongs to the host.
-  bool IsDstHost =
-      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
-  bool IsSrcHost =
-      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsDstHost = isHostDevice(DstDevice);
+  bool IsSrcHost = isHostDevice(SrcDevice);
 
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {
@@ -1228,10 +1274,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
-             SrcDevice->Platform.Plugin->isDataExchangable(
-                 SrcDevice->Device->getDeviceId(),
-                 DstDevice->Device->getDeviceId())) {
+  } else if (canExchangeData(SrcDevice, DstDevice)) {
     if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
                                                    DstPtr, Size, QueueImpl))
       return Res;
@@ -1253,6 +1296,169 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   }
 
   return Error::success();
+}
+
+static GenericDeviceTy::Copy3DDescTy
+makeCopy3DDesc(void *DstPtr, const ol_memcpy3d_layout_t &Dst, bool DstIsHost,
+               const void *SrcPtr, const ol_memcpy3d_layout_t &Src,
+               bool SrcIsHost, ol_dimensions_t Size) {
+  return {DstPtr,
+          SrcPtr,
+          {Dst.Offset.x, Dst.Offset.y, Dst.Offset.z},
+          {Src.Offset.x, Src.Offset.y, Src.Offset.z},
+          Dst.Pitch,
+          Dst.SlicePitch,
+          Src.Pitch,
+          Src.SlicePitch,
+          {Size.x, Size.y, Size.z},
+          DstIsHost,
+          SrcIsHost};
+}
+
+// Copy a region one row at a time with olMemcpy. Used for backends without
+// native 2D/3D copies.
+static Error copyRows(ol_queue_handle_t Queue,
+                      const GenericDeviceTy::Copy3DDescTy &Copy,
+                      ol_device_handle_t DstDevice,
+                      ol_device_handle_t SrcDevice) {
+  auto *Dst = static_cast<char *>(Copy.DstPtr);
+  auto *Src = static_cast<const char *>(Copy.SrcPtr);
+  for (size_t Z = 0; Z < Copy.Extent[2]; ++Z)
+    for (size_t Y = 0; Y < Copy.Extent[1]; ++Y) {
+      char *DstRow = Dst + (Copy.DstOffset[2] + Z) * Copy.DstSlicePitch +
+                     (Copy.DstOffset[1] + Y) * Copy.DstPitch +
+                     Copy.DstOffset[0];
+      const char *SrcRow = Src + (Copy.SrcOffset[2] + Z) * Copy.SrcSlicePitch +
+                           (Copy.SrcOffset[1] + Y) * Copy.SrcPitch +
+                           Copy.SrcOffset[0];
+      if (auto Res = olMemcpy_impl(Queue, DstRow, DstDevice, SrcRow, SrcDevice,
+                                   Copy.Extent[0]))
+        return Res;
+    }
+  return Error::success();
+}
+
+// Copy with the native 3D copy of \p Device, or row by row if its backend does
+// not support the copy. A null device means host memory.
+static Error copy3D(ol_device_handle_t Device, ol_queue_handle_t Queue,
+                    const GenericDeviceTy::Copy3DDescTy &Copy,
+                    ol_device_handle_t DstDevice,
+                    ol_device_handle_t SrcDevice) {
+  bool Unsupported = false;
+  Error Res = handleErrors(
+      Device->Device->dataMemcpy3D(Copy, Queue ? Queue->AsyncInfo : nullptr),
+      [&](std::unique_ptr<error::OffloadError> E) -> Error {
+        // INVALID_SIZE: a value exceeds what the backend's native copy takes.
+        std::error_code EC = E->convertToErrorCode();
+        if (EC == error::make_error_code(ErrorCode::UNSUPPORTED) ||
+            EC == error::make_error_code(ErrorCode::INVALID_SIZE)) {
+          Unsupported = true;
+          return Error::success();
+        }
+        return Error(std::move(E));
+      });
+  if (Unsupported && !Res)
+    return copyRows(Queue, Copy, Copy.DstIsHost ? nullptr : DstDevice,
+                    Copy.SrcIsHost ? nullptr : SrcDevice);
+  return Res;
+}
+
+Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
+                      ol_device_handle_t DstDevice,
+                      const ol_memcpy3d_layout_t *DstLayout, const void *SrcPtr,
+                      ol_device_handle_t SrcDevice,
+                      const ol_memcpy3d_layout_t *SrcLayout,
+                      ol_dimensions_t Size) {
+  if (Size.x == 0 || Size.y == 0 || Size.z == 0)
+    return Error::success();
+
+  // The slice pitch of a layout is only meaningful if that layout spans or
+  // starts past the first slice. Otherwise ignore it (and zero it so backends
+  // that look at both slice pitches never see an unvalidated value). This must
+  // match Copy3DDescTy::dstUsesSlices() and srcUsesSlices().
+  auto UsesSlices = [&](const ol_memcpy3d_layout_t &Layout) {
+    return Size.z > 1 || Layout.Offset.z > 0;
+  };
+  auto Fits = [&](const ol_memcpy3d_layout_t &Layout) {
+    if (Layout.Pitch < (size_t)Layout.Offset.x + Size.x)
+      return false;
+    if (!UsesSlices(Layout))
+      return true;
+    size_t MinSlice;
+    return !__builtin_mul_overflow(
+               Layout.Pitch, (size_t)Layout.Offset.y + Size.y, &MinSlice) &&
+           Layout.SlicePitch >= MinSlice &&
+           Layout.SlicePitch % Layout.Pitch == 0;
+  };
+  if (!Fits(*DstLayout) || !Fits(*SrcLayout))
+    return createOffloadError(ErrorCode::INVALID_SIZE,
+                              "pitch is smaller than the copied region");
+
+  ol_memcpy3d_layout_t Dst = *DstLayout, Src = *SrcLayout;
+  if (!UsesSlices(Dst))
+    Dst.SlicePitch = 0;
+  if (!UsesSlices(Src))
+    Src.SlicePitch = 0;
+
+  bool IsDstHost = isHostDevice(DstDevice);
+  bool IsSrcHost = isHostDevice(SrcDevice);
+
+  GenericDeviceTy::Copy3DDescTy Copy =
+      makeCopy3DDesc(DstPtr, Dst, IsDstHost, SrcPtr, Src, IsSrcHost, Size);
+
+  if (IsDstHost && IsSrcHost) {
+    // A queue of the host device keeps the copy asynchronous. Otherwise the
+    // copy is done on the CPU once the work enqueued on the queue completed.
+    if (Queue && isHostDevice(Queue->Device))
+      return copy3D(Queue->Device, Queue, Copy, DstDevice, SrcDevice);
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+    Copy.copyHost();
+    return Error::success();
+  }
+
+  // Devices that cannot exchange data directly stage the region through a
+  // packed host buffer, as olMemcpy does.
+  if (!IsDstHost && !IsSrcHost && !canExchangeData(SrcDevice, DstDevice)) {
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+
+    // Size of the packed region in bytes. Reject sizes that overflow size_t,
+    // which would make the buffer smaller than the region copied into it.
+    size_t Bytes;
+    if (__builtin_mul_overflow((size_t)Size.x, (size_t)Size.y, &Bytes) ||
+        __builtin_mul_overflow(Bytes, (size_t)Size.z, &Bytes))
+      return createOffloadError(ErrorCode::INVALID_SIZE,
+                                "the copied region is too large");
+    void *Buffer = malloc(Bytes);
+    if (!Buffer)
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
+
+    // The staging buffer holds only the copied region, tightly packed.
+    ol_memcpy3d_layout_t Packed = {
+        {0, 0, 0}, Size.x, Size.z > 1 ? (size_t)Size.x * Size.y : 0};
+    GenericDeviceTy::Copy3DDescTy ToHost =
+        makeCopy3DDesc(Buffer, Packed, true, SrcPtr, Src, false, Size);
+    GenericDeviceTy::Copy3DDescTy FromHost =
+        makeCopy3DDesc(DstPtr, Dst, false, Buffer, Packed, true, Size);
+    Error Res = copy3D(SrcDevice, nullptr, ToHost, nullptr, SrcDevice);
+    if (!Res)
+      Res = copy3D(DstDevice, nullptr, FromHost, DstDevice, nullptr);
+    free(Buffer);
+    return Res;
+  }
+
+  // As in olMemcpy, the source device performs the copy unless it is the host.
+  ol_device_handle_t Device = IsSrcHost ? DstDevice : SrcDevice;
+  if (Queue && Queue->Device != Device)
+    return createOffloadError(
+        ErrorCode::INVALID_QUEUE,
+        "the queue does not belong to the device performing the copy");
+
+  return copy3D(Device, Queue, Copy, DstDevice, SrcDevice);
 }
 
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,

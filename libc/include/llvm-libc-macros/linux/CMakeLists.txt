@@ -167,6 +167,12 @@ add_header(
 )
 
 add_header(
+  sys_swap_macros
+  HDR
+    sys-swap-macros.h
+)
+
+add_header(
   sys_time_macros
   HDR
     sys-time-macros.h

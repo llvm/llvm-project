@@ -18,9 +18,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s8))
-    $x10 = COPY %2(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s8))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -40,9 +40,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s16))
-    $x10 = COPY %2(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s16))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -62,9 +62,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_W]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s32))
-    $x10 = COPY %2(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s32))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -84,9 +84,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s64))
-    $x10 = COPY %2(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store monotonic (s64))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -108,11 +108,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 0
-    %3:gprb(s64) = G_SUB %2(s64), %1(s64)
-    %4:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s8))
-    $x10 = COPY %4(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 0
+    %3:gprb(i64) = G_SUB %2(i64), %1(i64)
+    %4:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s8))
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -134,11 +134,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 0
-    %3:gprb(s64) = G_SUB %2(s64), %1(s64)
-    %4:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s16))
-    $x10 = COPY %4(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 0
+    %3:gprb(i64) = G_SUB %2(i64), %1(i64)
+    %4:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s16))
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -160,11 +160,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_W]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 0
-    %3:gprb(s64) = G_SUB %2(s64), %1(s64)
-    %4:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s32))
-    $x10 = COPY %4(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 0
+    %3:gprb(i64) = G_SUB %2(i64), %1(i64)
+    %4:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s32))
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -186,10 +186,10 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 0
-    %3:gprb(s64) = G_SUB %2(s64), %1(s64)
-    %4:gprb(s64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s8))
-    $x10 = COPY %4(s64)
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 0
+    %3:gprb(i64) = G_SUB %2(i64), %1(i64)
+    %4:gprb(i64) = G_ATOMICRMW_ADD %0(p0), %3 :: (load store monotonic (s8))
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...

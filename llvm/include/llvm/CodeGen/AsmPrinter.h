@@ -49,7 +49,6 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
-class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -195,6 +194,8 @@ public:
   std::function<void(Module &)> EmitStackMaps;
   std::function<void()> AssertDebugEHFinalized;
 
+  void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -249,7 +250,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the

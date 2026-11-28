@@ -67,7 +67,7 @@ public:
   __libcpp_refstring& operator=(const __libcpp_refstring& __s) _NOEXCEPT;
   ~__libcpp_refstring();
 
-  _LIBCPP_HIDE_FROM_ABI const char* c_str() const _NOEXCEPT { return __imp_; }
+  const char* c_str() const _NOEXCEPT { return __imp_; }
 };
 #  endif // !_LIBCPP_ABI_VCRUNTIME
 

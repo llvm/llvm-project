@@ -31,7 +31,6 @@
 ---
 name:            hoge
 alignment:       1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

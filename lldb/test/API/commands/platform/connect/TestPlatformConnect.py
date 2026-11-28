@@ -14,7 +14,6 @@ class TestPlatformProcessConnect(TestBase):
     @expectedFailureAll(hostoslist=["windows"], triple=".*-android")
     @skipIfDarwin  # lldb-server not found correctly
     @expectedFailureWindowsAndNoLLDBServer()  # process modules not loaded
-    @expectedFailureWindowsAndLLDBServer(archs=no_match(["aarch64"]))
     # lldb-server platform times out waiting for the gdbserver port number to be
     # written to the pipe, yet it seems the gdbserver already has written it.
     @expectedFailureAll(

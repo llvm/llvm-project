@@ -7,6 +7,9 @@
 'clang-tidy':
   - '/\bclang-tidy/i'
 
+'clang-repl':
+  - '/\bclang-repl/i'
+
 'clang:temporal-safety':
   - '/LifetimeSafety/i'
 

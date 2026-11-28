@@ -2559,9 +2559,8 @@ static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
       !match(II.getOperand(2), m_Zero()))
     return std::nullopt;
 
-  for (auto *U : II.users()) {
-    if (match(U, m_ZExt(m_Specific(&II)))) {
-      auto *User = cast<Instruction>(U);
+  for (Instruction *User : II.users()) {
+    if (match(User, m_ZExt(m_Specific(&II)))) {
       Type *Ty = II.getOperand(1)->getType();
       if (User->getType() != Ty)
         continue;
@@ -4156,8 +4155,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     InstructionCost MaxAbsorbedCost = 0;
     bool AllUsersAbsorbCast = true;
-    for (const User *U : I->users()) {
-      auto *Usr = cast<Instruction>(U);
+    for (const Instruction *Usr : I->users()) {
       std::optional<InstructionCost> UserCost = GetUserAbsorbedCastCost(Usr);
       if (!UserCost) {
         AllUsersAbsorbCast = false;
@@ -5100,6 +5098,74 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
                                   {}, VIC);
 }
 
+TargetTransformInfo::VectorInstrContext
+AArch64TTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || Mask.empty() || !ST->isNeonAvailable() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || isa<Constant, ExtractElementInst>(*SplatIt) ||
+      any_of(Scalars,
+             [&](Value *V) { return V != *SplatIt && !isa<UndefValue>(V); }))
+    return VectorInstrContext::None;
+
+  // The indexed (by element) FMLA/FMLS take the splatted operand from a lane of
+  // a 128-bit register, see isProfitableToSinkOperands(). SVE indexes within
+  // each 128-bit segment, so a wider fixed-length SVE vector still needs a dup.
+  Type *ScalarTy = (*SplatIt)->getType();
+  if (!ScalarTy->isFloatTy() && !ScalarTy->isDoubleTy() &&
+      !(ScalarTy->isHalfTy() && ST->hasFullFP16()))
+    return VectorInstrContext::None;
+  if (ST->useSVEForFixedLengthVectors() &&
+      Mask.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() >
+          AArch64::SVEBitsPerBlock)
+    return VectorInstrContext::None;
+
+  // Same use limit as SLP, bounds the walk over the users of the scalar.
+  constexpr unsigned MaxUses = 64;
+  if ((*SplatIt)->hasNUsesOrMore(MaxUses))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty() ||
+      any_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+        return UserOp.Opcode != Instruction::FMul;
+      }))
+    return VectorInstrContext::None;
+
+  // Only fmuls fused with their fadd/fsub user (FMLA/FMLS by element) are
+  // reported. An unfused fmul by element takes the lane too, but reporting it
+  // makes SLP vectorize VF=2 trees whose alternate fadd/fsub nodes it
+  // undercounts. Mixed fadd and fsub users form such an alternate node, which
+  // is not fused.
+  std::optional<unsigned> FusedOpcode;
+  if (all_of((*SplatIt)->users(),
+             [&](const User *U) {
+               if (!match(U, m_FMul(m_Value(), m_Value())))
+                 return true;
+               if (!match(U, m_OneUse(m_AllowContract(m_Value()))))
+                 return false;
+               const auto *FAddSub = dyn_cast<Instruction>(U->user_back());
+               if (!FAddSub ||
+                   FAddSub->getParent() != cast<Instruction>(U)->getParent() ||
+                   !match(FAddSub, m_AllowContract(m_CombineOr(
+                                       m_FAdd(m_Value(), m_Value()),
+                                       m_FSub(m_Value(), m_Value())))))
+                 return false;
+               if (!FusedOpcode)
+                 FusedOpcode = FAddSub->getOpcode();
+               return *FusedOpcode == FAddSub->getOpcode();
+             }) &&
+      FusedOpcode)
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
+}
+
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
@@ -5183,7 +5249,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
@@ -5224,7 +5291,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CtxI);
+                                           Op2Info, Args, CtxI, TLibInfo,
+                                           Scalars);
 
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
@@ -5965,6 +6033,35 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }
 
+// Get the latency of NumInst of Inst according to the scheduling model. The
+// latency will be the latency of the last instruction plus the time it gets to
+// get there, which will be the amount of other instructions before that (i.e.
+// NumInst - 1) multiplied by how long it takes to get through them (the
+// reciprocal of the throughput). If the model has no information for this
+// instruction then we assume the reciprocal throughput is 1 and use
+// DefaultLatency for the latency.
+static InstructionCost
+getLatencyFromSchedModel(const AArch64Subtarget *ST, unsigned Inst,
+                         unsigned NumInst, InstructionCost DefaultLatency) {
+  assert(NumInst != 0 && "Can't calculate latency of zero instructions");
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  unsigned SchedClass = TII->get(Inst).getSchedClass();
+  const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                    ? Sched.getSchedClassDesc(SchedClass)
+                                    : nullptr;
+  // If the cpu has no scheduling model, or it doesn't describe the
+  // instruction, then fall back to the default latency. Variant
+  // scheduling classes can't be resolved without a MachineInstr, so
+  // treat them the same way.
+  if (!SCD || !SCD->isValid() || SCD->isVariant())
+    return (NumInst - 1) + DefaultLatency;
+  // We need to convert the number of instructions before the last to a float
+  // here, as the reciprocal throughput may be fractional.
+  return (float)(NumInst - 1) * Sched.getReciprocalThroughput(*ST, *SCD) +
+         Sched.computeInstrLatency(*ST, *SCD);
+}
+
 InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 Align Alignment,
                                                 unsigned AddressSpace,
@@ -6012,13 +6109,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // querying the SchedModel.
     if (ST->getFixedLoadLatency())
       return (LT.first - 1) + ST->getFixedLoadLatency();
-    // We expect the load to become LT.first loads of type LT.second. The
-    // latency will be the latency of the last load plus the time it gets to get
-    // there, which will be the amount of other loads before that (i.e. total
-    // loads - 1) multiplied by how long it takes to get through them (the
-    // reciprocal of the throughput). We get the latency and reciprocal
-    // throughput from the SchedModel, and assume that the loads become the
-    // variant with unsigned integer offset.
+    // We expect the load to become LT.first loads of type LT.second. We
+    // calculate the latency using the SchedModel, and assume that the loads
+    // become the variant with unsigned integer offset.
     unsigned Inst = 0;
     if (LT.second.isScalableVector() ||
         ST->useSVEForFixedLengthVectors(LT.second)) {
@@ -6061,22 +6154,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
         llvm_unreachable("Unexpected integer type");
       }
     }
-    const MCSchedModel &Sched = ST->getSchedModel();
-    const TargetInstrInfo *TII = ST->getInstrInfo();
-    unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
-                                      ? Sched.getSchedClassDesc(SchedClass)
-                                      : nullptr;
-    // If the cpu has no scheduling model, or it doesn't describe the load, then
-    // fall back to the default load latency. Variant scheduling classes can't
-    // be resolved without a MachineInstr, so treat them the same way.
-    if (!SCD || !SCD->isValid() || SCD->isVariant())
-      return (LT.first - 1) + ST->getLoadLatency();
-    // We need to convert the number of loads before the last to a float here,
-    // as the reciprocal throughput may be fractional.
-    float NumLoads = (LT.first - 1).getValue();
-    return NumLoads * Sched.getReciprocalThroughput(*ST, *SCD) +
-           Sched.computeInstrLatency(*ST, *SCD);
+    return getLatencyFromSchedModel(ST, Inst, LT.first.getValue(),
+                                    ST->getLoadLatency());
   }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
@@ -6185,9 +6264,44 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
+
     if (EC.isKnownMultipleOf(Factor) &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable)) {
+      unsigned Num = TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+      if (CostKind == TTI::TCK_Latency) {
+        // Latency doesn't make much sense for stores, so just return 1
+        if (Opcode == Instruction::Store)
+          return 1;
+        // If the subtarget has overridden the load latency then use that
+        // instead of querying the SchedModel.
+        if (ST->getFixedLoadLatency())
+          return (LT.first - 1) + ST->getFixedLoadLatency();
+        // Lookup the load opcode based on whether we're using SVE, interleaving
+        // factor, and element size.
+        const unsigned Opcodes[2][3][4] = {
+            {
+                {AArch64::LD2Twov16b, AArch64::LD2Twov8h, AArch64::LD2Twov4s,
+                 AArch64::LD2Twov2d},
+                {AArch64::LD3Threev16b, AArch64::LD3Threev8h,
+                 AArch64::LD3Threev4s, AArch64::LD3Threev2d},
+                {AArch64::LD4Fourv16b, AArch64::LD4Fourv8h, AArch64::LD4Fourv4s,
+                 AArch64::LD4Fourv2d},
+            },
+            {
+                {AArch64::LD2B, AArch64::LD2H, AArch64::LD2W, AArch64::LD2D},
+                {AArch64::LD3B, AArch64::LD3H, AArch64::LD3W, AArch64::LD3D},
+                {AArch64::LD4B, AArch64::LD4H, AArch64::LD4W, AArch64::LD4D},
+            }};
+        unsigned LogElemSize =
+            Log2_32(DL.getTypeSizeInBits(SubVecTy->getElementType()));
+        assert(LogElemSize >= 3 && LogElemSize <= 6 &&
+               "Unexpected element size");
+        assert(Factor <= 4 && "Unexpected interleaving factor");
+        unsigned Inst = Opcodes[UseScalable][Factor - 2][LogElemSize - 3];
+        return getLatencyFromSchedModel(ST, Inst, Num, ST->getLoadLatency());
+      }
+      return Factor * Num;
+    }
 
     // Cost the alternative approach for scalable vectors where the interleave
     // factor is larger than the VF: use a contiguous load/store of the full
@@ -6241,10 +6355,15 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   for (auto *I : Tys) {
     if (!I->isVectorTy())
       continue;
-    if (I->getScalarSizeInBits() * cast<FixedVectorType>(I)->getNumElements() ==
-        128)
-      Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
-              getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
+    auto LT = getTypeLegalizationCost(I);
+    if (!LT.second.is128BitVector())
+      continue;
+    // Each legal part is spilled as a whole Q register.
+    Type *LegalTy = EVT(LT.second).getTypeForEVT(I->getContext());
+    Cost +=
+        LT.first *
+        (getMemoryOpCost(Instruction::Store, LegalTy, Align(16), 0, CostKind) +
+         getMemoryOpCost(Instruction::Load, LegalTy, Align(16), 0, CostKind));
   }
   return Cost;
 }
@@ -6552,8 +6671,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
         if (isa<LoadInst>(&I)) {
           LoadedValuesPlus.insert(&I);
           // Include in-loop 1st users of loaded values.
-          for (auto *U : I.users())
-            if (L->contains(cast<Instruction>(U)))
+          for (Instruction *U : I.users())
+            if (L->contains(U))
               LoadedValuesPlus.insert(U);
         } else
           Stores.push_back(cast<StoreInst>(&I));
@@ -7410,6 +7529,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded) {
+    int TmpIndex = Index;
+    VectorType *TmpSubTp = SubTp;
+    if (improveShuffleKindFromMask(Kind, Mask, SrcTy, TmpIndex, TmpSubTp) ==
+        TTI::SK_Broadcast)
+      return TTI::TCC_Free;
+  }
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask

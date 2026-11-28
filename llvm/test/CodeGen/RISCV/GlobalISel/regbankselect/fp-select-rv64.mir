@@ -134,7 +134,7 @@ body:             |
     ; RV32I-NEXT: [[TRUNC:%[0-9]+]]:gprb(s32) = G_TRUNC [[COPY2]](s64)
     ; RV32I-NEXT: [[C:%[0-9]+]]:gprb(s64) = G_CONSTANT i64 1
     ; RV32I-NEXT: [[AND:%[0-9]+]]:gprb(s64) = G_AND [[COPY]], [[C]]
-    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:fprb(s32) = COPY [[TRUNC]](s32)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:fprb(i32) = COPY [[TRUNC]](s32)
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:fprb(s32) = G_SELECT [[AND]](s64), [[COPY3]], [[COPY1]]
     ; RV32I-NEXT: $f10_f = COPY [[SELECT]](s32)
     ; RV32I-NEXT: PseudoRET implicit $f10_f
@@ -164,7 +164,7 @@ body:             |
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(s64) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:gprb(s64) = G_CONSTANT i64 1
     ; RV32I-NEXT: [[AND:%[0-9]+]]:gprb(s64) = G_AND [[COPY]], [[C]]
-    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:fprb(s64) = COPY [[COPY2]](s64)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:fprb(i64) = COPY [[COPY2]](s64)
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:fprb(s64) = G_SELECT [[AND]](s64), [[COPY1]], [[COPY3]]
     ; RV32I-NEXT: $f10_d = COPY [[SELECT]](s64)
     ; RV32I-NEXT: PseudoRET implicit $f10_d
@@ -221,7 +221,7 @@ body:             |
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(s64) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:gprb(s64) = G_CONSTANT i64 1
     ; RV32I-NEXT: [[AND:%[0-9]+]]:gprb(s64) = G_AND [[COPY]], [[C]]
-    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(s64) = COPY [[COPY1]](s64)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(i64) = COPY [[COPY1]](s64)
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:gprb(s64) = G_SELECT [[AND]](s64), [[COPY3]], [[COPY2]]
     ; RV32I-NEXT: $x10 = COPY [[SELECT]](s64)
     ; RV32I-NEXT: PseudoRET implicit $x10

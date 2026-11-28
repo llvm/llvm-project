@@ -448,6 +448,19 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   if (!T2JumpTables.empty())
     MF->ensureAlignment(Align(4));
 
+  // Funclet entries are aligned to the function's preferred alignment when
+  // they are emitted (WinException::beginFunclet), so count that padding. The
+  // alignment is final only after the jump table check above.
+  if (MF->hasEHFunclets()) {
+    const Align FuncletAlign = MF->getPreferredAlignment();
+    for (MachineBasicBlock &MBB : *MF) {
+      if (MBB.isEHFuncletEntry() && MBB.getAlignment() < FuncletAlign) {
+        MBB.setAlignment(FuncletAlign);
+        BBUtils->adjustBBOffsetsAfter(MBB.getPrevNode());
+      }
+    }
+  }
+
   /// Remove dead constant pool entries.
   MadeChange |= removeUnusedCPEntries();
 
@@ -1291,7 +1304,8 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
   MachineBasicBlock *UserBB = U.MI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
-  unsigned MinNoSplitDisp = BBInfo[UserBB->getNumber()].postOffset(CPEAlign);
+  unsigned MinNoSplitDisp =
+      BBInfo[UserBB->getNumber()].postOffset(CPEAlign) - UserOffset;
   if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
     return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;
@@ -1311,7 +1325,7 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
     if (isWaterInRange(UserOffset, WaterBB, U, Growth) &&
         (WaterBB->getNumber() < U.HighWaterMark->getNumber() ||
          NewWaterList.count(WaterBB) || WaterBB == U.MI->getParent()) &&
-        Growth < BestGrowth) {
+        (CloserWater || Growth < BestGrowth)) {
       // This is the least amount of required padding seen so far.
       BestGrowth = Growth;
       WaterIter = IP;

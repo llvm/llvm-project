@@ -344,7 +344,7 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
 MIRProfileLoaderPass::MIRProfileLoaderPass(
     std::string FileName, std::string RemappingFileName, FSDiscriminatorPass P,
     IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : MachineFunctionPass(ID), ProfileFileName(FileName), P(P) {
+    : MachineFunctionPass(ID), P(P) {
   LowBit = getFSPassBitBegin(P);
   HighBit = getFSPassBitEnd(P);
 

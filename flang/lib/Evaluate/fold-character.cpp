@@ -131,7 +131,7 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, Concat &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {
@@ -144,7 +144,7 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, SetLength &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {

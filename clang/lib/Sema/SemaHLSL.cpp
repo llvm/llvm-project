@@ -1031,6 +1031,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return ST == llvm::Triple::Vertex && IsInput;
   case SemanticKind::ViewID:
     return IsInput;
+  case SemanticKind::StencilRef:
+    return ST == llvm::Triple::Pixel && !IsInput;
   default:
     return false;
   }
@@ -1509,6 +1511,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
     return;
   case SemanticKind::SampleIndex:
   case SemanticKind::PrimitiveID:
+  case SemanticKind::StencilRef:
     // SPIR-V declares these built-ins as 32-bit integers and converts 16-bit
     // declarations.
     if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
@@ -2389,7 +2392,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::Depth:
   case SemanticKind::DepthLessEqual:
   case SemanticKind::DepthGreaterEqual:
-  case SemanticKind::StencilRef:
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
   case SemanticKind::CullPrimitive:
@@ -3943,11 +3945,12 @@ static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
   return false;
 }
 
-static bool CheckFloatingOrIntRepresentation(Sema *S, SourceLocation Loc,
-                                             int ArgOrdinal,
-                                             clang::QualType PassedType) {
-  if (!PassedType->hasIntegerRepresentation() &&
-      !PassedType->hasFloatingRepresentation())
+static bool CheckNumericRepresentation(Sema *S, SourceLocation Loc,
+                                       int ArgOrdinal,
+                                       clang::QualType PassedType) {
+  if (getScalarComponentType(PassedType)->isBooleanType() ||
+      (!PassedType->hasIntegerRepresentation() &&
+       !PassedType->hasFloatingRepresentation()))
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* integer */ 1
            << /* fp */ 1 << PassedType;
@@ -5297,7 +5300,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatingOrIntRepresentation))
+                                   CheckNumericRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;
@@ -5668,6 +5671,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     SetElementTypeAsReturnType(&SemaRef, TheCall,
                                getASTContext().UnsignedIntTy);
     break;
+  }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    if (!getASTContext().getTargetInfo().getTriple().isDXIL()) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_builtin_target_unsupported);
+      return true;
+    }
+    return false;
   }
   }
   return false;

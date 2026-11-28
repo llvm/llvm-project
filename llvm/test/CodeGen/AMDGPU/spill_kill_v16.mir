@@ -4,7 +4,6 @@
 
 ---
 name: spill_restore_vgpr16
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4 }
@@ -78,7 +77,6 @@ body: |
 
 ---
 name: spill_restore_vgpr16_middle_of_block
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4 }
@@ -155,7 +153,6 @@ body: |
 
 ---
 name: spill_restore_vgpr16_end_of_block
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4 }

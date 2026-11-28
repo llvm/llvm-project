@@ -3,7 +3,6 @@
 
 ---
 name: vmem_scratch_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: vmem_buffer_load_dword_offset
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -55,7 +53,6 @@ body: |
 
 ---
 name: vmem_buffer_load_addr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -81,7 +78,6 @@ body: |
 
 ---
 name: vmem_flat_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -107,7 +103,6 @@ body: |
 
 ---
 name: vmem_global_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -133,7 +128,6 @@ body: |
 
 ---
 name: vmem_global_store
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -155,7 +149,6 @@ body: |
 
 ---
 name: vmem_buffer_store
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg:  $sgpr32
@@ -176,7 +169,6 @@ body: |
 
 ---
 name: vmem_scratch_store
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body: |
@@ -196,7 +188,6 @@ body: |
 
 ---
 name: smem_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -218,7 +209,6 @@ body: |
 
 ---
 name: smem_store
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -242,7 +232,6 @@ body: |
 
 ---
 name: vmem_load_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -277,7 +266,6 @@ body: |
 
 ---
 name: vmem_store_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -317,7 +305,6 @@ body: |
 
 ---
 name: smem_load_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -345,7 +332,6 @@ body: |
 
 ---
 name: smem_store_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -377,7 +363,6 @@ body: |
 
 ---
 name: vmem_loads_with_an_intervening_nop
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -412,7 +397,6 @@ body: |
 
 ---
 name: vmem_contiguous_loads_with_an_intervening_store
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -448,7 +432,6 @@ body: |
 
 ---
 name: vmem_stores_with_intervening_nop
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -492,7 +475,6 @@ body: |
 
 ---
 name: vmem_contiguous_stores_with_an_intervening_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -538,7 +520,6 @@ body: |
 
 ---
 name: atomic_op
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -570,7 +551,6 @@ body: |
 
 ---
 name: smem_xcnt_insertion_with_pending_vmem_event
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -610,7 +590,6 @@ body: |
 
 ---
 name: vmem_group_reg_dependency_with_prior_instruction
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -642,7 +621,6 @@ body: |
 
 ---
 name: multiple_xcnt_insertion_in_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -678,7 +656,6 @@ body: |
 
 ---
 name: xcnt_event_post_load_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -724,7 +701,6 @@ body: |
 
 ---
 name: xcnt_event_post_store_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -782,7 +758,6 @@ body: |
 
 ---
 name: load_store_switching
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -827,7 +802,6 @@ body: |
 
 ---
 name: dual_mov
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -853,7 +827,6 @@ body: |
 
 ---
 name: ds_load_store
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -878,7 +851,6 @@ body: |
 
 ---
 name: xcnt_max
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1028,7 +1000,6 @@ body: |
 
 ---
 name: wait_kmcnt_with_outstanding_vmem
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1055,7 +1026,6 @@ body: |
 
 ---
 name: wait_kmcnt_with_outstanding_vmem_2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1099,7 +1069,6 @@ body: |
 
 ---
 name: wait_kmcnt_and_wait_loadcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1143,7 +1112,6 @@ body: |
 
 ---
 name: implicit_handling_of_pending_vmem_group
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1191,7 +1159,6 @@ body: |
 
 ---
 name: mixed_pending_events
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1240,7 +1207,6 @@ body: |
 
 ---
 name: pending_vmem_event_between_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1291,7 +1257,6 @@ body: |
 
 ---
 name: flushing_vmem_cnt_on_block_entry
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1339,7 +1304,6 @@ body: |
 
 ---
 name: wait_loadcnt_with_outstanding_smem
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1366,7 +1330,6 @@ body: |
 
 ---
 name: overwrite_vgpr_after_smem
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -1389,7 +1352,6 @@ body: |
 
 ---
 name: overwrite_sgpr_after_vmem
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

@@ -2580,6 +2580,34 @@ foreach op = ["test_wait", "try_wait"] in {
   } // scope
 } // op
 
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          defvar base_args = [llvm_shared_ptr_ty];
+          defvar state_args = !if(parity, [llvm_i32_ty], [llvm_i64_ty]);
+          defvar tl_args = !if(time_limit, [llvm_i32_ty], []<LLVMType>);
+          defvar args = !listconcat(base_args, state_args, tl_args);
+          defvar ret = !if(!eq(phase, "primary"),
+                          [llvm_i1_ty, llvm_i1_ty, llvm_i32_ty], [llvm_i1_ty]);
+          defvar name = StrJoin<"_", [op,
+                            !if(parity, "parity", ""),
+                            !if(time_limit, "tl", ""), phase]>.ret;
+          defvar suffix = scope # "_space_cta";
+          def int_nvvm_mbarrier_ # name # "_" # suffix :
+              Intrinsic<ret, args,
+              [IntrConvergent, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
+          def int_nvvm_mbarrier_ # name # "_relaxed_" # suffix :
+              Intrinsic<ret, args,
+              [IntrConvergent, IntrNoCallback, NoCapture<ArgIndex<0>>,
+               IntrArgMemOnly, IntrReadMem]>;
+        } // time_limit
+      } // parity
+    } // phase
+  } // scope
+} // op
+
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
 let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>] in {
@@ -3915,6 +3943,25 @@ foreach shape = ["32x32b", "16x32bx2"] in {
     } // ty
   } // num
 } // shape
+
+// tcgen05.ld{.red}.spcompress intrinsics
+class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
+  DefaultAttrsIntrinsicFlags<
+    !listconcat([llvm_anyint_ty,                   // mdata
+                 llvm_any_vector_float_ty],        // cdata
+                !if(IsRed, [llvm_float_ty], [])),  // redval
+    [llvm_tmem_ptr_ty],                            // taddr
+    !listconcat([llvm_i32_ty,                      // row_op
+                 llvm_i1_ty],                      // abs
+                !if(IsRed, [llvm_i1_ty], [])),     // nan
+    !listconcat([IntrConvergent, IntrArgMemOnly, IntrReadMem,
+                 Range<ArgIndex<1>, 0, 2>,
+                 ArgInfo<ArgIndex<1>, [ArgName<"row_op">]>,
+                 ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
+                !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []))>;
+
+def int_nvvm_tcgen05_ld_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<false>;
+def int_nvvm_tcgen05_ld_red_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<true>;
 
 //
 // Bulk store intrinsics

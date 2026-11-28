@@ -11,7 +11,6 @@
 # GCN: %4:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %1, 0, 1, 15, 15, 1, implicit $exec
 # GCN: %6:vgpr_16 = V_MOV_B16_t16_e64_dpp %3, 0, %5, 0, 1, 15, 15, 1, implicit $exec
 name: vop3_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

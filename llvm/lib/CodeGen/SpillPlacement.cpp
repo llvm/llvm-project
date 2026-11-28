@@ -231,7 +231,6 @@ void SpillPlacement::releaseMemory() {
 
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                          MachineBlockFrequencyInfo *MBFI) {
-  MF = &mf;
   this->bundles = Bundles;
   this->MBFI = MBFI;
 

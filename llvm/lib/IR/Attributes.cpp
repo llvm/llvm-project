@@ -2881,3 +2881,15 @@ void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
       Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
   }
 }
+
+AttributeSet AttributeFuncs::dropRetOnlyCaptureComponents(
+    LLVMContext &C, AttributeSet ParamAttrs, Type *RetTy) {
+  if (RetTy->isPointerTy())
+    return ParamAttrs;
+  CaptureInfo CI = ParamAttrs.getCaptureInfo();
+  if (capturesNothing(CI.getRetComponents() & ~CI.getOtherComponents()))
+    return ParamAttrs;
+  AttrBuilder B(C, ParamAttrs);
+  B.addCapturesAttr(CaptureInfo(CI.getOtherComponents()));
+  return AttributeSet::get(C, B);
+}

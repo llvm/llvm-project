@@ -373,7 +373,7 @@ define void @workgroupStore() {
 ; CHECK-LABEL: define void @workgroupStore(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(
-; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 256)
+; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i32 256)
 ; CHECK: call void @llvm.spv.assign.ptr.type.p3(
 ; CHECK-SAME: ptr addrspace(3) %[[PTR]], metadata i32 poison, i32 3)
 ; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
@@ -394,7 +394,7 @@ entry:
 ; Offset 16 reaches an array. The scalar access needs one more zero index.
 define i32 @workgroupNested() {
 ; CHECK-LABEL: define i32 @workgroupNested(
-; CHECK: %[[ARRAY:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupNested, i32 0, i64 1)
+; CHECK: %[[ARRAY:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupNested, i32 0, i32 1)
 ; CHECK: %[[STORE:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
 ; CHECK: store i32 42, ptr addrspace(3) %[[STORE]], align 4
 ; CHECK: %[[LOAD:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 false, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
@@ -410,7 +410,7 @@ entry:
 
 define i32 @workgroupStruct() {
 ; CHECK-LABEL: define i32 @workgroupStruct(
-; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupStruct, i32 0, i64 1, i64 1)
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupStruct, i32 0, i32 1, i32 1)
 ; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
 ; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
 ; CHECK: ret i32 %[[VALUE]]
@@ -424,7 +424,7 @@ entry:
 
 define i32 @workgroupVectorElement() {
 ; CHECK-LABEL: define i32 @workgroupVectorElement(
-; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupVectors, i32 0, i64 1, i64 1)
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupVectors, i32 0, i32 1, i32 1)
 ; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
 ; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
 ; CHECK: ret i32 %[[VALUE]]
@@ -438,7 +438,7 @@ entry:
 
 define float @workgroupReinterpret(float %value) {
 ; CHECK-LABEL: define float @workgroupReinterpret(
-; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 1)
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i32 1)
 ; CHECK: %[[STORED:.*]] = call i32 @llvm.spv.bitcast.i32.f32(float %value)
 ; CHECK: store atomic volatile i32 %[[STORED]], ptr addrspace(3) %[[PTR]] release, align 4
 ; CHECK: %[[LOADED:.*]] = load atomic volatile i32, ptr addrspace(3) %[[PTR]] acquire, align 4
@@ -468,8 +468,9 @@ entry:
 define void @workgroupDynamic(i64 %index) {
 ; CHECK-LABEL: define void @workgroupDynamic(
 ; CHECK: %[[OFFSET:.*]] = shl i64 %index, 2
-; CHECK: %[[INDEX:.*]] = udiv i64 %[[OFFSET]], 4
-; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 %[[INDEX]])
+; CHECK: %[[TRUNC:.*]] = trunc i64 %[[OFFSET]] to i32
+; CHECK: %[[INDEX:.*]] = udiv i32 %[[TRUNC]], 4
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i32 %[[INDEX]])
 ; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
 entry:
   %offset = shl i64 %index, 2
@@ -482,7 +483,7 @@ entry:
 define void @workgroupNestedExpression() {
 ; CHECK-LABEL: define void @workgroupNestedExpression(
 ; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) {{%.*}}, align 4
-; CHECK: call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) {{%.*}}, i32 0, i64 1)
+; CHECK: call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) {{%.*}}, i32 0, i32 1)
 ; CHECK: store i32 %[[VALUE]], ptr addrspace(3) {{%.*}}, align 4
 entry:
   %value = load i32, ptr addrspace(3) getelementptr inbounds inrange(0, 16)

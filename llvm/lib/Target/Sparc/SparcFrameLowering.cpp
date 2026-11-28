@@ -268,12 +268,24 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
   MachineFrameInfo    &MFI = MF.getFrameInfo();
   SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
 
-  return !(MFI.hasCalls()               // has calls
-           || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
-           || MRI.isPhysRegUsed(SP::O6) // %sp is used
-           || hasFP(MF)                 // need %fp
-           || MF.hasInlineAsm()         // has inline assembly
-           || SMFI->isLargeProc());     // is a large procedure
+  if (MFI.hasCalls()               // has calls
+      || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
+      || MRI.isPhysRegUsed(SP::O6) // %sp is used
+      || hasFP(MF)                 // need %fp
+      || MF.hasInlineAsm()         // has inline assembly
+      || SMFI->isLargeProc())      // is a large procedure
+    return false;
+
+  // %o registers are normally only allocated once all the %i, %g and %l
+  // registers are used, but IntRegsV8Plus is restricted to %g/%o registers and
+  // can use them earlier. Remapping %i to %o would then merge two different
+  // registers.
+  if (SMFI->usesV8PlusRegs())
+    for (unsigned N = 0; N != 8; ++N)
+      if (MRI.isPhysRegUsed(SP::I0 + N) && MRI.isPhysRegUsed(SP::O0 + N))
+        return false;
+
+  return true;
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {

@@ -43,6 +43,28 @@ void LiveStacks::releaseMemory() {
   S2RCMap.clear();
 }
 
+void LiveStacks::canonicalizeIndexes(const SlotIndexes &SI) {
+  for (auto &[Slot, LI] : S2IMap) {
+    if (none_of(LI, [&](const LiveRange::Segment &S) {
+          return SI.isStaleIndex(S.start) || SI.isStaleIndex(S.end);
+        }))
+      continue;
+    SmallVector<LiveRange::Segment, 8> Segments;
+    for (const LiveRange::Segment &S : LI) {
+      SlotIndex Start = SI.canonicalizeIndex(S.start);
+      SlotIndex End = S.end;
+      // The dead slot keeps a store on the preceding instruction covered.
+      if (SI.isStaleIndex(End))
+        End = SI.canonicalizeIndex(End).getDeadSlot();
+      if (Start < End)
+        Segments.push_back(LiveRange::Segment(Start, End, S.valno));
+    }
+    LI.segments.clear();
+    for (const LiveRange::Segment &S : Segments)
+      LI.addSegment(S);
+  }
+}
+
 void LiveStacks::init(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   // FIXME: No analysis is being done right now. We are relying on the

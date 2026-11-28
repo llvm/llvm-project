@@ -1272,6 +1272,235 @@ func.func @while_cond_true() -> i1 {
 
 // -----
 
+// CHECK-LABEL: @while_cond_select_exit_value
+// CHECK-SAME:    (%{{.*}}: i32, %[[V:.*]]: i32)
+func.func @while_cond_select_exit_value(%n: i32, %v: i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %0:2 = scf.while (%i = %c0) : (i32) -> (i32, i32) {
+    %condition = arith.cmpi slt, %i, %n : i32
+    %s = arith.select %condition, %c0, %v : i32
+    scf.condition(%condition) %i, %s : i32, i32
+  } do {
+  ^bb0(%arg0: i32, %arg1: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    %next = arith.addi %arg0, %c1 : i32
+    scf.yield %next : i32
+  }
+  return %0#1 : i32
+}
+// CHECK:         scf.while (%{{.*}} = %{{.*}}) : (i32) -> i32 {
+// CHECK-NOT:       arith.select
+// CHECK:           scf.condition(%{{.*}}) %{{.*}} : i32
+// CHECK:         } do {
+// CHECK:         }
+// CHECK-NEXT:    return %[[V]] : i32
+
+// -----
+
+// CHECK-LABEL: @while_cond_select_after_value
+// CHECK-SAME:    (%[[A:.*]]: i32, %[[B:.*]]: i32)
+func.func @while_cond_select_after_value(%a: i32, %b: i32) -> i32 {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0 : i32
+}
+// CHECK:         scf.while
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      scf.condition(%[[COND]])
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:      "test.use"(%[[A]]) : (i32) -> ()
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[B]] : i32
+
+// -----
+
+// The values are defined in the loop: the condition forwards the true value to
+// the do block once the loop result is unused.
+// CHECK-LABEL: @while_cond_select_inner_values
+func.func @while_cond_select_inner_values() {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %a = "test.value_a"() : () -> i32
+    %b = "test.value_b"() : () -> i32
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return
+}
+// CHECK:         scf.while
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      %[[VA:.*]] = "test.value_a"() : () -> i32
+// CHECK-NEXT:      "test.value_b"() : () -> i32
+// CHECK-NEXT:      scf.condition(%[[COND]]) %[[VA]] : i32
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:    ^bb0(%[[ARG:.*]]: i32):
+// CHECK-NEXT:      "test.use"(%[[ARG]]) : (i32) -> ()
+
+// -----
+
+// The values are defined in the loop: the condition forwards the false value to
+// the loop result when the do block argument is unused.
+// CHECK-LABEL: @while_cond_select_inner_false_value
+func.func @while_cond_select_inner_false_value() -> i32 {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %a = "test.value_a"() : () -> i32
+    %b = "test.value_b"() : () -> i32
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.body"() : () -> ()
+    scf.yield
+  }
+  return %0 : i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      "test.value_a"() : () -> i32
+// CHECK-NEXT:      %[[VB:.*]] = "test.value_b"() : () -> i32
+// CHECK-NEXT:      scf.condition(%[[COND]]) %[[VB]] : i32
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:    ^bb0(%{{.*}}: i32):
+// CHECK-NEXT:      "test.body"() : () -> ()
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[RES]] : i32
+
+// -----
+
+// Mixed outside/inside operands: replacing the do block argument with the
+// outer true value frees the condition to forward the inner false value.
+// CHECK-LABEL: @while_cond_select_mixed_outer_true
+// CHECK-SAME:    (%[[A:.*]]: i32)
+func.func @while_cond_select_mixed_outer_true(%a: i32) -> i32 {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %b = "test.value_b"() : () -> i32
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0 : i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      %[[VB:.*]] = "test.value_b"() : () -> i32
+// CHECK-NEXT:      scf.condition(%[[COND]]) %[[VB]] : i32
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:    ^bb0(%{{.*}}: i32):
+// CHECK-NEXT:      "test.use"(%[[A]]) : (i32) -> ()
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[RES]] : i32
+
+// -----
+
+// Forwarding the same select at multiple condition positions updates each slot
+// independently according to its remaining uses.
+// CHECK-LABEL: @while_cond_select_duplicate_forward
+func.func @while_cond_select_duplicate_forward() -> i32 {
+  %0:2 = scf.while () : () -> (i32, i32) {
+    %condition = "test.condition"() : () -> i1
+    %a = "test.value_a"() : () -> i32
+    %b = "test.value_b"() : () -> i32
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s, %s : i32, i32
+  } do {
+  ^bb0(%arg0: i32, %arg1: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0#1 : i32
+}
+// CHECK:         %[[RES:.*]]:2 = scf.while : () -> (i32, i32) {
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      %[[VA:.*]] = "test.value_a"() : () -> i32
+// CHECK-NEXT:      %[[VB:.*]] = "test.value_b"() : () -> i32
+// CHECK-NEXT:      scf.condition(%[[COND]]) %[[VA]], %[[VB]] : i32, i32
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:    ^bb0(%[[ARG0:.*]]: i32, %{{.*}}: i32):
+// CHECK-NEXT:      "test.use"(%[[ARG0]]) : (i32) -> ()
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[RES]]#1 : i32
+
+// -----
+
+// When both select operands are defined inside the loop and both the do block
+// argument and the loop result are used, the select is kept.
+// CHECK-LABEL: @while_cond_select_inner_both_used
+func.func @while_cond_select_inner_both_used() -> i32 {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %a = "test.value_a"() : () -> i32
+    %b = "test.value_b"() : () -> i32
+    %s = arith.select %condition, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0 : i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK-NEXT:      %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:      %[[VA:.*]] = "test.value_a"() : () -> i32
+// CHECK-NEXT:      %[[VB:.*]] = "test.value_b"() : () -> i32
+// CHECK-NEXT:      %[[S:.*]] = arith.select %[[COND]], %[[VA]], %[[VB]] : i32
+// CHECK-NEXT:      scf.condition(%[[COND]]) %[[S]] : i32
+// CHECK-NEXT:    } do {
+// CHECK-NEXT:    ^bb0(%[[ARG:.*]]: i32):
+// CHECK-NEXT:      "test.use"(%[[ARG]]) : (i32) -> ()
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[RES]] : i32
+
+// -----
+
+// A select on another condition is kept.
+// CHECK-LABEL: @while_cond_select_other_condition
+func.func @while_cond_select_other_condition(%c: i1, %a: i32, %b: i32) -> i32 {
+  %0 = scf.while () : () -> i32 {
+    %condition = "test.condition"() : () -> i1
+    %s = arith.select %c, %a, %b : i32
+    scf.condition(%condition) %s : i32
+  } do {
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0 : i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK:           %[[S:.*]] = arith.select
+// CHECK:           scf.condition(%{{.*}}) %[[S]] : i32
+// CHECK:         } do {
+// CHECK:         ^bb0(%[[ARG:.*]]: i32):
+// CHECK:           "test.use"(%[[ARG]]) : (i32) -> ()
+// CHECK:           scf.yield
+// CHECK:         }
+// CHECK:         return %[[RES]] : i32
+
+// -----
+
 // CHECK-LABEL: @invariant_loop_args_in_same_order
 // CHECK-SAME: (%[[FUNC_ARG0:.*]]: tensor<i32>)
 func.func @invariant_loop_args_in_same_order(%f_arg0: tensor<i32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>) {

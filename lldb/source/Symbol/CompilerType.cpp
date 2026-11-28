@@ -332,20 +332,6 @@ std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
   return std::nullopt;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
-}
-
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
-}
-
 bool CompilerType::IsBeingDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -920,23 +906,16 @@ llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
   return CompilerType();
 }
 
-llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
-    std::string &child_name, uint32_t &child_byte_size,
-    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-    bool &child_is_deref_of_parent, ValueObject *valobj,
-    uint64_t &language_flags) const {
+    ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetChildCompilerTypeAtIndex(
+      return type_system_sp->GetChildAtIndex(
           m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, valobj,
-          language_flags);
-  return CompilerType();
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
 }
 
 // Look for a child member (doesn't include base classes, but it does include

@@ -16,9 +16,11 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def Python_Test_Dialect : Dialect {
   let name = "python_test";
   let cppNamespace = "python_test";
+  let useDefaultOperationRegistration = 1;
 
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 class TestType<string name, string typeMnemonic>

@@ -1,0 +1,17 @@
+static_library("UBAwareInterpreter") {
+  output_name = "LLVMUBAwareInterpreter"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [
+    "Context.cpp",
+    "ExecutorBase.cpp",
+    "Interpreter.cpp",
+    "Library.cpp",
+    "Value.cpp",
+  ]
+}

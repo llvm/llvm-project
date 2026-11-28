@@ -10,7 +10,7 @@
 #include "LowerToLLVMMetadata.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"

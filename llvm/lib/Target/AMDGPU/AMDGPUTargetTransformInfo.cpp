@@ -56,7 +56,6 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
-      TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -527,7 +526,8 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -539,6 +539,16 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     LT.second.getVectorNumElements() : 1;
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+  // A vector operation has a property of its context instruction only if all
+  // non-poison lanes satisfy Pred.
+  auto AllLanes = [&](function_ref<bool(const Value *)> Pred) {
+    if (!CtxI || CtxI->getOpcode() != Opcode || !Pred(CtxI))
+      return false;
+    return all_of(Scalars, [&](const Value *V) {
+      return !V || isa<PoisonValue>(V) || V == CtxI || Pred(V);
+    });
+  };
 
   switch (ISD) {
   case ISD::SHL:
@@ -587,16 +597,20 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation. A vector fmul priced with a scalar context fuses with
     // the scalar fadd|fsub only when it is emitted lane by lane.
-    if (CtxI && CtxI->hasOneUse() &&
+    if (CtxI &&
         (CtxI->getType() == Ty ||
-         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
-      const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
-      if (FAddSub &&
-          (FAddSub->getOpcode() == Instruction::FAdd ||
-           FAddSub->getOpcode() == Instruction::FSub) &&
-          isFusedFMul(*TLI, Ty, CtxI, FAddSub))
-        return TargetTransformInfo::TCC_Free;
-    }
+         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1) &&
+        AllLanes([&](const Value *V) {
+          const auto *FMul = dyn_cast<Instruction>(V);
+          if (!FMul || FMul->getOpcode() != Opcode || !FMul->hasOneUse())
+            return false;
+          const auto *FAddSub = dyn_cast<BinaryOperator>(*FMul->user_begin());
+          return FAddSub &&
+                 (FAddSub->getOpcode() == Instruction::FAdd ||
+                  FAddSub->getOpcode() == Instruction::FSub) &&
+                 isFusedFMul(*TLI, Ty, FMul, FAddSub);
+        }))
+      return TargetTransformInfo::TCC_Free;
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
@@ -649,7 +663,10 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && (CtxI && CtxI->hasApproxFunc())) {
+    if (SLT == MVT::f32 && AllLanes([&](const Value *V) {
+          const auto *FPMO = dyn_cast<FPMathOperator>(V);
+          return !FPMO || FPMO->getOpcode() != Opcode || FPMO->hasApproxFunc();
+        })) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -679,7 +696,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, TLibInfo, Scalars);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16
@@ -1412,13 +1429,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are loads from the VGPR address space, since each
+  // lane reads its own registers.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::VGPR;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
@@ -1833,21 +1852,18 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       continue;
     }
 
-    // Check for zero-cost multiple use InsertElement/ExtractElement
-    // instructions
-    if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
-      if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
-        Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
-        if (VecOpInst && VecOpInst->hasOneUse())
-          continue;
+    // Check for zero-cost multiple use InsertElement instructions. Shuffles are
+    // handled below.
+    if (auto *OpInst = dyn_cast<InsertElementInst>(Op.get())) {
+      Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
+      if (VecOpInst && VecOpInst->hasOneUse())
+        continue;
 
-        if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
-                               TTI::TCK_RecipThroughput, 0,
-                               OpInst->getOperand(0),
-                               OpInst->getOperand(1)) == 0) {
-          Ops.push_back(&Op);
-          continue;
-        }
+      if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
+                             TTI::TCK_RecipThroughput, 0, OpInst->getOperand(0),
+                             OpInst->getOperand(1)) == 0) {
+        Ops.push_back(&Op);
+        continue;
       }
     }
 
@@ -1878,6 +1894,12 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
       if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
           Shuffle->isSingleSource()) {
+        // Sink the insertelement of a scalar splat along with the shuffle, so
+        // that isel sees the scalar and can fold it as a splat operand.
+        if (Shuffle->isZeroEltSplat() &&
+            match(Shuffle->getOperand(0),
+                  m_InsertElt(m_Value(), m_Value(), m_ZeroInt())))
+          Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
         continue;
       }
@@ -2160,29 +2182,6 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
   return NumInsts + llvm::popcount(Rem);
 }
 
-static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
-                                       unsigned EltBytes, unsigned MaxBytes,
-                                       bool HasDwordx3) {
-  unsigned MaxPiece = EltBytes == 1 ? 8 : MaxBytes;
-  unsigned WideBytes = PowerOf2Ceil(Bytes);
-  unsigned NumWide = 0, SmallBytes = 0;
-  for (unsigned Off = 0; Off < Bytes;) {
-    unsigned Rem = Bytes - Off;
-    unsigned Span = Rem;
-    if (Rem <= Alignment)
-      Span = std::min<uint64_t>(Alignment, WideBytes - Off);
-    unsigned Piece = std::min(llvm::bit_floor(Span), MaxPiece);
-    if (Rem <= EltBytes)
-      Piece = 4;
-    if (Piece >= MaxBytes)
-      ++NumWide;
-    else
-      SmallBytes += std::max(Piece, 4u);
-    Off += Piece;
-  }
-  return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
-}
-
 static bool hasUniformPointerOperand(const Instruction *I) {
   const auto *LI = dyn_cast_or_null<LoadInst>(I);
   if (!LI)
@@ -2277,12 +2276,6 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     // The last byte of a 7-byte remainder is not widened into the scalar load.
     if (!VecTy && Bytes % 4)
       return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
-    if (Bytes % 4 || !TLI->isTypeLegal(EVT::getVectorVT(Src->getContext(),
-                                                        MVT::i32, Dwords))) {
-      unsigned EltBytes = Bytes % 4 ? EltBits / 8 : 4;
-      return getNumWidenedSMEMLoads(Bytes, Alignment.value(), EltBytes,
-                                    MaxBytes, HasDwordx3);
-    }
     if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
       ++Dwords;
     return getNumMemoryInsts(Dwords * 4, MaxBytes, HasDwordx3);

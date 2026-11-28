@@ -1785,12 +1785,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
     llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = Arg0->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt32Ty(this->getLLVMContext()), Arg0->getType());
     assert((Arg0->getType()->hasFloatingRepresentation() ||
             Arg0->getType()->hasIntegerRepresentation()) &&
            "sign operand must have a float or int representation");
@@ -1935,6 +1931,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
                                    ArrayRef<Value *>{Op0}, nullptr,
                                    "hlsl.ddy.fine");
+  }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    assert(CGM.getTarget().getTriple().isDXIL() &&
+           "hlsl.isdebuggingenabled is only supported on DXIL");
+    return Builder.CreateIntrinsic(
+        Builder.getInt1Ty(), Intrinsic::dx_isdebuggingenabled,
+        ArrayRef<Value *>{}, nullptr, "hlsl.isdebuggingenabled");
   }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:

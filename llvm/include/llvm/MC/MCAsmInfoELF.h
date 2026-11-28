@@ -12,16 +12,15 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
+class Triple;
 
 class LLVM_ABI MCAsmInfoELF : public MCAsmInfo {
   virtual void anchor();
-  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override;
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
-  bool useCodeAlign(const MCSection &Sec) const final;
 
 protected:
-  MCAsmInfoELF(const MCTargetOptions &Options);
+  MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options);
 };
 
 } // end namespace llvm

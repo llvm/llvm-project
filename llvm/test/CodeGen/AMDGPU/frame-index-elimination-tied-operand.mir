@@ -3,7 +3,6 @@
 ...
 ---
 name:            tied_operand_test
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 2, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

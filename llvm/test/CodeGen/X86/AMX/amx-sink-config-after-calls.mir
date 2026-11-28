@@ -10,35 +10,6 @@
 ---
 name:            test_api
 alignment:       16
-registers:
-  - { id: 0, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 2, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 3, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 4, class: tile, preferred-register: '', flags: [  ] }
-  - { id: 5, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 6, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 9, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 10, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 13, class: tile, preferred-register: '', flags: [  ] }
-  - { id: 14, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 15, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 18, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 19, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 22, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 23, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 24, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 25, class: tile, preferred-register: '', flags: [  ] }
-  - { id: 26, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 29, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 30, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 33, class: tile, preferred-register: '', flags: [  ] }
-  - { id: 34, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 35, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 38, class: gr64_nosp, preferred-register: '', flags: [  ] }
-  - { id: 39, class: gr64, preferred-register: '', flags: [  ] }
-  - { id: 40, class: gr16, preferred-register: '', flags: [  ] }
-  - { id: 41, class: gr16, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%2' }

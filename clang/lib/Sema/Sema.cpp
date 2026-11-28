@@ -2796,9 +2796,15 @@ bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) {
   return areDocumentationDiagsEnabled(Loc);
 }
 
+/// The diagnostic groups that documentation comments are checked for.
+static constexpr diag::Group DocumentationDiagGroups[] = {
+    diag::Group::Documentation, diag::Group::DocumentationPedantic};
+
 bool Sema::computeDocumentationDiagsAt(SourceLocation Loc) const {
-  return !Diags.areAllIgnored("documentation", Loc) ||
-         !Diags.areAllIgnored("documentation-pedantic", Loc);
+  return llvm::any_of(DocumentationDiagGroups, [&](diag::Group G) {
+    return !Diags.areAllIgnored(DiagnosticIDs::getWarningOptionForGroup(G),
+                                Loc);
+  });
 }
 
 void Sema::clearDocumentationDiagsCache() {
@@ -2806,10 +2812,27 @@ void Sema::clearDocumentationDiagsCache() {
   DocDiagsExactComputed = 0;
 }
 
+bool Sema::areDocumentationDiagsSourceLocationDependent() {
+  if (DocDiagsInSuppressionMapping)
+    return *DocDiagsInSuppressionMapping;
+
+  // Documentation diagnostics are not location-dependent, except if a
+  // (location-dependent) warning suppression mapping has a section for them.
+  SmallVector<diag::kind, 64> DocDiags;
+  for (diag::Group G : DocumentationDiagGroups)
+    Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+        diag::Flavor::WarningOrError,
+        DiagnosticIDs::getWarningOptionForGroup(G), DocDiags);
+  DocDiagsInSuppressionMapping = llvm::any_of(DocDiags, [&](diag::kind D) {
+    return Diags.hasDiagSuppressionMappingFor(D);
+  });
+  return *DocDiagsInSuppressionMapping;
+}
+
 bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
-  // Under a suppression mapping the severity depends on the file path rather
-  // than the diagnostic state, so there is nothing stable to key a cache on.
-  if (Loc.isInvalid() || Diags.hasDiagSuppressionMapping())
+  // Under a suppression mapping the severity can depend on the file path rather
+  // than the diagnostic state. Then there is nothing stable to key a cache on.
+  if (Loc.isInvalid() || areDocumentationDiagsSourceLocationDependent())
     return computeDocumentationDiagsAt(Loc);
 
   const void *StateKey = Diags.getDiagStateKeyForLoc(Loc);

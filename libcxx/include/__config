@@ -142,9 +142,9 @@ typedef __char32_t char32_t;
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
       __lx __v_;                                                                                                       \
-      _LIBCPP_HIDE_FROM_ABI x(__lx __v) : __v_(__v) {}                                                                 \
-      _LIBCPP_HIDE_FROM_ABI explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                      \
-      _LIBCPP_HIDE_FROM_ABI operator int() const { return __v_; }                                                      \
+      x(__lx __v) : __v_(__v) {}                                                                                       \
+      explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                                            \
+      operator int() const { return __v_; }                                                                            \
       };
 // clang-format on
 

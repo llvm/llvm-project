@@ -176,4 +176,4 @@ struct TVC : VX
 template <typename T>
 TVC<T>::~TVC() {}
 
-// CHECK: attributes [[ATTRGRP]] = { mustprogress noinline nounwind{{.*}} }
+// CHECK: attributes [[ATTRGRP]] = { likely_module_local mustprogress noinline nounwind{{.*}} }

@@ -59,6 +59,16 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 // modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
+// VGPR address space (13) load/store indexed by (byte offset >> 2).
+def SDTRegIdxLoad : SDTypeProfile<1, 1,
+    [SDTCisVT<1, i32>]>; // dword_index
+def SDTRegIdxStore : SDTypeProfile<0, 2,
+    [SDTCisVT<1, i32>]>; // data, dword_index
+def SIreg_load : SDNode<"AMDGPUISD::REG_LOAD", SDTRegIdxLoad,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SIreg_store : SDNode<"AMDGPUISD::REG_STORE", SDTRegIdxStore,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
@@ -1286,7 +1296,6 @@ def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
-def lds : NamedBitOperand<"lds", "LDS", 1>;
 
 def omod : CustomOperand<1, "OModSI">;
 def omod0 : DefaultOperand<omod, 0>;
@@ -1316,9 +1325,7 @@ def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
-def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
-def exp_done : NamedBitOperand<"done", "Done", 1>;
-def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 // The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
 def format : CustomOperand<1, "Format", i8> {

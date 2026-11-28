@@ -11,47 +11,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/NativeDylibManager.h"
-#include "orc-rt-internal/bedrock/sys/DynamicLibrary.h"
+#include "orc-rt-internal/bedrock/host/DynamicLibrary.h"
 #include "orc-rt/bedrock/Session.h"
 
 namespace orc_rt {
-
-Expected<std::unique_ptr<NativeDylibManager>>
-NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
-                           const char *InstanceName,
-                           SimpleSymbolTable::MutatorFn AddInterface) {
-
-  std::unique_ptr<NativeDylibManager> Instance(new NativeDylibManager(S));
-
-  SimpleSymbolTable NDMST;
-  if (auto Err = AddInterface(NDMST))
-    return Err;
-  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
-      {SymbolNameSpec::c(InstanceName),
-       static_cast<const void *>(Instance.get())}};
-  if (auto Err = NDMST.addUnique(InstanceSym))
-    return std::move(Err);
-
-  if (auto Err = ST.addUnique(std::move(NDMST)))
-    return std::move(Err);
-
-  return std::move(Instance);
-}
 
 void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
   // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
   // mustn't be dlclose'd).
   if (Path.empty())
-    return OnComplete(sys::globalLookupHandle());
+    return OnComplete(host::globalLookupHandle());
 
-  auto H = sys::loadLibrary(Path);
+  auto H = host::loadLibrary(Path);
   if (!H)
     return OnComplete(H.takeError());
 
   // Capture S by reference, rather than this, so that the callback remains
   // valid even if the NativeDylibManager is destroyed prior to shutdown.
   S.addOnShutdown([&S = this->S, Handle = *H]() noexcept {
-    if (auto Err = sys::unloadLibrary(Handle))
+    if (auto Err = host::unloadLibrary(Handle))
       S.reportError(std::move(Err));
   });
   OnComplete(std::move(H));
@@ -59,7 +37,7 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
                                 void *Handle, RemoteSymbolLookupSet Symbols) {
-  auto Addrs = sys::lookupLibrarySymbols(Handle, Symbols);
+  auto Addrs = host::lookupLibrarySymbols(Handle, Symbols);
 
   // Convert weak-missing entries (empty optional from lookupLibrarySymbols)
   // to a present zero address. This matches the resolve semantics of

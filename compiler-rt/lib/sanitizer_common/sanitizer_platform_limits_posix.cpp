@@ -309,7 +309,7 @@ namespace __sanitizer {
 #define SIZEOF_STRUCT_USTAT 32
 #    elif defined(__arm__) || defined(__i386__) || defined(__mips__) ||    \
         defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
-        defined(__hexagon__) || defined(__alpha__)
+        defined(__hexagon__) || defined(__alpha__) || defined(__hppa__)
 #      define SIZEOF_STRUCT_USTAT 20
 #    elif defined(__loongarch__)
   // Not used. The minimum Glibc version available for LoongArch is 2.36
@@ -1178,7 +1178,7 @@ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
 #endif
 #  if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && \
-      !defined(__alpha__)
+      !defined(__alpha__) && !defined(__hppa__)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
 

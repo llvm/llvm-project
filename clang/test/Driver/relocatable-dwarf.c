@@ -1,6 +1,7 @@
 // Mach-O objects with DWARF 5 or later relocate offsets between DWARF sections,
-// except for the Apple operating systems below. This applies to code
-// generation, the integrated assembler, and LTO code generation in the linker.
+// except for the Apple operating systems and 32-bit ARM and x86 below. This
+// applies to code generation, the integrated assembler, and LTO code generation
+// in the linker.
 
 // RUN: %clang -### --target=arm64-apple-none-macho -g -c %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CC1
@@ -30,6 +31,18 @@
 // RUN: %clang -### --target=arm64-apple-driverkit23 -g -flto %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NONE
 // RUN: %clang -### --target=x86_64-linux-gnu -g -c %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=armv7em-apple-none-macho -g -c %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=armv7em-apple-none-macho -g -c -x assembler %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=armv7em-apple-none-macho -g -flto %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=i386-apple-none-macho -g -c %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=i386-apple-none-macho -g -c -x assembler %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang -### --target=i386-apple-none-macho -g -flto %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NONE
 
 // CC1:   "-cc1" {{.*}}"-grelocatable-dwarf"

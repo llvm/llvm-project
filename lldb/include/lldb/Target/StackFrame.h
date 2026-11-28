@@ -315,12 +315,12 @@ public:
                          bool include_synthetic_vars = true,
                          bool must_have_valid_location = false);
 
-  /// Create a ValueObject for a variable name / pathname, possibly including
-  /// simple dereference/child selection syntax.
+  /// Evaluate the Data Inspection Language (DIL) expression \p var_expr in
+  /// this frame.
+  /// \see https://lldb.llvm.org/resources/dil.html
   ///
   /// \param[in] var_expr
-  ///     The string specifying a variable to base the VariableObject off
-  ///     of.
+  ///     The DIL expression to evaluate.
   ///
   /// \param[in] use_dynamic
   ///     Whether the correct dynamic type of an object pointer should be
@@ -646,17 +646,6 @@ protected:
   std::recursive_mutex m_mutex;
 
 private:
-  /// Private methods, called from GetValueForVariableExpressionPath.
-  /// See that method for documentation of parameters and return value.
-  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull);
-
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;
 };

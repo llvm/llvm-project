@@ -127,6 +127,10 @@ def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_
 def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
 def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
 
+// Vector 128-bit integer add/sub on the equivalent i64 vector type
+def loongarch_vadd_q : SDNode<"LoongArchISD::VADD_Q", SDT_LoongArchV2R>;
+def loongarch_vsub_q : SDNode<"LoongArchISD::VSUB_Q", SDT_LoongArchV2R>;
+
 // Vector double-precision convert to 32-bit integer
 def loongarch_vftintrz_w_d: SDNode<"LoongArchISD::VFTINTRZ", SDT_LoongArchVFTINTRZ_W_D>;
 
@@ -2286,12 +2290,25 @@ multiclass VmulwusPat<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_Q_DU_D") LSX128:$vj, LSX128:$vk)>;
 }
 
+// Put an FP scalar in element 0 of an LSX or LASX vector. The other elements
+// are undefined.
+def fpr32_to_vec : OutPatFrag<(ops node:$fj),
+                              (INSERT_SUBREG (IMPLICIT_DEF), $fj, sub_32)>;
+def fpr64_to_vec : OutPatFrag<(ops node:$fj),
+                              (INSERT_SUBREG (IMPLICIT_DEF), $fj, sub_64)>;
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
 defm : PatVrVr<add, "VADD">;
 // VSUB_{B/H/W/D}
 defm : PatVrVr<sub, "VSUB">;
+
+// VADD_Q/VSUB_Q
+def : Pat<(loongarch_vadd_q (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+          (VADD_Q LSX128:$vj, LSX128:$vk)>;
+def : Pat<(loongarch_vsub_q (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+          (VSUB_Q LSX128:$vj, LSX128:$vk)>;
 
 // VADDI_{B/H/W/D}U
 defm : PatVrNimm5<sub, "VADDI">;
@@ -2746,20 +2763,20 @@ def : Pat<(vector_insert v2f64:$vd, (f64 (bitconvert i64:$rj)), uimm1:$imm),
 foreach imm = 0...3 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, imm),
-            (VEXTRINS_W $vd, (SUBREG_TO_REG FPR32:$fj, sub_32), Imm)>;
+            (VEXTRINS_W $vd, (fpr32_to_vec FPR32:$fj), Imm)>;
 }
 
 foreach imm = 0...1 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, imm),
-            (VEXTRINS_D $vd, (SUBREG_TO_REG FPR64:$fj, sub_64), Imm)>;
+            (VEXTRINS_D $vd, (fpr64_to_vec FPR64:$fj), Imm)>;
 }
 
 // scalar_to_vector
 def : Pat<(v4f32 (scalar_to_vector FPR32:$fj)),
-          (SUBREG_TO_REG FPR32:$fj, sub_32)>;
+          (fpr32_to_vec FPR32:$fj)>;
 def : Pat<(v2f64 (scalar_to_vector FPR64:$fj)),
-          (SUBREG_TO_REG FPR64:$fj, sub_64)>;
+          (fpr64_to_vec FPR64:$fj)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
@@ -2935,9 +2952,9 @@ def : Pat<(loongarch_vreplvei v2f64:$vj, immZExt1:$ui1),
 
 // VREPLVEI_{W/D}
 def : Pat<(lsxsplatf32 FPR32:$fj),
-          (VREPLVEI_W (SUBREG_TO_REG FPR32:$fj, sub_32), 0)>;
+          (VREPLVEI_W (fpr32_to_vec FPR32:$fj), 0)>;
 def : Pat<(lsxsplatf64 FPR64:$fj),
-          (VREPLVEI_D (SUBREG_TO_REG FPR64:$fj, sub_64), 0)>;
+          (VREPLVEI_D (fpr64_to_vec FPR64:$fj), 0)>;
 
 // VSTELM
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
@@ -2976,6 +2993,12 @@ def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i16:$vj, uimm3:$imm),
 def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v4i32:$vj, uimm2:$imm),
                                        (GRLenVT 31), (GRLenVT 0))),
           (VPICKVE2GR_WU v4i32:$vj, uimm2:$imm)>;
+
+// Vector extraction with sign extension and constant index.
+def : Pat<(GRLenVT (sext_inreg (vector_extract v16i8:$vj, uimm4:$imm), i8)),
+          (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
+def : Pat<(GRLenVT (sext_inreg (vector_extract v8i16:$vj, uimm3:$imm), i16)),
+          (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
 
 // Vector extraction with constant index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),
@@ -3506,28 +3529,28 @@ def : Pat<(loongarch_vfrsqrte v2f64:$src),
 // Vector floating-point conversion
 def : Pat<(f32 (fceil FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRP_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (fceil FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRP_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (ffloor FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRM_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (ffloor FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRM_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (ftrunc FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRZ_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (ftrunc FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRZ_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (froundeven FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRNE_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 
 defm : PatVrF<fceil, "VFRINTRP">;
 defm : PatVrF<ffloor, "VFRINTRM">;

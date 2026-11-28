@@ -45,15 +45,13 @@ name:            const_i8
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i8
     ; CHECK: [[MOV8ri:%[0-9]+]]:gr8 = MOV8ri 2
     ; CHECK-NEXT: $al = COPY [[MOV8ri]]
     ; CHECK-NEXT: RET 0, implicit $al
-    %0(s8) = G_CONSTANT i8 2
+    %0:gpr(s8) = G_CONSTANT i8 2
     $al = COPY %0(s8)
     RET 0, implicit $al
 
@@ -63,15 +61,13 @@ name:            const_i16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i16
     ; CHECK: [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 3
     ; CHECK-NEXT: $ax = COPY [[MOV16ri]]
     ; CHECK-NEXT: RET 0, implicit $ax
-    %0(s16) = G_CONSTANT i16 3
+    %0:gpr(s16) = G_CONSTANT i16 3
     $ax = COPY %0(s16)
     RET 0, implicit $ax
 
@@ -81,15 +77,13 @@ name:            const_i32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32
     ; CHECK: [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 4
     ; CHECK-NEXT: $eax = COPY [[MOV32ri]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s32) = G_CONSTANT i32 4
+    %0:gpr(s32) = G_CONSTANT i32 4
     $eax = COPY %0(s32)
     RET 0, implicit $eax
 
@@ -98,15 +92,13 @@ body:             |
 name:            const_i32_0
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32_0
     ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: $eax = COPY [[MOV32r0_]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s32) = G_CONSTANT i32 0
+    %0:gpr(s32) = G_CONSTANT i32 0
     $eax = COPY %0(s32)
     RET 0, implicit $eax
 
@@ -116,15 +108,13 @@ name:            const_i64
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64
     ; CHECK: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri 68719476720
     ; CHECK-NEXT: $rax = COPY [[MOV64ri]]
     ; CHECK-NEXT: RET 0, implicit $rax
-    %0(s64) = G_CONSTANT i64 68719476720
+    %0:gpr(s64) = G_CONSTANT i64 68719476720
     $rax = COPY %0(s64)
     RET 0, implicit $rax
 
@@ -135,15 +125,13 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_u32
     ; CHECK: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 1879048192
     ; CHECK-NEXT: $rax = COPY [[MOV32ri64_]]
     ; CHECK-NEXT: RET 0, implicit $rax
-    %0(s64) = G_CONSTANT i64 1879048192
+    %0:gpr(s64) = G_CONSTANT i64 1879048192
     $rax = COPY %0(s64)
     RET 0, implicit $rax
 
@@ -153,15 +141,13 @@ name:            const_i64_u32_max
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_u32_max
     ; CHECK: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 4294967295
     ; CHECK-NEXT: $rax = COPY [[MOV32ri64_]]
     ; CHECK-NEXT: RET 0, implicit $rax
-    %0(s64) = G_CONSTANT i64 4294967295
+    %0:gpr(s64) = G_CONSTANT i64 4294967295
     $rax = COPY %0(s64)
     RET 0, implicit $rax
 
@@ -171,15 +157,13 @@ name:            const_i64_i32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_i32
     ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 -1
     ; CHECK-NEXT: $rax = COPY [[MOV64ri32_]]
     ; CHECK-NEXT: RET 0, implicit $rax
-    %0(s64) = G_CONSTANT i64 -1
+    %0:gpr(s64) = G_CONSTANT i64 -1
     $rax = COPY %0(s64)
     RET 0, implicit $rax
 
@@ -189,9 +173,6 @@ name:            main
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -203,8 +184,8 @@ body:             |
     ; CHECK-NEXT: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 0
     ; CHECK-NEXT: MOV64mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV32ri64_]] :: (store (p0) into %ir.data)
     ; CHECK-NEXT: RET 0
-    %0(p0) = COPY $rdi
-    %1(p0) = G_CONSTANT i64 0
+    %0:gpr(p0) = COPY $rdi
+    %1:gpr(p0) = G_CONSTANT i64 0
     G_STORE %1(p0), %0(p0) :: (store (p0) into %ir.data)
     RET 0
 

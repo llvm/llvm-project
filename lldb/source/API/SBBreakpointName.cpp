@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointName.h"
+#include "Utils.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
@@ -24,6 +25,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "SBBreakpointOptionCommon.h"
 
@@ -173,12 +175,16 @@ operator=(const SBBreakpointName &rhs) {
 bool SBBreakpointName::operator==(const lldb::SBBreakpointName &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
+  if (!m_impl_up || !rhs.m_impl_up)
+    return m_impl_up == rhs.m_impl_up;
   return *m_impl_up == *rhs.m_impl_up;
 }
 
 bool SBBreakpointName::operator!=(const lldb::SBBreakpointName &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
+  if (!m_impl_up || !rhs.m_impl_up)
+    return m_impl_up != rhs.m_impl_up;
   return *m_impl_up != *rhs.m_impl_up;
 }
 
@@ -199,7 +205,10 @@ const char *SBBreakpointName::GetName() const {
 
   if (!m_impl_up)
     return "<Invalid Breakpoint Name Object>";
-  return ConstString(m_impl_up->GetName()).GetCString();
+  TargetSP target_sp = m_impl_up->GetTarget();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(m_impl_up->GetName());
 }
 
 void SBBreakpointName::SetEnabled(bool enable) {
@@ -318,8 +327,8 @@ const char *SBBreakpointName::GetCondition() {
   TargetAPIMutex api_lock = m_impl_up->GetTarget()->GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
 
-  return ConstString(bp_name->GetOptions().GetCondition().GetText())
-      .GetCString();
+  return GetDebuggerStringPool(*m_impl_up->GetTarget())
+      .Intern(bp_name->GetOptions().GetCondition().GetText());
 }
 
 void SBBreakpointName::SetAutoContinue(bool auto_continue) {
@@ -427,8 +436,8 @@ const char *SBBreakpointName::GetThreadName() const {
   TargetAPIMutex api_lock = m_impl_up->GetTarget()->GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
 
-  return ConstString(bp_name->GetOptions().GetThreadSpec()->GetName())
-      .GetCString();
+  return GetDebuggerStringPool(*m_impl_up->GetTarget())
+      .Intern(bp_name->GetOptions().GetThreadSpec()->GetName());
 }
 
 void SBBreakpointName::SetQueueName(const char *queue_name) {
@@ -455,8 +464,8 @@ const char *SBBreakpointName::GetQueueName() const {
   TargetAPIMutex api_lock = m_impl_up->GetTarget()->GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
 
-  return ConstString(bp_name->GetOptions().GetThreadSpec()->GetQueueName())
-      .GetCString();
+  return GetDebuggerStringPool(*m_impl_up->GetTarget())
+      .Intern(bp_name->GetOptions().GetThreadSpec()->GetQueueName());
 }
 
 void SBBreakpointName::SetCommandLineCommands(SBStringList &commands) {
@@ -499,7 +508,8 @@ const char *SBBreakpointName::GetHelpString() const {
   if (!bp_name)
     return "";
 
-  return ConstString(bp_name->GetHelp()).GetCString();
+  return GetDebuggerStringPool(*m_impl_up->GetTarget())
+      .Intern(bp_name->GetHelp());
 }
 
 void SBBreakpointName::SetHelpString(const char *help_string) {

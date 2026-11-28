@@ -1,0 +1,68 @@
+# RUN: split-file %s %t
+# RUN: not llc -mtriple=spirv64-unknown-unknown -run-pass=none -filetype=null %t/not-a-type.mir 2>&1 | FileCheck %t/not-a-type.mir
+# RUN: not llc -mtriple=spirv64-unknown-unknown -run-pass=none -filetype=null %t/undef-type.mir 2>&1 | FileCheck %t/undef-type.mir
+# RUN: not llc -mtriple=spirv64-unknown-unknown -run-pass=none -filetype=null %t/undef-reg.mir 2>&1 | FileCheck %t/undef-reg.mir
+# RUN: not llc -mtriple=spirv64-unknown-unknown -run-pass=none -filetype=null %t/bad-name.mir 2>&1 | FileCheck %t/bad-name.mir
+# RUN: not llc -mtriple=spirv64-unknown-unknown -run-pass=none -filetype=null %t/undef-last.mir 2>&1 | FileCheck %t/undef-last.mir
+
+;--- not-a-type.mir
+---
+name: not_a_type
+machineFunctionInfo:
+  vregTypes:
+    - { reg: '%1', type: '%1' }
+# CHECK: :[[@LINE-1]]:29: expected a SPIR-V type register
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+    %1:iid(i32) = OpConstantNull %0(s64)
+...
+
+;--- undef-type.mir
+---
+name: undef_type
+machineFunctionInfo:
+  vregTypes:
+    - { reg: '%1', type: '%2' }
+# CHECK: :[[@LINE-1]]:29: expected a SPIR-V type register
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+    %1:iid(i32) = OpConstantNull %0(s64)
+...
+
+;--- undef-reg.mir
+---
+name: undef_vreg
+machineFunctionInfo:
+  vregTypes:
+    - { reg: '%1', type: '%0' }
+# CHECK: :[[@LINE-1]]:17: virtual register is not used or defined
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+...
+
+;--- bad-name.mir
+---
+name: bad_name
+machineFunctionInfo:
+  vregTypes:
+    - { reg: '1', type: '%0' }
+# CHECK: :[[@LINE-1]]:15: expected a virtual register
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+    %1:iid(i32) = OpConstantNull %0(s64)
+...
+
+;--- undef-last.mir
+---
+name: undef_last
+machineFunctionInfo:
+  lastInsertedType: '%1'
+# CHECK: :[[@LINE-1]]:24: virtual register is not defined
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+...

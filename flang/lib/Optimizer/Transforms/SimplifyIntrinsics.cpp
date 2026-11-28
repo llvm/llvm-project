@@ -34,7 +34,7 @@
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"

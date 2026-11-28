@@ -1,0 +1,95 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv68 -mattr=+hmx -run-pass=post-RA-sched \
+# RUN:   %s -o - | FileCheck %s
+
+# The Hexagon hazard recognizer delays other instructions after one half of
+# an HMX activation/weight pair is scheduled, so that the other half is placed
+# next to it. If the second half depends on an instruction that is not yet
+# scheduled, delaying it deadlocks the post-RA scheduler. Check that the
+# scheduler terminates and keeps the dependent instruction between the two.
+
+# A volatile store between the activation and weight instructions.
+# CHECK-LABEL: name: split_by_store
+# CHECK:      M8_mxmem_blk_sm_act_hf
+# CHECK-NEXT: S2_storeri_io
+# CHECK-NEXT: M8_mxmem_wei_hf
+---
+name: split_by_store
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+    M8_mxmem_blk_sm_act_hf $r0, $r4
+    S2_storeri_io $r2, 0, $r3 :: (volatile store (s32))
+    M8_mxmem_wei_hf $r1, $r5
+    PS_jmpret $r31, implicit-def $pc
+...
+
+# A register used by the activation is redefined and then used by the weight.
+# The anti-dependence is broken by renaming, so the pair can be adjacent.
+# CHECK-LABEL: name: split_by_redef
+# CHECK:      A2_addi
+# CHECK-NEXT: M8_mxmem_blk_sm_act_hf
+# CHECK-NEXT: M8_mxmem_wei_hf
+---
+name: split_by_redef
+body: |
+  bb.0:
+    liveins: $r0, $r4, $r5
+    M8_mxmem_blk_sm_act_hf $r0, $r4
+    $r0 = A2_addi $r0, 128
+    M8_mxmem_wei_hf $r0, $r5
+    PS_jmpret $r31, implicit-def $pc
+...
+
+# Another HMX instruction between the activation and weight instructions.
+# CHECK-LABEL: name: split_by_hmx
+# CHECK:      M8_mxmem_blk_sm_act_hf
+# CHECK-NEXT: M8_mxclracc_hf
+# CHECK-NEXT: M8_mxmem_wei_hf
+---
+name: split_by_hmx
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r4, $r5
+    M8_mxmem_blk_sm_act_hf $r0, $r4
+    M8_mxclracc_hf
+    M8_mxmem_wei_hf $r1, $r5
+    PS_jmpret $r31, implicit-def $pc
+...
+
+# Independent instructions must not be scheduled between the two halves.
+# CHECK-LABEL: name: adjacent
+# CHECK:      M8_mxmem_blk_sm_act_hf
+# CHECK-NEXT: M8_mxmem_wei_hf
+---
+name: adjacent
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+    M8_mxmem_blk_sm_act_hf $r0, $r4
+    $r6 = A2_addi $r2, 1
+    $r7 = A2_addi $r3, 1
+    $r8 = A2_addi $r2, 2
+    $r9 = A2_addi $r3, 2
+    M8_mxmem_wei_hf $r1, $r5
+    PS_jmpret $r31, implicit-def $pc, implicit $r6, implicit $r7, implicit $r8, implicit $r9
+...
+
+# The load and the activation use both memory slots of the first cycle, so the
+# weight is scheduled in the next cycle. An independent instruction that
+# becomes ready in that cycle must not be scheduled before the weight.
+# CHECK-LABEL: name: adjacent_after_slot_conflict
+# CHECK:      M8_mxmem_blk_sm_act_hf
+# CHECK-NEXT: M8_mxmem_wei_hf
+---
+name: adjacent_after_slot_conflict
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+    $r6 = L2_loadri_io $r2, 0
+    M8_mxmem_blk_sm_act_hf $r0, $r4
+    M8_mxmem_wei_hf $r1, $r5
+    $r7 = A2_addi $r3, 1
+    $r8 = A2_addi $r3, 2
+    $r9 = A2_addi $r6, 3
+    PS_jmpret $r31, implicit-def $pc, implicit $r7, implicit $r8, implicit $r9
+...

@@ -29,16 +29,16 @@ body:             |
     liveins: $x10
 
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 1
-    %2:gprb(s32) = G_CONSTANT i32 0
+    %1:gprb(i32) = G_CONSTANT i32 1
+    %2:gprb(i32) = G_CONSTANT i32 0
     G_BRINDIRECT %0(p0)
 
   bb.2:
-    $x10 = COPY %2(s32)
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
   bb.3:
-    $x10 = COPY %1(s32)
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...

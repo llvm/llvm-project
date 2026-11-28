@@ -18,7 +18,6 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class Module;
@@ -44,10 +43,6 @@ public:
 };
 
 ModulePass *createDXILEmbedderLegacyPass();
-
-namespace dxil {
-extern cl::opt<bool> SourceInDebugModule;
-} // namespace dxil
 
 } // namespace llvm
 

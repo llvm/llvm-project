@@ -725,9 +725,9 @@ public:
 
       if (Propagate) {
         NewWorkList.push_back(Inst);
-        for (auto *User : Inst->users())
+        for (Instruction *User : Inst->users())
           if (ShapeMap.count(User) == 0)
-            WorkList.push_back(cast<Instruction>(User));
+            WorkList.push_back(User);
       }
     }
 
@@ -801,9 +801,9 @@ public:
       // worklist, we use their users as seeds for the next round of forward
       // propagation.
       for (size_t I = BeforeProcessingV; I != WorkList.size(); I++)
-        for (User *U : WorkList[I]->users())
-          if (isa<Instruction>(U) && V != U)
-            NewWorkList.push_back(cast<Instruction>(U));
+        for (Instruction *U : WorkList[I]->users())
+          if (V != U)
+            NewWorkList.push_back(U);
     }
     return NewWorkList;
   }

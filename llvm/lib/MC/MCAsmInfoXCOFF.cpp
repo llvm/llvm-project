@@ -41,10 +41,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   ParseInlineAsmUsingAsmParser = true;
 }
 
-bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {
-  return static_cast<const MCSectionXCOFF &>(Sec).getKind().isText();
-}
-
 MCSectionXCOFF::~MCSectionXCOFF() = default;
 
 void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {

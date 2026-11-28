@@ -28,7 +28,8 @@ define i16 @num_sign_bits_mul_i48_1(i8 %X, i8 %Y, i8 %Z, i8 %W) {
 ; GFX9-NEXT:    v_mul_i32_i24_sdwa v2, sext(v2), sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
 ; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v2
 ; GFX9-NEXT:    v_mul_i32_i24_e32 v0, v0, v2
-; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 24, v[0:1]
+; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 16, v[0:1]
+; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 8, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %A = sext i8 %X to i48
   %B = sext i8 %Y to i48

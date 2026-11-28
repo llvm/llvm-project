@@ -81,7 +81,7 @@ private:
   static constexpr rank_type __rank_ = extents_type::rank();
 
   // Used for default construction check and mandates
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __required_span_size_is_representable(const extents_type& __ext) {
+  static constexpr bool __required_span_size_is_representable(const extents_type& __ext) {
     if constexpr (__rank_ == 0)
       return true;
 
@@ -95,7 +95,7 @@ private:
   }
 
   template <class _OtherIndexType>
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool
+  static constexpr bool
   __required_span_size_is_representable(const extents_type& __ext, span<_OtherIndexType, __rank_> __strides) {
     if constexpr (__rank_ == 0)
       return true;
@@ -121,7 +121,7 @@ private:
 
   // compute offset of a strided layout mapping
   template <class _StridedMapping>
-  _LIBCPP_HIDE_FROM_ABI static constexpr index_type __offset(const _StridedMapping& __mapping) {
+  static constexpr index_type __offset(const _StridedMapping& __mapping) {
     if constexpr (_StridedMapping::extents_type::rank() == 0) {
       return static_cast<index_type>(__mapping());
     } else if (__mapping.required_span_size() == static_cast<typename _StridedMapping::index_type>(0)) {
@@ -135,7 +135,7 @@ private:
 
   // compute the permutation for sorting the stride array
   // we never actually sort the stride array
-  _LIBCPP_HIDE_FROM_ABI constexpr void __bubble_sort_by_strides(array<rank_type, __rank_>& __permute) const {
+  constexpr void __bubble_sort_by_strides(array<rank_type, __rank_>& __permute) const {
     for (rank_type __i = __rank_ - 1; __i > 0; __i--) {
       for (rank_type __r = 0; __r < __i; __r++) {
         if (__strides_[__permute[__r]] > __strides_[__permute[__r + 1]]) {
@@ -156,7 +156,7 @@ private:
 
 public:
   // [mdspan.layout.stride.cons], constructors
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping() noexcept : __extents_(extents_type()) {
+  constexpr mapping() noexcept : __extents_(extents_type()) {
     // Note the nominal precondition is covered by above static assert since
     // if rank_dynamic is != 0 required_span_size is zero for default construction
     if constexpr (__rank_ > 0) {
@@ -169,12 +169,12 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const mapping&) noexcept = default;
+  constexpr mapping(const mapping&) noexcept = default;
 
   template <class _OtherIndexType>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext, span<_OtherIndexType, __rank_> __strides) noexcept
+  constexpr mapping(const extents_type& __ext, span<_OtherIndexType, __rank_> __strides) noexcept
       : __extents_(__ext), __strides_([&]<size_t... _Pos>(index_sequence<_Pos...>) {
           return __mdspan_detail::__possibly_empty_array<index_type, __rank_>{
               static_cast<index_type>(std::as_const(__strides[_Pos]))...};
@@ -213,19 +213,17 @@ public:
   template <class _OtherIndexType>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext,
-                                          const array<_OtherIndexType, __rank_>& __strides) noexcept
+  constexpr mapping(const extents_type& __ext, const array<_OtherIndexType, __rank_>& __strides) noexcept
       : mapping(__ext, span(__strides)) {}
 
   template <class _StridedLayoutMapping>
     requires(__mdspan_detail::__layout_mapping_alike<_StridedLayoutMapping> &&
              is_constructible_v<extents_type, typename _StridedLayoutMapping::extents_type> &&
              _StridedLayoutMapping::is_always_unique() && _StridedLayoutMapping::is_always_strided())
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
-      !(is_convertible_v<typename _StridedLayoutMapping::extents_type, extents_type> &&
-        (__mdspan_detail::__is_mapping_of<layout_left, _StridedLayoutMapping> ||
-         __mdspan_detail::__is_mapping_of<layout_right, _StridedLayoutMapping> ||
-         __mdspan_detail::__is_mapping_of<layout_stride, _StridedLayoutMapping>)))
+  constexpr explicit(!(is_convertible_v<typename _StridedLayoutMapping::extents_type, extents_type> &&
+                       (__mdspan_detail::__is_mapping_of<layout_left, _StridedLayoutMapping> ||
+                        __mdspan_detail::__is_mapping_of<layout_right, _StridedLayoutMapping> ||
+                        __mdspan_detail::__is_mapping_of<layout_stride, _StridedLayoutMapping>)))
       mapping(const _StridedLayoutMapping& __other) noexcept
       : __extents_(__other.extents()), __strides_([&]<size_t... _Pos>(index_sequence<_Pos...>) {
           // stride() only compiles for rank > 0
@@ -251,18 +249,18 @@ public:
                                         "layout_stride::mapping converting ctor: base offset of mapping must be zero.");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping& operator=(const mapping&) noexcept = default;
+  constexpr mapping& operator=(const mapping&) noexcept = default;
 
   // [mdspan.layout.stride.obs], observers
-  _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept { return __extents_; }
+  constexpr const extents_type& extents() const noexcept { return __extents_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr array<index_type, __rank_> strides() const noexcept {
+  constexpr array<index_type, __rank_> strides() const noexcept {
     return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
       return array<index_type, __rank_>{__strides_[_Pos]...};
     }(make_index_sequence<__rank_>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type required_span_size() const noexcept {
+  constexpr index_type required_span_size() const noexcept {
     if constexpr (__rank_ == 0) {
       return static_cast<index_type>(1);
     } else {
@@ -280,7 +278,7 @@ public:
   template <class... _Indices>
     requires((sizeof...(_Indices) == __rank_) && (is_convertible_v<_Indices, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _Indices> && ...))
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
+  constexpr index_type operator()(_Indices... __idx) const noexcept {
     // Mappings are generally meant to be used for accessing allocations and are meant to guarantee to never
     // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
     // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
@@ -292,8 +290,8 @@ public:
     }(make_index_sequence<sizeof...(_Indices)>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
+  static constexpr bool is_always_unique() noexcept { return true; }
+  static constexpr bool is_always_exhaustive() noexcept {
     if constexpr (__rank_ == 0)
       return true;
     for (size_t __r = 0; __r < __rank_; ++__r)
@@ -301,10 +299,10 @@ public:
         return true;
     return false;
   }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept { return true; }
+  static constexpr bool is_always_strided() noexcept { return true; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const noexcept {
+  static constexpr bool is_unique() noexcept { return true; }
+  constexpr bool is_exhaustive() const noexcept {
     if constexpr (is_always_exhaustive())
       return true;
     index_type __span_size = required_span_size();
@@ -314,11 +312,11 @@ public:
       return (__extents_.extent(_Pos) * ... * static_cast<index_type>(1));
     }(make_index_sequence<__rank_>());
   }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_strided() noexcept { return true; }
+  static constexpr bool is_strided() noexcept { return true; }
 
   // according to the standard layout_stride does not have a constraint on stride(r) for rank>0
   // it still has the precondition though
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const noexcept {
+  constexpr index_type stride(rank_type __r) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__r < __rank_, "layout_stride::mapping::stride(): invalid rank index");
     return __strides_[__r];
   }
@@ -326,7 +324,7 @@ public:
   template <class _OtherMapping>
     requires(__mdspan_detail::__layout_mapping_alike<_OtherMapping> &&
              (_OtherMapping::extents_type::rank() == __rank_) && _OtherMapping::is_always_strided())
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const mapping& __lhs, const _OtherMapping& __rhs) noexcept {
+  friend constexpr bool operator==(const mapping& __lhs, const _OtherMapping& __rhs) noexcept {
     if (__offset(__rhs))
       return false;
     if constexpr (__rank_ == 0)

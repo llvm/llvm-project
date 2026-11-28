@@ -240,6 +240,11 @@ def Vector_ContractionOp :
     // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
 
+    // Returns (lhs dim, rhs dim) pairs for the free dimensions: "parallel"
+    // iterators that index exactly one of lhs and rhs. The dim of the operand
+    // that does not index the iterator is -1.
+    std::vector<std::pair<int64_t, int64_t>> getFreeDimMap();
+
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
     }
@@ -1355,7 +1360,8 @@ def Vector_TransferReadOp :
 
     A memref/tensor operand with vector element type, must have its vector
     element type match a suffix (shape and element type) of the vector (e.g.
-    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
+    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>). Masking is not supported when
+    the memref/tensor has a vector element type (e.g. `memref<4xvector<4xf32>>`)`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[1 .. 1 + rank(memref/tensor))` that defines the
@@ -1379,6 +1385,12 @@ def Vector_TransferReadOp :
     matches how elements are read from the MemRef/Tensor, *before* any
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask take the value of the
+    pass-thru, if provided, and `padding` otherwise. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -1611,7 +1623,8 @@ def Vector_TransferWriteOp :
     A vector memref/tensor operand must have its vector element type match a
     suffix (shape and element type) of the vector (e.g. memref<3x2x6x4x3xf32>,
     vector<1x1x4x3xf32>). If the operand is a tensor, the operation returns a
-    new tensor of the same type.
+    new tensor of the same type. Masking is not supported when the memref/tensor
+    has a vector element type (e.g. `memref<4xvector<4xf32>>`)`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[2 .. 2 + rank(memref/tensor))` that defines the
@@ -1631,6 +1644,13 @@ def Vector_TransferWriteOp :
     matches how elements are written into the MemRef/Tensor, *after* applying
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask are not written: the
+    MemRef keeps its previous contents and the result Tensor takes the
+    corresponding elements of the destination Tensor. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -2828,9 +2848,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise. At this point, 0-D
-    vectors are not supported by `vector.mask`. They may be supported in the
-    future.
+    argument, if provided, or as specified by the masked operation, otherwise.
+    At this point, 0-D vectors are not supported by `vector.mask`. They may be
+    supported in the future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking

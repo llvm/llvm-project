@@ -93,6 +93,7 @@
 // CHECK-NEXT: HLSLVkBuiltIn (SubjectMatchRule_variable_is_parameter, SubjectMatchRule_field, SubjectMatchRule_function)
 // CHECK-NEXT: HLSLVkLocation (SubjectMatchRule_variable_is_parameter, SubjectMatchRule_field, SubjectMatchRule_function)
 // CHECK-NEXT: HLSLVkPushConstant (SubjectMatchRule_variable_is_global)
+// CHECK-NEXT: HexagonHLXVectorStackLimit (SubjectMatchRule_function)
 // CHECK-NEXT: Hot (SubjectMatchRule_function)
 // CHECK-NEXT: HybridPatchable (SubjectMatchRule_function)
 // CHECK-NEXT: IBAction (SubjectMatchRule_objc_method_is_instance)

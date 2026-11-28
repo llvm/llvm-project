@@ -5,6 +5,11 @@
 !u16i = !cir.int<u, 16>
 !rec_Whole = !cir.struct<"Whole" {data !u16i, data !u16i}>
 !rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
+!rec_A = !cir.struct<"A" {data !s32i}>
+!rec_B = !cir.struct<"B" {data !s32i}>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}>
+!rec_HasU = !cir.struct<"HasU" {data !s32i, data !rec_U}>
+!rec_HasUPtr = !cir.struct<"HasUPtr" {data !s32i, data !cir.ptr<!rec_U>}>
 
 module {
   // Promote CIR stack slots through the generic mem2reg pass after CFG flattening.
@@ -12,7 +17,7 @@ module {
   cir.func @promote_simple_stack_slots() -> !s32i {
     // CHECK: %[[CONST:.*]] = cir.const #cir.int<42>
     // CHECK: cir.return %[[CONST]]
-    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
     %1 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
     %2 = cir.const #cir.int<42> : !s32i
     cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
@@ -93,5 +98,175 @@ module {
     cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_AllPad>
     %v = cir.load %slot : !cir.ptr<!rec_AllPad>, !rec_AllPad
     cir.return %v : !rec_AllPad
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_copy_to_bitcast_slot
+  cir.func @do_not_promote_copy_to_bitcast_slot(%src: !cir.ptr<!rec_B>) -> !rec_A {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    // CHECK: %[[BC:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    // CHECK: cir.copy %{{.+}} to %[[BC]] : !cir.ptr<!rec_B>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!rec_A>, !rec_A
+    %slot = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    %bc = cir.cast bitcast %slot : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    cir.copy %src to %bc : !cir.ptr<!rec_B>
+    %v = cir.load %slot : !cir.ptr<!rec_A>, !rec_A
+    cir.return %v : !rec_A
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_copy_from_bitcast_slot
+  cir.func @do_not_promote_copy_from_bitcast_slot(%v: !rec_A, %dst: !cir.ptr<!rec_B>) {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    // CHECK: cir.store %{{.+}}, %[[SLOT]] : !rec_A, !cir.ptr<!rec_A>
+    // CHECK: %[[BC:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    // CHECK: cir.copy %[[BC]] to %{{.+}} : !cir.ptr<!rec_B>
+    %slot = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    cir.store %v, %slot : !rec_A, !cir.ptr<!rec_A>
+    %bc = cir.cast bitcast %slot : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    cir.copy %bc to %dst : !cir.ptr<!rec_B>
+    cir.return
+  }
+
+  // Promoting the bitcast copy would compute the copied value in ^store but
+  // read the slot's default at ^merge.
+  // CHECK-LABEL: cir.func @do_not_promote_bitcast_copy_diamond
+  cir.func @do_not_promote_bitcast_copy_diamond(%cond: !cir.bool, %src: !cir.ptr<!rec_B>) -> !rec_A {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    // CHECK: %[[BC:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    // CHECK: cir.copy %{{.+}} to %[[BC]] : !cir.ptr<!rec_B>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!rec_A>, !rec_A
+    %slot = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    cir.brcond %cond ^store, ^skip
+  ^store:
+    %bc = cir.cast bitcast %slot : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
+    cir.copy %src to %bc : !cir.ptr<!rec_B>
+    cir.br ^merge
+  ^skip:
+    cir.br ^merge
+  ^merge:
+    %v = cir.load %slot : !cir.ptr<!rec_A>, !rec_A
+    cir.return %v : !rec_A
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_self_copy
+  cir.func @do_not_promote_self_copy(%v: !rec_A) -> !rec_A {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    // CHECK: cir.copy %[[SLOT]] to %[[SLOT]] : !cir.ptr<!rec_A>
+    %slot = cir.alloca "s" align(4) init : !cir.ptr<!rec_A>
+    cir.store %v, %slot : !rec_A, !cir.ptr<!rec_A>
+    cir.copy %slot to %slot : !cir.ptr<!rec_A>
+    %r = cir.load %slot : !cir.ptr<!rec_A>, !rec_A
+    cir.return %r : !rec_A
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_volatile_copy
+  cir.func @do_not_promote_volatile_copy(%src: !cir.ptr<!rec_Whole>) -> !rec_Whole {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(2) init : !cir.ptr<!rec_Whole>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] volatile : !cir.ptr<!rec_Whole>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!rec_Whole>, !rec_Whole
+    %slot = cir.alloca "s" align(2) init : !cir.ptr<!rec_Whole>
+    cir.copy %src to %slot volatile : !cir.ptr<!rec_Whole>
+    %v = cir.load %slot : !cir.ptr<!rec_Whole>, !rec_Whole
+    cir.return %v : !rec_Whole
+  }
+
+  // CHECK-LABEL: cir.func @promote_slot_with_lifetime_markers
+  cir.func @promote_slot_with_lifetime_markers() -> !s32i {
+    // CHECK-NOT: cir.alloca
+    // CHECK-NOT: cir.lifetime
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<42> : !s32i
+    // CHECK-NOT: cir.lifetime
+    // CHECK: cir.return %[[CONST]] : !s32i
+    %slot = cir.alloca "s" align(4) : !cir.ptr<!s32i>
+    cir.lifetime.start %slot : !cir.ptr<!s32i>
+    %c = cir.const #cir.int<42> : !s32i
+    cir.store %c, %slot : !s32i, !cir.ptr<!s32i>
+    %v = cir.load %slot : !cir.ptr<!s32i>, !s32i
+    cir.lifetime.end %slot : !cir.ptr<!s32i>
+    cir.return %v : !s32i
+  }
+
+  // Lifetime markers stay when something else keeps the slot in memory.
+  // CHECK-LABEL: cir.func @keep_lifetime_markers_of_unpromoted_slot
+  cir.func @keep_lifetime_markers_of_unpromoted_slot() -> !s32i {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) : !cir.ptr<!s32i>
+    // CHECK: cir.lifetime.start %[[SLOT]] : !cir.ptr<!s32i>
+    // CHECK: cir.load volatile %[[SLOT]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.lifetime.end %[[SLOT]] : !cir.ptr<!s32i>
+    %slot = cir.alloca "s" align(4) : !cir.ptr<!s32i>
+    cir.lifetime.start %slot : !cir.ptr<!s32i>
+    %c = cir.const #cir.int<42> : !s32i
+    cir.store %c, %slot : !s32i, !cir.ptr<!s32i>
+    %v = cir.load volatile %slot : !cir.ptr<!s32i>, !s32i
+    cir.lifetime.end %slot : !cir.ptr<!s32i>
+    cir.return %v : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_union_slot
+  cir.func @do_not_promote_union_slot(%src: !cir.ptr<!rec_U>) -> !rec_U {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!rec_U>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] : !cir.ptr<!rec_U>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!rec_U>, !rec_U
+    %slot = cir.alloca "u" align(4) init : !cir.ptr<!rec_U>
+    cir.copy %src to %slot : !cir.ptr<!rec_U>
+    %v = cir.load %slot : !cir.ptr<!rec_U>, !rec_U
+    cir.return %v : !rec_U
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_struct_with_union_member
+  cir.func @do_not_promote_struct_with_union_member(%src: !cir.ptr<!rec_HasU>) -> !rec_HasU {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_HasU>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] : !cir.ptr<!rec_HasU>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!rec_HasU>, !rec_HasU
+    %slot = cir.alloca "s" align(4) init : !cir.ptr<!rec_HasU>
+    cir.copy %src to %slot : !cir.ptr<!rec_HasU>
+    %v = cir.load %slot : !cir.ptr<!rec_HasU>, !rec_HasU
+    cir.return %v : !rec_HasU
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_union_array
+  cir.func @do_not_promote_union_array(%src: !cir.ptr<!cir.array<!rec_U x 2>>) -> !cir.array<!rec_U x 2> {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!cir.array<!rec_U x 2>>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] : !cir.ptr<!cir.array<!rec_U x 2>>
+    // CHECK: cir.load %[[SLOT]] : !cir.ptr<!cir.array<!rec_U x 2>>, !cir.array<!rec_U x 2>
+    %slot = cir.alloca "a" align(4) init : !cir.ptr<!cir.array<!rec_U x 2>>
+    cir.copy %src to %slot : !cir.ptr<!cir.array<!rec_U x 2>>
+    %v = cir.load %slot : !cir.ptr<!cir.array<!rec_U x 2>>, !cir.array<!rec_U x 2>
+    cir.return %v : !cir.array<!rec_U x 2>
+  }
+
+  // Typed loads and stores of a union are not made lossier by promotion.
+  // CHECK-LABEL: cir.func @promote_union_slot_without_copies
+  // CHECK-SAME: (%[[V:[^:]+]]: !rec_U)
+  cir.func @promote_union_slot_without_copies(%v: !rec_U) -> !rec_U {
+    // CHECK-NEXT: cir.return %[[V]] : !rec_U
+    %slot = cir.alloca "u" align(4) init : !cir.ptr<!rec_U>
+    cir.store %v, %slot : !rec_U, !cir.ptr<!rec_U>
+    %r = cir.load %slot : !cir.ptr<!rec_U>, !rec_U
+    cir.return %r : !rec_U
+  }
+
+  // A pointer to a union holds no union bytes, so the slot still promotes.
+  // CHECK-LABEL: cir.func @promote_struct_with_union_pointer
+  cir.func @promote_struct_with_union_pointer(%src: !cir.ptr<!rec_HasUPtr>) -> !rec_HasUPtr {
+    // CHECK-NOT: cir.alloca
+    // CHECK-NOT: cir.copy
+    // CHECK: %[[V:.*]] = cir.load %{{.+}} : !cir.ptr<!rec_HasUPtr>, !rec_HasUPtr
+    // CHECK: cir.return %[[V]] : !rec_HasUPtr
+    %slot = cir.alloca "s" align(8) init : !cir.ptr<!rec_HasUPtr>
+    cir.copy %src to %slot : !cir.ptr<!rec_HasUPtr>
+    %v = cir.load %slot : !cir.ptr<!rec_HasUPtr>, !rec_HasUPtr
+    cir.return %v : !rec_HasUPtr
+  }
+
+  // Promoted copies keep the alignment of the side that stays in memory.
+  // CHECK-LABEL: cir.func @promote_copies_keep_alignment
+  cir.func @promote_copies_keep_alignment(%src: !cir.ptr<!rec_Whole>, %dst: !cir.ptr<!rec_Whole>) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[V:.*]] = cir.load align(1) %{{.+}} : !cir.ptr<!rec_Whole>, !rec_Whole
+    // CHECK: cir.store align(1) %[[V]], %{{.+}} : !rec_Whole, !cir.ptr<!rec_Whole>
+    %slot = cir.alloca "s" align(2) init : !cir.ptr<!rec_Whole>
+    cir.copy %src align(1) to %slot align(2) : !cir.ptr<!rec_Whole>
+    cir.copy %slot align(2) to %dst align(1) : !cir.ptr<!rec_Whole>
+    cir.return
   }
 }

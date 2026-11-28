@@ -108,7 +108,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
   }
 
-  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Expand);
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
 
   // Float
 

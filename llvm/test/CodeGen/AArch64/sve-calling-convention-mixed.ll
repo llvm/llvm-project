@@ -542,10 +542,10 @@ define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x 
 ; CHECK-NEXT:    addvl x1, sp, #1
 ; CHECK-NEXT:    fmov s4, #4.00000000
 ; CHECK-NEXT:    fmov s5, #5.00000000
-; CHECK-NEXT:    str z25, [sp, #2, mul vl]
 ; CHECK-NEXT:    fmov s6, #6.00000000
 ; CHECK-NEXT:    fmov s7, #7.00000000
 ; CHECK-NEXT:    str z24, [sp, #1, mul vl]
+; CHECK-NEXT:    str z25, [sp, #2, mul vl]
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #3

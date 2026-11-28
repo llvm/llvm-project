@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 
 @b = internal addrspace(4) constant [1 x i16] [ i16 7 ], align 2
@@ -10,11 +8,6 @@
 
 ; FUNC-LABEL: {{^}}float:
 ; GCN: s_load_dword
-
-; EG: VTX_READ_32
-; EG: @float_gv
-; EG-NOT: MOVA_INT
-; EG-NOT: MOV
 define amdgpu_kernel void @float(ptr addrspace(1) %out, i32 %index) {
 entry:
   %0 = getelementptr inbounds [5 x float], ptr addrspace(4) @float_gv, i32 0, i32 %index
@@ -26,13 +19,7 @@ entry:
 @i32_gv = internal unnamed_addr addrspace(4) constant [5 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4], align 4
 
 ; FUNC-LABEL: {{^}}i32:
-
 ; GCN: s_load_dword
-
-; EG: VTX_READ_32
-; EG: @i32_gv
-; EG-NOT: MOVA_INT
-; EG-NOT: MOV
 define amdgpu_kernel void @i32(ptr addrspace(1) %out, i32 %index) {
 entry:
   %0 = getelementptr inbounds [5 x i32], ptr addrspace(4) @i32_gv, i32 0, i32 %index
@@ -48,11 +35,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}struct_foo_gv_load:
 ; GCN: s_load_dword
-
-; EG: VTX_READ_32
-; EG: @struct_foo_gv
-; EG-NOT: MOVA_INT
-; EG-NOT: MOV
 define amdgpu_kernel void @struct_foo_gv_load(ptr addrspace(1) %out, i32 %index) {
   %gep = getelementptr inbounds [1 x %struct.foo], ptr addrspace(4) @struct_foo_gv, i32 0, i32 0, i32 1, i32 %index
   %load = load i32, ptr addrspace(4) %gep, align 4
@@ -67,11 +49,6 @@ define amdgpu_kernel void @struct_foo_gv_load(ptr addrspace(1) %out, i32 %index)
 
 ; FUNC-LABEL: {{^}}array_v1_gv_load:
 ; GCN: s_load_dword
-
-; EG: VTX_READ_32
-; EG: @array_v1_gv
-; EG-NOT: MOVA_INT
-; EG-NOT: MOV
 define amdgpu_kernel void @array_v1_gv_load(ptr addrspace(1) %out, i32 %index) {
   %gep = getelementptr inbounds [4 x <1 x i32>], ptr addrspace(4) @array_v1_gv, i32 0, i32 %index
   %load = load <1 x i32>, ptr addrspace(4) %gep, align 4
@@ -80,10 +57,6 @@ define amdgpu_kernel void @array_v1_gv_load(ptr addrspace(1) %out, i32 %index) {
 }
 
 ; FUNC-LABEL: {{^}}gv_addressing_in_branch:
-
-; EG: VTX_READ_32
-; EG: @float_gv
-; EG-NOT: MOVA_INT
 define amdgpu_kernel void @gv_addressing_in_branch(ptr addrspace(1) %out, i32 %index, i32 %a) {
 entry:
   %0 = icmp eq i32 0, %a

@@ -34,14 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
-// This is the limit of processor resource usage at which the
-// scheduler should try to look for other instructions (not using the
-// critical resource).
-static cl::opt<int> ProcResCostLim("procres-cost-lim", cl::Hidden,
-                                   cl::desc("The OOO window for processor "
-                                            "resources during scheduling."),
-                                   cl::init(8));
-
 unsigned SystemZHazardRecognizer::
 getNumDecoderSlots(SUnit *SU) const {
   const MCSchedClassDesc *SC = getSchedClass(SU);
@@ -154,8 +146,7 @@ void SystemZHazardRecognizer::nextGroup() {
 
   // Clear CriticalResourceIdx if it is now below the threshold.
   if (CriticalResourceIdx != UINT_MAX &&
-      (ProcResourceCounters[CriticalResourceIdx] <=
-       ProcResCostLim))
+      (ProcResourceCounters[CriticalResourceIdx] <= CLOpts.procres_cost_lim))
     CriticalResourceIdx = UINT_MAX;
 
   LLVM_DEBUG(dumpState(););
@@ -301,11 +292,10 @@ EmitInstruction(SUnit *SU) {
       ProcResourceCounters[PI->ProcResourceIdx];
     CurrCounter += PI->ReleaseAtCycle;
     // Check if this is now the new critical resource.
-    if ((CurrCounter > ProcResCostLim) &&
+    if ((CurrCounter > CLOpts.procres_cost_lim) &&
         (CriticalResourceIdx == UINT_MAX ||
          (PI->ProcResourceIdx != CriticalResourceIdx &&
-          CurrCounter >
-          ProcResourceCounters[CriticalResourceIdx]))) {
+          CurrCounter > ProcResourceCounters[CriticalResourceIdx]))) {
       LLVM_DEBUG(
           dbgs() << "++ New critical resource: "
                  << SchedModel->getProcResource(PI->ProcResourceIdx)->Name

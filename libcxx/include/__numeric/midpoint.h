@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
   requires(is_integral_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, bool>)
 [[nodiscard]]
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
+constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
   constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
@@ -48,18 +48,18 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_
 
 template <class _Tp>
   requires(is_object_v<_Tp> && (sizeof(_Tp) > 0))
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
+[[nodiscard]] constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
   return __a + std::midpoint(ptrdiff_t(0), __b - __a);
 }
 
 template <typename _Fp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Fp __fp_abs(_Fp __f) {
+constexpr _Fp __fp_abs(_Fp __f) {
   return __f >= 0 ? __f : -__f;
 }
 
 template <class _Fp>
   requires(is_floating_point_v<_Fp>)
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Fp midpoint(_Fp __a, _Fp __b) noexcept {
+[[nodiscard]] constexpr _Fp midpoint(_Fp __a, _Fp __b) noexcept {
   constexpr _Fp __lo = numeric_limits<_Fp>::min() * 2;
   constexpr _Fp __hi = numeric_limits<_Fp>::max() / 2;
 

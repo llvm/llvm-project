@@ -72,6 +72,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertVSETVLILegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRLegacyPass(*PR);
   initializeRISCVInsertWriteVXRMLegacyPass(*PR);
+  initializeRISCVLandingPadSetupLegacyPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergeLegacyPass(*PR);
   initializeRISCVPushPopOptLegacyPass(*PR);
@@ -111,6 +112,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
           Options.MCOptions.LibraryOptions)),
       TLOF(createTLOF(TT)) {
   initAsmInfo();
+
+  LLT::setUseExtended(true);
 
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
@@ -356,8 +359,8 @@ public:
   void addPreSched2() override;
   void addMachineSSAOptimization() override;
   FunctionPass *createRVVRegAllocPass(bool Optimized);
-  bool addRegAssignAndRewriteFast() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteOptimized() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addFastRegAlloc() override;
@@ -390,21 +393,21 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
   return createFastRVVRegisterAllocator();
 }
 
-bool RISCVPassConfig::addRegAssignAndRewriteFast() {
+void RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
   addPass(createRISCVInsertVSETVLILegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
-  return TargetPassConfig::addRegAssignAndRewriteFast();
+  TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
-bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
+void RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
   addPass(createRISCVInsertVSETVLILegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
-  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+  TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 void RISCVPassConfig::addIRPasses() {

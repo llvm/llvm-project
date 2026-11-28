@@ -266,6 +266,28 @@ add_libc_test(
 )
 
 add_libc_test(
+  timegm_test
+  SUITE
+    libc-time-tests
+  SRCS
+    timegm_test.cpp
+  CXX_STANDARD
+    20
+  COMPILE_OPTIONS
+    ${time_test_copts}
+  DEPENDS
+    .time_test_utils
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.limits
+    libc.src.time.time_constants
+    libc.src.time.time_utils
+    libc.src.time.timegm
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   clock_nanosleep_test
   SUITE
     libc-time-tests

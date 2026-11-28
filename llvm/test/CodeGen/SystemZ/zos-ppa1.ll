@@ -121,7 +121,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Length of Name
 ; CHECK-NEXT:  DC XL2'0004'
 ; CHECK-NEXT: * Name of Function
-; CHECK-NEXT:  DC XL4'93858186'
+; CHECK-NEXT:  DC CE'leaf'
 ; CHECK-NEXT:  DC 2XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_leaf_0-L#PPA1_leaf_0)
 ; CHECK-NEXT:  DS 0B
@@ -162,7 +162,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Length of Name
 ; CHECK-NEXT:  DC XL2'0007'
 ; CHECK-NEXT: * Name of Function
-; CHECK-NEXT:  DC XL7'95969593858186'
+; CHECK-NEXT:  DC CE'nonleaf'
 ; CHECK-NEXT:  DC 3XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_nonleaf_0-L#PPA1_nonleaf_0)
 ; CHECK-NEXT:  DS 0B
@@ -206,7 +206,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Length of Name
 ; CHECK-NEXT:  DC XL2'000A'
 ; CHECK-NEXT: * Name of Function
-; CHECK-NEXT:  DC XL10'A689A388819393968381'
+; CHECK-NEXT:  DC CE'withalloca'
 ; CHECK-NEXT:  DC A(L#EPM_withalloca_0-L#PPA1_withalloca_0)
 
 ; Attribute "zos-ppa1-name"="" removes the function name from PPA1.

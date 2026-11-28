@@ -24,6 +24,5 @@ class TestFrameVarDILInstanceVariables(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("this", type="TestMethods *")
         self.expect_var_path("c", children=[ValueCheck(name="field_", value="-1")])

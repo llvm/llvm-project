@@ -14,6 +14,8 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "RelocationMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
@@ -36,7 +38,8 @@ public:
 
   bool isInitialized() { return !Units.empty(); }
 
-  void addValidRelocs(RelocationMap &RM);
+  /// \returns the number of relocations added to \p RM.
+  size_t addValidRelocs(RelocationMap &RM);
 
   /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
   /// unit at \p UnitOffset in the input.
@@ -44,16 +47,29 @@ public:
                                 const std::vector<ValidReloc> &InRelocs,
                                 uint64_t UnitOffset, int64_t LinkedOffset);
 
+  /// Record where the output of the unit at \p UnitOffset in the input starts
+  /// in .debug_info and .debug_addr, for the relocations saved relative to it.
+  void setUnitOffsets(uint64_t UnitOffset, uint64_t DebugInfoOffset,
+                      uint64_t DebugAddrOffset);
+
+  void setNumInputRelocs(size_t Num) { NumInputRelocs = Num; }
+  size_t getNumInputRelocs() const { return NumInputRelocs; }
+
   DwarfLinkerForBinaryRelocationMap() = default;
 
 private:
   struct UnitRelocs {
     std::vector<ValidReloc> DebugInfo;
     std::vector<ValidReloc> DebugAddr;
+    /// Where the unit starts in each output section, if its relocations are
+    /// relative to it.
+    std::optional<std::pair<uint64_t, uint64_t>> Offsets;
   };
 
   /// Map compilation unit offset to the valid relocations to store.
   DenseMap<uint64_t, UnitRelocs> Units;
+
+  size_t NumInputRelocs = 0;
 };
 
 struct ObjectWithRelocMap {
@@ -119,8 +135,6 @@ private:
 
     StringRef SrcFileName;
 
-    uint8_t DebugMapObjectType;
-
     std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DwarfLinkerRelocMap;
 
     std::optional<std::string> LibInstallName;
@@ -155,9 +169,8 @@ private:
                    const DebugMapObject &DMO,
                    std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM)
         : Linker(Linker), SrcFileName(DMO.getObjectFilename()),
-          DebugMapObjectType(MachO::N_OSO), DwarfLinkerRelocMap(DLBRM) {
+          DwarfLinkerRelocMap(DLBRM) {
       if (DMO.getRelocationMap().has_value()) {
-        DebugMapObjectType = MachO::N_LIB;
         LibInstallName.emplace(DMO.getInstallName().value());
         const RelocationMap &RM = DMO.getRelocationMap().value();
         auto AddRelocs =
@@ -184,6 +197,8 @@ private:
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
+      DwarfLinkerRelocMap->setNumInputRelocs(ValidDebugInfoRelocs.size() +
+                                             ValidDebugAddrRelocs.size());
       // Only a sized symbol has a known extent. The ranges stand in for the
       // high_pc that assembly files lack.
       for (const auto &Entry : DMO.symbols()) {
@@ -297,6 +312,10 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
 
+  /// Find the compilation-prefix-map.json closest to \p ObjectPath, which
+  /// describes how the compiler remapped paths in the object's debug info.
+  std::shared_ptr<PrefixMapper> findCompilationPrefixMap(StringRef ObjectPath);
+
   Error copySwiftInterfaces(StringRef Architecture) const;
 
   Error copyEmbeddedResources() const;
@@ -321,13 +340,15 @@ private:
   std::mutex &ErrorHandlerMutex;
   ThreadPoolInterface *ThreadPool;
 
-  std::vector<std::string> EmptyWarnings;
-
   /// A list of all .swiftinterface files referenced by the debug
   /// info, mapping Module name to path on disk. The entries need to
   /// be uniqued and sorted and there are only few entries expected
   /// per compile unit, which is why this is a std::map.
   std::map<std::string, std::string> ParseableSwiftInterfaces;
+
+  /// The compilation prefix map of the objects in each directory, or nullptr
+  /// if there is none.
+  StringMap<std::shared_ptr<PrefixMapper>> CompilationPrefixMaps;
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;

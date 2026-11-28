@@ -69,6 +69,12 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
   // CHECK: spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3xf32>
   spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3 x f32>
+
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_vector, @scc_vector) : !spirv.array<2 x vector<3xf32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_vector, @scc_vector) : !spirv.array<2 x vector<3 x f32>>
+
+  // CHECK: spirv.SpecConstantComposite @scc_mixed (@sc_i32_1, @scc_vector) : !spirv.struct<(i32, vector<3xf32>)>
+  spirv.SpecConstantComposite @scc_mixed (@sc_i32_1, @scc_vector) : !spirv.struct<(i32, vector<3 x f32>)>
 }
 
 // -----

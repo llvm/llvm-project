@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -374,6 +376,14 @@ TEST_F(SpecialCaseListTest, DotSlashWarning) {
       makeSpecialCaseList(IgnoreList, /*Version=*/4);
   std::unique_ptr<SpecialCaseList> SCL5 =
       makeSpecialCaseList(IgnoreList, /*Version=*/5);
+
+  // errs() caches has_colors() on first use, so an earlier test that warned
+  // to a terminal would make the captured warnings below contain escape
+  // codes. Disable colors for this test regardless.
+  WithColor::setAutoDetectFunction([](const raw_ostream &) { return false; });
+  llvm::scope_exit RestoreColors([] {
+    WithColor::setAutoDetectFunction(WithColor::defaultAutoDetectFunction());
+  });
 
   // Version 3 should not warn (new behavior, no warn)
   testing::internal::CaptureStderr();

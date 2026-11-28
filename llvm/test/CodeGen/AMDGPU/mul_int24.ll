@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX9 %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM %s
-
-; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
 define amdgpu_kernel void @test_smul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 ; SI-LABEL: test_smul24_i32:
 ; SI:       ; %bb.0: ; %entry
@@ -48,42 +44,6 @@ define amdgpu_kernel void @test_smul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smul24_i32:
-; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL T0.W, KC0[2].Z, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[2].W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MULLO_INT * T1.X, PS, PV.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smul24_i32:
-; CM:       ; %bb.0: ; %entry
-; CM-NEXT:    ALU 10, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T0.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHL T0.Z, KC0[2].Z, literal.x,
-; CM-NEXT:     LSHL * T0.W, KC0[2].W, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:     ASHR T1.Z, PV.W, literal.y,
-; CM-NEXT:     ASHR * T0.W, PV.Z, literal.y,
-; CM-NEXT:    2(2.802597e-45), 8(1.121039e-44)
-; CM-NEXT:     MULLO_INT T1.X, T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T1.Y (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T1.Z (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT * T1.W (MASKED), T0.W, T1.Z,
 entry:
   %a.shl = shl i32 %a, 8
   %a.24 = ashr i32 %a.shl, 8
@@ -134,37 +94,6 @@ define amdgpu_kernel void @test_smulhi24_i64(ptr addrspace(1) %out, i32 %a, i32 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smulhi24_i64:
-; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL T0.W, KC0[2].Z, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[2].W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MULHI_INT * T1.X, PS, PV.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smulhi24_i64:
-; CM:       ; %bb.0: ; %entry
-; CM-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T0.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MULHI_INT24 T1.X, KC0[2].Z, KC0[2].W,
-; CM-NEXT:     MULHI_INT24 T1.Y (MASKED), KC0[2].Z, KC0[2].W,
-; CM-NEXT:     MULHI_INT24 T1.Z (MASKED), KC0[2].Z, KC0[2].W,
-; CM-NEXT:     MULHI_INT24 * T1.W (MASKED), KC0[2].Z, KC0[2].W,
 entry:
   %a.shl = shl i32 %a, 8
   %a.24 = ashr i32 %a.shl, 8
@@ -200,16 +129,6 @@ define i64 @test_smul48_i64(i64 %lhs, i64 %rhs) {
 ; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v2
 ; GFX9-NEXT:    v_mul_i32_i24_e32 v0, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; EG-LABEL: test_smul48_i64:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-;
-; CM-LABEL: test_smul48_i64:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %shl.lhs = shl i64 %lhs, 40
   %lhs24 = ashr i64 %shl.lhs, 40
   %shl.rhs = shl i64 %rhs, 40
@@ -245,16 +164,6 @@ define <2 x i64> @test_smul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v3, v2, v6
 ; GFX9-NEXT:    v_mul_i32_i24_e32 v2, v2, v6
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; EG-LABEL: test_smul48_v2i64:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-;
-; CM-LABEL: test_smul48_v2i64:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %shl.lhs = shl <2 x i64> %lhs, <i64 40, i64 40>
   %lhs24 = ashr <2 x i64> %shl.lhs, <i64 40, i64 40>
   %shl.rhs = shl <2 x i64> %rhs, <i64 40, i64 40>
@@ -317,47 +226,6 @@ define amdgpu_kernel void @test_smul24_i64(ptr addrspace(1) %out, [8 x i32], i32
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smul24_i64:
-; EG:       ; %bb.0:
-; EG-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL T0.W, KC0[4].Z, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[6].W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     MULHI_INT * T0.Y, PV.W, PS,
-; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T1.W, T0.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smul24_i64:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 14, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T0.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHL T0.Z, KC0[4].Z, literal.x,
-; CM-NEXT:     LSHL * T0.W, KC0[6].W, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:     ASHR T1.Z, PV.W, literal.y,
-; CM-NEXT:     ASHR * T0.W, PV.Z, literal.y,
-; CM-NEXT:    2(2.802597e-45), 8(1.121039e-44)
-; CM-NEXT:     MULLO_INT T1.X, T1.Z, T0.W,
-; CM-NEXT:     MULLO_INT T1.Y (MASKED), T1.Z, T0.W,
-; CM-NEXT:     MULLO_INT T1.Z (MASKED), T1.Z, T0.W,
-; CM-NEXT:     MULLO_INT * T1.W (MASKED), T1.Z, T0.W,
-; CM-NEXT:     MULHI_INT24 T1.X (MASKED), KC0[6].W, KC0[4].Z,
-; CM-NEXT:     MULHI_INT24 T1.Y, KC0[6].W, KC0[4].Z,
-; CM-NEXT:     MULHI_INT24 T1.Z (MASKED), KC0[6].W, KC0[4].Z,
-; CM-NEXT:     MULHI_INT24 * T1.W (MASKED), KC0[6].W, KC0[4].Z,
   %shl.i = shl i32 %a, 8
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64
@@ -411,43 +279,6 @@ define amdgpu_kernel void @test_smul24_i64_square(ptr addrspace(1) %out, i32 %a,
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smul24_i64_square:
-; EG:       ; %bb.0:
-; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL * T0.W, KC0[2].Z, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     MULHI_INT * T0.Y, PV.W, PV.W,
-; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T0.W, T0.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smul24_i64_square:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 12, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T0.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHL * T0.W, KC0[2].Z, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:     ASHR * T0.W, PV.W, literal.y,
-; CM-NEXT:    2(2.802597e-45), 8(1.121039e-44)
-; CM-NEXT:     MULLO_INT T1.X, T0.W, T0.W,
-; CM-NEXT:     MULLO_INT T1.Y (MASKED), T0.W, T0.W,
-; CM-NEXT:     MULLO_INT T1.Z (MASKED), T0.W, T0.W,
-; CM-NEXT:     MULLO_INT * T1.W (MASKED), T0.W, T0.W,
-; CM-NEXT:     MULHI_INT24 T1.X (MASKED), KC0[2].Z, KC0[2].Z,
-; CM-NEXT:     MULHI_INT24 T1.Y, KC0[2].Z, KC0[2].Z,
-; CM-NEXT:     MULHI_INT24 T1.Z (MASKED), KC0[2].Z, KC0[2].Z,
-; CM-NEXT:     MULHI_INT24 * T1.W (MASKED), KC0[2].Z, KC0[2].Z,
   %shl.i = shl i32 %a, 8
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64
@@ -512,50 +343,6 @@ define amdgpu_kernel void @test_smul24_i33(ptr addrspace(1) %out, i33 %a, i33 %b
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smul24_i33:
-; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 10, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T2.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL T0.W, KC0[2].W, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[3].Y, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     MULHI_INT * T0.X, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T1.X, T0.W, T1.W,
-; EG-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; EG-NEXT:     BFE_INT * T1.Y, T0.X, 0.0, 1,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smul24_i33:
-; CM:       ; %bb.0: ; %entry
-; CM-NEXT:    ALU 16, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHL T0.Z, KC0[2].W, literal.x,
-; CM-NEXT:     LSHL * T0.W, KC0[3].Y, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     ASHR T1.Z, PV.W, literal.x,
-; CM-NEXT:     ASHR * T0.W, PV.Z, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MULHI_INT24 T0.X, KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 T0.Y (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 T0.Z (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 * T0.W (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULLO_INT T1.X, T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T1.Y (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T1.Z (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT * T1.W (MASKED), T0.W, T1.Z,
-; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:     BFE_INT * T1.Y, T0.X, 0.0, 1,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %a.shl = shl i33 %a, 9
   %a.24 = ashr i33 %a.shl, 9
@@ -611,39 +398,6 @@ define amdgpu_kernel void @test_smulhi24_i33(ptr addrspace(1) %out, i33 %a, i33 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_smulhi24_i33:
-; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHL T0.W, KC0[2].W, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[3].Y, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     MULHI_INT * T0.X, PS, PV.W,
-; EG-NEXT:     AND_INT T0.X, PS, 1,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: test_smulhi24_i33:
-; CM:       ; %bb.0: ; %entry
-; CM-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     MULHI_INT24 T0.X, KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 T0.Y (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 T0.Z (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     MULHI_INT24 * T0.W (MASKED), KC0[2].W, KC0[3].Y,
-; CM-NEXT:     AND_INT * T0.X, PV.X, 1,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %tmp0 = shl i33 %a, 9
   %a_24 = ashr i33 %tmp0, 9
@@ -723,61 +477,6 @@ define amdgpu_kernel void @simplify_i24_crash(ptr addrspace(1) %out, i32 %arg0, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: simplify_i24_crash:
-; EG:       ; %bb.0: ; %bb
-; EG-NEXT:    ALU_PUSH_BEFORE 1, @6, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    JUMP @5 POP:1
-; EG-NEXT:    ALU 12, @8, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 0
-; EG-NEXT:    POP @5 POP:1
-; EG-NEXT:    CF_END
-; EG-NEXT:    ALU clause starting at 6:
-; EG-NEXT:     SETNE_INT * T0.W, KC0[2].Z, 0.0,
-; EG-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
-; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     MOV T0.W, KC0[3].Y,
-; EG-NEXT:     MOV * T1.W, KC0[2].W,
-; EG-NEXT:     LSHL T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T0.W, PS, literal.x,
-; EG-NEXT:     ASHR * T1.W, PV.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     MOV T2.W, KC0[2].Y,
-; EG-NEXT:     MULLO_INT * T0.X, PS, PV.W,
-; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     MOV * T0.Y, PS,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: simplify_i24_crash:
-; CM:       ; %bb.0: ; %bb
-; CM-NEXT:    ALU_PUSH_BEFORE 1, @6, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    JUMP @5 POP:1
-; CM-NEXT:    ALU 15, @8, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
-; CM-NEXT:    POP @5 POP:1
-; CM-NEXT:    CF_END
-; CM-NEXT:    ALU clause starting at 6:
-; CM-NEXT:     SETNE_INT * T0.W, KC0[2].Z, 0.0,
-; CM-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
-; CM-NEXT:    ALU clause starting at 8:
-; CM-NEXT:     MOV T0.Z, KC0[3].Y,
-; CM-NEXT:     MOV * T0.W, KC0[2].W,
-; CM-NEXT:     LSHL T1.Z, PV.W, literal.x,
-; CM-NEXT:     LSHL * T0.W, PV.Z, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MOV T0.Y, KC0[2].Y,
-; CM-NEXT:     ASHR T0.Z, PV.W, literal.x,
-; CM-NEXT:     ASHR * T0.W, PV.Z, literal.x,
-; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MULLO_INT T0.X, T0.W, T0.Z,
-; CM-NEXT:     MULLO_INT T0.Y (MASKED), T0.W, T0.Z,
-; CM-NEXT:     MULLO_INT T0.Z (MASKED), T0.W, T0.Z,
-; CM-NEXT:     MULLO_INT * T0.W (MASKED), T0.W, T0.Z,
-; CM-NEXT:     LSHR T1.X, T0.Y, literal.x,
-; CM-NEXT:     MOV * T0.Y, PV.X,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 bb:
   %cmp = icmp eq i32 %arg0, 0
   br i1 %cmp, label %bb11, label %bb7
@@ -844,46 +543,6 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
-;
-; EG-LABEL: test_umul_i24:
-; EG:       ; %bb.0:
-; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHR * T0.W, KC0[2].Z, literal.x,
-; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; EG-NEXT:     MULHI * T0.X, PV.W, literal.x,
-; EG-NEXT:    -8372255(nan), 0(0.000000e+00)
-; EG-NEXT:     MULLO_INT * T0.Y, T0.W, literal.x,
-; EG-NEXT:    -8372255(nan), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T0.X, T0.X, PS, 1,
-; EG-NEXT:     MOV * T1.X, literal.x,
-; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
-;
-; CM-LABEL: test_umul_i24:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 14, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     LSHR * T0.W, KC0[2].Z, literal.x,
-; CM-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; CM-NEXT:     MULHI T0.X, T0.W, literal.x,
-; CM-NEXT:     MULHI T0.Y (MASKED), T0.W, literal.x,
-; CM-NEXT:     MULHI T0.Z (MASKED), T0.W, literal.x,
-; CM-NEXT:     MULHI * T0.W (MASKED), T0.W, literal.x,
-; CM-NEXT:    -8372255(nan), 0(0.000000e+00)
-; CM-NEXT:     MULLO_INT T0.X (MASKED), T0.W, literal.x,
-; CM-NEXT:     MULLO_INT T0.Y, T0.W, literal.x,
-; CM-NEXT:     MULLO_INT T0.Z (MASKED), T0.W, literal.x,
-; CM-NEXT:     MULLO_INT * T0.W (MASKED), T0.W, literal.x,
-; CM-NEXT:    -8372255(nan), 0(0.000000e+00)
-; CM-NEXT:     BIT_ALIGN_INT * T0.X, T0.X, PV.Y, 1,
-; CM-NEXT:     MOV * T1.X, literal.x,
-; CM-NEXT:    0(0.000000e+00), 0(0.000000e+00)
   %i = lshr i32 %arg, 9
   %i1 = zext i32 %i to i64
   %i2 = mul i64 %i1, 4286595041

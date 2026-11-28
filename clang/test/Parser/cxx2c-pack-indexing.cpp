@@ -40,6 +40,9 @@ struct SS : T...[1] {
     const T...[0] f(T...[0] && p) noexcept((T...[0])0) {
         T...[0] (*test)(const volatile T...[0]**);
         thread_local T...[0] d;
+#ifdef __MVS__
+        // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
         [[maybe_unused]] T...[0] a = p;
         auto ptr = new T...[0](0);
         (*ptr).~T...[0]();

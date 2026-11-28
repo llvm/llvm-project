@@ -95,6 +95,10 @@ protected:
   /// True if target stack grow up.  Default is false.
   bool StackGrowsUp = false;
 
+  /// Whether a section indicating a (non-)executable stack should be emitted.
+  /// Used by most ELF platforms.
+  bool EmitELFStackSection = false;
+
   /// True if this target has the MachO .subsections_via_symbols directive.
   /// Default is false.
   bool HasSubsectionsViaSymbols = false;
@@ -215,6 +219,9 @@ protected:
   /// True if the target supports the .addrsig directive.
   bool HasAddrsigDirective = true;
 
+  void (*SpecifierExprPrintFn)(const MCAsmInfo &, raw_ostream &,
+                               const MCSpecifierExpr &) = nullptr;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -254,11 +261,6 @@ protected:
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
   bool SunStyleELFSectionSwitchSyntax = false;
-
-  /// This is true if this target uses ELF '.section' directive before the
-  /// '.bss' one. It's used for PPC/Linux which doesn't support the '.bss'
-  /// directive only.  Defaults to false.
-  bool UsesELFSectionDirectiveForBSS = false;
 
   bool NeedsDwarfSectionOffsetDirective = false;
 
@@ -439,6 +441,13 @@ protected:
   // quoted when used as a symbol name.
   llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
 
+  /// Sections whose name also is supported as a directive without an explicit
+  /// ".section" directive.
+  ///
+  /// not contained => .section .text,#alloc,#execinstr
+  /// contained     => .text
+  SmallDenseSet<StringRef, 8> SectionDirectives;
+
   const MCTargetOptions &TargetOptions;
 
 public:
@@ -468,6 +477,8 @@ public:
   /// True if target stack grow up.
   bool isStackGrowthDirectionUp() const { return StackGrowsUp; }
 
+  bool emitELFStackSection() const { return EmitELFStackSection; }
+
   bool hasSubsectionsViaSymbols() const { return HasSubsectionsViaSymbols; }
 
   // Data directive accessors.
@@ -477,13 +488,6 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-
-  /// Targets can implement this method to specify a section to switch to
-  /// depending on whether the translation unit has any trampolines that require
-  /// an executable stack.
-  virtual MCSection *getStackSection(MCContext &Ctx, bool Exec) const {
-    return nullptr;
-  }
 
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
@@ -516,25 +520,8 @@ public:
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}
 
-  /// Return true if the .section directive should be omitted when
-  /// emitting \p SectionName.  For example:
-  ///
-  /// shouldOmitSectionDirective(".text")
-  ///
-  /// returns false => .section .text,#alloc,#execinstr
-  /// returns true  => .text
-  virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
-
-  // Return true if a .align directive should use "optimized nops" to fill
-  // instead of 0s.
-  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
-
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
-  }
-
-  bool usesELFSectionDirectiveForBSS() const {
-    return UsesELFSectionDirectiveForBSS;
   }
 
   bool needsDwarfSectionOffsetDirective() const {
@@ -549,11 +536,8 @@ public:
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
 
-  /// Returns the maximum possible encoded instruction size in bytes. If \p STI
-  /// is null, this should be the maximum size for any subtarget.
-  virtual unsigned getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
-    return MaxInstLength;
-  }
+  /// Returns the maximum possible encoded instruction size in bytes.
+  unsigned getMaxInstLength() const { return MaxInstLength; }
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
@@ -741,9 +725,7 @@ public:
   }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  virtual void setUseIntegratedAssembler(bool Value) {
-    UseIntegratedAssembler = Value;
-  }
+  void setUseIntegratedAssembler(bool Value) { UseIntegratedAssembler = Value; }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
   void setParseInlineAsmUsingAsmParser(bool Value) {
@@ -764,10 +746,6 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &,
-                                  const MCSpecifierExpr &) const {
-    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
-  }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
 

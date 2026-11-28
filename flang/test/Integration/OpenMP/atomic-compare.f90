@@ -21,13 +21,13 @@ subroutine atomic_compare_integer(x, e, d)
   if (x == e) x = d
 end
 
-! seq_cst ordering → cmpxchg seq_cst + flush
+! seq_cst ordering → cmpxchg seq_cst, no flush
 !CHECK-LABEL: define void @atomic_compare_seq_cst_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]], align 4
 !CHECK: cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] seq_cst seq_cst
-!CHECK: call void @__kmpc_flush(
+!CHECK-NOT: call void @__kmpc_flush
 subroutine atomic_compare_seq_cst(x, e, d)
   integer :: x, e, d
   !$omp atomic compare seq_cst
@@ -46,13 +46,13 @@ subroutine atomic_compare_acquire(x, e, d)
   if (x == e) x = d
 end
 
-! release ordering → cmpxchg release + flush
+! release ordering → cmpxchg release, no flush
 !CHECK-LABEL: define void @atomic_compare_release_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]], align 4
 !CHECK: cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] release monotonic
-!CHECK: call void @__kmpc_flush(
+!CHECK-NOT: call void @__kmpc_flush
 subroutine atomic_compare_release(x, e, d)
   integer :: x, e, d
   !$omp atomic compare release
@@ -82,12 +82,12 @@ subroutine atomic_compare_lt(x, e)
   if (x < e) x = e
 end
 
-! Less-than with seq_cst → atomicrmw max seq_cst + flush (signed)
+! Less-than with seq_cst → atomicrmw max seq_cst, no flush (signed)
 !CHECK-LABEL: define void @atomic_compare_lt_seq_cst_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
 !CHECK: atomicrmw max ptr %[[X]], i32 %[[EVAL]] seq_cst
-!CHECK: call void @__kmpc_flush(
+!CHECK-NOT: call void @__kmpc_flush
 subroutine atomic_compare_lt_seq_cst(x, e)
   integer :: x, e
   !$omp atomic compare seq_cst
@@ -195,11 +195,11 @@ subroutine atomic_compare_complex8(x, e, d)
   if (x == e) x = d
 end
 
-! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst + flush
+! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst, no flush
 !CHECK-LABEL: define void @atomic_compare_complex4_seq_cst_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
-!CHECK: call void @__kmpc_flush(
+!CHECK-NOT: call void @__kmpc_flush
 subroutine atomic_compare_complex4_seq_cst(x, e, d)
   complex :: x, e, d
   !$omp atomic compare seq_cst
@@ -262,11 +262,11 @@ subroutine omp_atomic_compare_ptr(x, e, d)
 
 end subroutine
 
-! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst + flush
+! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst, no flush
 !CHECK-LABEL: define void @atomic_compare_weak_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: cmpxchg weak ptr %[[X]], i32 %{{.*}}, i32 %{{.*}} seq_cst seq_cst
-!CHECK: call void @__kmpc_flush(
+!CHECK-NOT: call void @__kmpc_flush
 subroutine atomic_compare_weak(x, e, d)
   integer :: x, e, d
   !$omp atomic compare weak seq_cst

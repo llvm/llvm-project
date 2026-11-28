@@ -163,6 +163,14 @@ void ThisEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ", via This)\n";
 }
 
+void ParamEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM,
+                           const LoanPropagationAnalysis *) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Param " << Param->getName() << ")\n";
+}
+
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM,
                    const LoanPropagationAnalysis *) const {

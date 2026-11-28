@@ -131,6 +131,11 @@ bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
 /// Clear the collapsed DoConstruct tracking set.
 void clearCollapsedDoConstructs();
 
+/// Forget the DOs nested in \p eval whose induction variables an unstructured
+/// acc.loop privatizes. Call it once the evaluations nested in the OpenACC
+/// construct \p eval are lowered.
+void clearIvPrivatizedDoConstructs(const pft::Evaluation &eval);
+
 /// Find the first nested DoConstruct evaluation directly under \p eval,
 /// skipping over any other sibling evaluations (e.g. a CompilerDirective
 /// such as !DIR$ IVDEP) that may appear between loop levels of a collapsed

@@ -26,11 +26,8 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 
 class MipsRegisterInfo : public MipsGenRegisterInfo {
-private:
-  const bool ArePtrs64bit;
-
 public:
-  explicit MipsRegisterInfo(const MipsSubtarget &STI);
+  MipsRegisterInfo();
 
   /// Get PIC indirect call register
   static unsigned getPICCallReg();

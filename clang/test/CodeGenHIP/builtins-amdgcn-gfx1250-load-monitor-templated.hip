@@ -27,14 +27,14 @@ __device__ void test_amdgcn_flat_load_monitor_b128_from_template(v4i* inptr, v4i
 // CHECK-NEXT:    store ptr [[INPTR]], ptr [[INPTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[INPTR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef <4 x i32> @_Z39templated_amdgcn_flat_load_monitor_b128ILj5ELj0EEDv4_iPS0_(ptr noundef [[TMP0]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef <4 x i32> @_Z39templated_amdgcn_flat_load_monitor_b128ILj5ELj0EEDv4_iPS0_(ptr noundef [[TMP0]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store <4 x i32> [[CALL]], ptr [[TMP1]], align 16
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef <4 x i32> @_Z39templated_amdgcn_flat_load_monitor_b128ILj5ELj0EEDv4_iPS0_(
-// CHECK-SAME: ptr noundef [[INPTR:%.*]]) #[[ATTR0]] comdat {
+// CHECK-SAME: ptr noundef [[INPTR:%.*]]) #[[ATTR1:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[INPTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[INPTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[INPTR_ADDR]] to ptr

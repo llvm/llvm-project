@@ -1114,3 +1114,43 @@ body:             |
     $x10 = COPY %5
     PseudoRET implicit $x10
 ...
+---
+name: vl_dominates_dbg_value
+body: |
+  bb.0:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: vl_dominates_dbg_value
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: DBG_VALUE %x
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %vl:gprnox0 = COPY $x1
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    DBG_VALUE %x
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_sink_dbg_value
+body: |
+  bb.0:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: vl_doesnt_dominate_sink_dbg_value
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: DBG_VALUE %x
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    DBG_VALUE %x
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...

@@ -21,7 +21,6 @@
 
 ---
 name:            widget
-tracksRegLiveness: true
 jumpTable:
   kind:            label-difference32
   entries:

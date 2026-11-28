@@ -161,6 +161,7 @@ define <4 x float> @foo7(<4 x i64> %a) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %b = and <4 x i64> %a, <i64 4278255360, i64 4278255360, i64 4278255360, i64 4278255360>

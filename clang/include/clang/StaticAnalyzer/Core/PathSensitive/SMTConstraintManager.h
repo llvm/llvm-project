@@ -366,7 +366,7 @@ protected:
 
   /// Given a program state, construct the logical conjunction and add it to
   /// the solver
-  virtual void addStateConstraints(ProgramStateRef State) const {
+  void addStateConstraints(ProgramStateRef State) const {
     // TODO: Don't add all the constraints, only the relevant ones
     auto CZ = State->get<ConstraintSMT>();
     auto I = CZ.begin(), IE = CZ.end();

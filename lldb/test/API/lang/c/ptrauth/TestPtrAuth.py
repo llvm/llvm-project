@@ -71,4 +71,6 @@ class TestPtrAuth(Arm64eTestBase):
         self.assertEqual(
             cast.Cast(unqualified_type).GetLocation(), special.GetLocation()
         )
-        self.assertFailure(cast.CanSet(), "value is not in a writable location")
+        self.assertFailure(
+            cast.CanSet(), "cannot modify a value through a cast that drops __ptrauth"
+        )

@@ -4231,7 +4231,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    if (MAI.useCodeAlign(*Section)) {
+    if (Section->isText()) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);

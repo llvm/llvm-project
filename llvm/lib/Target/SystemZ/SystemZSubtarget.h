@@ -23,12 +23,16 @@
 #include "llvm/TargetParser/Triple.h"
 #include <string>
 
+#define OPTIONS_STRUCT_DECL
+#include "SystemZOptions.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "SystemZGenSubtargetInfo.inc"
 
 namespace llvm {
 class GlobalValue;
 class StringRef;
+class SystemZTargetMachine;
 
 class SystemZSubtarget : public SystemZGenSubtargetInfo {
   virtual void anchor();
@@ -39,6 +43,7 @@ protected:
 #include "SystemZGenSubtargetInfo.inc"
 
 private:
+  const SystemZOptions &CLOpts;
   Triple TargetTriple;
   std::unique_ptr<SystemZCallingConventionRegisters> SpecialRegisters;
   SystemZInstrInfo InstrInfo;
@@ -54,7 +59,9 @@ private:
 public:
   SystemZSubtarget(const Triple &TT, const std::string &CPU,
                    const std::string &TuneCPU, const std::string &FS,
-                   const TargetMachine &TM);
+                   const SystemZTargetMachine &TM);
+
+  const SystemZOptions &getCLOpts() const { return CLOpts; }
 
   SystemZCallingConventionRegisters *getSpecialRegisters() const {
     assert(SpecialRegisters && "Unsupported SystemZ calling convention");

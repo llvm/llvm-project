@@ -8,3 +8,17 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.timerfd_create
 )
+
+add_entrypoint_object(
+  timerfd_gettime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timerfd_gettime
+)
+
+add_entrypoint_object(
+  timerfd_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timerfd_settime
+)

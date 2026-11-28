@@ -36,11 +36,11 @@ class Instruction;
 class Type;
 class Constant;
 
-/// Helper for LoadStoreVec::createConstantVector(). Reinterprets the bits of
-/// one scalar constant as another type of the same size, for example float
-/// 1.0 as i32 0x3f800000, or a null pointer as i64 0. createConstantVector()
-/// flattens, slices, and packs those scalars into a constant vector.
-class ScalarConstReinterpret {
+/// Reinterprets the bits of a value as another type of the same size, for
+/// example float 1.0 as i32 0x3f800000, a null pointer as i64 0, or <2 x i32>
+/// as double. Used by createConstantVector() to pack constants, and by
+/// vectorizeLoads() to unpack each load from the vector load.
+class SameSizeReinterpret {
   /// A single cast in the chain built by getCastChain().
   using CastStep = std::pair<Instruction::Opcode, Type *>;
 
@@ -61,7 +61,15 @@ public:
   LLVM_ABI static bool canReinterpret(Type *SrcTy, Type *DestTy,
                                       const DataLayout &DL);
 
-  /// Reinterprets scalar constant \p C as \p DestTy, e.g., float 1.0 to i32
+  /// Reinterprets \p V as \p DestTy, which must have the same size in \p DL,
+  /// inserting casts before \p WhereIt. Casts of constants fold, so nothing is
+  /// inserted for those. \returns nullptr if a non-integral pointer is
+  /// involved.
+  LLVM_ABI static Value *reinterpretValue(Value *V, Type *DestTy,
+                                          BasicBlock::iterator WhereIt,
+                                          Context &Ctx, const DataLayout &DL);
+
+  /// Reinterprets constant \p C as \p DestTy, e.g., float 1.0 to i32
   /// 0x3f800000, or a null pointer to i64 0. \returns nullptr if a
   /// non-integral pointer is involved.
   LLVM_ABI static Constant *reinterpretConstant(Constant *C, Type *DestTy,
@@ -76,7 +84,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   InstructionCost CostBefore = 0;
   const Analyses *A = nullptr;
   Context *Ctx = nullptr;
-  std::unique_ptr<LegalityAnalysis> Legality;
+  LegalityAnalysis *Legality = nullptr;
   VecUtils::DeadInstructionMorgue DeadInstrMorgue;
 
   /// Saves the IR along with the current cost of \p Rgn, so that
@@ -94,6 +102,16 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// Builds a single vector load out of \p Loads. \returns the new load.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
+  /// \returns true if a vector of type \p FromTy can be unpacked as each
+  /// of \p ToTypes.
+  template <typename TypeRangeT>
+  bool canUnpack(FixedVectorType *FromTy, TypeRangeT ToTypes);
+
+  /// \p VecLoad is the vectorized \p OrigLoads. This function unpacks the
+  /// elements of \p VecLoad that have uses, casting them back to the
+  /// element's type (as in \p OrigLoads) if needed.
+  void unpackIfNeeded(LoadInst *VecLoad, BndlRef<Instruction *> OrigLoads);
+
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
@@ -107,7 +125,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// loads. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
-  /// Vectorizes \p Loads into a single load. \return the packed load.
+  /// Vectorizes \p Loads into a single load and unpacks each original load
+  /// from it, casting the lanes back to the load's type if needed.
+  /// \return the packed load.
   LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:

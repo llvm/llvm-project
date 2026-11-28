@@ -167,10 +167,12 @@ func.func @vectorize_dynamic_1d_broadcast(%arg0: tensor<?xf32>,
   return %0 : tensor<?xf32>
 }
 
+// CHECK: #[[$MAP:.+]] = affine_map<(d0) -> (0)>
+
 // CHECK-LABEL:   @vectorize_dynamic_1d_broadcast
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = tensor.dim %{{.*}}, %[[VAL_3]] : tensor<?xf32>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %{{.*}} {permutation_map = #{{.*}}} : tensor<?xf32>, vector<4xf32>
+// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %{{.*}} {in_bounds = [true], permutation_map = #[[$MAP]]} : tensor<?xf32>, vector<4xf32>
 // CHECK:           %[[VAL_9:.*]] = vector.create_mask %[[VAL_4]] : vector<4xi1>
 // CHECK:           %[[VAL_10:.*]] = vector.mask %[[VAL_9]] { vector.transfer_read %{{.*}} {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
 // CHECK:           %[[VAL_12:.*]] = vector.mask %[[VAL_9]] { vector.transfer_read %{{.*}} {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
@@ -922,13 +924,13 @@ func.func @mmt4d_scalable_with_assume(%A: memref<16x16x8x1xf32>, %B: memref<16x1
 // CHECK-SAME:      memref<16x16x8x1xf32>, vector<16x16x16x8x[4]x1xf32>
 // CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]
 // `in-bounds` are set to true for dynamic dims with assume, static sizes will be inferred elsewhere.
-// CHECK-SAME:      in_bounds = [false, false, false, false, true, false]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true, true, true]{{.*}} : memref<16x16x?x1xf32>, vector<16x16x16x8x[4]x1xf32>
 // CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]
-// CHECK-SAME:      in_bounds = [false, false, false, true]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true]{{.*}} : memref<16x16x8x?xf32>, vector<16x16x8x[4]xf32>
 // CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<16x16x16x8x[4]x1xf32>
 // CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [2, 5] : vector<16x16x16x8x[4]x1xf32> to vector<16x16x8x[4]xf32>
 // CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]
-// CHECK-SAME:      in_bounds = [false, false, false, true]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true]{{.*}} : vector<16x16x8x[4]xf32>, memref<16x16x8x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1020,13 +1022,13 @@ func.func @batch_mmt4d_scalable_with_assume(%A: memref<2x16x16x8x1xf32>, %B: mem
 // CHECK-SAME:      memref<2x16x16x8x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
 // CHECK:           %[[VEC_B:.*]] = vector.transfer_read %[[B]]
 // `in-bounds` are set to true for dynamic dims with assume, static sizes will be inferred elsewhere.
-// CHECK-SAME:      in_bounds = [false, false, false, false, false, true, false]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true, true, true, true]{{.*}} : memref<2x16x16x?x1xf32>, vector<2x16x16x16x8x[4]x1xf32>
 // CHECK:           %[[VEC_C:.*]] = vector.transfer_read %[[C_IN]]
-// CHECK-SAME:      in_bounds = [false, false, false, false, true]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true, true]{{.*}} : memref<2x16x16x8x?xf32>, vector<2x16x16x8x[4]xf32>
 // CHECK:           %[[MUL:.*]] = arith.mulf %[[VEC_A]], %[[VEC_B]] : vector<2x16x16x16x8x[4]x1xf32>
 // CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[VEC_C]] [3, 6] : vector<2x16x16x16x8x[4]x1xf32> to vector<2x16x16x8x[4]xf32>
 // CHECK:           vector.transfer_write %[[RED]], %[[C_IN]]
-// CHECK-SAME:      in_bounds = [false, false, false, false, true]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32>
+// CHECK-SAME:      in_bounds = [true, true, true, true, true]{{.*}} : vector<2x16x16x8x[4]xf32>, memref<2x16x16x8x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

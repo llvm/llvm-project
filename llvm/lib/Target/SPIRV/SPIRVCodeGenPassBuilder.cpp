@@ -13,19 +13,11 @@
 #include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
-#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
-#include "llvm/CodeGen/MachineCopyPropagation.h"
-#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
-#include "llvm/CodeGen/PatchableFunction.h"
-#include "llvm/CodeGen/PostRAMachineSink.h"
-#include "llvm/CodeGen/PostRASchedulerList.h"
-#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
-#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -53,18 +45,15 @@ public:
                                    const CGPassBuilderOption &Opts,
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    // Disable passes that break from assuming no virtual registers exist.
-    disablePass<MachineCopyPropagationPass, PostRAMachineSinkingPass,
-                PostRASchedulerPass, FuncletLayoutPass, StackMapLivenessPass,
-                PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
-                MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
-                BranchFolderPass, MachineBlockPlacementPass>();
+    disablePass<LiveDebugValuesPass, BranchFolderPass,
+                MachineBlockPlacementPass>();
     // Logical SPIR-V cannot express the pointer induction variables that loop
     // strength reduction creates.
     if (TM.getSubtargetImpl()->isLogicalSPIRV())
       Opt.DisableLSR = true;
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
   Error addIRTranslator(PassManagerWrapper &PMW) override;
@@ -84,12 +73,16 @@ public:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
   Base::addIRPasses(PMW);
 
   flushFPMsToMPM(PMW);
+
+  addModulePass(SPIRVLowerResourceNamesPass(), PMW);
 
   if (getTM().getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None) {
@@ -106,6 +99,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(SPIRVRegularizerPass(), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(SPIRVCtorDtorLoweringPass(), PMW);
+  addModulePass(SPIRVLowerDynamicLocalMemoryPass(getTM()), PMW);
   addModulePass(SPIRVPrepareFunctionsPass(getTM()), PMW);
   addModulePass(SPIRVPrepareGlobalsPass(), PMW);
 }
@@ -215,8 +209,6 @@ void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SPIRVPassRegistry.def"

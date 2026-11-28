@@ -47,6 +47,14 @@ void foo(int arg) {
   {}
   #pragma omp target map(marr[:][n:][:])
   {}
+
+  double *p = &marr[0][0][0];
+  // The shape-operator is allowed only in clauses that explicitly allow it;
+  // the map clause does not allow it as the base of an array section.
+  #pragma omp target map((([10])p)[0:10]) // expected-error {{OpenMP array shaping operation is not allowed here}}
+  {}
+  #pragma omp target map(to: (([2][10])p)[1][0:10]) // expected-error {{OpenMP array shaping operation is not allowed here}}
+  {}
 }
 #else
 

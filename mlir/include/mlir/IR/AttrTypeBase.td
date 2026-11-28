@@ -254,6 +254,12 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
 
   // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
   bit genMnemonicAlias = 0;
+
+  // Optional. The partition of this def. `-gen-{attr,type}def-{decls,defs}`
+  // generate the defs of one partition at a time with
+  // `-{attr,type}def-partition=...`, which requires every generated def to be
+  // in a partition. Ignored without `-{attr,type}def-partition`.
+  Partition partition = ?;
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits

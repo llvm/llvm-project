@@ -7,28 +7,26 @@
 define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm3
 ; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vpsrld $31, %xmm3, %xmm2
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %eax
-; AVX2-NEXT:    vmovd %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    movl %esi, %edi
-; AVX2-NEXT:    subl %eax, %edi
-; AVX2-NEXT:    vpextrd $2, %xmm1, %edx
-; AVX2-NEXT:    subl %edx, %edi
-; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %edi
-; AVX2-NEXT:    andl $3, %edi
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rsi, %rax
+; AVX2-NEXT:    vmovd %xmm2, %esi
+; AVX2-NEXT:    leal (%rsi,%rax), %edi
+; AVX2-NEXT:    vpextrd $2, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rdx,%rcx), %r8d
+; AVX2-NEXT:    addl %edi, %r8d
+; AVX2-NEXT:    andl $3, %r8d
+; AVX2-NEXT:    addq %rsi, %rax
+; AVX2-NEXT:    addq %rax, %rdx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    vextractps $3, %xmm0, %r8d
+; AVX2-NEXT:    vextractps $3, %xmm0, %edi
 ; AVX2-NEXT:    cmpq $4, %rcx
-; AVX2-NEXT:    cmovbl -24(%rsp,%rdi,4), %r8d
+; AVX2-NEXT:    cmovbl -24(%rsp,%r8,4), %edi
 ; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rsi,4)
 ; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rax,4)
@@ -38,7 +36,7 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> 
 ; AVX2-NEXT:    movl $3, %eax
 ; AVX2-NEXT:    cmovbq %rcx, %rax
 ; AVX2-NEXT:    andl $3, %eax
-; AVX2-NEXT:    movl %r8d, -24(%rsp,%rax,4)
+; AVX2-NEXT:    movl %edi, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -68,28 +66,26 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> 
 define <4 x float> @test_compress_v4f32(<4 x float> %vec, <4 x i1> %mask, <4 x float> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v4f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm3
 ; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %edx
-; AVX2-NEXT:    vmovd %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    movl %esi, %edi
-; AVX2-NEXT:    subl %edx, %edi
+; AVX2-NEXT:    vpsrld $31, %xmm3, %xmm2
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    vmovd %xmm2, %esi
+; AVX2-NEXT:    leal (%rsi,%rdx), %edi
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %edi
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
-; AVX2-NEXT:    subl %eax, %edi
-; AVX2-NEXT:    andl $3, %edi
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    leal (%rcx,%rax), %r8d
+; AVX2-NEXT:    addl %edi, %r8d
+; AVX2-NEXT:    andl $3, %r8d
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rsi,4)
-; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rsi, %rdx
 ; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rdx,4)
-; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $3, %ecx
@@ -444,22 +440,23 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm3
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
-; AVX2-NEXT:    vpsrlq $63, %ymm1, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    vmovd %xmm2, %ecx
+; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm2
+; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; AVX2-NEXT:    vpsrlq $63, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX2-NEXT:    vmovd %xmm1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    andl $3, %ecx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX2-NEXT:    vmovq %xmm2, %rdx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    movq %rdx, %rsi
 ; AVX2-NEXT:    subq %rax, %rsi
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, %rax
 ; AVX2-NEXT:    movq %rsi, %rdi
 ; AVX2-NEXT:    subq %rax, %rdi
@@ -518,18 +515,19 @@ define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm3
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
-; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm2
-; AVX2-NEXT:    vpsrlq $63, %ymm2, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; AVX2-NEXT:    vpsrlq $63, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX2-NEXT:    vmovd %xmm1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    andl $3, %ecx
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-NEXT:    vmovlpd %xmm0, (%rsp)
+; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm2
 ; AVX2-NEXT:    vmovq %xmm2, %rax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    movl %eax, %ecx
@@ -1261,75 +1259,75 @@ define <8 x i16> @test_compress_v8i16(<8 x i16> %vec, <8 x i1> %mask, <8 x i16> 
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vpsraw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrw $1, %xmm1, %r9d
-; AVX2-NEXT:    andl $1, %r9d
-; AVX2-NEXT:    vmovd %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    leaq (%rsi,%r9), %rcx
-; AVX2-NEXT:    vpextrw $2, %xmm1, %r10d
-; AVX2-NEXT:    movl %r10d, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    vpextrw $3, %xmm1, %r8d
-; AVX2-NEXT:    movl %r8d, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rax, %rdx
-; AVX2-NEXT:    vpextrw $4, %xmm1, %r11d
-; AVX2-NEXT:    movl %r11d, %edi
+; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm3
+; AVX2-NEXT:    vpsraw $15, %xmm3, %xmm3
+; AVX2-NEXT:    vpextrw $1, %xmm1, %edi
 ; AVX2-NEXT:    andl $1, %edi
-; AVX2-NEXT:    addq %rdx, %rdi
-; AVX2-NEXT:    movl %esi, %ebx
-; AVX2-NEXT:    addl %r9d, %ebx
-; AVX2-NEXT:    vpextrw $5, %xmm1, %ebp
-; AVX2-NEXT:    andl $1, %r10d
-; AVX2-NEXT:    andl $1, %r8d
-; AVX2-NEXT:    addl %r10d, %r8d
-; AVX2-NEXT:    movl %ebp, %r9d
-; AVX2-NEXT:    andl $1, %r9d
-; AVX2-NEXT:    addq %rdi, %r9
-; AVX2-NEXT:    addl %ebx, %r8d
-; AVX2-NEXT:    vpextrw $6, %xmm1, %ebx
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    vpextrw $2, %xmm3, %r11d
+; AVX2-NEXT:    vpextrw $3, %xmm3, %r10d
+; AVX2-NEXT:    vpextrw $4, %xmm3, %r9d
+; AVX2-NEXT:    vpextrw $5, %xmm3, %ebx
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    movl %r11d, %r8d
+; AVX2-NEXT:    movl %r10d, %esi
+; AVX2-NEXT:    movl %r9d, %edx
+; AVX2-NEXT:    movl %ebx, %ecx
+; AVX2-NEXT:    movl %eax, %ebp
+; AVX2-NEXT:    addl %edi, %ebp
 ; AVX2-NEXT:    andl $1, %r11d
-; AVX2-NEXT:    andl $1, %ebp
-; AVX2-NEXT:    addl %r11d, %ebp
-; AVX2-NEXT:    movl %ebx, %r10d
+; AVX2-NEXT:    addl %ebp, %r11d
+; AVX2-NEXT:    vpextrw $6, %xmm3, %ebp
 ; AVX2-NEXT:    andl $1, %r10d
-; AVX2-NEXT:    addq %r9, %r10
+; AVX2-NEXT:    andl $1, %r9d
+; AVX2-NEXT:    addl %r10d, %r9d
+; AVX2-NEXT:    movl %ebp, %r10d
+; AVX2-NEXT:    addl %r11d, %r9d
+; AVX2-NEXT:    vpextrw $7, %xmm3, %r14d
 ; AVX2-NEXT:    andl $1, %ebx
-; AVX2-NEXT:    addl %ebp, %ebx
-; AVX2-NEXT:    vpextrw $7, %xmm1, %r14d
-; AVX2-NEXT:    addl %r8d, %ebx
-; AVX2-NEXT:    movl %r14d, %r8d
-; AVX2-NEXT:    andl $1, %r8d
-; AVX2-NEXT:    addq %r10, %r8
+; AVX2-NEXT:    andl $1, %ebp
+; AVX2-NEXT:    addl %ebx, %ebp
+; AVX2-NEXT:    movl %r14d, %r11d
 ; AVX2-NEXT:    andl $1, %r14d
-; AVX2-NEXT:    addl %ebx, %r14d
+; AVX2-NEXT:    addl %ebp, %r14d
+; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    leaq (%rax,%rdi), %rbx
+; AVX2-NEXT:    andl $1, %r8d
+; AVX2-NEXT:    addq %rbx, %r8
+; AVX2-NEXT:    andl $1, %esi
+; AVX2-NEXT:    addq %r8, %rsi
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rsi, %rdx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    andl $1, %r10d
+; AVX2-NEXT:    addq %rcx, %r10
+; AVX2-NEXT:    andl $1, %r11d
+; AVX2-NEXT:    addq %r10, %r11
+; AVX2-NEXT:    addl %r9d, %r14d
 ; AVX2-NEXT:    andl $7, %r14d
-; AVX2-NEXT:    vpextrw $7, %xmm0, %r11d
-; AVX2-NEXT:    cmpq $8, %r8
-; AVX2-NEXT:    cmovbw -16(%rsp,%r14,2), %r11w
+; AVX2-NEXT:    vpextrw $7, %xmm0, %edi
+; AVX2-NEXT:    cmpq $8, %r11
+; AVX2-NEXT:    cmovbw -16(%rsp,%r14,2), %di
 ; AVX2-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrw $1, %xmm0, -16(%rsp,%rsi,2)
-; AVX2-NEXT:    andl $7, %ecx
-; AVX2-NEXT:    vpextrw $2, %xmm0, -16(%rsp,%rcx,2)
-; AVX2-NEXT:    andl $7, %eax
+; AVX2-NEXT:    vpextrw $1, %xmm0, -16(%rsp,%rax,2)
+; AVX2-NEXT:    movzwl %bx, %eax
+; AVX2-NEXT:    vpextrw $2, %xmm0, -16(%rsp,%rax,2)
+; AVX2-NEXT:    movzwl %r8w, %eax
 ; AVX2-NEXT:    vpextrw $3, %xmm0, -16(%rsp,%rax,2)
+; AVX2-NEXT:    andl $7, %esi
+; AVX2-NEXT:    vpextrw $4, %xmm0, -16(%rsp,%rsi,2)
 ; AVX2-NEXT:    andl $7, %edx
-; AVX2-NEXT:    vpextrw $4, %xmm0, -16(%rsp,%rdx,2)
-; AVX2-NEXT:    andl $7, %edi
-; AVX2-NEXT:    vpextrw $5, %xmm0, -16(%rsp,%rdi,2)
-; AVX2-NEXT:    andl $7, %r9d
-; AVX2-NEXT:    vpextrw $6, %xmm0, -16(%rsp,%r9,2)
+; AVX2-NEXT:    vpextrw $5, %xmm0, -16(%rsp,%rdx,2)
+; AVX2-NEXT:    andl $7, %ecx
+; AVX2-NEXT:    vpextrw $6, %xmm0, -16(%rsp,%rcx,2)
 ; AVX2-NEXT:    andl $7, %r10d
 ; AVX2-NEXT:    vpextrw $7, %xmm0, -16(%rsp,%r10,2)
-; AVX2-NEXT:    cmpq $7, %r8
+; AVX2-NEXT:    cmpq $7, %r11
 ; AVX2-NEXT:    movl $7, %eax
-; AVX2-NEXT:    cmovbq %r8, %rax
+; AVX2-NEXT:    cmovbq %r11, %rax
 ; AVX2-NEXT:    andl $7, %eax
-; AVX2-NEXT:    movw %r11w, -16(%rsp,%rax,2)
+; AVX2-NEXT:    movw %di, -16(%rsp,%rax,2)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r14
@@ -4946,19 +4944,18 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) nounwind {
 define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_illegal_element_type:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm2
+; AVX2-NEXT:    vpsrld $31, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $3, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rcx,4)
-; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    andl $3, %eax
 ; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
@@ -4988,23 +4985,22 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
 define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_narrow:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm1
 ; AVX2-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vmovd %xmm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    andl $1, %edi
+; AVX2-NEXT:    vpextrd $1, %xmm0, -24(%rsp,%rdi,4)
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rax,4)
-; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
-; AVX2-NEXT:    leal (,%rax,4), %ecx
-; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rcx)
-; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
-; AVX2-NEXT:    andl $3, %eax
-; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
+; AVX2-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX2-NEXT:    subl %eax, %edi
+; AVX2-NEXT:    leal (,%rdi,4), %eax
+; AVX2-NEXT:    vpextrd $2, %xmm0, -24(%rsp,%rax)
+; AVX2-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX2-NEXT:    subl %eax, %edi
+; AVX2-NEXT:    andl $3, %edi
+; AVX2-NEXT:    vpextrd $3, %xmm0, -24(%rsp,%rdi,4)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -5042,18 +5038,16 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_narrow_illegal_element_type:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %ecx, %xmm0
 ; AVX2-NEXT:    vpinsrd $1, %r8d, %xmm0, %xmm0
+; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movl %esi, -24(%rsp,%rax,4)
-; AVX2-NEXT:    vpextrd $1, %xmm0, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
-; AVX2-NEXT:    shll $2, %eax
-; AVX2-NEXT:    movl %edx, -24(%rsp,%rax)
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    movl %esi, -24(%rsp,%rcx,4)
+; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %edx, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
@@ -5113,13 +5107,12 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_v4i32_zero_passthru:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm2
+; AVX2-NEXT:    vpsrld $31, %xmm2, %xmm2
+; AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vmovaps %xmm3, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx

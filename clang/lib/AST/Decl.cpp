@@ -1306,8 +1306,10 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   }
 
   // The visibility of a template is stored in the templated decl.
-  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
-    return getVisibilityOf(TD->getTemplatedDecl(), kind);
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+    if (const NamedDecl *Templated = TD->getTemplatedDecl())
+      return getVisibilityOf(Templated, kind);
+  }
 
   return std::nullopt;
 }
@@ -4974,34 +4976,6 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   return dyn_cast<FieldDecl>(CountDecl);
 }
 
-static bool initializationHasSideEffects(const FieldDecl &FD) {
-  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
-  // FIXME: Destruction of ObjC lifetime types has side-effects.
-  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    return !RD->isCompleteDefinition() || !RD->hasTrivialDefaultConstructor() ||
-           !RD->hasTrivialDestructor();
-  return false;
-}
-
-template <typename AttrType> static bool hasAttribute(QualType T) {
-  if (const TagDecl *TD = T->getAsTagDecl())
-    return TD->hasAttr<AttrType>();
-  if (const TypedefType *TDT = T->getAs<TypedefType>())
-    return TDT->getDecl()->hasAttr<AttrType>();
-  return false;
-}
-
-bool FieldDecl::isUnusedPrivateField() const {
-  if (isImplicit() || !getDeclName() || getAccess() != AS_private ||
-      hasAttr<UnusedAttr>() || getParent()->isDependentContext())
-    return false;
-
-  QualType FieldType = getType();
-  return !hasAttribute<UnusedAttr>(FieldType) &&
-         (hasAttribute<WarnUnusedAttr>(FieldType) ||
-          !initializationHasSideEffects(*this));
-}
-
 //===----------------------------------------------------------------------===//
 // TagDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -5573,7 +5547,6 @@ unsigned RecordDecl::getODRHash() {
 BlockDecl::BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
     : Decl(Block, DC, CaretLoc), DeclContext(Block) {
   setIsVariadic(false);
-  setCapturesCXXThis(false);
   setBlockMissingReturnType(true);
   setIsConversionFromLambda(false);
   setDoesNotEscape(false);
@@ -5592,8 +5565,8 @@ void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {
 }
 
 void BlockDecl::setCaptures(ASTContext &Context, ArrayRef<Capture> Captures,
-                            bool CapturesCXXThis) {
-  this->setCapturesCXXThis(CapturesCXXThis);
+                            QualType CXXThisType) {
+  this->CXXThisType = CXXThisType;
   this->NumCaptures = Captures.size();
 
   if (Captures.empty()) {

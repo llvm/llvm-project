@@ -1,5 +1,21 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @pack_scalable_inner_tile(%source: tensor<16x16xf32>, %dest: tensor<2x4x8x4xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [[8], 4] into %dest : tensor<16x16xf32> -> tensor<2x4x8x4xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_scalable_inner_tile(%source: tensor<2x4x8x4xf32>, %dest: tensor<16x16xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [[8], 4] into %dest : tensor<2x4x8x4xf32> -> tensor<16x16xf32>
+  return
+}
+
+// -----
+
 func.func @load_number_of_indices(%v : memref<f32>) {
   // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
@@ -788,6 +804,45 @@ func.func @scaled_contract_wrong_number_of_indexing_maps(
           tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
       outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
   return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_too_many_outputs(
+    %A: tensor<256x512xi8>, %sA: tensor<256xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %C: tensor<256x128xf32>,
+    %E: tensor<256x128xf32>) -> (tensor<256x128xf32>, tensor<256x128xf32>) {
+  // expected-error @+1 {{expected 5 indexing maps and operands}}
+  %D:2 = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (m, n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B
+        : tensor<256x512xi8>, tensor<256xf8E8M0FNU>, tensor<128x512xi8>)
+      outs(%C, %E : tensor<256x128xf32>, tensor<256x128xf32>)
+      -> (tensor<256x128xf32>, tensor<256x128xf32>)
+  return %D#0, %D#1 : tensor<256x128xf32>, tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_no_outputs(
+    %A: tensor<256x512xi8>, %sA: tensor<256xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>) {
+  // expected-error @+1 {{expected 5 indexing maps and operands}}
+  linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB, %C
+        : tensor<256x512xi8>, tensor<256xf8E8M0FNU>,
+          tensor<128x512xi8>, tensor<128xf8E8M0FNU>, tensor<256x128xf32>)
+  return
 }
 
 // -----
@@ -2426,7 +2481,7 @@ func.func @pooling_nwc_min_unsigned_i1(
 func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   -> (tensor<?xf16>, vector<4xf16>)
 {
-  // expected-warning @unknown {{could not cast operand of type 'f16' to 'vector<4xf16>'}}
+  // expected-warning @unknown @times(2) {{could not cast operand of type 'f16' to 'vector<4xf16>'}}
   // expected-error @below {{Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'vector<4xf16>' and 'f16'}}
   %0 = linalg.matmul ins(%t, %t : tensor<?xf16>, tensor<?xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>

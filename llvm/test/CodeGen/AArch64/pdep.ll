@@ -15,16 +15,16 @@ define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    pmul v3.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    and w8, w8, w1
-; CHECK-NEXT:    eor w9, w1, w8
-; CHECK-NEXT:    and w10, w8, #0xfe
-; CHECK-NEXT:    orr w9, w9, w10, lsr #1
+; CHECK-NEXT:    ubfx w9, w8, #1, #7
+; CHECK-NEXT:    eor w10, w1, w8
+; CHECK-NEXT:    orr w9, w10, w9
 ; CHECK-NEXT:    bic v1.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    fmov w10, s3
 ; CHECK-NEXT:    pmul v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    and w10, w10, w9
+; CHECK-NEXT:    ubfx w11, w10, #2, #6
 ; CHECK-NEXT:    eor w9, w9, w10
-; CHECK-NEXT:    and w11, w10, #0xfc
-; CHECK-NEXT:    orr w9, w9, w11, lsr #2
+; CHECK-NEXT:    orr w9, w9, w11
 ; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    and w9, w11, w9
 ; CHECK-NEXT:    and w11, w9, w0, lsl #4
@@ -62,28 +62,28 @@ define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 ; CHECK-BASE-NEXT:    bic w9, w9, w8
 ; CHECK-BASE-NEXT:    and w8, w8, w1
 ; CHECK-BASE-NEXT:    eor w10, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    eor w12, w1, w8
-; CHECK-BASE-NEXT:    and w13, w8, #0xfffe
-; CHECK-BASE-NEXT:    orr w12, w12, w13, lsr #1
+; CHECK-BASE-NEXT:    ubfx w12, w8, #1, #15
+; CHECK-BASE-NEXT:    eor w13, w1, w8
 ; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #2
+; CHECK-BASE-NEXT:    orr w12, w13, w12
 ; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #4
 ; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #8
 ; CHECK-BASE-NEXT:    bic w9, w9, w10
 ; CHECK-BASE-NEXT:    and w10, w10, w12
 ; CHECK-BASE-NEXT:    eor w11, w9, w9, lsl #1
+; CHECK-BASE-NEXT:    ubfx w13, w10, #2, #14
 ; CHECK-BASE-NEXT:    eor w12, w12, w10
-; CHECK-BASE-NEXT:    and w13, w10, #0xfffc
-; CHECK-BASE-NEXT:    orr w12, w12, w13, lsr #2
 ; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #2
+; CHECK-BASE-NEXT:    orr w12, w12, w13
 ; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #4
 ; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #8
 ; CHECK-BASE-NEXT:    bic w9, w9, w11
 ; CHECK-BASE-NEXT:    and w11, w11, w12
 ; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #1
+; CHECK-BASE-NEXT:    ubfx w13, w11, #4, #12
 ; CHECK-BASE-NEXT:    eor w12, w12, w11
-; CHECK-BASE-NEXT:    and w13, w11, #0xfff0
-; CHECK-BASE-NEXT:    orr w12, w12, w13, lsr #4
 ; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #2
+; CHECK-BASE-NEXT:    orr w12, w12, w13
 ; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #4
 ; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #8
 ; CHECK-BASE-NEXT:    and w9, w9, w12
@@ -113,23 +113,23 @@ define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 ; CHECK-PMUL-NEXT:    fmov w8, s2
 ; CHECK-PMUL-NEXT:    pmull v3.1q, v1.1d, v0.1d
 ; CHECK-PMUL-NEXT:    and w8, w8, w1
-; CHECK-PMUL-NEXT:    eor w9, w1, w8
-; CHECK-PMUL-NEXT:    and w10, w8, #0xfffe
-; CHECK-PMUL-NEXT:    orr w9, w9, w10, lsr #1
+; CHECK-PMUL-NEXT:    ubfx w9, w8, #1, #15
+; CHECK-PMUL-NEXT:    eor w10, w1, w8
+; CHECK-PMUL-NEXT:    orr w9, w10, w9
 ; CHECK-PMUL-NEXT:    bic v1.8b, v1.8b, v3.8b
-; CHECK-PMUL-NEXT:    fmov w10, s3
+; CHECK-PMUL-NEXT:    fmov w11, s3
 ; CHECK-PMUL-NEXT:    pmull v2.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    and w10, w10, w9
+; CHECK-PMUL-NEXT:    and w10, w11, w9
+; CHECK-PMUL-NEXT:    ubfx w11, w10, #2, #14
 ; CHECK-PMUL-NEXT:    eor w9, w9, w10
-; CHECK-PMUL-NEXT:    and w11, w10, #0xfffc
-; CHECK-PMUL-NEXT:    orr w9, w9, w11, lsr #2
+; CHECK-PMUL-NEXT:    orr w9, w9, w11
 ; CHECK-PMUL-NEXT:    bic v1.8b, v1.8b, v2.8b
 ; CHECK-PMUL-NEXT:    fmov w11, s2
 ; CHECK-PMUL-NEXT:    pmull v0.1q, v1.1d, v0.1d
 ; CHECK-PMUL-NEXT:    and w11, w11, w9
+; CHECK-PMUL-NEXT:    ubfx w12, w11, #4, #12
 ; CHECK-PMUL-NEXT:    eor w9, w9, w11
-; CHECK-PMUL-NEXT:    and w12, w11, #0xfff0
-; CHECK-PMUL-NEXT:    orr w9, w9, w12, lsr #4
+; CHECK-PMUL-NEXT:    orr w9, w9, w12
 ; CHECK-PMUL-NEXT:    fmov w12, s0
 ; CHECK-PMUL-NEXT:    and w9, w12, w9
 ; CHECK-PMUL-NEXT:    and w12, w9, w0, lsl #8

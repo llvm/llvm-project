@@ -50,9 +50,9 @@ exit:
 
 define i64 @sdiv_arg_outer_iv(ptr noalias %dst, ptr %src) {
 ; CHECK: 'sdiv_arg_outer_iv'
-; CHECK: Cost of 0 for VF 2: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
-; CHECK: Cost of 0 for VF 4: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
-; CHECK: Cost of 0 for VF 8: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 2: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 4: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 8: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
 ; CHECK: Cost of 0 for VF 16: REPLICATE ir<%div> = sdiv ir<%add.offset>, ir<8>
 entry:
   br label %outer.header

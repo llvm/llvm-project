@@ -18,6 +18,7 @@
 #include "MipsRegisterInfo.h"
 #include "MipsSelectionDAGInfo.h"
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -224,6 +225,16 @@ void MipsSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
                                         : &Mips::GPR32RegClass);
 }
 
+void MipsSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
+}
+
 CodeGenOptLevel MipsSubtarget::getOptLevelToEnablePostRAScheduler() const {
   return CodeGenOptLevel::Aggressive;
 }
@@ -239,6 +250,14 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   // O32 uses 32-bit GPRs even when the selected CPU supports a 64-bit ISA.
   if (isABI_O32())
     IsGP64bit = false;
+
+  // Before MIPS32, single-precision arithmetic can only use the even FPRs
+  // when the FPRs are 32 bits wide. The odd FPRs only hold the upper half of
+  // a double. A single-float FPU such as the R5900 has 32 single-precision
+  // FPRs.
+  if (isABI_O32() && !IsSoftFloat && !IsSingleFloat && hasMips1() &&
+      !hasMips32() && !isFP64bit())
+    UseOddSPReg = false;
 
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;

@@ -19,6 +19,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblySortRegion.h"
+#include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -36,14 +37,6 @@ using WebAssembly::SortRegion;
 using WebAssembly::SortRegionInfo;
 
 #define DEBUG_TYPE "wasm-cfg-sort"
-
-// Option to disable EH pad first sorting. Only for testing unwind destination
-// mismatches in CFGStackify.
-static cl::opt<bool> WasmDisableEHPadSort(
-    "wasm-disable-ehpad-sort", cl::ReallyHidden,
-    cl::desc(
-        "WebAssembly: Disable EH pad-first sort order. Testing purpose only."),
-    cl::init(false));
 
 namespace {
 
@@ -135,9 +128,10 @@ namespace {
 
 /// Sort blocks by their number.
 struct CompareBlockNumbers {
+  bool EHPadSort;
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    if (!WasmDisableEHPadSort) {
+    if (EHPadSort) {
       if (A->isEHPad() && !B->isEHPad())
         return false;
       if (!A->isEHPad() && B->isEHPad())
@@ -149,9 +143,10 @@ struct CompareBlockNumbers {
 };
 /// Sort blocks by their number in the opposite order..
 struct CompareBlockNumbersBackwards {
+  bool EHPadSort;
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    if (!WasmDisableEHPadSort) {
+    if (EHPadSort) {
       if (A->isEHPad() && !B->isEHPad())
         return false;
       if (!A->isEHPad() && B->isEHPad())
@@ -200,6 +195,8 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     NumPredsLeft[MBB.getNumber()] = N;
   }
 
+  const bool EHPadSort =
+      MF.getSubtarget<WebAssemblySubtarget>().getCLOpts().ehpad_sort;
   // Topological sort the CFG, with additional constraints:
   //  - Between a region header and the last block in the region, there can be
   //    no blocks not dominated by its header.
@@ -210,10 +207,10 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   // from both queues.
   PriorityQueue<MachineBasicBlock *, std::vector<MachineBasicBlock *>,
                 CompareBlockNumbers>
-      Preferred;
+      Preferred(CompareBlockNumbers{EHPadSort});
   PriorityQueue<MachineBasicBlock *, std::vector<MachineBasicBlock *>,
                 CompareBlockNumbersBackwards>
-      Ready;
+      Ready(CompareBlockNumbersBackwards{EHPadSort});
 
   SortRegionInfo SRI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
@@ -262,7 +259,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       // If Next was originally ordered before MBB, and it isn't because it was
       // loop-rotated above the header, it's not preferred.
       if (Next->getNumber() < MBB->getNumber() &&
-          (WasmDisableEHPadSort || !Next->isEHPad()) &&
+          (!EHPadSort || !Next->isEHPad()) &&
           (!R || !R->contains(Next) ||
            R->getHeader()->getNumber() < Next->getNumber())) {
         Ready.push(Next);

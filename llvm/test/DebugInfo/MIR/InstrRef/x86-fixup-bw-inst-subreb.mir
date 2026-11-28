@@ -4,7 +4,7 @@
 # This test is a copy of llvm/test/CodeGen/X86/fixup-bw-inst.mir, with a few
 # test bodies removed. The pass promotes certain register operations to be
 # wider operations (such as loads and sign extensions), which has an instruction
-# encoding benefit. New instructions are created, and so should have a debug 
+# encoding benefit. New instructions are created, and so should have a debug
 # instruction number substitution; but in addition a qualifiying subregister,
 # because the newly def'd register is a different size to the old one.
 #
@@ -16,7 +16,6 @@
 # CHECK-LABEL: name: test1
 name:            test1
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rax' }
@@ -37,7 +36,6 @@ body:             |
 # CHECK-LABEL: name: test3
 name:            test3
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi' }

@@ -472,6 +472,12 @@ static void maybeParseOptions(lto_code_gen_t cg) {
     if (CG->OwnedContext)
       LTOContext->getLibraryOptions().assign(
           CG->getContext().getLibraryOptions());
+    // The target options were read when the generator was created. Read them
+    // again to pick up the options that were just parsed, unless
+    // lto_set_debug_options already parsed them before that.
+    if (optionParsingState == OptParsingState::NotParsed)
+      CG->setTargetOptions(
+          codegen::getTargetOptions(LTOContext->getLibraryOptions(), Triple()));
     lto_add_attrs(cg);
     optionParsingState = OptParsingState::Done;
   }

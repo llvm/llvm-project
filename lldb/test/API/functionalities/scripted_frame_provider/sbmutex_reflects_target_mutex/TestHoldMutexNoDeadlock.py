@@ -30,6 +30,7 @@ from lldbsuite.test.lldbtest import *
 class TestHoldMutexNoDeadlock(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # continuing never hits the breakpoint again
     def test_hold_mutex_no_deadlock(self):
         """
         Register a scripted frame provider that locks and holds

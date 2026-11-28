@@ -279,6 +279,7 @@ struct MissingFeatures {
   static bool pointerFieldProtection() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool returnValueSlotFeatures() { return false; }
+  static bool riscvVectorKinds() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool s390xVisibleVectorABI() { return false; }
   static bool sanitizers() { return false; }

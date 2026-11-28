@@ -1776,11 +1776,11 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
     // Check if final instruction is reduced outside of current block
     Instruction *FinalReduction = nullptr;
     auto NumUsers = 0u;
-    for (auto *U : ReductionOp->users()) {
+    for (Instruction *U : ReductionOp->users()) {
       ++NumUsers;
       if (U == &PHI)
         continue;
-      FinalReduction = dyn_cast<Instruction>(U);
+      FinalReduction = U;
     }
 
     if (NumUsers != 2 || !FinalReduction || FinalReduction->getParent() == B ||
@@ -1941,8 +1941,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
     if (RootToNode.count(I))
       continue;
 
-    for (User *U : I->users()) {
-      if (AllInstructions.count(cast<Instruction>(U)))
+    for (Instruction *U : I->users()) {
+      if (AllInstructions.count(U))
         continue;
 
       // Found an instruction that is not used by XCMLA/XCADD chain
@@ -1971,8 +1971,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
     if (!AllInstructions.count(I) || FinalInstructions.count(I))
       continue;
 
-    for (User *U : I->users())
-      Worklist.emplace_back(cast<Instruction>(U));
+    for (Instruction *U : I->users())
+      Worklist.emplace_back(U);
 
     for (Value *Op : I->operands()) {
       if (auto *OpI = dyn_cast<Instruction>(Op))

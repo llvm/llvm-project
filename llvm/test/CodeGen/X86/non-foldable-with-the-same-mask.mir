@@ -3,12 +3,6 @@
 
 ---
 name:            test_valignd_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -35,12 +29,6 @@ body:             |
 ...
 ---
 name:            test_vpalignr_same_mask
-registers:
-  - { id: 0, class: vk16wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -67,11 +55,6 @@ body:             |
 ...
 ---
 name:            test_vbroadcastss_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -96,11 +79,6 @@ body:             |
 ...
 ---
 name:            test_vmovddup_same_mask
-registers:
-  - { id: 0, class: vk2wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -125,11 +103,6 @@ body:             |
 ...
 ---
 name:            test_vmovshdup_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -154,11 +127,6 @@ body:             |
 ...
 ---
 name:            test_vpbroadcastd_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -183,12 +151,6 @@ body:             |
 ...
 ---
 name:            test_vdbpsadbw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -215,12 +177,6 @@ body:             |
 ...
 ---
 name:            test_vgf2p8affineqb_same_mask
-registers:
-  - { id: 0, class: vk16wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -247,12 +203,6 @@ body:             |
 ...
 ---
 name:            test_vmpsadbw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -279,11 +229,6 @@ body:             |
 ...
 ---
 name:            test_vpconflictd_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -308,12 +253,6 @@ body:             |
 ...
 ---
 name:            test_vpmultishiftqb_same_mask
-registers:
-  - { id: 0, class: vk16wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -340,11 +279,6 @@ body:             |
 ...
 ---
 name:            test_vexpandps_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -369,14 +303,6 @@ body:             |
 ...
 ---
 name:            test_vinserti32x4_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr256x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr256x }
-  - { id: 5, class: vr128x }
-  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -407,12 +333,6 @@ body:             |
 ...
 ---
 name:            test_vpackssdw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -439,14 +359,6 @@ body:             |
 ...
 ---
 name:            test_vpermd_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr256x }
-  - { id: 3, class: vr256x }
-  - { id: 4, class: vr128x }
-  - { id: 5, class: vr256x }
-  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -477,12 +389,6 @@ body:             |
 ...
 ---
 name:            test_vpermi2d_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128x }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -509,10 +415,6 @@ body:             |
 ...
 ---
 name:            test_vpermilps_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -535,14 +437,6 @@ body:             |
 ...
 ---
 name:            test_vpermps_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr256x }
-  - { id: 3, class: vr256x }
-  - { id: 4, class: vr128x }
-  - { id: 5, class: vr256x }
-  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -573,12 +467,6 @@ body:             |
 ...
 ---
 name:            test_vpermt2d_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128x }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -605,12 +493,6 @@ body:             |
 ...
 ---
 name:            test_vpermw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128x }
-  - { id: 4, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -637,10 +519,6 @@ body:             |
 ...
 ---
 name:            test_vpshufd_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -663,10 +541,6 @@ body:             |
 ...
 ---
 name:            test_vpshufhw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -689,10 +563,6 @@ body:             |
 ...
 ---
 name:            test_vpshuflw_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -715,14 +585,6 @@ body:             |
 ...
 ---
 name:            test_vshuff32x4_same_mask
-registers:
-  - { id: 0, class: vk8wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr256x }
-  - { id: 3, class: vr256x }
-  - { id: 4, class: vr128x }
-  - { id: 5, class: vr256x }
-  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -753,11 +615,6 @@ body:             |
 ...
 ---
 name:            test_vshufpd_same_mask
-registers:
-  - { id: 0, class: vk2wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -782,11 +639,6 @@ body:             |
 ...
 ---
 name:            test_vshufps_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -811,11 +663,6 @@ body:             |
 ...
 ---
 name:            test_vpunpckhbw_same_mask
-registers:
-  - { id: 0, class: vk16wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -840,11 +687,6 @@ body:             |
 ...
 ---
 name:            test_vpunpcklbw_same_mask
-registers:
-  - { id: 0, class: vk16wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -869,11 +711,6 @@ body:             |
 ...
 ---
 name:            test_vunpcklps_same_mask
-registers:
-  - { id: 0, class: vk4wm }
-  - { id: 1, class: vr128x }
-  - { id: 2, class: vr128x }
-  - { id: 3, class: vr128 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }

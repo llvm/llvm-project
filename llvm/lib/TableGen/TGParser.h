@@ -62,7 +62,6 @@ struct RecordsEntry {
 
   void dump() const;
 
-  RecordsEntry() = default;
   RecordsEntry(std::unique_ptr<Record> Rec);
   RecordsEntry(std::unique_ptr<ForeachLoop> Loop);
   RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion);

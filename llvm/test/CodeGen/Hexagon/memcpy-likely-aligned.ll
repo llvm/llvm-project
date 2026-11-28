@@ -12,6 +12,14 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: test_memcpy_aligned_tail:
+; CHECK: jump __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
+define void @test_memcpy_aligned_tail(ptr %dst, ptr %src) {
+entry:
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dst, ptr align 8 %src, i32 64, i1 false)
+  ret void
+}
+
 ; Smaller memcpy (< 32 bytes) should NOT use the specialized path.
 ; CHECK-LABEL: test_memcpy_small:
 ; CHECK-NOT: likely_aligned

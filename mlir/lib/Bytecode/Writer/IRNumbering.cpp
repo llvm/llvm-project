@@ -538,8 +538,7 @@ void IRNumberingState::number(Type type) {
     }
   }
 
-  // If this attribute will be emitted using the bytecode format, perform a
-  // dummy writing to number any nested components.
+  // Otherwise, try the dialect bytecode interface.
   if (const auto *interface = numbering->dialect->interface) {
     NumberingDialectWriter writer(*this, config.getDialectVersionMap());
     if (succeeded(interface->writeType(type, writer)))

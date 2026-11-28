@@ -180,9 +180,8 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
   // Replace an instruction with a constant and add all users of the instruction
   // to the worklist
   auto ReplaceInstructionWithConst = [&](Instruction *I, Constant *C) {
-    for (User *U : I->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        Worklist.push_back(UI);
+    for (Instruction *UI : I->users())
+      Worklist.push_back(UI);
     I->replaceAllUsesWith(C);
   };
 

@@ -193,11 +193,11 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA && InstanceInfoAA->isAssumedUniqueForAnalysis();
 }
 
-Constant *
-AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
-                          Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
-                          const DataLayout &DL, AA::RangeTy *RangePtr) {
-  if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
+Constant *AA::getInitialValueForObj(Attributor &A,
+                                    const AbstractAttribute &QueryingAA,
+                                    Value &Obj, Type &Ty, const DataLayout &DL,
+                                    AA::RangeTy *RangePtr) {
+  if (Constant *Init = getInitialValueOfAllocation(&Obj, &Ty))
     return Init;
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
@@ -337,9 +337,6 @@ static bool getPotentialCopiesOfMemoryValue(
   SmallSetVector<Value *, 8> NewCopies;
   SmallSetVector<Instruction *, 8> NewCopyOrigins;
 
-  const auto *TLI =
-      A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
-
   auto Pred = [&](Value &Obj) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << Obj << "\n");
     if (isa<UndefValue>(&Obj))
@@ -358,7 +355,7 @@ static bool getPotentialCopiesOfMemoryValue(
     }
     // TODO: Use assumed noalias return.
     if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
-        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+        !(IsLoad ? isAllocationFn(&Obj) : isNoAliasCall(&Obj))) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;
@@ -499,8 +496,8 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
-      Value *InitialValue = AA::getInitialValueForObj(
-          A, QueryingAA, Obj, *I.getType(), TLI, DL, &Range);
+      Value *InitialValue = AA::getInitialValueForObj(A, QueryingAA, Obj,
+                                                      *I.getType(), DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
@@ -953,13 +950,24 @@ Argument *IRPosition::getAssociatedArgument() const {
   if (ArgNo < 0)
     return nullptr;
 
+  const auto &CB = cast<CallBase>(getAnchorValue());
+  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
+  if (!Callee)
+    return nullptr;
+
+  // Without callbacks, use the direct callee argument if available.
+  if (!Callee->hasMetadata(LLVMContext::MD_callback)) {
+    if (Callee->arg_size() > unsigned(ArgNo))
+      return Callee->getArg(ArgNo);
+    return nullptr;
+  }
+
   // Use abstract call sites to make the connection between the call site
   // values and the ones in callbacks. If a callback was found that makes use
   // of the underlying call site operand, we want the corresponding callback
   // callee argument and not the direct callee argument.
   std::optional<Argument *> CBCandidateArg;
   SmallVector<const Use *, 4> CallbackUses;
-  const auto &CB = cast<CallBase>(getAnchorValue());
   AbstractCallSite::getCallbackUses(CB, CallbackUses);
   for (const Use *U : CallbackUses) {
     AbstractCallSite ACS(U);
@@ -990,8 +998,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
-  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
-  if (Callee && Callee->arg_size() > unsigned(ArgNo))
+  if (Callee->arg_size() > unsigned(ArgNo))
     return Callee->getArg(ArgNo);
 
   return nullptr;
@@ -1048,18 +1055,23 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
   const Assume2KnowledgeMap &A2K =
       getInfoCache().getKnowledgeMap().lookup({&AssociatedValue, AK});
 
-  // Check if we found any potential assume use, if not we don't need to create
-  // explorer iterators.
+  // Check if we found any potential assume use, if not we don't need to look
+  // at the context.
   if (A2K.empty())
+    return false;
+
+  if (!canUseBodyFor(IRP))
     return false;
 
   LLVMContext &Ctx = AssociatedValue.getContext();
   unsigned AttrsSize = Attrs.size();
-  auto EIt = Explorer->begin(IRP.getCtxI()),
-       EEnd = Explorer->end(IRP.getCtxI());
-  for (const auto &It : A2K)
-    if (Explorer->findInContextOf(It.first, EIt, EEnd))
+  const Instruction *CtxI = IRP.getCtxI();
+  if (!CtxI)
+    return false;
+  for (const auto &It : A2K) {
+    if (Explorer->isInContextOf(It.first, CtxI))
       Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
+  }
   return AttrsSize != Attrs.size();
 }
 
@@ -2786,6 +2798,9 @@ Function *Attributor::internalizeFunction(Function &F, bool Force) {
 
 bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
                                       DenseMap<Function *, Function *> &FnMap) {
+  if (FnSet.empty())
+    return false;
+
   for (Function *F : FnSet)
     if (!Attributor::isInternalizable(*F))
       return false;
@@ -3205,6 +3220,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
 
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
+    bool MayReadOrWriteMemory = false;
 
     // To allow easy access to all instructions in a function with a given
     // opcode we store them in the InfoCache. As not all opcodes are interesting
@@ -3216,6 +3232,12 @@ void InformationCache::initializeInformationCache(const Function &CF,
       assert(!isa<CallBase>(&I) &&
              "New call base instruction type needs to be known in the "
              "Attributor.");
+      break;
+    case Instruction::VAArg:
+    case Instruction::Fence:
+    case Instruction::CatchPad:
+    case Instruction::CatchRet:
+      MayReadOrWriteMemory = true;
       break;
     case Instruction::Call:
       // Calls are interesting on their own, additionally:
@@ -3232,22 +3254,30 @@ void InformationCache::initializeInformationCache(const Function &CF,
       [[fallthrough]];
     case Instruction::CallBr:
     case Instruction::Invoke:
-    case Instruction::CleanupRet:
-    case Instruction::CatchSwitch:
+      MayReadOrWriteMemory = !cast<CallBase>(I).doesNotAccessMemory();
+      IsInterestingOpcode = true;
+      break;
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::UncondBr:
-    case Instruction::CondBr:
-    case Instruction::Resume:
-    case Instruction::Ret:
     case Instruction::Load:
       // The alignment of a pointer is interesting for loads.
     case Instruction::Store:
       // The alignment of a pointer is interesting for stores.
+      MayReadOrWriteMemory = true;
+      IsInterestingOpcode = true;
+      break;
+    case Instruction::CleanupRet:
+    case Instruction::CatchSwitch:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
+    case Instruction::Resume:
+    case Instruction::Ret:
     case Instruction::Alloca:
     case Instruction::AddrSpaceCast:
       IsInterestingOpcode = true;
     }
+    assert(MayReadOrWriteMemory == I.mayReadOrWriteMemory() &&
+           "Memory accessing opcode not handled");
     if (IsInterestingOpcode) {
       assert(is_contained(InterestingOpcodes, I.getOpcode()) &&
              "Interesting opcode missing from InterestingOpcodes");
@@ -3256,7 +3286,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
         Insts = new (Allocator) InstructionVectorTy();
       Insts->push_back(&I);
     }
-    if (I.mayReadOrWriteMemory())
+    if (MayReadOrWriteMemory)
       FI.RWInsts.push_back(&I);
   }
 
@@ -3961,13 +3991,11 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = false;
   static constexpr AAKindSet Allowed =
-      AAKindSet::get<&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID,
-                     &AANoSync::ID, &AANoFree::ID, &AANoReturn::ID,
-                     &AAMemoryLocation::ID, &AAMemoryBehavior::ID,
-                     &AAUnderlyingObjects::ID, &AANoCapture::ID,
-                     &AAInterFnReachability::ID, &AAIntraFnReachability::ID,
-                     &AACallEdges::ID, &AANoFPClass::ID, &AAMustProgress::ID,
-                     &AANonNull::ID, &AADenormalFPMath::ID>();
+      AAKindSet::get<AAWillReturn, AANoUnwind, AANoRecurse, AANoSync, AANoFree,
+                     AANoReturn, AAMemoryLocation, AAMemoryBehavior,
+                     AAUnderlyingObjects, AANoCapture, AAInterFnReachability,
+                     AAIntraFnReachability, AACallEdges, AANoFPClass,
+                     AAMustProgress, AANonNull, AADenormalFPMath>();
   AC.Allowed = Allowed;
   AC.UseLiveness = false;
 

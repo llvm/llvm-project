@@ -25,7 +25,6 @@ failedISel:      false
 hasWinCFI:       false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

@@ -461,9 +461,10 @@ defm : BWWriteResPair<WritePack,   [BWPort5], 3, [2], 2, 4>;
 defm : BWWriteResPair<WritePackX,  [BWPort5], 1, [1], 1, 5>;
 defm : BWWriteResPair<WritePackY,  [BWPort5], 1, [1], 1, 6>;
 defm : X86WriteResPairUnsupported<WritePackZ>;
-defm : BWWriteResPair<WriteBlend,  [BWPort5], 1, [1], 1, 5>; // Vector blends.
-defm : BWWriteResPair<WriteBlendY, [BWPort5], 1, [1], 1, 6>; // Vector blends (YMM/ZMM).
-defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : BWWriteResPair<WritePBLENDDX,   [BWPort015], 1, [1], 1, 5>; // Vector blends (XMM).
+defm : BWWriteResPair<WritePBLENDDY,   [BWPort015], 1, [1], 1, 6>; // Vector blends (YMM).
+defm : BWWriteResPair<WritePBLENDWX,   [BWPort5], 1, [1], 1, 5>; // Vector blends (XMM).
+defm : BWWriteResPair<WritePBLENDWY,   [BWPort5], 1, [1], 1, 6>; // Vector blends (YMM).
 defm : BWWriteResPair<WriteShuffle256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width vector shuffles.
 defm : BWWriteResPair<WriteVPMOV256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width packed vector width-changing move.
 defm : BWWriteResPair<WriteVarShuffle256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width vector variable shuffles.
@@ -679,13 +680,6 @@ def BWWriteResGroup7 : SchedWriteRes<[BWPort15]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[BWWriteResGroup7], (instregex "ANDN(32|64)rr")>;
-
-def BWWriteResGroup8 : SchedWriteRes<[BWPort015]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
-}
-def: InstRW<[BWWriteResGroup8], (instregex "VPBLENDD(Y?)rri")>;
 
 def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
   let Latency = 1;
@@ -972,8 +966,7 @@ def BWWriteResGroup65 : SchedWriteRes<[BWPort23,BWPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup65], (instrs VINSERTF128rmi,
-                                         VINSERTI128rmi,
-                                         VPBLENDDrmi)>;
+                                         VINSERTI128rmi)>;
 
 def BWWriteResGroup66 : SchedWriteRes<[BWPort23,BWPort0156]> {
   let Latency = 6;
@@ -1028,13 +1021,6 @@ def BWWriteResGroup74 : SchedWriteRes<[BWPort1,BWPort23]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup74], (instregex "FCOM(P?)(32|64)m")>;
-
-def BWWriteResGroup77 : SchedWriteRes<[BWPort23,BWPort015]> {
-  let Latency = 7;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup77], (instrs VPBLENDDYrmi)>;
 
 def BWWriteResGroup80 : SchedWriteRes<[BWPort23,BWPort0156]> {
   let Latency = 7;

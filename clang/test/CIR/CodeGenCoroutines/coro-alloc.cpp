@@ -38,7 +38,7 @@ int f4(promise_on_alloc_failure_tag) {
 }
 
 // CIR-LABEL: @_Z2f428promise_on_alloc_failure_tag(
-// CIR: %[[RetVal:.*]] = cir.alloca "__retval"
+// CIR: %[[RetVal:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR: %[[FrameAddr:.*]] = cir.alloca "__coro_frame_addr"
 // CIR: %[[NULL_INIT:.*]] = cir.const #cir.ptr<null>
 // CIR: %[[CORO_ID:.*]] = cir.coro.intrinsic.id(

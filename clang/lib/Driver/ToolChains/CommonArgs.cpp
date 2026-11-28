@@ -682,6 +682,9 @@ void tools::addLinkerCompressDebugSectionsOption(
 
 bool tools::useMachORelocatableDwarf(const llvm::Triple &T,
                                      unsigned DwarfVersion) {
+  // 32-bit ARM and x86 Mach-O use scattered relocations.
+  if (T.isARM() || T.isThumb() || T.getArch() == llvm::Triple::x86)
+    return false;
   return T.isOSBinFormatMachO() && DwarfVersion >= 5 &&
          !(T.isMacOSX() || T.isiOS() || T.isWatchOS() || T.isXROS() ||
            T.isDriverKit());
@@ -2643,6 +2646,8 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
   ToolChain::RuntimeLibType RLT = TC.GetRuntimeLibType(Args);
 
   switch (RLT) {
+  case ToolChain::RLT_None:
+    return;
   case ToolChain::RLT_CompilerRT:
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
     AddUnwindLibrary(TC, D, CmdArgs, Args);

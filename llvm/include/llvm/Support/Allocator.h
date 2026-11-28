@@ -455,7 +455,7 @@ public:
   }
 
   /// Allocate space for an array of objects without constructing them.
-  T *Allocate(size_t num = 1) {
+  LLVM_NO_SANITIZE_CFI_UNRELATED_CAST T *Allocate(size_t num = 1) {
     // Slabs are max_align_t-aligned and every size is a multiple of alignof(T),
     // so the bump pointer is already alignof(T)-aligned. Request alignment 1 so
     // the fast path skips realigning CurPtr; over-aligned T still needs it.

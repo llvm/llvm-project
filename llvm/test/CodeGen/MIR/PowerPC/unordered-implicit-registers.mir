@@ -20,7 +20,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 body: |

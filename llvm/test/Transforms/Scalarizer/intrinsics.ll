@@ -16,6 +16,10 @@ declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 ; Unary int
 declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
 
+; Binary int
+declare <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32>, <2 x i32>)
+declare <2 x i32> @llvm.ushl.sat.v2i32(<2 x i32>, <2 x i32>)
+
 ; Unary int plus constant scalar operand
 declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1)
 
@@ -176,6 +180,38 @@ define <2 x float> @scalarize_ldexp_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
 ;
   %powi = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> %y)
   ret <2 x float> %powi
+}
+
+define <2 x i32> @scalarize_sshl_sat_v2i32(<2 x i32> %x, <2 x i32> %y) #0 {
+; CHECK-LABEL: @scalarize_sshl_sat_v2i32(
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x i32> [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[SSHLSAT_I0:%.*]] = call i32 @llvm.sshl.sat.i32(i32 [[X_I0]], i32 [[Y_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x i32> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x i32> [[Y]], i64 1
+; CHECK-NEXT:    [[SSHLSAT_I1:%.*]] = call i32 @llvm.sshl.sat.i32(i32 [[X_I1]], i32 [[Y_I1]])
+; CHECK-NEXT:    [[SSHLSAT_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[SSHLSAT_I0]], i64 0
+; CHECK-NEXT:    [[SSHLSAT:%.*]] = insertelement <2 x i32> [[SSHLSAT_UPTO0]], i32 [[SSHLSAT_I1]], i64 1
+; CHECK-NEXT:    ret <2 x i32> [[SSHLSAT]]
+;
+  %sshlsat = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
+  ret <2 x i32> %sshlsat
+}
+
+define <2 x i32> @scalarize_ushl_sat_v2i32(<2 x i32> %x, <2 x i32> %y) #0 {
+; CHECK-LABEL: @scalarize_ushl_sat_v2i32(
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x i32> [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[USHLSAT_I0:%.*]] = call i32 @llvm.ushl.sat.i32(i32 [[X_I0]], i32 [[Y_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x i32> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x i32> [[Y]], i64 1
+; CHECK-NEXT:    [[USHLSAT_I1:%.*]] = call i32 @llvm.ushl.sat.i32(i32 [[X_I1]], i32 [[Y_I1]])
+; CHECK-NEXT:    [[USHLSAT_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[USHLSAT_I0]], i64 0
+; CHECK-NEXT:    [[USHLSAT:%.*]] = insertelement <2 x i32> [[USHLSAT_UPTO0]], i32 [[USHLSAT_I1]], i64 1
+; CHECK-NEXT:    ret <2 x i32> [[USHLSAT]]
+;
+  %ushlsat = call <2 x i32> @llvm.ushl.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
+  ret <2 x i32> %ushlsat
 }
 
 define <2 x i32> @scalarize_smul_fix_sat_v2i32(<2 x i32> %x) #0 {

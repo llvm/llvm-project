@@ -33,7 +33,7 @@ module {
 // CHECK:  }
 
   cir.func @scope_with_return() -> !u32i {
-    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
+    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!u32i>
     cir.scope {
       %2 = cir.const #cir.int<0> : !u32i
       cir.store %2, %0 : !u32i, !cir.ptr<!u32i>
@@ -45,7 +45,7 @@ module {
   }
 
 // CHECK:  cir.func{{.*}} @scope_with_return() -> !u32i {
-// CHECK:    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
+// CHECK:    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!u32i>
 // CHECK:    cir.br ^bb1
 // CHECK:  ^bb1:  // pred: ^bb0
 // CHECK:    %1 = cir.const #cir.int<0> : !u32i

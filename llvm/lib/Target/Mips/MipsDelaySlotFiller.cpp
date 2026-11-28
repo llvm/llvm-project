@@ -660,11 +660,17 @@ static bool delayExposesHazard(
   if (!BranchInfo.hasBranchInstr() || BranchInfo.isIndirectBranch())
     return true;
 
+  // Look at the first real instruction of the target. Skipping debug
+  // instructions keeps the decision the same with and without -g.
   const MachineBasicBlock *TargetMBB = BranchInfo.getBranchTarget();
-  if (!TargetMBB || TargetMBB->empty())
+  if (!TargetMBB)
+    return true;
+  MachineBasicBlock::const_instr_iterator TargetMI =
+      TargetMBB->getFirstNonDebugInstr().getInstrIterator();
+  if (TargetMI == TargetMBB->instr_end())
     return true;
 
-  bool Exposed = !IsSafe(TargetMBB->instr_front(), Candidate);
+  bool Exposed = !IsSafe(*TargetMI, Candidate);
 
   // A conditional branch also falls through, so the instruction after the
   // delay slot can be the one that reads the result.
@@ -1114,7 +1120,10 @@ static bool runDelaySlotFillerOnFunction(
 
     Changed |= runOnMachineBasicBlock(
         *curMBB,
-        (MBB != MF.end() && !(*MBB).empty()) ? &(*MBB).instr_front() : nullptr,
+        // Skip debug instructions so -g does not change the decision.
+        (MBB != MF.end() && MBB->getFirstNonDebugInstr() != MBB->end())
+            ? &*MBB->getFirstNonDebugInstr()
+            : nullptr,
         GetMBPI);
   }
 

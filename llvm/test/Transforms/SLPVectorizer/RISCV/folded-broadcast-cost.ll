@@ -22,6 +22,26 @@
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '8'
 ; YAML-NEXT: ...
+; YAML-NEXT: --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
+; YAML-NEXT: Name:            StoresVectorized
+; YAML-NEXT: Function:        add_two_splat_operands
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '-20'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '6'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
+; YAML-NEXT: Name:            StoresVectorized
+; YAML-NEXT: Function:        fma_two_splat_multiplicands
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '-5'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '5'
+; YAML-NEXT: ...
 define void @fmul_splat(i32 %s, ptr %p, ptr %q) {
 ; CHECK-LABEL: define void @fmul_splat(
 ; CHECK-SAME: i32 [[S:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -91,5 +111,80 @@ define void @fmul_splat_nested(i32 %s, ptr %p, ptr %q) {
   store i32 %m2, ptr %q2
   %q3 = getelementptr i32, ptr %q, i64 3
   store i32 %m3, ptr %q3
+  ret void
+}
+
+; Only one operand of the add can be taken as a scalar (.vx), so the splats
+; of %s and %t are not both folded.
+define void @add_two_splat_operands(i32 %s, i32 %t, ptr %p, ptr %q) {
+; CHECK-LABEL: define void @add_two_splat_operands(
+; CHECK-SAME: i32 [[S:%.*]], i32 [[T:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = load i32, ptr %p
+  %p1 = getelementptr inbounds nuw i32, ptr %p, i64 1
+  %x1 = load i32, ptr %p1
+  %p2 = getelementptr inbounds nuw i32, ptr %p, i64 2
+  %x2 = load i32, ptr %p2
+  %p3 = getelementptr inbounds nuw i32, ptr %p, i64 3
+  %x3 = load i32, ptr %p3
+  %st0 = add i32 %s, %t
+  %st1 = add i32 %s, %t
+  %st2 = add i32 %s, %t
+  %st3 = add i32 %s, %t
+  %m0 = mul i32 %st0, %x0
+  %m1 = mul i32 %st1, %x1
+  %m2 = mul i32 %st2, %x2
+  %m3 = mul i32 %st3, %x3
+  store i32 %m0, ptr %q
+  %q1 = getelementptr i32, ptr %q, i64 1
+  store i32 %m1, ptr %q1
+  %q2 = getelementptr i32, ptr %q, i64 2
+  store i32 %m2, ptr %q2
+  %q3 = getelementptr i32, ptr %q, i64 3
+  store i32 %m3, ptr %q3
+  ret void
+}
+
+; Only one multiplicand of the fma can be taken as a scalar (.vf), so the
+; splats of %s and %t are not both folded.
+define void @fma_two_splat_multiplicands(float %s, float %t, ptr %p, ptr %q) {
+; CHECK-LABEL: define void @fma_two_splat_multiplicands(
+; CHECK-SAME: float [[S:%.*]], float [[T:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[S]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[T]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP3]], <4 x float> [[TMP5]], <4 x float> [[TMP1]])
+; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = load float, ptr %p
+  %p1 = getelementptr inbounds nuw float, ptr %p, i64 1
+  %x1 = load float, ptr %p1
+  %p2 = getelementptr inbounds nuw float, ptr %p, i64 2
+  %x2 = load float, ptr %p2
+  %p3 = getelementptr inbounds nuw float, ptr %p, i64 3
+  %x3 = load float, ptr %p3
+  %m0 = call float @llvm.fma.f32(float %s, float %t, float %x0)
+  %m1 = call float @llvm.fma.f32(float %s, float %t, float %x1)
+  %m2 = call float @llvm.fma.f32(float %s, float %t, float %x2)
+  %m3 = call float @llvm.fma.f32(float %s, float %t, float %x3)
+  store float %m0, ptr %q
+  %q1 = getelementptr float, ptr %q, i64 1
+  store float %m1, ptr %q1
+  %q2 = getelementptr float, ptr %q, i64 2
+  store float %m2, ptr %q2
+  %q3 = getelementptr float, ptr %q, i64 3
+  store float %m3, ptr %q3
   ret void
 }

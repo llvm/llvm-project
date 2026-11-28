@@ -1101,10 +1101,10 @@ define amdgpu_kernel void @test_writelane_m0_sreg_i32(ptr addrspace(1) %out, i32
 ; GFX1010-SDAG-NEXT:    s_clause 0x1
 ; GFX1010-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX1010-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-SDAG-NEXT:    ;;#ASMSTART
 ; GFX1010-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX1010-SDAG-NEXT:    ;;#ASMEND
+; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    s_load_dword s3, s[0:1], 0x0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1118,10 +1118,10 @@ define amdgpu_kernel void @test_writelane_m0_sreg_i32(ptr addrspace(1) %out, i32
 ; GFX1100-SDAG-NEXT:    s_clause 0x1
 ; GFX1100-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1100-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-SDAG-NEXT:    ;;#ASMSTART
 ; GFX1100-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX1100-SDAG-NEXT:    ;;#ASMEND
+; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    s_load_b32 s3, s[0:1], 0x0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)

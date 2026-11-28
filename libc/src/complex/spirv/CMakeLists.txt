@@ -1,0 +1,26 @@
+add_entrypoint_object(
+  cabsf
+  SRCS
+    cabsf.cpp
+  HDRS
+    ../cabsf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.hypot
+)
+
+add_entrypoint_object(
+  cargf
+  SRCS
+    cargf.cpp
+  HDRS
+    ../cargf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.math.atan2f
+)

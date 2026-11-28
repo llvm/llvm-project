@@ -270,6 +270,12 @@ def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
+defm AsyncBarrierArriveReplayBug : AMDGPUSubtargetFeature<
+  "async-barrier-arrive-replay-bug",
+  "Enable the async barrier arrival workaround",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/0, [], InlineIgnore
+>;
+
 defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -1711,6 +1717,12 @@ defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
   /*GenPredicate=*/0
 >;
 
+defm DsAtomicAsyncBarrierArriveB64PipeBug : AMDGPUSubtargetFeature<"ds-atomic-async-barrier-arrive-b64-pipe-bug",
+  "DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 must not be in a clause and needs "
+  "s_wait_alu depctr_vm_vsrc(0) before and after it",
+  /*GenPredicate=*/0
+>;
+
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
   "Has v_wave_match_b32 instruction"
 >;
@@ -2509,6 +2521,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
+   FeatureAsyncBarrierArriveReplayBug,
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
@@ -2630,6 +2643,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureMcastFullMaskBug,
@@ -2671,6 +2685,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
    FeatureMcastFullMaskBug,
@@ -2716,6 +2731,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2744,6 +2760,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureUnusableSAddPCI64,
    FeatureMcastFullMaskBug,
    FeatureTransF16ToPartialVGPRWriteHazard,

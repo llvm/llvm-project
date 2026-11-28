@@ -19,18 +19,6 @@ using namespace mlir::pdl;
 #include "mlir/Dialect/PDL/IR/PDLOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// PDLDialect
-//===----------------------------------------------------------------------===//
-
-void PDLDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
-      >();
-  registerTypes();
-}
-
-//===----------------------------------------------------------------------===//
 // PDL Operations
 //===----------------------------------------------------------------------===//
 

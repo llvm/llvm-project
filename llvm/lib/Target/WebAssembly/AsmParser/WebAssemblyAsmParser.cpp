@@ -291,7 +291,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   std::vector<Nested> NestingStack;
 
   MCSymbolWasm *DefaultFunctionTable = nullptr;
-  MCSymbol *LastFunctionLabel = nullptr;
 
   bool Is64;
 
@@ -1106,7 +1105,6 @@ public:
           push(Function);
         }
         CurrentState = FunctionStart;
-        LastFunctionLabel = WasmSym;
       }
       auto *Signature = Ctx.createWasmSignature();
       if (parseSignature(Signature))
@@ -1373,7 +1371,6 @@ public:
       //   ...  . Not this line, which can contain any instruction
       ensureEmptyNestingStack(IDLoc);
       CurrentState = FunctionLabel;
-      LastFunctionLabel = Symbol;
       push(Function);
     }
   }

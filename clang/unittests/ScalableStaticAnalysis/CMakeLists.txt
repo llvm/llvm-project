@@ -64,3 +64,12 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Support
   TargetParser
   )
+
+add_custom_target(check-clang-scalablestaticanalysis-unit
+  COMMAND ClangScalableAnalysisTests
+  DEPENDS ClangScalableAnalysisTests
+  COMMENT "Running the Scalable Static Analysis Framework unit tests"
+  USES_TERMINAL
+  )
+set_target_properties(check-clang-scalablestaticanalysis-unit
+  PROPERTIES FOLDER "Clang tests/Suites")

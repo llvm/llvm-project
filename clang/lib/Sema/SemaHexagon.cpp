@@ -14,6 +14,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/STLExtras.h"
 #include <cstdint>
@@ -22,6 +24,15 @@
 namespace clang {
 
 SemaHexagon::SemaHexagon(Sema &S) : SemaBase(S) {}
+
+void SemaHexagon::handleHLXVectorStackLimitAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t Limit;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Limit, UINT_MAX,
+                                   /*StrictlyUnsigned=*/true))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HexagonHLXVectorStackLimitAttr(getASTContext(), AL, Limit));
+}
 
 bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID,
                                               CallExpr *TheCall) {

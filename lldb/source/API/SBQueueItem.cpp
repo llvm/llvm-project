@@ -28,6 +28,19 @@ SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
   LLDB_INSTRUMENT_VA(this, queue_item_sp);
 }
 
+SBQueueItem::SBQueueItem(const SBQueueItem &rhs)
+    : m_queue_item_sp(rhs.m_queue_item_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBQueueItem &SBQueueItem::operator=(const SBQueueItem &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_queue_item_sp = rhs.m_queue_item_sp;
+  return *this;
+}
+
 // Destructor
 SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 

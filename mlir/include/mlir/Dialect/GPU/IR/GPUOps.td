@@ -2246,7 +2246,7 @@ def MMAElementWiseAttr : EnumAttr<GPU_Dialect, MMAElementWise,
 
 def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
     [Pure,
-     AllTypesMatch<["args"]>]>{
+     VariadicAllTypesMatch<"args">]>{
 
   let summary = "GPU warp elementwise operation on a matrix";
 

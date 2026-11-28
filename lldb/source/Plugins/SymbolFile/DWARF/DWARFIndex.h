@@ -96,9 +96,11 @@ public:
 
   virtual void Dump(Stream &s) = 0;
 
-  StatsDuration::Duration GetIndexTime() { return m_index_time; }
+  /// Time spent creating this index and any index it falls back to,
+  /// including loading them from or saving them to the index cache.
+  virtual StatsDuration::Duration GetIndexTime() { return m_index_time; }
 
-  void ResetStatistics() { m_index_time.reset(); }
+  virtual void ResetStatistics() { m_index_time.reset(); }
 
 protected:
   Module &m_module;

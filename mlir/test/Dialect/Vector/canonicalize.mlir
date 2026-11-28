@@ -1965,6 +1965,44 @@ func.func @negative_transfer_folding_masked_write(
 
 // -----
 
+// The write is masked by an enclosing vector.mask: the masked-off lanes keep
+// the value of %t1, so the result is not %t0.
+
+// CHECK-LABEL: func @negative_transfer_folding_write_masked
+//       CHECK:   vector.transfer_read
+//       CHECK:   vector.mask {{.*}} { vector.transfer_write
+func.func @negative_transfer_folding_write_masked(
+    %t0: tensor<4xf32>, %t1: tensor<4xf32>, %mask: vector<4xi1>) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0], %pad : tensor<4xf32>, vector<4xf32>
+  %r = vector.mask %mask {
+    vector.transfer_write %v, %t1[%c0] : vector<4xf32>, tensor<4xf32>
+  } : vector<4xi1> -> tensor<4xf32>
+  return %r : tensor<4xf32>
+}
+
+// -----
+
+// The read is masked by an enclosing vector.mask: the masked-off lanes hold
+// the padding value, so the result is not %t0.
+
+// CHECK-LABEL: func @negative_transfer_folding_read_masked
+//       CHECK:   vector.mask {{.*}} { vector.transfer_read
+//       CHECK:   vector.transfer_write
+func.func @negative_transfer_folding_read_masked(
+    %t0: tensor<4xf32>, %t1: tensor<4xf32>, %mask: vector<4xi1>) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask {
+    vector.transfer_read %t0[%c0], %pad : tensor<4xf32>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  %r = vector.transfer_write %v, %t1[%c0] : vector<4xf32>, tensor<4xf32>
+  return %r : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @negative_transfer_folding_masked_read_and_write
 //  CHECK-SAME:   %[[MASK:[0-9a-zA-Z_]+]]: vector<2x3x4xi1>
 //       CHECK:   %[[V:.*]] = vector.transfer_read {{.*}}, {{.*}}, %[[MASK]]

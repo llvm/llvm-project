@@ -1004,7 +1004,8 @@ SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
   // AVR has no link register: the return address is pushed onto the stack by
   // the call instruction. The stack pointer always points at the first free
   // byte, so the pushed return address ends up right below the local area (the
-  // incoming stack arguments), which starts at SP_entry + 3.
+  // incoming stack arguments), which starts at SP_entry + 3, or SP_entry + 4
+  // with a 22-bit PC.
   //
   // The return address is pushed most significant byte first, hence it is
   // stored big-endian: [SP_entry + 1] is the high byte and [SP_entry + 2] the
@@ -1033,14 +1034,14 @@ SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
   // devices with a 22-bit PC (the ones providing EIJMP/EICALL), two elsewhere.
   // Only the two low bytes of the return address are returned, so on the former
   // they are found one byte higher up.
-  int PCWidth = Subtarget.hasEIJMPCALL() ? 3 : 2;
-
-  // A fixed object at offset N is located at SP_entry + N + 3, so the two low
-  // bytes of the return address are the fixed object at offset PCWidth - 4.
+  //
+  // A fixed object at offset N is located at SP_entry + N + 3, or at
+  // SP_entry + N + 4 with a 22-bit PC (see AVRFrameLowering), so the two low
+  // bytes of the return address are the fixed object at offset -2 on both.
   // Note that a frame index can only be referenced through Y, so taking the
   // return address forces the function to have a frame pointer (see
   // AVRFrameLowering::hasFPImpl).
-  int FI = MFI.CreateFixedObject(2, PCWidth - 4, true);
+  int FI = MFI.CreateFixedObject(2, -2, true);
   SDValue Addr = DAG.getFrameIndex(FI, PtrVT);
 
   // Load the two bytes separately and put them in the right halves of the
@@ -1245,6 +1246,25 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 bool AVRTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   return true;
+}
+
+void AVRTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                      SDNode *Node) const {
+  switch (MI.getOpcode()) {
+  // They may be expanded into a sequence that computes the new SP in R31R30
+  // (see AVRFrameLowering::eliminateCallFramePseudoInstr). If this
+  // happens, we need to add R31R30 into this instruction's defs, so that the
+  // register allocator doesn't keep any value in it across this instruction.
+  case AVR::ADJCALLSTACKDOWN:
+  case AVR::ADJCALLSTACKUP:
+    if (MI.getOperand(0).getImm() != 0)
+      MI.addOperand(MachineOperand::CreateReg(AVR::R31R30, /*isDef=*/true,
+                                              /*isImp=*/true, /*isKill=*/false,
+                                              /*isDead=*/true));
+    break;
+  default:
+    assert(false && "Unexpected instruction with a post-isel hook");
+  }
 }
 
 //===----------------------------------------------------------------------===//

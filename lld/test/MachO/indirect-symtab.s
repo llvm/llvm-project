@@ -22,20 +22,20 @@
 
 # CHECK:      Indirect symbols for (__TEXT,__stubs) 2 entries
 # CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_fn
 # CHECK-NEXT: _foo_fn
+# CHECK-NEXT: _bar_fn
 # CHECK-NEXT: Indirect symbols for (__DATA_CONST,__got) 6 entries
 # CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_tlv
-# CHECK-NEXT: _foo_tlv
-# CHECK-NEXT: LOCAL
-# CHECK-NEXT: _bar
 # CHECK-NEXT: _foo
+# CHECK-NEXT: _bar
+# CHECK-NEXT: LOCAL
+# CHECK-NEXT: _foo_tlv
+# CHECK-NEXT: _bar_tlv
 # CHECK-NEXT: _stub_binder
 # CHECK-NEXT: Indirect symbols for (__DATA,__la_symbol_ptr) 2 entries
 # CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_fn
 # CHECK-NEXT: _foo_fn
+# CHECK-NEXT: _bar_fn
 # DYSYMTAB: nindirectsyms 10
 
 #--- libfoo.s

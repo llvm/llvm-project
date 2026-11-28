@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstruction.h"
+#include "Utils.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"
@@ -27,6 +28,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 
 #include <memory>
@@ -126,7 +128,9 @@ const char *SBInstruction::GetMnemonic(SBTarget target) {
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return ConstString(inst_sp->GetMnemonic(&exe_ctx)).GetCString();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(inst_sp->GetMnemonic(&exe_ctx));
 }
 
 const char *SBInstruction::GetOperands(SBTarget target) {
@@ -147,7 +151,9 @@ const char *SBInstruction::GetOperands(SBTarget target) {
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return ConstString(inst_sp->GetOperands(&exe_ctx)).GetCString();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(inst_sp->GetOperands(&exe_ctx));
 }
 
 const char *SBInstruction::GetComment(SBTarget target) {
@@ -168,7 +174,9 @@ const char *SBInstruction::GetComment(SBTarget target) {
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return ConstString(inst_sp->GetComment(&exe_ctx)).GetCString();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(inst_sp->GetComment(&exe_ctx));
 }
 
 lldb::InstructionControlFlowKind

@@ -30,7 +30,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }

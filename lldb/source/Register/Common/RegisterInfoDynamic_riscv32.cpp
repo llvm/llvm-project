@@ -9,6 +9,7 @@
 #include "RegisterInfoDynamic_riscv32.h"
 
 #include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"

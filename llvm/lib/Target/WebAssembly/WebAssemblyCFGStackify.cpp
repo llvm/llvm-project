@@ -27,7 +27,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -50,6 +49,7 @@ STATISTIC(NumCatchUnwindMismatches, "Number of catch unwind mismatches found");
 
 namespace {
 class WebAssemblyCFGStackifyImpl {
+  const WebAssemblyOptions &CLOpts;
   MachineDominatorTree &MDT;
   MachineLoopInfo &MLI;
   WebAssemblyExceptionInfo &WEI;
@@ -165,9 +165,10 @@ class WebAssemblyCFGStackifyImpl {
   void unregisterScope(MachineInstr *Begin);
 
 public:
-  WebAssemblyCFGStackifyImpl(MachineDominatorTree &MDT, MachineLoopInfo &MLI,
+  WebAssemblyCFGStackifyImpl(const WebAssemblyOptions &CLOpts,
+                             MachineDominatorTree &MDT, MachineLoopInfo &MLI,
                              WebAssemblyExceptionInfo &WEI)
-      : MDT(MDT), MLI(MLI), WEI(WEI) {}
+      : CLOpts(CLOpts), MDT(MDT), MLI(MLI), WEI(WEI) {}
 
   bool runOnMachineFunction(MachineFunction &MF);
 };
@@ -1842,8 +1843,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
         EHPadStack.pop_back();
       else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
-      else if (WebAssembly::WasmUseLegacyEH &&
-               WebAssembly::isCatch(MI.getOpcode()))
+      else if (CLOpts.use_legacy_eh && WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
       else if (MI.getOpcode() == WebAssembly::END_TRY_TABLE)
         // In case of the legacy EH, 'catch' instruction is always an EH pad for
@@ -1983,10 +1983,9 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
         EHPadStack.pop_back();
       else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
-      else if (WebAssembly::WasmUseLegacyEH &&
-               WebAssembly::isCatch(MI.getOpcode()))
+      else if (CLOpts.use_legacy_eh && WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
-      else if (!WebAssembly::WasmUseLegacyEH &&
+      else if (!CLOpts.use_legacy_eh &&
                MI.getOpcode() == WebAssembly::END_TRY_TABLE)
         EHPadStack.push_back(TryToEHPad[EndToBegin[&MI]]);
     }
@@ -2003,7 +2002,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
 
   // When end_loop is before end_try_table within the same BB in unwind
   // destinations, we should split the end_loop into another BB.
-  if (!WebAssembly::WasmUseLegacyEH)
+  if (!CLOpts.use_legacy_eh)
     for (auto &[UnwindDest, _] : UnwindDestToTryRanges) {
       auto It = EHPadToTry.find(UnwindDest);
       // If UnwindDest is the fake caller block, it will not be in EHPadToTry
@@ -2044,7 +2043,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
           MBB->removeSuccessor(EHPad);
       }
 
-      if (WebAssembly::WasmUseLegacyEH)
+      if (CLOpts.use_legacy_eh)
         addNestedTryDelegate(RangeBegin, RangeEnd, UnwindDest);
       else
         addNestedTryTable(RangeBegin, RangeEnd, UnwindDest);
@@ -2261,7 +2260,7 @@ bool WebAssemblyCFGStackifyImpl::fixCatchUnwindMismatches(MachineFunction &MF) {
   for (auto &[EHPad, UnwindDest] : EHPadToUnwindDest) {
     MachineInstr *Try = EHPadToTry[EHPad];
     MachineInstr *EndTry = BeginToEnd[Try];
-    if (WebAssembly::WasmUseLegacyEH) {
+    if (CLOpts.use_legacy_eh) {
       addNestedTryDelegate(Try, EndTry, UnwindDest);
       NewEndTryBBs.insert(EndTry->getParent());
     } else {
@@ -2269,7 +2268,7 @@ bool WebAssemblyCFGStackifyImpl::fixCatchUnwindMismatches(MachineFunction &MF) {
     }
   }
 
-  if (!WebAssembly::WasmUseLegacyEH)
+  if (!CLOpts.use_legacy_eh)
     return true;
 
   // Adding a try-delegate wrapping an existing try-catch-end can make existing
@@ -2499,7 +2498,7 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
     if (MBB.isEHPad()) {
       // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
       if (UsesWasmEH) {
-        if (WebAssembly::WasmUseLegacyEH)
+        if (CLOpts.use_legacy_eh)
           placeTryMarker(MBB);
         else
           placeTryTableMarker(MBB);
@@ -2684,7 +2683,7 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
   placeMarkers(MF);
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
-  if (UsesWasmEH && WebAssembly::WasmUseLegacyEH)
+  if (UsesWasmEH && CLOpts.use_legacy_eh)
     removeUnnecessaryInstrs(MF);
 
   // Convert MBB operands in terminators to relative depth immediates.
@@ -2710,7 +2709,8 @@ bool WebAssemblyCFGStackifyLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   WebAssemblyExceptionInfo &WEI =
       getAnalysis<WebAssemblyExceptionInfoWrapperPass>().getWEI();
-  WebAssemblyCFGStackifyImpl Impl(MDT, MLI, WEI);
+  WebAssemblyCFGStackifyImpl Impl(
+      MF.getSubtarget<WebAssemblySubtarget>().getCLOpts(), MDT, MLI, WEI);
   return Impl.runOnMachineFunction(MF);
 }
 
@@ -2721,7 +2721,8 @@ WebAssemblyCFGStackifyPass::run(MachineFunction &MF,
   MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   WebAssemblyExceptionInfo &WEI =
       MFAM.getResult<WebAssemblyExceptionAnalysis>(MF);
-  WebAssemblyCFGStackifyImpl Impl(MDT, MLI, WEI);
+  WebAssemblyCFGStackifyImpl Impl(
+      MF.getSubtarget<WebAssemblySubtarget>().getCLOpts(), MDT, MLI, WEI);
   return Impl.runOnMachineFunction(MF)
              ? getMachineFunctionPassPreservedAnalyses()
              : PreservedAnalyses::all();

@@ -499,6 +499,10 @@ The current vendor extensions supported are:
 
 : LLVM implements [version 1.0.0 of the Matrix Multiply Accumulate Instruction Extension Specification](https://sifive.cdn.prismic.io/sifive/c391d53e-ffcf-4091-82f6-c37bf3e883ed_xsfvfwmaccqqq-spec.pdf) by SiFive. All instructions are prefixed with `sf.` as described in the specification linked above.
 
+`Xsfvfofp4min`
+
+: LLVM implements the [0.1 draft specification](https://www.sifive.com/document-file/ofp4-conversion-instruction-xsfvfofp4min-extension) by SiFive.
+
 `XCVbitmanip`
 
 : LLVM implements [version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification](https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst) by OpenHW Group. All instructions are prefixed with `cv.` as described in the specification.

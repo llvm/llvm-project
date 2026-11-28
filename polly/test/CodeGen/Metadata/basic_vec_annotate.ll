@@ -1,7 +1,7 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-annotate-metadata-vectorize < %s | FileCheck %s
 
-; Basic verification of vectorize metadata getting added when "-polly-vectorize-metadata" is
-; passed.
+; Basic verification that vectorize metadata is added when
+; "-polly-annotate-metadata-vectorize" is passed.
 
 ; void add(int *A, int *B, int *C,int n) {
 ;    for(int i=0; i<n; i++)

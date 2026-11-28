@@ -1323,7 +1323,7 @@ func.func @test_rescale(%arg0: tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439
    %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
    %input_zp = "tosa.const"() <{values = dense<127> : tensor<1xi8>}> : () -> tensor<1xi8>
    %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi8>}> : () -> tensor<1xi8>
-   %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439347028732:127>>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<13x21x3x!quant.uniform<i8:f32, 0.015655439347028732:-1>>
+   %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439347028732:127>>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<13x21x3x!quant.uniform<i8:f32, 0.015655439347028732:-1>>
     return %0 : tensor<13x21x3x!quant.uniform<i8:f32, 0.015655439347028732:-1>>
 }
 
@@ -2264,4 +2264,31 @@ func.func @test_legacy_const_mxint8() -> tensor<2x!tosa.mxint8> {
 func.func @test_legacy_block_scaled_const_splat_mxint8() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 1.0}>> : 0 : i8>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_i8_attributes
+func.func @test_unsigned_i8_attributes(%arg0: tensor<1xui8>, %arg1: tensor<1xi8>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %unsigned_zp: tensor<1xui8>, %signed_zp: tensor<1xi8>) -> (tensor<1xf32>, tensor<1xi8>, tensor<1xui8>) {
+  %0 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xui8>) -> tensor<1xf32>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %unsigned_zp, %signed_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<1xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xui8>, tensor<1xi8>) -> tensor<1xi8>
+  %2 = tosa.rescale %arg1, %multiplier, %shift, %signed_zp, %unsigned_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(true) : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xui8>) -> tensor<1xui8>
+  return %0, %1, %2 : tensor<1xf32>, tensor<1xi8>, tensor<1xui8>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_i16_attributes
+func.func @test_unsigned_i16_attributes(%arg0: tensor<1xui16>, %arg1: tensor<1xi8>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %unsigned_zp: tensor<1xui16>, %signed_zp: tensor<1xi8>) -> (tensor<1xf32>, tensor<1xi8>, tensor<1xui16>) {
+  %0 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xui16>) -> tensor<1xf32>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %unsigned_zp, %signed_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<1xui16>, tensor<1xi16>, tensor<1xi8>, tensor<1xui16>, tensor<1xi8>) -> tensor<1xi8>
+  %2 = tosa.rescale %arg1, %multiplier, %shift, %signed_zp, %unsigned_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(true) : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xui16>) -> tensor<1xui16>
+  return %0, %1, %2 : tensor<1xf32>, tensor<1xi8>, tensor<1xui16>
+}
+
+// -----
+
+func.func @test_cast_unsigned_bool(%arg0: tensor<1xui1>) -> tensor<1xf32> {
+  %0 = tosa.cast %arg0 : (tensor<1xui1>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
 }

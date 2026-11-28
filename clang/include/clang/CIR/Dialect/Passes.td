@@ -246,6 +246,7 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
       - `"x86_64"`: System V.
       - `"amdgpu"`: AMDGPU.
       - `"spirv"`: SPIR-V (`spirv`, `spirv32`, `spirv64` triples).
+      - `"aarch64"`: AAPCS64 and its Darwin variant.
       - `"test"`: the MLIR test target in `mlir/lib/ABI/Targets/Test/`.
       Other targets will be added as the LLVM ABI library ships them.
     - `classification-attr=<name>` reads a `DictionaryAttr` named `<name>`
@@ -268,7 +269,9 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
                         "x86_64 System V"),
              clEnumValN(cir::CallConvTarget::AMDGPU, "amdgpu",
                         "AMDGPU"),
-             clEnumValN(cir::CallConvTarget::SPIRV, "spirv", "SPIR-V")
+             clEnumValN(cir::CallConvTarget::SPIRV, "spirv", "SPIR-V"),
+             clEnumValN(cir::CallConvTarget::AArch64, "aarch64",
+                        "AArch64 AAPCS64")
            )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",

@@ -6,7 +6,7 @@
 ! depending on structure constructor temporary cleanup.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t
+! RUN: %t
 
 program derived_array_destruction
   implicit none

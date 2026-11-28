@@ -20,7 +20,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
@@ -341,8 +340,7 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       // passing into the function.
       if (Call->isDataOperand(&U)) {
         // Detect calls to free.
-        if (Call->isArgOperand(&U) &&
-            getFreedOperand(Call, &GetTLI(*Call->getFunction())) == U) {
+        if (Call->isArgOperand(&U) && getFreedOperand(Call) == U) {
           if (Writers)
             Writers->insert(Call->getParent()->getParent());
         } else {
@@ -959,14 +957,12 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
   return Known;
 }
 
-GlobalsAAResult::GlobalsAAResult(
-    const AnalysisOptions &Opts, const DataLayout &DL,
-    std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : Opts(Opts), DL(DL), GetTLI(std::move(GetTLI)) {}
+GlobalsAAResult::GlobalsAAResult(const AnalysisOptions &Opts,
+                                 const DataLayout &DL)
+    : Opts(Opts), DL(DL) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
     : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL),
-      GetTLI(std::move(Arg.GetTLI)),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -981,10 +977,9 @@ GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
 
 GlobalsAAResult::~GlobalsAAResult() = default;
 
-/*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
-    Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
-    CallGraph &CG) {
-  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout(), GetTLI);
+/*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(Module &M,
+                                                          CallGraph &CG) {
+  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout());
 
   // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
   Result.CollectSCCMembership(CG);
@@ -1001,13 +996,7 @@ GlobalsAAResult::~GlobalsAAResult() = default;
 AnalysisKey GlobalsAA::Key;
 
 GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-  return GlobalsAAResult::analyzeModule(M, GetTLI,
-                                        AM.getResult<CallGraphAnalysis>(M));
+  return GlobalsAAResult::analyzeModule(M, AM.getResult<CallGraphAnalysis>(M));
 }
 
 PreservedAnalyses RecomputeGlobalsAAPass::run(Module &M,
@@ -1032,7 +1021,6 @@ char GlobalsAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GlobalsAAWrapperPass, "globals-aa",
                       "Globals Alias Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(GlobalsAAWrapperPass, "globals-aa",
                     "Globals Alias Analysis", false, true)
 
@@ -1043,11 +1031,8 @@ ModulePass *llvm::createGlobalsAAWrapperPass() {
 GlobalsAAWrapperPass::GlobalsAAWrapperPass() : ModulePass(ID) {}
 
 bool GlobalsAAWrapperPass::runOnModule(Module &M) {
-  auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
   Result.reset(new GlobalsAAResult(GlobalsAAResult::analyzeModule(
-      M, GetTLI, getAnalysis<CallGraphWrapperPass>().getCallGraph())));
+      M, getAnalysis<CallGraphWrapperPass>().getCallGraph())));
   return false;
 }
 
@@ -1059,5 +1044,4 @@ bool GlobalsAAWrapperPass::doFinalization(Module &M) {
 void GlobalsAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<CallGraphWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

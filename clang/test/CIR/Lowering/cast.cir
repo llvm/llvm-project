@@ -15,7 +15,7 @@ module {
     %0 = cir.alloca "x1" align(4) init : !cir.ptr<!u32i>
     %1 = cir.alloca "x2" align(4) init : !cir.ptr<!s32i>
     %20 = cir.alloca "x4" align(2) init : !cir.ptr<!s16i>
-    %2 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    %2 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
     %3 = cir.alloca "a" align(1) init : !cir.ptr<!s8i>
     %4 = cir.alloca "b" align(2) init : !cir.ptr<!s16i>
     %5 = cir.alloca "c" align(8) init : !cir.ptr<!s64i>

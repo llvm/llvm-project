@@ -54,10 +54,11 @@ MCAsmInfoCOFF::MCAsmInfoCOFF(const MCTargetOptions &Options)
   // but in order not to create null typed symbols, we actually need to
   // make them global symbols as well.
   HasCOFFComdatConstants = true;
-}
 
-bool MCAsmInfoCOFF::useCodeAlign(const MCSection &Sec) const {
-  return Sec.isText();
+  // FIXME: Does .section .bss/.data/.text work everywhere??
+  SectionDirectives.insert(".text");
+  SectionDirectives.insert(".data");
+  SectionDirectives.insert(".bss");
 }
 
 void MCAsmInfoMicrosoft::anchor() {}
@@ -78,17 +79,6 @@ MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
   HasCOFFComdatConstants = false;
 }
 
-bool MCSectionCOFF::shouldOmitSectionDirective(StringRef Name) const {
-  if (COMDATSymbol || isUnique())
-    return false;
-
-  // FIXME: Does .section .bss/.data/.text work everywhere??
-  if (Name == ".text" || Name == ".data" || Name == ".bss")
-    return true;
-
-  return false;
-}
-
 void MCSectionCOFF::setSelection(int Selection) const {
   assert(Selection != 0 && "invalid COMDAT selection type");
   this->Selection = Selection;
@@ -100,7 +90,8 @@ void MCAsmInfoCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
                                          raw_ostream &OS) const {
   auto &Sec = static_cast<const MCSectionCOFF &>(Section);
   // standard sections don't require the '.section'
-  if (Sec.shouldOmitSectionDirective(Sec.getName())) {
+  if (!Sec.getCOMDATSymbol() && !Sec.isUnique() &&
+      SectionDirectives.contains(Sec.getName())) {
     OS << '\t' << Sec.getName() << '\n';
     return;
   }

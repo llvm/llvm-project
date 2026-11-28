@@ -288,6 +288,16 @@ LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
   return UnwindPlanSP();
 }
 
+CFAComparison LanguageRuntime::CompareCFAs(Process &process, const StackID &lhs,
+                                           const StackID &rhs) {
+  for (LanguageRuntime *runtime : process.GetLanguageRuntimes()) {
+    CFAComparison comparison = runtime->CompareCFAs(lhs, rhs);
+    if (comparison != CFAComparison::NoOpinion)
+      return comparison;
+  }
+  return CFAComparison::NoOpinion;
+}
+
 StructuredData::ObjectSP
 LanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
   return {};

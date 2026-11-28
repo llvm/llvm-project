@@ -175,6 +175,10 @@ public:
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
+///
+/// Users must call removeInstruction() and insertPotentialCapture() on IR
+/// changes. The CFG must not gain paths between existing blocks and blocks
+/// must not be renumbered.
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
@@ -196,13 +200,18 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// account for longjmp re-entry paths not visible to the forward CFG.
   std::optional<bool> CallsReturnsTwiceFn;
 
+  /// Cached reachability between block numbers.
+  DenseMap<std::pair<unsigned, unsigned>, bool> IsReachableCache;
+
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
+
   /// Whether the function contains a call that may return twice (e.g., setjmp).
   bool callsReturnsTwiceFn();
 
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
-                         const CycleInfo *CI = nullptr)
-      : DT(DT), LI(LI), CI(CI) {}
+                         const CycleInfo *CI = nullptr);
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
                                       bool OrAt, bool ReturnCaptures) override;

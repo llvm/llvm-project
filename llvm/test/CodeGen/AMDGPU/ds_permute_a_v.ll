@@ -35,10 +35,10 @@ define void @ds_bpermute_b32_v_a__use_a(ptr addrspace(3) %lds) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v0
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a0
 ; CHECK-NEXT:    ds_bpermute_b32 v0, v0, v1

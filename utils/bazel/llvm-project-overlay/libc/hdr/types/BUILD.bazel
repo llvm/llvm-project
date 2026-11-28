@@ -286,6 +286,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "struct_tcp_info",
+    hdrs = ["struct_tcp_info.h"],
+)
+
+libc_support_library(
     name = "struct_utsname",
     hdrs = ["struct_utsname.h"],
     deps = select({

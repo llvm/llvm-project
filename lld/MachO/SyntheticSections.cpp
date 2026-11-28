@@ -1006,11 +1006,12 @@ ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
                                 ArrayRef<uint8_t>{selrefData, wordSize},
                                 /*align=*/wordSize);
   assert(objcSelref->live);
-  objcSelref->relocs.push_back({/*type=*/target->unsignedRelocType,
-                                /*pcrel=*/false, /*length=*/3,
-                                /*offset=*/0,
-                                /*addend=*/static_cast<int64_t>(methnameOffset),
-                                /*referent=*/in.objcMethnameSection->isec});
+  objcSelref->relocs.emplace_back(
+      /*type=*/target->unsignedRelocType,
+      /*pcrel=*/false, /*length=*/3,
+      /*offset=*/0,
+      /*addend=*/static_cast<int64_t>(methnameOffset),
+      /*referent=*/in.objcMethnameSection->isec);
   objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
   addInputSection(objcSelref);
   objcSelref->isFinal = true;
@@ -1654,6 +1655,15 @@ void SymtabSection::finalizeContents() {
         addSymbol(undefinedSymbols, sym);
     }
   }
+
+  // Branch-range extension thunks are linker-created local symbols too.
+  for (const OutputSegment *seg : outputSegments)
+    for (const OutputSection *osec : seg->getSections())
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec))
+        for (const ConcatInputSection *thunk : textOsec->getThunks())
+          for (Defined *sym : thunk->symbols)
+            if (sym->includeInSymtab)
+              localSymbolsHandler(sym);
 
   emitStabs();
   uint32_t symtabIndex = stabs.size();

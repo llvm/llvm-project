@@ -945,7 +945,6 @@ TEST_F(CommandLineTest, WideIntegerHighValue) {
 // their parent:
 //
 //   * -cl-unsafe-math-optimizations
-//     * -cl-mad-enable
 //     * -funsafe-math-optimizations
 //       * -freciprocal-math
 
@@ -954,7 +953,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_FALSE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_FALSE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_FALSE(Invocation.getLangOpts().AllowRecip);
 
@@ -963,7 +961,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
   // Not generated - missing.
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
@@ -976,7 +973,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   // Explicitly provided root flag.
   ASSERT_TRUE(Invocation.getLangOpts().CLUnsafeMath);
   // Directly implied by explicitly provided root flag.
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   // Transitively implied by explicitly provided root flag.
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
@@ -986,19 +982,17 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
   // Not generated - implied by the generated root flag.
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
-  const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
+  const char *Args[] = {"-cl-unsafe-math-optimizations",
                         "-funsafe-math-optimizations", "-freciprocal-math"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
 
@@ -1007,19 +1001,16 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
   // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
   // Not generated - implied by their generated parent.
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
-  const char *Args[] = {"-cl-mad-enable", "-funsafe-math-optimizations",
-                        "-freciprocal-math"};
+  const char *Args[] = {"-funsafe-math-optimizations", "-freciprocal-math"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
 
@@ -1028,21 +1019,19 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
   // Generated - explicitly provided.
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-funsafe-math-optimizations")));
   // Not generated - implied by its generated parent.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
-  const char *Args[] = {"-cl-mad-enable", "-funsafe-math-optimizations"};
+  const char *Args[] = {"-funsafe-math-optimizations"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Present options that were not implied are generated.
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-funsafe-math-optimizations")));
 }
 

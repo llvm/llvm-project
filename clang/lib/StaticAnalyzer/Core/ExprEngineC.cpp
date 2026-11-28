@@ -88,7 +88,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         State = escapeValues(State, RightV, PSK_EscapeOther);
       }
 
-      Tmp2.insert(Engine.makePostStmtNode(B, State, N));
+      Tmp2.insert(Engine.makePostStmtNode(B, State.get(), N));
       continue;
     }
 
@@ -241,7 +241,7 @@ void ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
   if (V.isUnknown() && !OrigV.isUnknown()) {
     state = escapeValues(state, OrigV, PSK_EscapeOther);
   }
-  Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
+  Dst.insert(Engine.makePostStmtNode(CastE, state.get(), Pred));
 }
 
 void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
@@ -420,7 +420,7 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
       if (T->isReferenceType()) {
         // A bad_cast exception is thrown if input value is a reference.
         // Currently, we model this, by generating a sink.
-        Engine.makePostStmtNode(CastE, State, Pred, /*MarkAsSink=*/true);
+        Engine.makePostStmtNode(CastE, State.get(), Pred, /*MarkAsSink=*/true);
         return;
       } else {
         // If the cast fails on a pointer, bind to 0.
@@ -438,7 +438,7 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
         // Else, bind to the derived region value.
         State = State->BindExpr(CastE, SF, val);
     }
-    Dst.insert(Engine.makePostStmtNode(CastE, State, Pred));
+    Dst.insert(Engine.makePostStmtNode(CastE, State.get(), Pred));
     return;
   }
   case CK_BaseToDerived: {
@@ -595,7 +595,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
         state = finishObjectConstruction(state, DS, SF);
         // We constructed the object directly in the variable.
         // No need to bind anything.
-        dstEvaluated.insert(Engine.makePostStmtNode(DS, state, UpdatedN));
+        dstEvaluated.insert(Engine.makePostStmtNode(DS, state.get(), UpdatedN));
       } else {
         // Recover some path-sensitivity if a scalar value evaluated to
         // UnknownVal.
@@ -615,7 +615,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
       }
     }
     else {
-      dstEvaluated.insert(Engine.makePostStmtNode(DS, state, N));
+      dstEvaluated.insert(Engine.makePostStmtNode(DS, state.get(), N));
     }
   }
 
@@ -650,7 +650,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     // logical operators on vectors are not short-circuit. Currently they are
     // modeled as short-circuit in Clang CFG but this is incorrect.
     // Do not set the value for the expression. It'd be UnknownVal by default.
-    Dst.insert(Engine.makePostStmtNode(B, state, Pred));
+    Dst.insert(Engine.makePostStmtNode(B, state.get(), Pred));
     return;
   }
 
@@ -662,7 +662,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     (void) P;
     if (N->pred_size() != 1) {
       // We failed to track back where we came from.
-      Dst.insert(Engine.makePostStmtNode(B, state, Pred));
+      Dst.insert(Engine.makePostStmtNode(B, state.get(), Pred));
       return;
     }
     N = *N->pred_begin();
@@ -670,7 +670,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
 
   if (N->pred_size() != 1) {
     // We failed to track back where we came from.
-    Dst.insert(Engine.makePostStmtNode(B, state, Pred));
+    Dst.insert(Engine.makePostStmtNode(B, state.get(), Pred));
     return;
   }
 
@@ -963,7 +963,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           state = state->BindExpr(U, SF, Result);
           break;
       }
-      EvalSet.insert(Engine.makePostStmtNode(U, state, N));
+      EvalSet.insert(Engine.makePostStmtNode(U, state.get(), N));
       break;
     }
     }

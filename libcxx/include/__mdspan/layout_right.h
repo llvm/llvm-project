@@ -53,7 +53,7 @@ public:
   using layout_type  = layout_right;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __required_span_size_is_representable(const extents_type& __ext) {
+  static constexpr bool __required_span_size_is_representable(const extents_type& __ext) {
     if constexpr (extents_type::rank() == 0)
       return true;
 
@@ -71,9 +71,9 @@ private:
 
 public:
   // [mdspan.layout.right.cons], constructors
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping() noexcept               = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const mapping&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext) noexcept : __extents_(__ext) {
+  constexpr mapping() noexcept               = default;
+  constexpr mapping(const mapping&) noexcept = default;
+  constexpr mapping(const extents_type& __ext) noexcept : __extents_(__ext) {
     // not catching this could lead to out-of-bounds access later when used inside mdspan
     // mapping<dextents<char, 2>> map(dextents<char, 2>(40,40)); map(3, 10) == -126
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -83,7 +83,7 @@ public:
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
+  constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
     // not catching this could lead to out-of-bounds access later when used inside mdspan
@@ -95,7 +95,7 @@ public:
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents> && _OtherExtents::rank() <= 1)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
+  constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const layout_left::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
     // not catching this could lead to out-of-bounds access later when used inside mdspan
@@ -111,8 +111,7 @@ public:
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(extents_type::rank() > 0)
-      mapping(const layout_stride::mapping<_OtherExtents>& __other) noexcept
+  constexpr explicit(extents_type::rank() > 0) mapping(const layout_stride::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
     if constexpr (extents_type::rank() > 0) {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -131,12 +130,12 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping& operator=(const mapping&) noexcept = default;
+  constexpr mapping& operator=(const mapping&) noexcept = default;
 
   // [mdspan.layout.right.obs], observers
-  _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept { return __extents_; }
+  constexpr const extents_type& extents() const noexcept { return __extents_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type required_span_size() const noexcept {
+  constexpr index_type required_span_size() const noexcept {
     index_type __size = 1;
     for (size_t __r = 0; __r < extents_type::rank(); __r++)
       __size *= __extents_.extent(__r);
@@ -146,7 +145,7 @@ public:
   template <class... _Indices>
     requires((sizeof...(_Indices) == extents_type::rank()) && (is_convertible_v<_Indices, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _Indices> && ...))
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
+  constexpr index_type operator()(_Indices... __idx) const noexcept {
     // Mappings are generally meant to be used for accessing allocations and are meant to guarantee to never
     // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
     // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
@@ -160,15 +159,15 @@ public:
     }(make_index_sequence<sizeof...(_Indices)>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept { return true; }
+  static constexpr bool is_always_unique() noexcept { return true; }
+  static constexpr bool is_always_exhaustive() noexcept { return true; }
+  static constexpr bool is_always_strided() noexcept { return true; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_exhaustive() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_strided() noexcept { return true; }
+  static constexpr bool is_unique() noexcept { return true; }
+  static constexpr bool is_exhaustive() noexcept { return true; }
+  static constexpr bool is_strided() noexcept { return true; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const noexcept
+  constexpr index_type stride(rank_type __r) const noexcept
     requires(extents_type::rank() > 0)
   {
     // While it would be caught by extents itself too, using a too large __r
@@ -183,8 +182,7 @@ public:
 
   template <class _OtherExtents>
     requires(_OtherExtents::rank() == extents_type::rank())
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const mapping& __lhs, const mapping<_OtherExtents>& __rhs) noexcept {
+  friend constexpr bool operator==(const mapping& __lhs, const mapping<_OtherExtents>& __rhs) noexcept {
     return __lhs.extents() == __rhs.extents();
   }
 

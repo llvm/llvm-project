@@ -553,7 +553,8 @@ class AllMatchPred<list<string> values> :
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;
 
-// TODO: Only works for non-variadic.
+// These traits only works for non-variadic. For variadic, see
+// VariadicAllMatchSameOperatorPred and similar.
 class AllMatchSameOperatorPred<list<string> names, string operator> :
     AllMatchPred<!foreach(n, names, !subst("$_self", "$" # n, operator))>;
 
@@ -606,6 +607,35 @@ class AllTypesMatch<list<string> names> :
 // Checks that all type IDs match.
 class AllTypeIDsMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType().getTypeID()", "type IDs">;
+
+// Checks that `operator` evaluates to the same value for every element of the
+// variadic operand or result `name`. Vacuously satisfied if `name` has fewer than
+// two elements.
+class VariadicAllMatchSameOperatorPred<string name, string operator> :
+    CPred<"::llvm::all_equal(::llvm::map_range($" # name # ", "
+          "[](::mlir::Value v) { return "
+          # !subst("$_self", "v", operator) # "; }))">;
+
+class VariadicAllMatchSameOperatorTrait<string name, string operator,
+                                        string summary> :
+    PredOpTrait<"all elements of '" # name # "' have same " # summary,
+                VariadicAllMatchSameOperatorPred<name, operator>>;
+
+class VariadicAllElementTypesMatch<string name> :
+    VariadicAllMatchSameOperatorTrait<name, ElementType<"_self">.result,
+                                      "element type">;
+
+// Like `AllRanksMatch` and `AllShapesMatch`, the rank and shape variants cast
+// the type of every element to `ShapedType`, so the type constraint of `name`
+// must only admit shaped types.
+class VariadicAllRanksMatch<string name> :
+    VariadicAllMatchSameOperatorTrait<name, Rank<"_self">.result, "rank">;
+
+class VariadicAllShapesMatch<string name> :
+    VariadicAllMatchSameOperatorTrait<name, Shape<"_self">.result, "shape">;
+
+class VariadicAllTypesMatch<string name> :
+    VariadicAllMatchSameOperatorTrait<name, "$_self.getType()", "type">;
 
 // A type constraint that verifies that a shaped type matches the size and
 // element type of a container with element types. More specifically, it denotes

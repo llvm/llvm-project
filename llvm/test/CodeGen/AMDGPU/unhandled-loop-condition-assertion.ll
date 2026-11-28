@@ -1,8 +1,7 @@
 ; RUN: llc -O0 -asm-verbose=0 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
 ; RUN: llc -O0 -asm-verbose=0 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
-; XUN: llc -O0 -asm-verbose=0 -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
 
-; SI hits an assertion at -O0, evergreen hits a not implemented unreachable.
+; SI hits an assertion at -O0.
 
 ; COMMON-LABEL: {{^}}branch_true:
 define amdgpu_kernel void @branch_true(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {

@@ -29,10 +29,13 @@ class OMPArrayShapingExpr final
   SourceLocation LPLoc; /// The location of the left paren
   SourceLocation RPLoc; /// The location of the right paren
   unsigned NumDims = 0; /// Number of dimensions in the shaping expression.
+  /// The n-dimensional array type designated by the shaping operation.
+  QualType ShapedType;
 
   /// Construct full expression.
-  OMPArrayShapingExpr(QualType ExprTy, Expr *Op, SourceLocation L,
-                      SourceLocation R, ArrayRef<Expr *> Dims);
+  OMPArrayShapingExpr(QualType ExprTy, QualType ShapedTy, Expr *Op,
+                      SourceLocation L, SourceLocation R,
+                      ArrayRef<Expr *> Dims);
 
   /// Construct an empty expression.
   explicit OMPArrayShapingExpr(EmptyShell Shell, unsigned NumDims)
@@ -47,6 +50,9 @@ class OMPArrayShapingExpr final
   /// Sets source ranges for the brackets in the array shaping operation.
   void setBracketsRanges(ArrayRef<SourceRange> BR);
 
+  /// Sets the array type designated by the array shaping operation.
+  void setShapedType(QualType T) { ShapedType = T; }
+
   unsigned numTrailingObjects(OverloadToken<Expr *>) const {
     // Add an extra one for the base expression.
     return NumDims + 1;
@@ -58,8 +64,9 @@ class OMPArrayShapingExpr final
 
 public:
   static OMPArrayShapingExpr *Create(const ASTContext &Context, QualType T,
-                                     Expr *Op, SourceLocation L,
-                                     SourceLocation R, ArrayRef<Expr *> Dims,
+                                     QualType ShapedTy, Expr *Op,
+                                     SourceLocation L, SourceLocation R,
+                                     ArrayRef<Expr *> Dims,
                                      ArrayRef<SourceRange> BracketRanges);
 
   static OMPArrayShapingExpr *CreateEmpty(const ASTContext &Context,
@@ -89,6 +96,10 @@ public:
   /// Fetches base expression of array shaping expression.
   Expr *getBase() { return getTrailingObjects<Expr *>()[NumDims]; }
   const Expr *getBase() const { return getTrailingObjects<Expr *>()[NumDims]; }
+
+  /// Returns the n-dimensional array type designated by the shaping operation
+  /// (OpenMP 5.0 [2.1.4]); array sections based on this expression index it.
+  QualType getShapedType() const { return ShapedType; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPArrayShapingExprClass;

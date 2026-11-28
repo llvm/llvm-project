@@ -86,8 +86,6 @@ loop.end:
 
 ; Both the vector.early.exit block (cost 11) and the middle block (cost 5)
 ; extract the live-outs.
-; FIXME: The vector loop is left through only one of the two blocks, so
-; Cost = max(11, 5) suffices instead of Cost = 11 + 5.
 define i64 @live_outs_in_early_exit_and_middle_block(ptr align 8 dereferenceable(1024) %p1, ptr align 8 dereferenceable(1024) %p2) {
 ; CHECK-LABEL: LV: Checking a loop in 'live_outs_in_early_exit_and_middle_block'
 ; CHECK: LV: Scalar loop costs: 7.
@@ -103,7 +101,7 @@ define i64 @live_outs_in_early_exit_and_middle_block(ptr align 8 dereferenceable
 ; CHECK-NEXT: Cost of 2 for VF 2: EMIT vp<{{.*}}> = extract-last-lane vp<{{.*}}>
 ; CHECK-NEXT: Cost of 1 for VF 2: EMIT vp<{{.*}}> = icmp eq ir<128>, vp<{{.*}}>
 ; CHECK-NEXT: Cost of 0 for VF 2: EMIT branch-on-cond vp<{{.*}}>
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:6
+; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:4
 entry:
   br label %loop.header
 
@@ -130,7 +128,6 @@ exit:
 
 ; Both vector.early.exit blocks (cost 6 each) extract the live-outs and the
 ; middle block costs 1.
-; FIXME: Cost = max(6, 6, 1) suffices, instead of Cost = 6 + 6 + 1.
 define i64 @live_outs_in_multiple_early_exits(ptr align 8 dereferenceable(1024) %p1, ptr align 8 dereferenceable(1024) %p2, ptr align 8 dereferenceable(1024) %p3) {
 ; CHECK-LABEL: LV: Checking a loop in 'live_outs_in_multiple_early_exits'
 ; CHECK: LV: Scalar loop costs: 10.
@@ -146,7 +143,7 @@ define i64 @live_outs_in_multiple_early_exits(ptr align 8 dereferenceable(1024) 
 ; CHECK-NEXT: Cost of 2 for VF 2: EMIT {{.*}} = extract-lane vp<{{.*}}>, ir<%ld3>
 ; CHECK-NEXT: Cost of 1 for VF 2: EMIT vp<{{.*}}> = icmp eq ir<128>, vp<{{.*}}>
 ; CHECK-NEXT: Cost of 0 for VF 2: EMIT branch-on-cond vp<{{.*}}>
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:4
+; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:2
 entry:
   br label %loop.header
 

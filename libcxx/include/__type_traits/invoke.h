@@ -78,8 +78,7 @@ template <class, class... _Args>
 struct __invoke_result_impl {};
 
 template <class... _Args>
-using __direct_invoke_result_t _LIBCPP_NODEBUG =
-    decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
+using __direct_invoke_result_t _LIBCPP_NODEBUG = decltype(__builtin_invoke(std::declval<_Args>()...));
 
 template <class... _Args>
 struct __invoke_result_impl<__void_t<__direct_invoke_result_t<_Args...> >, _Args...> {
@@ -179,7 +178,7 @@ using __enable_if_bullet1 _LIBCPP_NODEBUG =
 
 template <class _Fp, class _A0, class _DecayFp = __decay_t<_Fp>, class _DecayA0 = __decay_t<_A0> >
 using __enable_if_bullet2 _LIBCPP_NODEBUG =
-    __enable_if_t<is_member_function_pointer<_DecayFp>::value && __is_reference_wrapper<_DecayA0>::value>;
+    __enable_if_t<is_member_function_pointer<_DecayFp>::value && __is_reference_wrapper_v<_DecayA0>>;
 
 template <class _Fp,
           class _A0,
@@ -189,7 +188,7 @@ template <class _Fp,
 using __enable_if_bullet3 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_function_pointer<_DecayFp>::value &&
                   !(is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value) &&
-                  !__is_reference_wrapper<_DecayA0>::value>;
+                  !__is_reference_wrapper_v<_DecayA0>>;
 
 template <class _Fp,
           class _A0,
@@ -202,7 +201,7 @@ using __enable_if_bullet4 _LIBCPP_NODEBUG =
 
 template <class _Fp, class _A0, class _DecayFp = __decay_t<_Fp>, class _DecayA0 = __decay_t<_A0> >
 using __enable_if_bullet5 _LIBCPP_NODEBUG =
-    __enable_if_t<is_member_object_pointer<_DecayFp>::value && __is_reference_wrapper<_DecayA0>::value>;
+    __enable_if_t<is_member_object_pointer<_DecayFp>::value && __is_reference_wrapper_v<_DecayA0>>;
 
 template <class _Fp,
           class _A0,
@@ -212,7 +211,7 @@ template <class _Fp,
 using __enable_if_bullet6 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_object_pointer<_DecayFp>::value &&
                   !(is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value) &&
-                  !__is_reference_wrapper<_DecayA0>::value>;
+                  !__is_reference_wrapper_v<_DecayA0>>;
 
 // __invoke forward declarations
 

@@ -38,18 +38,6 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// BuiltinDialect
-//===----------------------------------------------------------------------===//
-
-void BuiltinDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/IR/BuiltinAttributes.cpp.inc"
-      >();
-  addAttributes<DistinctAttr>();
-}
-
-//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 

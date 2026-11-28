@@ -204,6 +204,7 @@ libc_test(
         "//libc/hdr:time_macros",
         "//libc/hdr/types:socklen_t",
         "//libc/hdr/types:struct_linger",
+        "//libc/hdr/types:struct_tcp_info",
         "//libc/hdr/types:struct_timespec",
         "//libc/hdr/types:struct_timeval",
         "//libc/src/__support/CPP:scope",

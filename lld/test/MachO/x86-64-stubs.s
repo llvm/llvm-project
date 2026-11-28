@@ -64,7 +64,7 @@
 # CHECK-NEXT:    [[#%x, BINDER - BINDER_OFF]]: nop
 # CHECK-NEXT:    pushq $0
 # CHECK-NEXT:    jmp 0x[[#STUB_HELPER_ENTRY]]
-# CHECK-NEXT:    pushq $21
+# CHECK-NEXT:    pushq $19
 # CHECK-NEXT:    jmp 0x[[#STUB_HELPER_ENTRY]]
 
 .text

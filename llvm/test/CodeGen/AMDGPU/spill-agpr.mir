@@ -8,7 +8,6 @@
 
 ---
 name: spill_restore_agpr32
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -126,7 +125,6 @@ body: |
 
 ---
 name: spill_restore_agpr64
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -235,7 +233,6 @@ body: |
 
 ---
 name: spill_restore_agpr32_used_all_vgprs
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -405,7 +402,6 @@ body: |
 
 ---
 name: spill_restore_agpr96
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -522,7 +518,6 @@ body: |
 
 ---
 name: spill_restore_agpr128
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -647,7 +642,6 @@ body: |
 
 ---
 name: spill_restore_agpr160
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -780,7 +774,6 @@ body: |
 
 ---
 name: spill_restore_agpr192
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -921,7 +914,6 @@ body: |
 
 ---
 name: spill_restore_agpr256
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -1078,7 +1070,6 @@ body: |
 
 ---
 name: spill_restore_agpr288
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -1243,7 +1234,6 @@ body: |
 
 ---
 name: spill_restore_agpr320
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -1416,7 +1406,6 @@ body: |
 
 ---
 name: spill_restore_agpr352
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -1597,7 +1586,6 @@ body: |
 
 ---
 name: spill_restore_agpr384
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -1786,7 +1774,6 @@ body: |
 
 ---
 name: spill_restore_agpr512
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -2007,7 +1994,6 @@ body: |
 
 ---
 name: spill_restore_agpr1024
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32

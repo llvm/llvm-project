@@ -894,23 +894,13 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
       attrTypeEmitter.emitByte(0, "attr/type separator");
     };
     auto emitAttrOrTypeImpl = [&]() -> bool {
-      // Mutable types use a custom encoding when the dialect provides one; a
-      // self-reference resolves through
-      // DialectBytecodeReader::tryStartCyclicRead instead of recursing.
-      // Mutable attributes still use the fallback. Note the kind test:
-      // AttributeTrait::IsMutable also matches mutable types.
-      if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>,
-                                   Attribute>) {
-        if (entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
-          emitAttrOrTypeRawImpl();
-          return false;
-        }
-      }
-
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
                                   numberingState, stringSection,
                                   config.dialectVersionMap);
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
+        // Mutable types use a custom encoding when the dialect provides one; a
+        // self-reference resolves through
+        // DialectBytecodeReader::tryStartCyclicRead instead of recursing.
         for (const auto &callback : config.typeWriterCallbacks) {
           if (succeeded(callback->write(entryValue, dialectWriter)))
             return true;
@@ -920,7 +910,9 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
           if (succeeded(interface->writeType(entryValue, dialectWriter)))
             return true;
         }
-      } else {
+      } else if (!entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
+        // Mutable attributes still use the textual fallback, as there is no
+        // attribute-side analogue of DialectBytecodeReader::tryStartCyclicRead.
         for (const auto &callback : config.attributeWriterCallbacks) {
           if (succeeded(callback->write(entryValue, dialectWriter)))
             return true;

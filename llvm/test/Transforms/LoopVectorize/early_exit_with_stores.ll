@@ -1554,4 +1554,76 @@ exit:
   ret void
 }
 
+; The trip count is wider than the i8 IV.
+define void @loop_contains_store_i8_iv(ptr dereferenceable(40) noalias %array, ptr dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: define void @loop_contains_store_i8_iv(
+; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly dereferenceable(40) [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PRED]], i8 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i8> [[WIDE_LOAD]], splat (i8 50)
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[ARRAY]], i8 [[TMP0]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> zeroinitializer, ptr align 1 [[TMP5]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[VEC_IND]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 20
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc i32 [[TMP13]] to i8
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[TMP15]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAY]], i8 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[ST_ADDR]], align 1
+; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[PRED]], i8 [[IV]]
+; CHECK-NEXT:    [[EE_VAL:%.*]] = load i8, ptr [[EE_ADDR]], align 1
+; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i8 [[EE_VAL]], 50
+; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[FOR_INC]]
+; CHECK:       [[FOR_INC]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i8 [[IV_NEXT]], 20
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i8, ptr %array, i8 %iv
+  store i8 0, ptr %st.addr, align 1
+  %ee.addr = getelementptr inbounds nuw i8, ptr %pred, i8 %iv
+  %ee.val = load i8, ptr %ee.addr, align 1
+  %ee.cond = icmp sgt i8 %ee.val, 50
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i8 %iv, 1
+  %counted.cond = icmp eq i8 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 declare i64 @get_an_unknown_offset();

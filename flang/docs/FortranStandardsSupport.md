@@ -71,7 +71,7 @@ the multi-image execution. The table entries are based on the document [The new 
 | Team arguments to other intrinsics                         | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
 | Critical construct                                         | N      | Multi-image/Coarray feature |
-| Events                                                     | N      | Multi-image/Coarray feature |
+| Events                                                     | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
 | Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
 | New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |

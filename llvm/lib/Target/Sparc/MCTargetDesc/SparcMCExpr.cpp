@@ -38,6 +38,8 @@ StringRef Sparc::getSpecifierName(uint16_t S) {
   case ELF::R_SPARC_GOT10:         return "lo";
   case ELF::R_SPARC_GOT13:         return {};
   case ELF::R_SPARC_DISP32:        return "r_disp32";
+  case ELF::R_SPARC_TLS_DTPOFF32:  return "r_tls_dtpoff32";
+  case ELF::R_SPARC_TLS_DTPOFF64:  return "r_tls_dtpoff64";
   case ELF::R_SPARC_TLS_GD_HI22:   return "tgd_hi22";
   case ELF::R_SPARC_TLS_GD_LO10:   return "tgd_lo10";
   case ELF::R_SPARC_TLS_GD_ADD:    return "tgd_add";
@@ -114,5 +116,7 @@ uint16_t Sparc::parseSpecifier(StringRef name) {
 uint16_t Sparc::parseDataSpecifier(StringRef name) {
   return StringSwitch<uint16_t>(name)
       .Case("r_disp32", ELF::R_SPARC_DISP32)
+      .Case("r_tls_dtpoff32", ELF::R_SPARC_TLS_DTPOFF32)
+      .Case("r_tls_dtpoff64", ELF::R_SPARC_TLS_DTPOFF64)
       .Default(0);
 }

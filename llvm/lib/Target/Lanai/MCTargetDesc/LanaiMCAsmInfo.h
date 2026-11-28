@@ -24,8 +24,6 @@ class LanaiMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit LanaiMCAsmInfo(const Triple &TheTriple,
                           const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
 };
 
 namespace Lanai {

@@ -32,7 +32,7 @@ LLVM_ABI bool readConfigFromJSON(InstrumentationConfig &IConf,
 /// Read the configuration paths from the file with path \p InputFile into \p
 /// Configs.
 LLVM_ABI bool readConfigPathsFile(StringRef InputFile,
-                                  cl::list<std::string> &Configs,
+                                  SmallVectorImpl<std::string> &Configs,
                                   LLVMContext &Ctx, vfs::FileSystem &FS);
 
 } // end namespace instrumentor

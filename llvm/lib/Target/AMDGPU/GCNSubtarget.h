@@ -345,6 +345,12 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
+  bool needsAsyncBarrierArriveReplayWorkaround() const {
+    // Generic 12.5 code has no explicit XNACK setting; keep the workaround.
+    return hasAsyncBarrierArriveReplayBug() &&
+           TargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Off;
+  }
+
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
@@ -1028,10 +1034,10 @@ public:
     return false;
   }
 
-  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
-  // and surronded by S_WAIT_ALU(0xFFE3).
-  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
-    return getGeneration() == GFX12;
+  // \returns true if a singular s_barrier_join may observe spurious barrier
+  // completions.
+  bool hasBarrierJoinCompletionBug() const {
+    return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base

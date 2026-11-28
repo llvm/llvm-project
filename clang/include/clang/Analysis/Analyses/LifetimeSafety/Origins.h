@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -134,7 +135,7 @@ bool doesDeclHaveStorage(const ValueDecl *D);
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(const AnalysisDeclContext &AC);
+  OriginManager(const AnalysisDeclContext &AC, llvm::BumpPtrAllocator &Alloc);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -223,7 +224,7 @@ private:
   /// TODO(opt): Profile and evaluate the usefulness of small buffer
   /// optimisation.
   llvm::SmallVector<Origin> AllOrigins;
-  llvm::BumpPtrAllocator ListAllocator;
+  llvm::BumpPtrAllocator &ListAllocator;
   llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;

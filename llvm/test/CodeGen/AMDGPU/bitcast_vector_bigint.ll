@@ -280,9 +280,8 @@ define <2 x i6> @bitcast_i12_to_v2i6(i12 %int) {
 ; GFX9-LABEL: bitcast_i12_to_v2i6:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v2, 63, v0
 ; GFX9-NEXT:    v_bfe_u32 v1, v0, 6, 6
-; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    v_and_b32_e32 v0, 63, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: bitcast_i12_to_v2i6:

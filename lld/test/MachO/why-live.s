@@ -8,9 +8,9 @@
 ## Due to an implementation detail, LLD is not able to report -why_live info for
 ## absolute symbols. (ld64 has the same shortcoming.)
 # CHECK-NOT:   _abs
-# CHECK:       _undef from {{.*}}why-live.s.tmp.o
+# CHECK:       _foo from {{.*}}why-live.s.tmp.o
 # CHECK-NEXT:    _main from {{.*}}why-live.s.tmp.o
-# CHECK-NEXT:  _foo from {{.*}}why-live.s.tmp.o
+# CHECK-NEXT:  _undef from {{.*}}why-live.s.tmp.o
 # CHECK-NEXT:    _main from {{.*}}why-live.s.tmp.o
 ## Our handling of live_support sections can be improved: we shouldn't be
 ## printing _support twice. (ld64 seems to have the same issue.)

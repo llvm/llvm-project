@@ -341,8 +341,8 @@ define void @test_s_v32i8(ptr %p, <32 x i8> %v) #0 {
 ; CHECK-LABEL: test_s_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
+; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <32 x i8> %v, ptr %p, align 1
@@ -365,8 +365,8 @@ define void @test_s_v16i16(ptr %p, <16 x i16> %v) #0 {
 ; CHECK-LABEL: test_s_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
+; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <16 x i16> %v, ptr %p, align 2
@@ -389,8 +389,8 @@ define void @test_s_v8i32(ptr %p, <8 x i32> %v) #0 {
 ; CHECK-LABEL: test_s_v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
+; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <8 x i32> %v, ptr %p, align 4
@@ -413,8 +413,8 @@ define void @test_s_v4i64(ptr %p, <4 x i64> %v) #0 {
 ; CHECK-LABEL: test_s_v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    stxvd2x 35, 3, 4
+; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <4 x i64> %v, ptr %p, align 8
@@ -437,8 +437,8 @@ define void @test_s_v8float(ptr %p, <8 x float> %v) #0 {
 ; CHECK-LABEL: test_s_v8float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    stxvw4x 35, 3, 4
+; CHECK-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <8 x float> %v, ptr %p, align 4
@@ -461,8 +461,8 @@ define void @test_s_v4double(ptr %p, <4 x double> %v) #0 {
 ; CHECK-LABEL: test_s_v4double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    stxvd2x 35, 3, 4
+; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   store <4 x double> %v, ptr %p, align 8

@@ -1229,6 +1229,8 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
     return false;
   case ARM::BI__builtin_arm_ssat:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case ARM::BI_ReadStatusReg:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 1);
   case ARM::BI__builtin_arm_usat:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
   case ARM::BI__builtin_arm_ssat16:

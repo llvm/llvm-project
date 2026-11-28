@@ -8,7 +8,6 @@
 !endtype
 !!$OMP DECLARE REDUCTION(*:t1: omp_out=omp_out*omp_in) INITIALIZER(omp_priv=t1(&
 !!$OMP&1))
-!!$OMP METADIRECTIVE OTHERWISE(DECLARE REDUCTION(+:INTEGER))
 !!$OMP DECLARE REDUCTION(.fluffy.:t1: omp_out=omp_out.fluffy.omp_in) INITIALIZE&
 !!$OMP&R(omp_priv=t1(0))
 !!$OMP DECLARE REDUCTION(.mul.:t1: omp_out=omp_out.mul.omp_in) INITIALIZER(omp_&

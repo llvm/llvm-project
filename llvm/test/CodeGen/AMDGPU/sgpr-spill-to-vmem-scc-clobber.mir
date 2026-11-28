@@ -7,7 +7,6 @@
 
 ---
 name: sgpr32_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -59,7 +58,6 @@ body:             |
 
 ---
 name: sgpr64_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill}
@@ -111,7 +109,6 @@ body:             |
 
 ---
 name: sgpr32_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -162,7 +159,6 @@ body:             |
 
 ---
 name: sgpr64_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -215,7 +211,6 @@ body:             |
 
 ---
 name: sgpr32_save_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -332,7 +327,6 @@ body:             |
 
 ---
 name: sgpr32_restore_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -452,7 +446,6 @@ body:             |
 
 ---
 name: sgpr64_save_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -570,7 +563,6 @@ body:             |
 
 ---
 name: sgpr64_restore_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -693,7 +685,6 @@ body:             |
 
 ---
 name: sgpr32_save_clobber_scc_emergency_stack_slot_x2
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }
@@ -821,7 +812,6 @@ body:             |
 ...
 ---
 name: sgpr32_restore_clobber_scc_emergency_stack_slot_x2
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }

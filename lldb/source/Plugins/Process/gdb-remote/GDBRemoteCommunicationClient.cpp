@@ -4373,7 +4373,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
               addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
               lldb_private::SymbolContextList sc_list;
               process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-                  ConstString(symbol_name), eSymbolTypeAny, sc_list);
+                  symbol_name, eSymbolTypeAny, sc_list);
               for (const SymbolContext &sc : sc_list) {
                 if (symbol_load_addr != LLDB_INVALID_ADDRESS)
                   break;

@@ -45,6 +45,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  unshare
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unshare
+)
+
+add_entrypoint_object(
   sched_setparam
   ALIAS
   DEPENDS

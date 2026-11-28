@@ -122,6 +122,7 @@ llvm::Error ValueObjectCast::CanSetValue() {
   // UpdateValue rebuilds a stripped pointer from the parent; a write is lost.
   if (m_parent->GetCompilerType().HasPointerAuthQualifier() &&
       !GetCompilerType().HasPointerAuthQualifier())
-    return llvm::createStringError("cannot modify a value through a cast that drops __ptrauth");
+    return llvm::createStringError(
+        "cannot modify a value through a cast that drops __ptrauth");
   return ValueObject::CanSetValue();
 }

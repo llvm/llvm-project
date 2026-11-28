@@ -99,10 +99,12 @@ LogicalResult coalesceLoops(RewriterBase &rewriter,
 LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 
 /// Take the ParallelLoop and for each set of dimension indices, combine them
-/// into a single dimension. combinedDimensions must contain each index into
-/// loops exactly once.
-void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
-                           ArrayRef<std::vector<unsigned>> combinedDimensions);
+/// into a single dimension. `combinedDimensions` must contain each index into
+/// `loops` exactly once. Returns the collapsed loop. Reductions on `loops` are
+/// preserved.
+scf::ParallelOp
+collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
+                      ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 struct UnrolledLoopInfo {
   std::optional<scf::ForOp> mainLoopOp = std::nullopt;

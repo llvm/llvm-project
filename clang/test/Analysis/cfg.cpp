@@ -82,6 +82,29 @@ void testBuiltinSize() {
   (void)__builtin_object_size(dummy(), 0);
 }
 
+// Unlike __builtin_object_size, __builtin_constant_p keeps its argument in the CFG.
+// CHECK-LABEL: void testBuiltinConstantP()
+// CHECK-NEXT: [B2 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B1
+// CHECK-EMPTY:
+// CHECK-NEXT: [B1]
+// CHECK-NEXT:   1: __builtin_constant_p
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, int (*)(...) noexcept)
+// CHECK-NEXT:   3: dummy
+// CHECK-NEXT:   4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, int *(*)(void))
+// CHECK-NEXT:   5: [B1.4]()
+// CHECK-NEXT:   6: [B1.2]([B1.5])
+// CHECK-NEXT:   7: (void)[B1.6] (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:   Preds (1): B2
+// CHECK-NEXT:   Succs (1): B0
+// CHECK-EMPTY:
+// CHECK-NEXT: [B0 (EXIT)]
+// CHECK-NEXT:   Preds (1): B1
+void testBuiltinConstantP() {
+  extern int *dummy();
+  (void)__builtin_constant_p(dummy());
+}
+
 class A {
 public:
   A() {}

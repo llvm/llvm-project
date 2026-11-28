@@ -10,7 +10,6 @@
 # wait covering TENSOR must still find its single mark and produce an exact
 # tensorcnt wait: it is not affected by the other stage's truncation.
 name:            saturate_one_stage_only
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -118,7 +117,6 @@ body:             |
 # Waiting deep into a saturated stage. N is clamped to MaxAsyncMarks-1 so that a
 # non-trivial wait is still generated after truncation.
 name:            wait_deep_in_saturated_stage
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |

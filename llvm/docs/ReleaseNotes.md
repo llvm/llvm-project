@@ -227,6 +227,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* Removed `MemorySSA::ensureOptimizedUses()`, which no longer had any users.
+  Query `MemorySSAWalker::getClobberingMemoryAccess()` instead; it optimizes
+  each `MemoryUse` on demand and caches the result. `print<memoryssa>` no
+  longer optimizes uses before printing, and its `<no-ensure-optimized-uses>`
+  option is removed; use `print<memoryssa-walker>` to print clobbers.
+
 * `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
   ptradd-compatible representation, using a sequence of `getelementptr i8` and
   `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
@@ -235,6 +241,9 @@ Makes programs 10x faster by doing Special New Thing.
   the near future.
 
 ### Changes to building LLVM
+
+* The minimum required CMake version to build LLVM has been raised from 3.20.0
+  to 3.31.0.
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
@@ -334,6 +343,9 @@ Makes programs 10x faster by doing Special New Thing.
   respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
 
 ### Changes to the AMDGPU Backend
+
+* Added a compiler workaround for async barrier arrivals on gfx1250 and gfx1251
+  unless XNACK is explicitly disabled.
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
@@ -444,6 +456,9 @@ Makes programs 10x faster by doing Special New Thing.
   the WebAssembly `memory.copy` and `memory.fill` instructions.
 
 ### Changes to the Windows Target
+
+* On 32-bit Arm, a trap now follows a noreturn call that would otherwise end
+  a function or funclet, so the unwinder finds the right frame.
 
 ### Changes to the X86 Backend
 
@@ -592,6 +607,11 @@ Makes programs 10x faster by doing Special New Thing.
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
 
+* `llvm-readobj --unwind` now decodes only the part of `.pdata` covered by the
+  exception directory for ARM and ARM64 PE images, instead of the whole
+  section. Previously, other data merged into `.pdata` was decoded as unwind
+  entries, which could cause a fatal error.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
@@ -601,6 +621,9 @@ Makes programs 10x faster by doing Special New Thing.
 * MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
   rather than by LLDB's own liblzma binding, and is enabled with
   `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
+* The pre-DIL implementation of `frame variable` has been removed, together with
+  the `target.experimental.use-DIL` setting that selected it. Path expressions
+  are now always evaluated by the Data Inspection Language (DIL).
 
 #### SBAPI
 
@@ -612,6 +635,8 @@ Makes programs 10x faster by doing Special New Thing.
   return values that were actually in a different set. Both methods are now fixed
   so that they are limited to the registers within the register set. Scripts
   using these methods may have to be updated as a result.
+* `SBInitializationOptions` carries process-wide options to a new
+  `SBDebugger::Initialize` overload.
 
 #### Windows
 

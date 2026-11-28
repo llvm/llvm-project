@@ -2,7 +2,7 @@
 ! with a derived type component to a namelist.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t
+! RUN: %t
 
 module iotype_mod
   type ty2

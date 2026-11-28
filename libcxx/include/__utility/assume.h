@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // WARNING: [[assume]] can currently inhibit optimizations. Only add assumptions with a clear optimization intent.
 // See https://discourse.llvm.org/t/llvm-assume-blocks-optimization/71609 for a discussion.
 
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void __assume(bool __cond) { [[__assume__(__cond)]]; }
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void __assume(bool __cond) { [[__assume__(__cond)]]; }
 
 // This function allows the compiler to assume that `__a` and `__b` can never alias each other, similar to `__restrict`.
 // However, this assume must also hold if the function is inlined, so effectively the two pointers must never be part of
@@ -32,7 +32,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void __assume(bool __
 // well as pointers returned from the `malloc`-family of functions and `::operator new` family of functions. Other
 // pointers may be considered part of the same allocation, in which case this assume could lead to incorrect
 // optimizations.
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __assume_separate_storage([[__maybe_unused__]] const void* __a, [[__maybe_unused__]] const void* __b) {
 #if __has_builtin(__builtin_assume_separate_storage)
   // __builtin_assume_separate_storage claims constexpr support, but it's broken. See https://llvm.org/PR225335.

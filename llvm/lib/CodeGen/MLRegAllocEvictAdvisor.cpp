@@ -731,14 +731,12 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
           getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
-      // Only urgent evictions may evict unspillable ranges, as in the default
-      // advisor where their infinite weight fails shouldEvict.
-      if (!Urgent && !Intf->isSpillable())
-        return false;
-
-      // Only evict older cascades or live ranges without a cascade.
+      // Only evict older cascades or live ranges without a cascade, except when
+      // breaking a cascade is legal in RAGreedy::evictInterference.
       if (Cascade <= IntfCascade) {
-        if (!Urgent || Cascade == IntfCascade)
+        bool CanBreakCascade = (Cascade < IntfCascade && Urgent) ||
+                               (!VirtReg.isSpillable() && Intf->isSpillable());
+        if (!CanBreakCascade)
           return false;
         ++NumUrgent;
       }

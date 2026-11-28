@@ -104,3 +104,17 @@ declare <2 x double> @llvm.mips.fmsub.d(<2 x double>, <2 x double>, <2 x double>
 ; CHECK: st.d
 ; CHECK: .size llvm_mips_fmsub_d_test
 ;
+define <4 x float> @llvm_mips_fmadd_w_const_test() nounwind {
+; CHECK-LABEL: llvm_mips_fmadd_w_const_test:
+; CHECK:       lui $1, 16608
+  %r = tail call <4 x float> @llvm.mips.fmadd.w(<4 x float> splat (float 1.0), <4 x float> splat (float 2.0), <4 x float> splat (float 3.0))
+  ret <4 x float> %r
+}
+
+define <2 x double> @llvm_mips_fmadd_d_const_test() nounwind {
+; The const-evaluated value is stored in the constant pool.
+; CHECK:       .8byte 0x401c000000000000 # double 7
+; CHECK-LABEL: llvm_mips_fmadd_d_const_test:
+  %r = tail call <2 x double> @llvm.mips.fmadd.d(<2 x double> splat (double 1.0), <2 x double> splat (double 2.0), <2 x double> splat (double 3.0))
+  ret <2 x double> %r
+}

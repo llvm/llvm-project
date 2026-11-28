@@ -276,7 +276,7 @@ uses the package and provides other details.
 
 | Package | Version | Notes |
 | --- | --- | --- |
-| [CMake](http://cmake.org/) | >=3.20.0 | Makefile/workspace generator |
+| [CMake](http://cmake.org/) | >=3.31.0 | Makefile/workspace generator |
 | [python](http://www.python.org/) | >=3.8 | Build system support, automated testing, misc utilities |
 | [zlib](http://zlib.net) | >=1.2.3.4 | Compression library{sup}`1` |
 | [GNU Make](http://savannah.gnu.org/projects/make) | 3.79, 3.79.1 | Makefile/build processor{sup}`2` |

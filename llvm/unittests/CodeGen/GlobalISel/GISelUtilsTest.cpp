@@ -408,13 +408,11 @@ TEST_F(AArch64GISelMITest, ConstFalseTest) {
   // AArch64 uses ZeroOrOneBooleanContent for scalars, and
   // ZeroOrNegativeOneBooleanContent for vectors.
   for (auto IsVec : BooleanChoices) {
-    for (auto IsFP : BooleanChoices) {
-      EXPECT_TRUE(isConstFalseVal(TLI, 0, IsVec, IsFP));
-      EXPECT_FALSE(isConstFalseVal(TLI, 1, IsVec, IsFP));
+    EXPECT_TRUE(isConstFalseVal(TLI, 0, IsVec));
+    EXPECT_FALSE(isConstFalseVal(TLI, 1, IsVec));
 
-      // This would be true with UndefinedBooleanContent.
-      EXPECT_FALSE(isConstFalseVal(TLI, 2, IsVec, IsFP));
-    }
+    // This would be true with UndefinedBooleanContent.
+    EXPECT_FALSE(isConstFalseVal(TLI, 2, IsVec));
   }
 }
 

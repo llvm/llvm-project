@@ -253,7 +253,6 @@ class BreakpointConditionsTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         target = self.dbg.CreateTarget(exe)
-        self.runCmd("settings set target.experimental.use-DIL true")
 
         def break_on_symbol_with_condition(symbol, condition, mode=""):
             if mode:

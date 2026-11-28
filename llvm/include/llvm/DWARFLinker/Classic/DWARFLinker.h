@@ -624,10 +624,6 @@ private:
       /// Names.
       DwarfStringPoolEntryRef Name, MangledName, NameWithoutTemplate;
 
-      /// Offsets in the string pool.
-      uint32_t NameOffset = 0;
-      uint32_t MangledNameOffset = 0;
-
       /// Offset to apply to PC addresses inside a function.
       int64_t PCOffset = 0;
 

@@ -206,8 +206,6 @@ struct ContainsTrivialArray {
 ContainsTrivialArray &
 ContainsTrivialArray::operator=(const ContainsTrivialArray &) = default;
 
-// FIXME: CIR zeroes the temporary member by member (leaving its padding
-// uninitialized) whereas OGCG memsets
 struct HasPadding {
   int a;
   long b[32];
@@ -215,7 +213,13 @@ struct HasPadding {
 };
 
 // CIR-LABEL: cir.func {{.*}} @_Z11resetPaddedP10HasPadding(
-// CIR:    cir.call @_ZN10HasPaddingaSEOS_(
+// CIR:         %[[RP_TMP:.*]] = cir.alloca "ref.tmp0"
+// CIR:         %[[RP_TMP_VOID:.*]] = cir.cast bitcast %[[RP_TMP]] : !cir.ptr<!rec_HasPadding> -> !cir.ptr<!void>
+// CIR-NEXT:    %[[RP_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CIR-NEXT:    %[[RP_SIZE:.*]] = cir.const #cir.int<272> : !u64i
+// CIR-NEXT:    cir.libc.memset %[[RP_SIZE]] bytes at %[[RP_TMP_VOID]] align(8) to %[[RP_ZERO]]
+// CIR-NOT:     cir.store
+// CIR:         cir.call @_ZN10HasPaddingaSEOS_(%{{.*}}, %[[RP_TMP]])
 
 // CIR-LABEL: cir.func {{.*}} @_ZN10HasPaddingaSEOS_(
 // CIR:         %[[HP_THIS:.*]] = cir.load deref %{{.*}} : !cir.ptr<!cir.ptr<!rec_HasPadding>>
@@ -231,6 +235,8 @@ struct HasPadding {
 
 // LLVM-LABEL: define {{.*}} @_Z11resetPaddedP10HasPadding(
 // LLVM:         [[RP_TMP:%.*]] = alloca %struct.HasPadding, align 8
+// LLVM:         call void @llvm.memset.p0.i64(ptr align 8 [[RP_TMP]], i8 0, i64 272, i1 false)
+// LLVM-NOT:     store
 // LLVM:         [[RP_P:%.*]] = load ptr, ptr {{.*}}
 // LLVM-NEXT:    call {{.*}} @_ZN10HasPaddingaSEOS_(ptr {{.*}} [[RP_P]], ptr {{.*}} [[RP_TMP]])
 

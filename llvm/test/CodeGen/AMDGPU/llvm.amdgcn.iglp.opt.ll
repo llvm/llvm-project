@@ -66,15 +66,8 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; SDAG-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
-; SDAG-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
-; SDAG-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
-; SDAG-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
-; SDAG-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
-; SDAG-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
-; SDAG-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
-; SDAG-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
-; SDAG-NEXT:    s_nop 9
+; SDAG-NEXT:    s_nop 15
+; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:8288
 ; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:8304
 ; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:8256
@@ -113,8 +106,14 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; SDAG-NEXT:    ds_read_b128 a[32:35], v1 offset:49152
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
-; SDAG-NEXT:    s_nop 15
-; SDAG-NEXT:    s_nop 2
+; SDAG-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
+; SDAG-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
+; SDAG-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
+; SDAG-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
+; SDAG-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
+; SDAG-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
+; SDAG-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
+; SDAG-NEXT:    s_nop 11
 ; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:24672
 ; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:24688
 ; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:24640
@@ -123,6 +122,7 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; SDAG-NEXT:    ds_write_b128 v0, a[44:47] offset:24624
 ; SDAG-NEXT:    ds_write_b128 v0, a[32:35] offset:24576
 ; SDAG-NEXT:    ds_write_b128 v0, a[36:39] offset:24592
+; SDAG-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_iglp_opt_mfma_gemm:

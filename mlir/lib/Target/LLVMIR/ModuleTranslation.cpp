@@ -18,8 +18,10 @@
 #include "LoopAnnotationTranslation.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/IR/AttrTypeSubElements.h"
@@ -1894,6 +1896,8 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
   if (func.getWillReturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
+  if (func.getStrictfp())
+    llvmFunc->addFnAttr(llvm::Attribute::StrictFP);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
   if (func.getOptsizeAttr())

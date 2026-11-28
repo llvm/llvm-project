@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -no-stack-coloring=false < %s
+; RUN: llc -mcpu=corei7 -stack-coloring=true < %s
 
 ; Make sure that we don't crash when dbg values are used.
 

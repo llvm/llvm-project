@@ -213,7 +213,6 @@
 
 ---
 name:            src2_singledef_singleuse_dst_singleuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -311,7 +310,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_singleuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -409,7 +407,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_singleuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -525,7 +522,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_singleuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -645,7 +641,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_singleuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -775,7 +770,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_singleuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -908,7 +902,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_singleuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1069,7 +1062,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_singleuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1232,7 +1224,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_multiuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1356,7 +1347,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_multiuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1488,7 +1478,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_multiuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1637,7 +1626,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_multiuse_singledef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1789,7 +1777,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_multiuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -1958,7 +1945,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_multiuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2121,7 +2107,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_multiuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2311,7 +2296,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_multiuse_multidef_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2485,7 +2469,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_singleuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2609,7 +2592,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_singleuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2732,7 +2714,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_singleuse_singleedef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2849,7 +2830,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_singleuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -2968,7 +2948,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_singleuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3079,7 +3058,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_singleuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3192,7 +3170,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_singleuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3332,7 +3309,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_singleuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3476,7 +3452,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_multiuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3599,7 +3574,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_multiuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3733,7 +3707,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_multiuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -3883,7 +3856,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_multiuse_singledef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4036,7 +4008,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_multiuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4173,7 +4144,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_multiuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4319,7 +4289,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_multiuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4489,7 +4458,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_multiuse_multidef_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4664,7 +4632,6 @@ body:             |
 
 ---
 name:            src2_singledef_singleuse_dst_singleuse_singledef_mixed
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4764,7 +4731,6 @@ body:             |
 
 ---
 name:            src2_multidef_singleuse_dst_multiuse_multidef_mixed
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -4936,7 +4902,6 @@ body:             |
 
 ---
 name:            src2_singledef_multiuse_dst_singleuse_multidef_mixed
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5069,7 +5034,6 @@ body:             |
 
 ---
 name:            src2_multidef_multiuse_dst_multiuse_multidef_mixed
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5220,7 +5184,6 @@ body:             |
 
 ---
 name:            no_copy_for_mfma
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5363,7 +5326,6 @@ body:             |
 
 ---
 name:            src2_reaching_def_av_mov_b32_imm_pseudo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5464,7 +5426,6 @@ body:             |
 
 ---
 name:            src2_reaching_def_av_mov_b64_imm_pseudo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5567,7 +5528,6 @@ body:             |
 # region.
 ---
 name:            noncandidate_mfma_def_feeds_candidate_src2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -5680,7 +5640,6 @@ body:             |
 
 ---
 name:            av_mov_imm_src2_def_escapes_to_vgpr_user
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

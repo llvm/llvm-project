@@ -21,7 +21,8 @@ using namespace lldb_private;
 
 Property::Property(const PropertyDefinition &definition)
     : m_name(definition.name), m_description(definition.description),
-      m_is_global(definition.global) {
+      m_is_global(definition.global), m_is_deprecated(definition.deprecated),
+      m_deprecation_message(definition.deprecation_message) {
   switch (definition.type) {
   case OptionValue::eTypeInvalid:
   case OptionValue::eTypeProperties:
@@ -249,6 +250,24 @@ bool Property::DumpQualifiedName(
   return false;
 }
 
+static constexpr llvm::StringLiteral g_deprecated_tag("(deprecated)");
+
+void Property::DumpDeprecatedTag(Stream &strm, uint32_t dump_mask) const {
+  // Names dumped on their own are used for completion, and commands are read
+  // back by "settings read", so neither can have a deprecation tag included.
+  if (m_is_deprecated &&
+      (dump_mask &
+       ~(OptionValue::eDumpOptionName | OptionValue::eDumpGroupFilter)) &&
+      !(dump_mask & OptionValue::eDumpOptionCommand))
+    strm << ' ' << g_deprecated_tag;
+}
+
+std::string Property::GetTaggedDescription() const {
+  if (!m_is_deprecated)
+    return m_description;
+  return (g_deprecated_tag + " " + m_description).str();
+}
+
 void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
                     uint32_t dump_mask) const {
   if (m_value_sp) {
@@ -260,7 +279,9 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_desc || !transparent) {
       if ((dump_mask & OptionValue::eDumpOptionName) && !m_name.empty()) {
         DumpQualifiedName(strm);
-        if (dump_mask & ~OptionValue::eDumpOptionName)
+        DumpDeprecatedTag(strm, dump_mask);
+        if (dump_mask &
+            ~(OptionValue::eDumpOptionName | OptionValue::eDumpGroupFilter))
           strm.PutChar(' ');
       }
     }
@@ -269,8 +290,9 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
       if (!desc.empty())
         strm << "-- " << desc;
 
-      if (transparent && (dump_mask == (OptionValue::eDumpOptionName |
-                                        OptionValue::eDumpOptionDescription)))
+      if (transparent && ((dump_mask & ~OptionValue::eDumpGroupFilter) ==
+                          (OptionValue::eDumpOptionName |
+                           OptionValue::eDumpOptionDescription)))
         strm.EOL();
     }
     m_value_sp->DumpValue(exe_ctx, strm, dump_mask);
@@ -279,13 +301,12 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
 
 void Property::DumpDescription(
     CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,
-    bool display_qualified_name,
+    bool display_qualified_name, bool include_deprecated,
     std::optional<Stream::HighlightSettings> highlight) const {
   if (!m_value_sp)
     return;
-  llvm::StringRef desc = GetDescription();
 
-  if (desc.empty())
+  if (GetDescription().empty())
     return;
 
   StreamString qualified_name;
@@ -295,8 +316,17 @@ void Property::DumpDescription(
 
     if (m_value_sp->DumpQualifiedName(qualified_name))
       strm.Printf("'%s' variables:\n\n", qualified_name.GetData());
-    sub_properties->DumpAllDescriptions(interpreter, strm);
+    sub_properties->DumpAllDescriptions(interpreter, strm, include_deprecated);
   } else {
+    // A deprecated property is only described when the user named it or asked
+    // for deprecated properties, so always say that it's deprecated. Only
+    // build a tagged copy of the description in that case.
+    std::string tagged_desc;
+    llvm::StringRef desc = GetDescription();
+    if (m_is_deprecated) {
+      tagged_desc = GetTaggedDescription();
+      desc = tagged_desc;
+    }
     if (display_qualified_name) {
       StreamString qualified_name;
       DumpQualifiedName(qualified_name);

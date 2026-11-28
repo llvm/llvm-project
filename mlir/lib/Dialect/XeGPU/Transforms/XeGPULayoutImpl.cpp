@@ -31,6 +31,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <functional>
@@ -81,47 +82,112 @@ void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
   });
 }
 
-// Sets the layout on a TensorDesc value by updating its type to include
-// the given layout, if the type does not already have a layout attached.
-static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
-  auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(val.getType());
-  if (!tensorDescTy || tensorDescTy.getLayoutAttr())
-    return;
-  auto typeWithLayout = xegpu::TensorDescType::get(
-      tensorDescTy.getContext(), tensorDescTy.getShape(),
-      tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-  val.setType(typeWithLayout);
+/// Return whether every target recorded for `region` has been visited.
+static bool isReady(Region *region,
+                    const DenseMap<Region *, SmallPtrSet<Region *, 2>> &targets,
+                    const SetVector<Region *> &visitedRegions) {
+  auto it = targets.find(region);
+  if (it == targets.end())
+    return true;
+  for (Region *target : it->second)
+    if (!visitedRegions.contains(target))
+      return false;
+  return true;
 }
 
-// the walkRegionBackward() is a recursive function
-// the input rootOp is the function operation, which is also a region op.
-// it recursively processes the region op in reverse topological order.
-static void walkRegionBackward(Region &region,
-                               llvm::function_ref<void(Operation *)> visit) {
+/// Order regions for walkBackward, preferring successors before predecessors
+/// and breaking ties by reverse region order.
+static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
+  SmallVector<Region *> regions;
+  for (Region &region : llvm::reverse(op->getRegions()))
+    regions.push_back(&region);
+  auto regionOp = dyn_cast<RegionBranchOpInterface>(op);
+  if (!regionOp)
+    return regions;
 
-  // Use post-order traversal to process blocks in reverse topological order.
-  // This ensures that use blocks are visited before def blocks, which is
-  // required for backward layout propagation.
+  // Track inter-region edges and exits to the parent op. Ignore self-edges.
+  DenseMap<Region *, SmallPtrSet<Region *, 2>> targets;
+  SmallPtrSet<Region *, 2> exits;
+  for (Region *region : regions) {
+    SmallVector<RegionSuccessor> successors;
+    regionOp.getSuccessorRegions(*region, successors);
+    for (const RegionSuccessor &successor : successors) {
+      if (successor.isOperation())
+        exits.insert(region);
+      else if (successor.getSuccessor() != region)
+        targets[region].insert(successor.getSuccessor());
+    }
+  }
+
+  SetVector<Region *> visitedRegions;
+  while (visitedRegions.size() < regions.size()) {
+    // If no region is ready, every unvisited region is on a cycle (e.g.
+    // scf.while before <-> after). Break it at an exit region when possible:
+    // its consumers outside the op are already visited, and its in-cycle
+    // successor is then visited after it, like a use across a loop back edge.
+    // Returns the first unvisited region that satisfies `pred`, or null.
+    auto findFirst = [&](auto pred) -> Region * {
+      for (Region *region : regions)
+        if (!visitedRegions.contains(region) && pred(region))
+          return region;
+      return nullptr;
+    };
+    Region *chosen = findFirst([&](Region *region) {
+      return isReady(region, targets, visitedRegions);
+    });
+    if (!chosen)
+      chosen =
+          findFirst([&](Region *region) { return exits.contains(region); });
+    if (!chosen)
+      chosen = findFirst([](Region *) { return true; });
+    visitedRegions.insert(chosen);
+  }
+  return visitedRegions.takeVector();
+}
+
+/// Visits the ops of `region` backward; see xegpu::walkBackward.
+static void walkRegionBackward(Region &region,
+                               xegpu::BackwardLayoutVisitor &visitor) {
   if (region.empty())
     return;
+  // CFG post-order visits successor blocks first, except across back edges.
   llvm::ReversePostOrderTraversal<Region *> rpot(&region);
   SmallVector<Block *> blocks(rpot.begin(), rpot.end());
   for (Block *block : llvm::reverse(blocks)) {
-    // ops: back -> front
     for (Operation &op : llvm::reverse(*block)) {
-      // make sure we first visit inside the region op (so yield op first)
-      // and then move to region op itself
-      // Regions are iterated in forward order so that for multi-region ops
-      // like scf.while, earlier regions (e.g., "before/cond") are processed
-      // first. This ensures that when a later region's terminator (e.g., "do"
-      // yield) needs the layout of an earlier region's block args, those
-      // layouts are already available from use points.
-      for (Region &nested : op.getRegions())
-        walkRegionBackward(nested, visit);
-
-      visit(&op);
+      auto walkNestedRegions = [&]() {
+        for (Region *nested : getBackwardRegionOrder(&op))
+          walkRegionBackward(*nested, visitor);
+      };
+      walkNestedRegions();
+      auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
+      if (terminator && isa<RegionBranchOpInterface>(op.getParentOp())) {
+        visitor.visitTerminator(terminator);
+      } else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op)) {
+        visitor.visitRegionOp(regionOp);
+        // Pipelined loops pass values along iter_arg chains; each walk moves a
+        // layout request back one iter_arg: allow region args + 1 walks.
+        unsigned numRegionArgs = 0;
+        for (Region &region : op.getRegions())
+          numRegionArgs += region.getNumArguments();
+        for (unsigned i = 0;
+             i < numRegionArgs + 1 && visitor.shouldRevisitRegions(regionOp);
+             ++i) {
+          walkNestedRegions();
+          visitor.visitRegionOp(regionOp);
+        }
+      } else {
+        visitor.visitRegularOp(&op);
+      }
     }
   }
+}
+
+void xegpu::walkBackward(Operation *root, BackwardLayoutVisitor &visitor) {
+  root->walk([&](FunctionOpInterface funcOp) {
+    if (!funcOp.isExternal())
+      walkRegionBackward(funcOp.getFunctionBody(), visitor);
+  });
 }
 
 static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
@@ -229,9 +295,10 @@ static void propagateResultsToRegularOperands(Operation *op) {
     return;
 
   // Recover layout for TensorDesc type results by updating the type to include
-  // the layout. For vector type
-  if (isa<xegpu::TensorDescType>(resultType))
-    setTensorDescLayout(result, resLayout);
+  // the layout.
+  if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(resultType);
+      tdescTy && !tdescTy.getLayoutAttr())
+    xegpu::setTensorDescLayout(result, resLayout);
 
   // Recover layout for vector type results, or for multi-reduction ops which
   // may reduce to a scalar that still needs a layout.
@@ -249,124 +316,39 @@ static void propagateResultsToRegularOperands(Operation *op) {
   }
 }
 
-// Propagate layout from region op results and sibling region block args
-// to yield/condition operands. For each successor of this terminator:
-// - Parent successor: propagate from parent op's result layouts (use points).
-// - Region successor: propagate from target region's block arg layouts (use
-//   points), e.g., scf.yield in "after/do" region propagates to "before/cond"
-//   block args.
-static void propagateRegionResultsToYieldOperands(
-    mlir::RegionBranchTerminatorOpInterface yieldOp) {
-  auto regionBranchOp =
-      dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
-  if (!regionBranchOp)
+void xegpu::propagateRegionResultsToYieldOperands(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue, SetOperandLayoutFnTy setOperandLayout) {
+  auto regionOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!regionOp)
     return;
-
-  SmallVector<RegionSuccessor> successors;
-  SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
-  yieldOp.getSuccessorRegions(operandAttrs, successors);
-
-  for (const RegionSuccessor &successor : successors) {
-    OperandRange succOps = yieldOp.getSuccessorOperands(successor);
-    if (succOps.empty())
-      continue;
-    unsigned beginIdx = succOps.getBeginOperandIndex();
-    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
-    unsigned count = std::min<unsigned>(succOps.size(), successorInputs.size());
-
-    for (unsigned i = 0; i < count; ++i) {
-      xegpu::DistributeLayoutAttr layout;
-      if (successor.isOperation()) {
-        // For parent successor, get layout from external use points of the
-        // parent op's results.
-        auto regionResult = regionBranchOp->getResult(i);
-        layout = getLayoutFromUsePoints(regionResult);
-        if (layout) {
-          // set layout for the region op, like scf.loop
-          xegpu::setTemporaryLayout(regionResult, layout);
-          if (isa<xegpu::TensorDescType>(regionResult.getType()))
-            setTensorDescLayout(regionResult, layout);
-        }
-      } else {
-        // For region successor, get layout from the target region's block
-        // arg use points (e.g., "before/cond" region args for scf.while
-        // "after/do" yield).
-        layout = getLayoutFromUsePoints(successorInputs[i]);
-      }
-      if (!layout)
-        continue;
-      auto operandType = succOps[i].getType();
-      if (isa<VectorType>(operandType) ||
-          dyn_cast<xegpu::TensorDescType>(operandType))
-        // recover layout for yield op operands
-        xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
-    }
-  }
-}
-
-/// Assign a layout to a region op's results (e.g. scf.for) using the layout of
-/// the terminator operands that the region forwards to them. For each operand a
-/// terminator (e.g. scf.yield) forwards to a successor input, if that input is
-/// a region op result, the operand's layout is written onto the result.
-/// clang-format off
-/// Example: scf.for ... iter_args(...) -> (out types) {
-///   ...
-///   scf.yield ... : (yield types)
-/// }
-/// clang-format on
-/// Having a layout on the region op result lets a later step attach a
-/// convert_layout as a use to resolve the region op's no-use case.
-/// Block-argument successors are left untouched.
-LogicalResult xegpu::propagateYieldOperandsToRegionResults(
-    mlir::RegionBranchTerminatorOpInterface terminator,
-    xegpu::GetLayoutFnTy getLayoutOfValue) {
-  // Only process if the terminator is inside a region branch op.
-  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
-  if (!branchOp)
-    return success();
-
   RegionBranchSuccessorMapping mapping;
-  branchOp.getSuccessorOperandInputMapping(mapping,
+  regionOp.getSuccessorOperandInputMapping(mapping,
                                            RegionBranchPoint(terminator));
   for (const auto &[successorOperand, successorInputs] : mapping) {
-    for (Value successorInput : successorInputs) {
-      Type inputType = successorInput.getType();
-      // We only need to operate on vector types.
-      if (!isa<VectorType>(inputType))
-        continue;
-      xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand->get());
-
-      // The forwarded operand must carry a layout to propagate.
-      if (!successorOperandLayout)
-        return failure();
-      // Assign the yield operand's layout to the region op result it feeds.
-      if (auto result = dyn_cast<OpResult>(successorInput))
-        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
-      // Restrict the input IR: a successor argument that is not tied to an init
-      // operand (scf.while's "after" arguments) must be fed by a pass-through,
-      // because nothing else identifies which value the region carries. Its
-      // layout is then that of the forwarded argument's init operand.
-      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
-        auto loop =
-            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
-        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
-        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
-          return terminator->emitError(
-              "unsupported region structure: the successor argument it feeds "
-              "is not tied to an init operand, so its value must be passed "
-              "through from predecessor region argument.");
-      }
-    }
+    if (!xegpu::isLayoutCarrierType(successorOperand->get().getType()))
+      continue;
+    // Prefer the layout of a region argument, e.g. a loop's iter_arg.
+    xegpu::DistributeLayoutAttr layout;
+    for (auto arg : llvm::make_isa_range<BlockArgument>(successorInputs))
+      if ((layout = getLayoutOfValue(arg)))
+        break;
+    // Otherwise the region result's (an operand feeds at most one).
+    if (!layout)
+      for (Value input : successorInputs)
+        if (isa<OpResult>(input))
+          layout = getLayoutOfValue(input);
+    setOperandLayout(*successorOperand, layout);
   }
-  return success();
 }
 
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
 LogicalResult
 xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
-                                  xegpu::GetLayoutFnTy getLayoutOfValue) {
+                                  xegpu::GetLayoutFnTy getLayoutOfValue,
+                                  SetOperandLayoutFnTy setOperandLayout,
+                                  SetTDescArgLayoutFnTy setTDescArgLayout) {
   // Iterate all regions of the region op. For each block argument that has a
   // layout (obtained via `getLayoutOfValue`), trace back to find the
   // corresponding init operand of the regionOp and set the layout on it.
@@ -383,11 +365,12 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
       if (!layout)
         continue;
 
-      // Recover layout for tensor_desc block args by updating the type.
-      if (isa<xegpu::TensorDescType>(regionArg.getType()))
-        setTensorDescLayout(regionArg, layout);
+      // Pass on the layout of tensor_desc block args (it ends up in the type).
+      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(regionArg.getType());
+          tdescTy && !tdescTy.getLayoutAttr())
+        setTDescArgLayout(cast<BlockArgument>(regionArg), layout);
 
-      // Recover layout for region op operands, like scf.for's init operands.
+      // Pass on the layout of region op operands, like scf.for's init operands.
       // Find all predecessor values that flow into this block argument.
       SmallVector<Value> predValues;
       regionOp.getPredecessorValues(regionSuccessor, inputIdx, predValues);
@@ -395,7 +378,7 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
         // Match predecessor value to an operand of the regionOp.
         for (OpOperand &operand : regionOp->getOpOperands()) {
           if (operand.get() == predVal)
-            xegpu::setTemporaryLayout(operand, layout);
+            setOperandLayout(operand, layout);
         }
       }
     }
@@ -421,39 +404,46 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
 //      Then the result layouts are propagated to operands.
 //
 //    For region operations (e.g., loops):
-//       - When backward propagation reaches a region op, it sets the layout of
-//       the region op’s results according to use points like regular ops.
-//       - Then, the result layouts (such as a loop output) are propagated to
-//       their corresponding operands in the yield.
-//       - When backward propagation reaches the first operation inside the
-//       region, the pass examines the region op’s initialization list,
-//       propagating from region arguments to the corresponding initialization
-//       operands.
-//       - This ensures that layouts are consistently propagated
-//       across region boundaries while preserving a single well-defined use for
-//       each definition at the region-op level.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto processFunc = [&](Region &body, StringRef funcName) {
-    walkRegionBackward(body, [&](Operation *op) {
-      if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        (void)xegpu::propagateRegionArgsToInits(regionOp,
-                                                getLayoutFromUsePoints);
-      } else if (auto yieldOp =
-                     dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
-        propagateRegionResultsToYieldOperands(yieldOp);
-      } else if (!dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
-        propagateResultsToRegularOperands(op);
-      }
-    });
-  };
-  removeTemporaryLayoutAttrs(rootOp);
-  rootOp->walk([&](func::FuncOp func) {
-    processFunc(func.getBody(), func.getSymName());
-  });
-  rootOp->walk([&](gpu::GPUFuncOp func) {
-    processFunc(func.getBody(), func.getName());
-  });
+//       - A terminator operand takes the layout of the region argument it
+//       feeds (from while op's cond region), or else of the region result
+//       (from their use points).
+//       - The region op, visited after its regions, sets its result layouts
+//       from their use points and its init operands from the region
+//       arguments.
+namespace {
+/// Recover temporary layouts through the shared backward walk.
+struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
+  void visitTerminator(RegionBranchTerminatorOpInterface terminator) override {
+    xegpu::propagateRegionResultsToYieldOperands(
+        terminator, getLayoutFromUsePoints,
+        xegpu::setTemporaryLayout<OpOperand>);
+  }
+  void visitRegionOp(RegionBranchOpInterface regionOp) override {
+    // The region results take the layout of their uses.
+    for (OpResult result : regionOp->getResults()) {
+      xegpu::DistributeLayoutAttr layout = getLayoutFromUsePoints(result);
+      if (!layout)
+        continue;
+      xegpu::setTemporaryLayout(result, layout);
+      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(result.getType());
+          tdescTy && !tdescTy.getLayoutAttr())
+        xegpu::setTensorDescLayout(result, layout);
+    }
+    (void)xegpu::propagateRegionArgsToInits(
+        regionOp, getLayoutFromUsePoints, xegpu::setTemporaryLayout<OpOperand>,
+        xegpu::setTensorDescLayout);
+  }
+  void visitRegularOp(Operation *op) override {
+    if (!isa<xegpu::AnchorLayoutInterface>(op))
+      propagateResultsToRegularOperands(op);
+  }
+};
+} // namespace
 
+bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
+  removeTemporaryLayoutAttrs(rootOp);
+  LayoutRecovery recovery;
+  walkBackward(rootOp, recovery);
   return true;
 }
 
@@ -1891,6 +1881,49 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
+/// Select a default 2D block IO layout without transpose or transform.
+/// `numSg` is needed only in Subgroup mode.
+static xegpu::DistributeLayoutAttr setupDefault2DBlockIOLayout(
+    xegpu::LayoutKind layoutKind, ArrayRef<int64_t> dataShape, Type elemTy,
+    int numSg,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const xegpu::uArch::uArch *uArch) {
+  auto context = elemTy.getContext();
+  auto subgroupSize = uArch->getSubgroupSize();
+  assert(dataShape.size() >= 2 && "Expected at least 2D shape for ND op");
+
+  // Compute the default 2D block IO lane layout / lane data.
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+  auto [laneLayout, laneData, order] =
+      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
+                                 uArchInstruction->getPackedFormatBitSize());
+
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(context, laneLayout, laneData);
+
+  auto instData =
+      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
+
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
+           "Expected the block IO layout to satisfy uArch block constraints");
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
+                                       laneData);
+  }
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    return get2DBlockIOSubgroupLayout(context, dataShape, elemTy,
+                                      uArchInstruction, numSg);
+  }
+
+  return nullptr;
+}
+
 /// Sets up the anchor layout for a store_nd operation. StoreNd picks its
 /// own layout based on uArch block parameters (it does not take a consumer
 /// layout, since it is a data sink).
@@ -1904,44 +1937,9 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
               xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
   if (!uArchInstruction)
     return nullptr;
-
-  auto context = srcVecTy.getContext();
-  Type elemTy = srcVecTy.getElementType();
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto dataShape = srcVecTy.getShape();
-  [[maybe_unused]] int rank = srcVecTy.getRank();
-  assert(rank >= 2 && "Expected at least 2D shape for ND op");
-
-  // Compute the default 2D block IO lane layout / lane data.
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData, order] =
-      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
-                                 uArchInstruction->getPackedFormatBitSize());
-
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-
-  auto instData =
-      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
-  // Shape not realizable as a 2D-block instruction; let the caller report it.
-  if (!instData)
-    return nullptr;
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
-           "Expected the store layout to satisfy uArch block constraints");
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-  }
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    return get2DBlockIOSubgroupLayout(context, dataShape, elemTy,
-                                      uArchInstruction, numSg);
-  }
-
-  return nullptr;
+  return setupDefault2DBlockIOLayout(layoutKind, srcVecTy.getShape(),
+                                     srcVecTy.getElementType(), numSg,
+                                     uArchInstruction, uArch);
 }
 
 /// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
@@ -1951,51 +1949,15 @@ xegpu::DistributeLayoutAttr
 xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                    xegpu::TensorDescType tdescTy, int numSg,
                                    const xegpu::uArch::uArch *uArch) {
-
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
           uArch->getInstruction(
               xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
   if (!uArchInstruction)
     return nullptr;
-
-  auto context = tdescTy.getContext();
-  Type elemTy = tdescTy.getElementType();
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto dataShape = tdescTy.getShape();
-  [[maybe_unused]] int rank = tdescTy.getRank();
-  assert(rank >= 2 && "Expected at least 2D shape for ND op");
-
-  // Compute the default 2D block IO lane layout / lane data.
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData, order] =
-      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
-                                 uArchInstruction->getPackedFormatBitSize());
-
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-
-  auto instData =
-      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
-  // Shape not realizable as a 2D-block instruction; let the caller report it.
-  if (!instData)
-    return nullptr;
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
-           "Expected the prefetch layout to satisfy uArch block constraints");
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-  }
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    return get2DBlockIOSubgroupLayout(context, dataShape, elemTy,
-                                      uArchInstruction, numSg);
-  }
-
-  return nullptr;
+  return setupDefault2DBlockIOLayout(layoutKind, tdescTy.getShape(),
+                                     tdescTy.getElementType(), numSg,
+                                     uArchInstruction, uArch);
 }
 
 /// Sets up the anchor layout for a load_nd operation. LoadNd takes a
@@ -2009,7 +1971,18 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                xegpu::DistributeLayoutAttr consumerLayout,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
-  assert(consumerLayout && "Expected a valid consumer layout");
+  // Loads without a requested layout use the default block IO layout.
+  if (!consumerLayout) {
+    const auto *uArchInstruction =
+        dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+            uArch->getInstruction(
+                xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+    if (!uArchInstruction)
+      return nullptr;
+    return setupDefault2DBlockIOLayout(layoutKind, resVecTy.getShape(),
+                                       resVecTy.getElementType(), numSg,
+                                       uArchInstruction, uArch);
+  }
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(consumerLayout.isForWorkgroup() &&
            "Expected consumer layout to be a complete workgroup-level layout");
@@ -2130,30 +2103,60 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   return nullptr;
 }
 
-/// Sets up the anchor layout for load gather and load matrix operation.
-/// load matrix lowers to load gather and 1d block load. All of them share the
-/// same layout setup logic.
-///
-/// For Subgroup layout, uses the consumer layout directly.
-///
-/// For InstData layout, takes consumer's inst_data as-is; lane_layout and
-/// lane_data are taken from the consumer.
-///
-/// For Lane layout, lane_layout/lane_data are taken from the consumer.
-///
-/// A consumer layout that carries lane_layout and lane_data is required.
-/// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
-/// per-lane chunk.
-///
-/// TODO: derive lane_layout/lane_data here when the consumer has none, capped
-/// by `maxChunkSize`, the way `setupGenericStoreAnchorLayout` does via
-/// `computeScatterIOLaneLayoutAndData`. That path is missing today, so the
-/// assert below stands in for it.
+/// Select the most balanced `numSg` factorization of `wgShape` whose sg_data
+/// is a multiple of `instData`.
+static xegpu::DistributeLayoutAttr
+getDefaultScatterIOSubgroupLayout(mlir::MLIRContext *context,
+                                  ArrayRef<int64_t> wgShape,
+                                  ArrayRef<int64_t> instData, int numSg) {
+  auto candidates = getSgLayoutCandidates(wgShape, instData, numSg);
+  if (candidates.empty())
+    return nullptr;
+  // Candidates are ordered most-balanced first.
+  return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
+}
+
+/// Select a default scatter IO layout with at most `maxChunkSize` elements
+/// per lane. Instruction data is lane_layout * lane_data.
+static xegpu::DistributeLayoutAttr setupDefaultScatterIOLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
+    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
+
+  auto [laneLayout, laneData] =
+      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
+
+  SmallVector<int64_t> instData(srcShape.size());
+  for (size_t i = 0; i < srcShape.size(); ++i)
+    instData[i] = laneLayout[i] * laneData[i];
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    return getDefaultScatterIOSubgroupLayout(context, srcShape, instData,
+                                             numSg);
+  }
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+  }
+  if (layoutKind == xegpu::LayoutKind::Lane) {
+    return buildLaneLayout(context, laneLayout, laneData);
+  }
+  return nullptr;
+}
+
+/// Select a layout for load_gather or load_matrix. Reuse requested subgroup
+/// layouts; otherwise keep the consumer's lane_layout, restrict lane_data to a
+/// bounded innermost chunk, and in InstData mode set inst_data to
+/// lane_layout * lane_data.
+/// Without a requested layout, use the default scatter IO layout.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
-    ArrayRef<int64_t> resShape, int subgroupSize) {
+    ArrayRef<int64_t> resShape, int subgroupSize, int numSg) {
 
+  if (!consumerLayout)
+    return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                       resShape, subgroupSize, numSg);
   if (layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
 
@@ -2187,9 +2190,11 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 }
 
 /// Sets up the anchor layout for a load gather operation.
-xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
-    xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr
+xegpu::setupLoadGatherAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   VectorType resVecTy, int contigChunkSize,
+                                   xegpu::DistributeLayoutAttr consumerLayout,
+                                   int numSg, const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
@@ -2203,16 +2208,16 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
+                                      maxChunkSize, resShape, subgroupSize,
+                                      numSg);
 }
 
 /// Sets up the anchor layout for load matrix operation.
 /// TODO: enhance load matrix to indicate lowering to chunked load or not.
-xegpu::DistributeLayoutAttr
-xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType resVecTy, int contigChunkSize,
-                                   xegpu::DistributeLayoutAttr consumerLayout,
-                                   const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupLoadMatrixAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
+    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+    const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
@@ -2223,48 +2228,8 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
-}
-
-/// Picks the subgroup layout for a scatter-style store (store_scatter /
-/// store_matrix): the most balanced `numSg` factorization that divides
-/// `wgShape` with sg_data a multiple of `instData`. A store has no consumer.
-static xegpu::DistributeLayoutAttr
-getStoreSubgroupLayouts(mlir::MLIRContext *context, ArrayRef<int64_t> wgShape,
-                        ArrayRef<int64_t> instData, int numSg) {
-  auto candidates = getSgLayoutCandidates(wgShape, instData, numSg);
-  if (candidates.empty())
-    return nullptr;
-  // Candidates are ordered most-balanced first.
-  return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
-}
-
-/// Sets up the anchor layout for store scatter and store matrix operation,
-/// which share the same logic. Lane layout comes from
-/// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
-static xegpu::DistributeLayoutAttr setupGenericStoreAnchorLayout(
-    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
-    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
-
-  auto [laneLayout, laneData] =
-      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
-
-  SmallVector<int64_t> instData(srcShape.size());
-  for (size_t i = 0; i < srcShape.size(); ++i)
-    instData[i] = laneLayout[i] * laneData[i];
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    return getStoreSubgroupLayouts(context, srcShape, instData, numSg);
-  }
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
-  }
-  if (layoutKind == xegpu::LayoutKind::Lane) {
-    return buildLaneLayout(context, laneLayout, laneData);
-  }
-  return nullptr;
+                                      maxChunkSize, resShape, subgroupSize,
+                                      numSg);
 }
 
 /// Sets up the anchor layout for a store scatter operation.
@@ -2284,8 +2249,8 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+  return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                     srcShape, subgroupSize, numSg);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
@@ -2303,8 +2268,8 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+  return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                     srcShape, subgroupSize, numSg);
 }
 
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from

@@ -1,13 +1,17 @@
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=err %s
+// RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=err %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=warn \
 // RUN:   -Wno-error=bpf-enum-not-relocated %s
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=none \
 // RUN:   -Wno-bpf-enum-not-relocated %s
+// RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=none \
+// RUN:   -fbpf-no-enum-reloc=bpf_map_type,ops_flags %s
 
 // Where a constant is required, an enumerator of an enum with the
 // preserve_access_index attribute is not relocated, and its value is used.
 // This is diagnosed with -Wbpf-enum-not-relocated, an error by default, which
 // -Wno-error=, -Wno- or #pragma clang diagnostic opts out of.
+// -fbpf-no-enum-reloc= disables the relocation, so there is no diagnostic.
 
 // none-no-diagnostics
 

@@ -10,6 +10,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Stream.h"
 
@@ -75,7 +76,10 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
 }
 
 bool StackID::IsYoungerThan(const StackID &other, Process &process) const {
-  switch (process.CompareCFAs(*this, other)) {
+  CFAComparison comparison = process.CompareCFAs(*this, other);
+  if (comparison == CFAComparison::NoOpinion)
+    comparison = LanguageRuntime::CompareCFAs(process, *this, other);
+  switch (comparison) {
   case CFAComparison::Younger:
     return true;
   case CFAComparison::Older:

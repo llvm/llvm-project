@@ -7,7 +7,9 @@ into libexpressions_mid, itself merged into libexpressions_top.
   DW_OP_addrx g2. The operations keep indexing .debug_addr, whose entries
   carry the relocations.
 - In hash.c, the location of secret computes an offset with DW_OP_convert
-  operations, then adds the address of kSecret.
+  operations, then adds the address of kSecret. The parallel linker widens the
+  type references of DW_OP_convert, which moves the address when it merges a
+  dSYM made by the classic linker.
 
 Instructions to reproduce
 -------------------------
@@ -60,6 +62,14 @@ DEFINE:        %{out}/libexpressions_top.dylib.dSYM | FileCheck %s
 RUN: rm -rf %t
 REDEFINE: %{l1} = classic
 REDEFINE: %{l2} = classic
+REDEFINE: %{l3} = classic
+RUN: %{link}
+REDEFINE: %{l1} = parallel
+REDEFINE: %{l2} = parallel
+REDEFINE: %{l3} = parallel
+RUN: %{link}
+REDEFINE: %{l1} = classic
+REDEFINE: %{l2} = parallel
 REDEFINE: %{l3} = classic
 RUN: %{link}
 

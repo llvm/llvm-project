@@ -48,7 +48,6 @@ void AArch64GISelMITest::getTargetTestModuleString(SmallString<512> &S,
 ---
 ...
 name: func
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -85,7 +84,6 @@ void AMDGPUGISelMITest::getTargetTestModuleString(
 ---
 ...
 name: func
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

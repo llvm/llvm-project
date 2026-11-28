@@ -2050,6 +2050,10 @@ supported for the `amdgcn` target.
   `alloca` is not visible while in a called function. Attempting to dereference
   a pointer to such memory in a called function is undefined behavior.
 
+  Pointers can be cast to and from the generic address space, which uses a
+  {ref}`synthetic aperture<amdgpu-synthetic-apertures>`; a generic pointer
+  obtained this way cannot be dereferenced.
+
 **Barrier**
 
 : This address space represents barrier IDs (introduced in GFX12) as addresses.
@@ -2105,6 +2109,10 @@ The following synthetic apertures are defined:
   - 1
   - `0x00000001`
   - Barrier
+* - VGPR
+  - 3
+  - `0x00000003`
+  - VGPR
 :::
 
 Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
@@ -2127,6 +2135,69 @@ upper 32 bits of the generic pointer.
 As the LDS aperture is defined by its 16 most significant bits, we can theoretically
 support up to `(1 << 16) - 1` synthetic apertures safely.
 
+(amdgpu-clusters)=
+
+### Clusters
+
+On targets that support workgroup clusters (for example `gfx1250`), the
+workgroups of a grid can be grouped into *clusters*. A cluster is a fixed-size
+block of workgroups that are co-scheduled on the same shader engine so that
+they can cooperate more closely than workgroups in different clusters.
+
+On each subtarget, the maximum size of a cluster is limited by the number of
+WGPs on a shader engine; each workgroup in a cluster runs on a separate WGP. A
+WGP may simultaneously host workgroups from different clusters.
+
+(amdgpu-cluster-dims)=
+
+#### Cluster Dimensions
+
+Clusters may be 1D, 2D, or 3D. The cluster dimensions are determined by the
+`"amdgpu-cluster-dims"` function attribute.
+
+```llvm
+"amdgpu-cluster-dims"="x,y,z"
+```
+
+- An absent attribute indicates that it is statically unknown whether clustering
+  is enabled.
+- A value of "1024,1024,1024" indicates that clustering is enabled, but the
+  dimensions are not statically known.
+- A value of "0,0,0" indicates that clustering is disabled.
+- Any other value enables clustering and explicitly specifies the cluster
+  dimensions.
+
+#### Workgroups in a Cluster
+
+Every workgroup in a cluster is the same size, and every cluster in a dispatch
+is the same size.
+
+A workgroup can query its position within the grid and its cluster using the
+following intrinsics:
+
+* `llvm.amdgcn.cluster.id.{x,y,z}` -- the coordinates of this workgroup's
+  cluster within the grid.
+* `llvm.amdgcn.cluster.workgroup.id.{x,y,z}` -- the coordinates of this
+  workgroup within its cluster.
+* `llvm.amdgcn.cluster.workgroup.flat.id` -- the flattened index of this
+  workgroup within its cluster. The linearization treats X as the innermost
+  dimension and Z as the outermost:
+
+  `flat_id = x + y * cluster_dim_x + z * cluster_dim_x * cluster_dim_y`.
+* `llvm.amdgcn.cluster.workgroup.max.id.{x,y,z}` -- the largest workgroup
+  index within the cluster in each dimension.
+* `llvm.amdgcn.cluster.workgroup.max.flat.id` -- the largest flattened
+  workgroup within the cluster.
+
+#### Cluster Multicast Loads
+
+Within a cluster, several workgroups can combine matching load requests via
+{ref}`cluster multicast DMA operations <amdgpu-cluster-multicast-dma>` so that
+each populates its own LDS from a single shared fetch of global memory. The
+`cluster` memory scope (see {ref}`amdgpu-memory-scopes`) synchronizes operations
+performed by threads in workgroups of the same cluster. On targets that do not
+support clusters, `cluster` scope behaves like `agent` scope.
+
 (amdgpu-memory-scopes)=
 
 ### Memory Scopes
@@ -2147,6 +2218,7 @@ backend memory model when the target triple OS is `amdhsa` (see
 The memory model supported is based on the HSA memory model [{ref}`HSA <hsa>`] which is
 based in turn on HRF-indirect with scope inclusion [{ref}`HRF <hrf>`]. The happens-before
 relation is transitive over the synchronizes-with relation independent of scope
+(except as noted for {ref}`one-as syncscopes<amdgpu-one-as>`)
 and synchronizes-with allows the memory scope instances to be inclusive (see
 table {ref}`amdgpu-amdhsa-llvm-sync-scopes-table`). Concurrent atomic operations
 only operate atomically with respect to each other if they are included in each
@@ -2156,19 +2228,6 @@ all have inclusive scopes, then R returns `undef` (see {ref}`memmodel`).
 This is different to the OpenCL [{ref}`OpenCL <opencl>`] memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
 is conservatively correct for OpenCL.
-
-There is a `one-as` variant for each sync scope. If a `release` or
-`acquire` operation with a `one-as` sync scope participates in a
-synchronization, only the effects of memory operations in the address space of
-the `one-as` operation are synchronized. The address space of a `fence`
-instruction with `one-as` sync scope is specified via
-`amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
-
-:::{note}
-The behavior of `one-as` sync scopes is currently not well-founded in the
-memory model. Synchronization via a `one-as` sync scope effectively causes
-the happens-before relation to be non-transitive.
-:::
 
 :::{list-table} AMDHSA LLVM Sync Scopes
 :name: amdgpu-amdhsa-llvm-sync-scopes-table
@@ -2224,6 +2283,34 @@ the happens-before relation to be non-transitive.
 * - `singlethread-one-as`
   - Same as `singlethread` but only synchronizes with other operations within the same address space.
 :::
+
+(amdgpu-one-as)=
+
+#### `one-as` syncscopes
+
+There is a `one-as` variant for each scope which limits the synchronization to
+operations performed only in one address space:
+
+- When an atomic `release` or `acquire` operation specifies a `one-as`
+  syncscope, it synchronizes only the effects of memory operations performed in
+  the address space that the atomic itself operates on.
+- Similarly, when a `fence` operation specifies a `one-as` syncscope, it
+  synchronizes only the effects of memory operations performed in the specified
+  address spaces, and only when paired with an atomic in one of those address
+  spaces.
+
+The address spaces of a `fence` instruction with `one-as` sync scope are
+specified via `amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
+
+**Limitations**
+
+- Synchronization through `one-as` sync scopes does not provide transitive
+  happens-before across address spaces. In other words, transitive
+  happens-before through a `one-as` operation requires every synchronization
+  link in the chain to include that operation's address space.
+- Specifying a `one-as` syncscope on a `fence` explicitly opts out of the
+  {ref}`synchronization established via barriers<amdgpu-barrier-memory-model>`,
+  since barrier objects do not access any of the memory address spaces.
 
 (amdgpu-fat-buffer-oob-handling)=
 
@@ -2573,9 +2660,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA loads, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
+      This does not include global or buffer loads to LDS, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
     - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA stores, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
+      This does not include global stores from LDS, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
     - 0x0080: All DS instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0100: All DS read instructions may be scheduled across sched_barrier.
@@ -3303,6 +3390,18 @@ The field indicates how much data is fetched on a cache miss. It is only support
 on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
 support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
+(amdgpu_noclobber)=
+
+### '`amdgpu.noclobber`' Metadata
+
+Consider the writes that a `load` instruction L marked as `!amdgpu.noclobber`
+may see according to the {ref}`AMDGPU memory model<amdgpu-location-order>`.
+L returns `undef` if any of these writes does not happen-before the operation
+that dispatches the kernel executing L.
+
+This metadata can allow the AMDGPU compiler backend to emit scalar instead of
+vector load instructions.
+
 ## LLVM IR Attributes
 
 The AMDGPU backend supports the following LLVM IR attributes.
@@ -3479,10 +3578,8 @@ The AMDGPU backend supports the following LLVM IR attributes.
     If a shader has this attribute, then all its callees must match its value.
     An amd_cs_chain CC function with this enabled has an extra symbol prefixed with "\_dvgpr$" with the value of the function symbol, offset by one less than the number of dynamic VGPR blocks required by the function encoded in bits 5..3.
 * - "amdgpu-cluster-dims"="x,y,z"
-  - Specify the cluster workgroup dimensions.
-    A value of "0,0,0" indicates that cluster is disabled.
-    A value of "1024,1024,1024" indicates that cluster is enabled, but the dimensions cannot be determined at compile time.
-    Any other value explicitly specifies the cluster dimensions.
+  - Specify the cluster workgroup dimensions. See {ref}`amdgpu-cluster-dims` for
+    details.
 
     This is only relevant on targets with cluster support.
 * - "amdgpu-expert-scheduling-mode" true/false.
@@ -7160,7 +7257,7 @@ The memory space properties are:
   - private
   - scratch
   - 32
-  - 0x00000000
+  - 0xFFFFFFFF
 * - Local
   - group
   - LDS
@@ -8728,6 +8825,13 @@ sections listed below.
 cache operations** (such as write-back or invalidate) that are usually part of
 these sequences.
 
+**Note:** The code sequence tables in the sections below do not show
+`!nontemporal` on `load atomic` and `store atomic`. With `!nontemporal`,
+the load or store instruction of the code sequence also sets the cache policy
+bits listed for a nontemporal non-atomic load or store to the same address
+space, in addition to the bits already listed. See
+{ref}`amdgpu-memmodel-temporal-hints`.
+
 - {ref}`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 - {ref}`amdgpu-amdhsa-memory-model-gfx90a`
 - {ref}`amdgpu-amdhsa-memory-model-gfx942`
@@ -8735,36 +8839,30 @@ these sequences.
 - {ref}`amdgpu-amdhsa-memory-model-gfx12`
 - {ref}`amdgpu-amdhsa-memory-model-gfx12_5`
 
-(amdgpu-amdhsa-execution-barriers-memory-model)=
+(amdgpu-barrier-memory-model)=
 
-##### Execution Barriers
+##### `synchronizes-with` Using Barriers
 
 :::{note}
 See {ref}`amdgpu-execution-synchronization-barriers-execution-model` for definitions of
 the terminology used in this section.
 :::
 
-- A barrier *arrive* operation `A` can pair with a release fence program-ordered before it
-  to form a `barrier-arrive-release` `BR`. The synchronization scope and the set of address
-  spaces affected are determined by the release fence.
-- A barrier *wait* operation `W` can pair with an acquire fence program-ordered after it to
-  form a `barrier-wait-acquire` `BA`. The synchronization scope and the set of address
-  spaces affected are determined by the acquire fence.
+A release fence `FR` *synchronizes-with* an acquire fence `FA` in address
+space *AS* if there exist a barrier *arrive* `A` and barrier *wait* `W` such
+that:
 
-A `BR` *synchronizes-with* `BA` in an address space *AS* if and only if:
-
+- `FR` is *program-ordered* before `A`.
 - `A` *barrier-executes-before* `W`.
-- *BA* and *BR*'s {ref}`synchronization scope<amdgpu-memory-scopes>` overlap.
-- *BA* and *BR*'s {ref}`synchronization scope<amdgpu-memory-scopes>`
-  allow cross address space synchronization (they cannot have `one-as`) {sup}`1`.
-- *BA* and *BR*'s address spaces both include *AS*.
+- `W` is *program-ordered* before `FA`.
+- `FR` and `FA` have {ref}`inclusive scopes<amdgpu-inclusive-scopes>`.
+- Both fences include *AS* in their sets of synchronized address spaces.
 
-Informally, we can deduce from the above rules that:
+A fence that specifies a {ref}`one-as syncscope<amdgpu-one-as>` cannot be
+paired in this manner with a barrier.
 
-- *Happens-before* is consistent with *barrier-executes-before*.
-
-{sup}`1`: This is a requirement due to how current hardware implements barrier operations.
-This limitation may be lifted in the future.
+Informally, we can deduce from the above rules that *happens-before* is
+consistent with *barrier-executes-before*.
 
 (amdgpu-fence-as)=
 
@@ -16717,6 +16815,12 @@ within a map that has been added by the same *vendor-name*.
   - integer
   -
   - Scratch memory size in bytes.
+* - ".backend_stack_size"
+  - integer
+  -
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
+    Chain callees are excluded, since they reuse the caller's stack frame.
+    Indirect calls and recursion do not contribute.
 * - ".lds_size"
   - integer
   -
@@ -16829,7 +16933,12 @@ within a map that has been added by the same *vendor-name*.
   - Number of SGPRs used by the shader.
 * - ".stack_frame_size_in_bytes"
   - integer
-  - Amount of stack size used by the shader.
+  - Amount of stack size used by the shader itself, not including the stack used by any of its callees.
+* - ".backend_stack_size"
+  - integer
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
+    Chain callees are excluded, since they reuse the caller's stack frame.
+    Indirect calls and recursion do not contribute.
 * - ".shader_subtype"
   - string
   - Shader subtype/kind.

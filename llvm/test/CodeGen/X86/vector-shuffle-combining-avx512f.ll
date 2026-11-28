@@ -24,6 +24,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>
 
 declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
 declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double>, <8 x double>, i32 immarg)
 
 define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
 ; CHECK-LABEL: combine_permvar_8f64_identity:
@@ -1342,3 +1343,48 @@ define <8 x i64> @PR235659(<8 x i64> %a) {
   %shuffle3 = shufflevector <8 x i64> %div, <8 x i64> zeroinitializer, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i64> %shuffle3
 }
+
+define double @max_splat1_v8f64(<8 x double> %v) nounwind #0 {
+; X86-LABEL: max_splat1_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
+; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: max_splat1_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %c = shufflevector <8 x double> %v, <8 x double> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %m = call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %v, <8 x double> %c, i32 4)
+  %r = extractelement <8 x double> %m, i64 0
+  ret double %r
+}
+
+define <16 x i8> @splat_add_trunc_v8i64_v16i8(<8 x i64> %a, <16 x i8> %c) {
+; CHECK-LABEL: splat_add_trunc_v8i64_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %t = trunc <8 x i64> %a to <8 x i8>
+  %w = shufflevector <8 x i8> %t, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s = add <16 x i8> %w, %c
+  %r = shufflevector <16 x i8> %s, <16 x i8> poison, <16 x i32> zeroinitializer
+  ret <16 x i8> %r
+}
+
+attributes #0 = { "target-cpu"="skylake-avx512" }

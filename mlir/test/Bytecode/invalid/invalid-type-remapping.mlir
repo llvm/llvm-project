@@ -53,3 +53,13 @@ module {
     return %0 : tensor<10xi32>
   }
 }
+
+// -----
+
+// CHECK: recursive alias 'redef' redefined with a different body
+// CHECK: failed to read bytecode
+// Remapping i32 to !test.i32 while reading into a context that already holds
+// !test.test_rec_alias<redef, i32> exercises failed mutation in readType.
+module {
+  func.func private @recursive_alias_redefined_body() -> !test.test_rec_alias<redef, i32>
+}

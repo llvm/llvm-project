@@ -159,7 +159,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // HOST-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // HOST:       omp_offload.failed:
-// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14use_local_varsv_l70(ptr [[RESULT]], ptr null) #[[ATTR2:[0-9]+]]
+// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14use_local_varsv_l70(ptr [[RESULT]], ptr null) #[[ATTR3:[0-9]+]]
 // HOST-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // HOST:       omp_offload.cont:
 // HOST-NEXT:    [[TMP23:%.*]] = load i32, ptr [[RESULT]], align 4
@@ -173,7 +173,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // HOST-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
 // HOST-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
+// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
 // HOST-NEXT:    store i32 42, ptr @local_scalar, align 4
 // HOST-NEXT:    store i32 1, ptr @local_array, align 4
 // HOST-NEXT:    store i32 100, ptr @_ZN12LocalStorageIiE5valueE, align 4
@@ -187,7 +187,7 @@ int use_new_local_vars() {
 //
 //
 // HOST-LABEL: define {{[^@]+}}@_Z18read_local_storageIiET_v
-// HOST-SAME: () #[[ATTR0]] comdat {
+// HOST-SAME: () #[[ATTR2:[0-9]+]] comdat {
 // HOST-NEXT:  entry:
 // HOST-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZN12LocalStorageIiE5valueE, align 4
 // HOST-NEXT:    ret i32 [[TMP0]]
@@ -246,7 +246,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // HOST-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // HOST:       omp_offload.failed:
-// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z21use_nohost_local_varsv_l86(ptr [[RESULT]], ptr null) #[[ATTR2]]
+// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z21use_nohost_local_varsv_l86(ptr [[RESULT]], ptr null) #[[ATTR3]]
 // HOST-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // HOST:       omp_offload.cont:
 // HOST-NEXT:    [[TMP23:%.*]] = load i32, ptr [[RESULT]], align 4
@@ -260,7 +260,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // HOST-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
 // HOST-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
+// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // HOST-NEXT:    store i32 7, ptr @local_nohost_var, align 4
 // HOST-NEXT:    [[TMP1:%.*]] = load i32, ptr @local_nohost_var, align 4
 // HOST-NEXT:    store i32 [[TMP1]], ptr [[TMP0]], align 4
@@ -320,7 +320,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // HOST-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // HOST:       omp_offload.failed:
-// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18use_new_local_varsv_l99(ptr [[RESULT]], ptr null) #[[ATTR2]]
+// HOST-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18use_new_local_varsv_l99(ptr [[RESULT]], ptr null) #[[ATTR3]]
 // HOST-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // HOST:       omp_offload.cont:
 // HOST-NEXT:    [[TMP23:%.*]] = load i32, ptr [[RESULT]], align 4
@@ -334,7 +334,7 @@ int use_new_local_vars() {
 // HOST-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // HOST-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
 // HOST-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
+// HOST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // HOST-NEXT:    store i32 55, ptr @_ZN11PlainStruct8s_memberE, align 4
 // HOST-NEXT:    store i32 77, ptr @local_init_var, align 4
 // HOST-NEXT:    [[TMP1:%.*]] = load i32, ptr @_ZN11PlainStruct8s_memberE, align 4

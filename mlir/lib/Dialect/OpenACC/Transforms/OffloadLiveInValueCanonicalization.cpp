@@ -70,7 +70,6 @@
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Analysis/TopologicalSortUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
@@ -79,6 +78,7 @@
 #include "mlir/IR/Region.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -306,7 +306,7 @@ public:
       accSupportPtr = &getAnalysis<acc::OpenACCSupport>();
     acc::OpenACCSupport &accSupport = *accSupportPtr;
 
-    func::FuncOp func = getOperation();
+    FunctionOpInterface func = getOperation();
     LLVM_DEBUG(llvm::dbgs()
                << "Processing function: " << func.getName() << "\n");
 

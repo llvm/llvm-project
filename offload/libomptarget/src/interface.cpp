@@ -170,13 +170,9 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
 
   int Rc = OFFLOAD_SUCCESS;
 
-  // Allocate StateInfo for targetDataBegin and targetDataEnd to track
-  // allocations, pointer attachments and deferred transfers.
-  // This is not needed for targetDataUpdate.
-  std::unique_ptr<StateInfoTy> StateInfo;
-  if (TargetDataFunction == targetDataBegin ||
-      TargetDataFunction == targetDataEnd)
-    StateInfo = std::make_unique<StateInfoTy>();
+  // Allocate StateInfo to track allocations, pointer attachments, deferred
+  // transfers and host pointers to restore after FROM transfers.
+  auto StateInfo = std::make_unique<StateInfoTy>();
 
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo,

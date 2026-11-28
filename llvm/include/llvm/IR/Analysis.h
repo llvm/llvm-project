@@ -117,7 +117,6 @@ public:
   /// Construct a special preserved set that preserves all passes.
   static PreservedAnalyses all() {
     PreservedAnalyses PA;
-    PA.PreservedIDs.insert(&AllAnalysesKey);
     PA.PreservesAll = true;
     return PA;
   }
@@ -310,11 +309,8 @@ public:
   }
 
 private:
-  /// A special key used to indicate all analyses.
-  LLVM_ABI static AnalysisSetKey AllAnalysesKey;
-
   /// The IDs of analyses and analysis sets that are preserved.
-  SmallPtrSet<void *, 2> PreservedIDs;
+  SmallPtrSet<void *, 8> PreservedIDs;
 
   /// The IDs of explicitly not-preserved analyses.
   ///
@@ -325,7 +321,7 @@ private:
   /// Also, a given ID should never occur both here and in `PreservedIDs`.
   SmallPtrSet<AnalysisKey *, 2> NotPreservedAnalysisIDs;
 
-  /// Whether PreservedIDs contains AllAnalysesKey.
+  /// Whether all analyses are preserved unless explicitly abandoned.
   bool PreservesAll = false;
 };
 } // namespace llvm

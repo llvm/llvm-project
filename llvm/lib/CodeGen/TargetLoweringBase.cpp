@@ -750,7 +750,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   EnableExtLdPromotion = false;
   StackPointerRegisterToSaveRestore = 0;
   BooleanContents = UndefinedBooleanContent;
-  BooleanFloatContents = UndefinedBooleanContent;
   BooleanVectorContents = UndefinedBooleanContent;
   SchedPreferenceInfo = Sched::ILP;
   GatherAllAliasesMaxDepth = 18;

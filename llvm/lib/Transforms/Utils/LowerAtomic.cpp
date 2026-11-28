@@ -139,9 +139,10 @@ bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
 
-  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr, RMWI->isVolatile());
+  LoadInst *Orig = Builder.CreateAlignedLoad(
+      Val->getType(), Ptr, RMWI->getAlign(), RMWI->isVolatile());
   Value *Res = buildAtomicRMWValue(RMWI->getOperation(), Builder, Orig, Val);
-  Builder.CreateStore(Res, Ptr)->setVolatile(RMWI->isVolatile());
+  Builder.CreateAlignedStore(Res, Ptr, RMWI->getAlign(), RMWI->isVolatile());
   RMWI->replaceAllUsesWith(Orig);
   RMWI->eraseFromParent();
   return true;
