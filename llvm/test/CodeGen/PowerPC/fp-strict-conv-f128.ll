@@ -203,7 +203,7 @@ define i1 @q_to_u1(fp128 %m) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    .cfi_def_cfa_offset 32
 ; NOVSX-NEXT:    .cfi_offset lr, 16
-; NOVSX-NEXT:    bl __fixunskfsi
+; NOVSX-NEXT:    bl __fixkfsi
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)
@@ -803,7 +803,7 @@ define fp128 @u1_to_q(i1 zeroext %m) #0 {
 ; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    .cfi_def_cfa_offset 32
 ; NOVSX-NEXT:    .cfi_offset lr, 16
-; NOVSX-NEXT:    bl __floatunsikf
+; NOVSX-NEXT:    bl __floatsikf
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    addi r1, r1, 32
 ; NOVSX-NEXT:    ld r0, 16(r1)

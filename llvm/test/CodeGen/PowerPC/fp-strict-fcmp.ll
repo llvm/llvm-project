@@ -1736,38 +1736,34 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_one_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    stdu r1, -80(r1)
-; NOVSX-NEXT:    std r0, 96(r1)
-; NOVSX-NEXT:    mr r30, r6
-; NOVSX-NEXT:    mr r29, r5
-; NOVSX-NEXT:    mr r28, r4
-; NOVSX-NEXT:    mr r27, r3
+; NOVSX-NEXT:    stdu r1, -96(r1)
+; NOVSX-NEXT:    li r3, 48
+; NOVSX-NEXT:    std r0, 112(r1)
+; NOVSX-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
+; NOVSX-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    li r3, 64
+; NOVSX-NEXT:    vmr v30, v2
+; NOVSX-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    vmr v31, v3
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    vmr v2, v30
+; NOVSX-NEXT:    vmr v3, v31
+; NOVSX-NEXT:    srwi r30, r3, 5
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
+; NOVSX-NEXT:    li r4, 64
+; NOVSX-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
+; NOVSX-NEXT:    li r4, 48
 ; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    lvx v30, r1, r4 # 16-byte Folded Reload
 ; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    and r3, r26, r3
-; NOVSX-NEXT:    addi r1, r1, 80
+; NOVSX-NEXT:    and r3, r30, r3
+; NOVSX-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
+; NOVSX-NEXT:    addi r1, r1, 96
 ; NOVSX-NEXT:    ld r0, 16(r1)
-; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"one", metadata !"fpexcept.strict") #0
@@ -1987,38 +1983,34 @@ define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_ueq_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    stdu r1, -80(r1)
-; NOVSX-NEXT:    std r0, 96(r1)
-; NOVSX-NEXT:    mr r30, r6
-; NOVSX-NEXT:    mr r29, r5
-; NOVSX-NEXT:    mr r28, r4
-; NOVSX-NEXT:    mr r27, r3
+; NOVSX-NEXT:    stdu r1, -96(r1)
+; NOVSX-NEXT:    li r3, 48
+; NOVSX-NEXT:    std r0, 112(r1)
+; NOVSX-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
+; NOVSX-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    li r3, 64
+; NOVSX-NEXT:    vmr v30, v2
+; NOVSX-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    vmr v31, v3
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    vmr v2, v30
+; NOVSX-NEXT:    vmr v3, v31
+; NOVSX-NEXT:    srwi r30, r3, 5
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
+; NOVSX-NEXT:    li r4, 64
+; NOVSX-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
+; NOVSX-NEXT:    li r4, 48
 ; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    lvx v30, r1, r4 # 16-byte Folded Reload
 ; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    or r3, r3, r26
-; NOVSX-NEXT:    addi r1, r1, 80
+; NOVSX-NEXT:    or r3, r3, r30
+; NOVSX-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
+; NOVSX-NEXT:    addi r1, r1, 96
 ; NOVSX-NEXT:    ld r0, 16(r1)
-; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ueq", metadata !"fpexcept.strict") #0
@@ -2323,38 +2315,34 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_one_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    stdu r1, -80(r1)
-; NOVSX-NEXT:    std r0, 96(r1)
-; NOVSX-NEXT:    mr r30, r6
-; NOVSX-NEXT:    mr r29, r5
-; NOVSX-NEXT:    mr r28, r4
-; NOVSX-NEXT:    mr r27, r3
+; NOVSX-NEXT:    stdu r1, -96(r1)
+; NOVSX-NEXT:    li r3, 48
+; NOVSX-NEXT:    std r0, 112(r1)
+; NOVSX-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
+; NOVSX-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    li r3, 64
+; NOVSX-NEXT:    vmr v30, v2
+; NOVSX-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    vmr v31, v3
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    vmr v2, v30
+; NOVSX-NEXT:    vmr v3, v31
+; NOVSX-NEXT:    srwi r30, r3, 5
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
+; NOVSX-NEXT:    li r4, 64
+; NOVSX-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
+; NOVSX-NEXT:    li r4, 48
 ; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    lvx v30, r1, r4 # 16-byte Folded Reload
 ; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    and r3, r26, r3
-; NOVSX-NEXT:    addi r1, r1, 80
+; NOVSX-NEXT:    and r3, r30, r3
+; NOVSX-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
+; NOVSX-NEXT:    addi r1, r1, 96
 ; NOVSX-NEXT:    ld r0, 16(r1)
-; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"one", metadata !"fpexcept.strict") #0
@@ -2574,38 +2562,34 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_ueq_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    stdu r1, -80(r1)
-; NOVSX-NEXT:    std r0, 96(r1)
-; NOVSX-NEXT:    mr r30, r6
-; NOVSX-NEXT:    mr r29, r5
-; NOVSX-NEXT:    mr r28, r4
-; NOVSX-NEXT:    mr r27, r3
+; NOVSX-NEXT:    stdu r1, -96(r1)
+; NOVSX-NEXT:    li r3, 48
+; NOVSX-NEXT:    std r0, 112(r1)
+; NOVSX-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
+; NOVSX-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    li r3, 64
+; NOVSX-NEXT:    vmr v30, v2
+; NOVSX-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; NOVSX-NEXT:    vmr v31, v3
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
-; NOVSX-NEXT:    mr r4, r28
-; NOVSX-NEXT:    mr r5, r29
-; NOVSX-NEXT:    mr r6, r30
-; NOVSX-NEXT:    srwi r26, r3, 5
-; NOVSX-NEXT:    mr r3, r27
+; NOVSX-NEXT:    vmr v2, v30
+; NOVSX-NEXT:    vmr v3, v31
+; NOVSX-NEXT:    srwi r30, r3, 5
 ; NOVSX-NEXT:    bl __unordkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
+; NOVSX-NEXT:    li r4, 64
+; NOVSX-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
+; NOVSX-NEXT:    li r4, 48
 ; NOVSX-NEXT:    srwi r3, r3, 5
+; NOVSX-NEXT:    lvx v30, r1, r4 # 16-byte Folded Reload
 ; NOVSX-NEXT:    xori r3, r3, 1
-; NOVSX-NEXT:    or r3, r3, r26
-; NOVSX-NEXT:    addi r1, r1, 80
+; NOVSX-NEXT:    or r3, r3, r30
+; NOVSX-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
+; NOVSX-NEXT:    addi r1, r1, 96
 ; NOVSX-NEXT:    ld r0, 16(r1)
-; NOVSX-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; NOVSX-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ueq", metadata !"fpexcept.strict") #0
