@@ -28,7 +28,7 @@ CMake docs or execute `cmake --help-variable VARIABLE_NAME`.
 
 **CMAKE_INSTALL_PREFIX**:PATH
 
-: Path where LLVM will be installed if "make install" is invoked or the
+: Path where LLVM will be installed if `make install` is invoked or the
   "INSTALL" target is built.
 
 **CMAKE_CXX_COMPILER**:STRING
