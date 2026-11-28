@@ -1384,7 +1384,9 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
 /// lane_data unchanged.
 ///
 /// Set inst_data[i] to lane_layout[i] * lane_data[i]. On non-reduced
-/// dimensions, preserve a reused parent's larger inst_data[i].
+/// dimensions among the last two, preserve a reused parent's larger
+/// inst_data[i]; leading dimensions are not widened because lane-level
+/// distribution only supports unit leading dimensions.
 ///
 /// Source layout examples with subgroupSize = maxReduceVectorSize = 16:
 /// \code
@@ -1500,11 +1502,15 @@ computeReductionLaneLayoutAndData(
   }
 
   // Preserve compatible consumer blocking on non-reduced dimensions so the
-  // reduction result can use the same instruction tiles as its consumer.
+  // reduction result can use the same instruction tiles as its consumer. Only
+  // the last two dimensions are widened: lane-level distribution of
+  // multi_reduction requires the blocked source to be unit on the dimensions
+  // before them.
   SmallVector<int64_t> instData(srcRank);
+  int firstInnerDim = std::max(0, srcRank - 2);
   for (int i = 0; i < srcRank; ++i) {
     instData[i] = laneLayout[i] * laneData[i];
-    if (isReduced(i) || parentInstData.empty())
+    if (isReduced(i) || i < firstInnerDim || parentInstData.empty())
       continue;
     // The lane product must divide the instruction tile, which must divide
     // the source extent.
