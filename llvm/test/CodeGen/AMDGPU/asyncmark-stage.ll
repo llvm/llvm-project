@@ -203,7 +203,7 @@ define amdgpu_kernel void @same_counter_distinct_sequences(ptr addrspace(1) %glb
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
-; SDAG-NEXT:    s_wait_asynccnt 0x2
+; SDAG-NEXT:    s_wait_asynccnt 0x0
 ; SDAG-NEXT:    ds_load_b32 v4, v1
 ; SDAG-NEXT:    s_wait_dscnt 0x0
 ; SDAG-NEXT:    global_store_b32 v0, v4, s[0:1]
@@ -230,7 +230,7 @@ define amdgpu_kernel void @same_counter_distinct_sequences(ptr addrspace(1) %glb
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
-; GISEL-NEXT:    s_wait_asynccnt 0x2
+; GISEL-NEXT:    s_wait_asynccnt 0x0
 ; GISEL-NEXT:    ds_load_b32 v4, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    global_store_b32 v0, v4, s[0:1]
@@ -597,7 +597,7 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
-; SDAG-NEXT:    s_wait_asynccnt 0x1
+; SDAG-NEXT:    s_wait_asynccnt 0x0
 ; SDAG-NEXT:    s_wait_tensorcnt 0x0
 ; SDAG-NEXT:    ds_load_b32 v3, v1
 ; SDAG-NEXT:    s_wait_dscnt 0x0
@@ -636,7 +636,7 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
-; GISEL-NEXT:    s_wait_asynccnt 0x1
+; GISEL-NEXT:    s_wait_asynccnt 0x0
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
 ; GISEL-NEXT:    ds_load_b32 v3, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
@@ -916,9 +916,57 @@ exit:
   ret void
 }
 
-declare void @llvm.amdgcn.asyncmark(i32)
-declare void @llvm.amdgcn.wait.asyncmark(i16, i32)
-declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)
+; Unordered completion of mark counter
+
+define amdgpu_kernel void @load_and_store_async(ptr addrspace(1) %src_lane, ptr addrspace(1) %dst_lane, ptr addrspace(3) %load_lds, ptr addrspace(3) %store_lds) {
+; SDAG-LABEL: load_and_store_async:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-NEXT:    v_nop
+; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-NEXT:    s_clause 0x1
+; SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s6
+; SDAG-NEXT:    v_mov_b32_e32 v2, s7
+; SDAG-NEXT:    s_clause 0x1
+; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1]
+; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; SDAG-NEXT:    global_store_async_from_lds_b32 v0, v2, s[2:3]
+; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; SDAG-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; SDAG-NEXT:    s_wait_asynccnt 0x0
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: load_and_store_async:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s6
+; GISEL-NEXT:    v_mov_b32_e32 v2, s7
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1]
+; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; GISEL-NEXT:    global_store_async_from_lds_b32 v0, v2, s[2:3]
+; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; GISEL-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS|GLOBAL_LOAD_ASYNC_TO_LDS_MCAST|GLOBAL_STORE_ASYNC_FROM_LDS)
+; GISEL-NEXT:    s_wait_asynccnt 0x0
+; GISEL-NEXT:    s_endpgm
+  call void @llvm.amdgcn.global.load.async.to.lds.b32(
+      ptr addrspace(1) %src_lane, ptr addrspace(3) %load_lds, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark(i32 14)
+  call void @llvm.amdgcn.global.store.async.from.lds.b32(
+      ptr addrspace(1) %dst_lane, ptr addrspace(3) %store_lds, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark(i32 14)
+  ; Leave the younger group outstanding.
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 14)
+  ret void
+}

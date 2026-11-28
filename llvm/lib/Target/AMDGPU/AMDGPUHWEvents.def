@@ -49,8 +49,9 @@ AMDGPU_HW_EVENT(VGPR_XDL_WRITE,             26) /* write VGPR dest in XDL VALU *
 AMDGPU_HW_EVENT(VGPR_LDS_READ,              27) /* read VGPR source in LDS */
 AMDGPU_HW_EVENT(VGPR_FLAT_READ,             28) /* read VGPR source in FLAT */
 AMDGPU_HW_EVENT(VGPR_VMEM_READ,             29) /* read VGPR source in other VMEM */
-AMDGPU_HW_EVENT(ASYNC_ACCESS,               30) /* access that uses ASYNC_CNT */
-AMDGPU_HW_EVENT(TENSOR_ACCESS,              31) /* access that uses TENSOR_CNT */
+AMDGPU_HW_EVENT(ASYNC_READ,                 30) /* read that uses ASYNC_CNT */
+AMDGPU_HW_EVENT(ASYNC_WRITE,                31) /* write that uses ASYNC_CNT */
+AMDGPU_HW_EVENT(TENSOR_ACCESS,              32) /* access that uses TENSOR_CNT */
 
 AMDGPU_LAST_HW_EVENT(TENSOR_ACCESS)
 
