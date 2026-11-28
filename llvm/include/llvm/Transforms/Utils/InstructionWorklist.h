@@ -59,7 +59,11 @@ public:
     assert(I);
     assert(I->getParent() && "Instruction not inserted yet?");
 
-    if (WorklistMap.insert(std::make_pair(I, Worklist.size())).second) {
+    // Popped instructions keep their entry, so I is only queued if its slot
+    // still holds it.
+    unsigned &Idx = WorklistMap.try_emplace(I, Worklist.size()).first->second;
+    if (Idx >= Worklist.size() || Worklist[Idx] != I) {
+      Idx = Worklist.size();
       LLVM_DEBUG(dbgs() << "ADD: " << *I << '\n');
       Worklist.push_back(I);
     }
@@ -84,7 +88,8 @@ public:
   /// Remove I from the worklist if it exists.
   void remove(Instruction *I) {
     auto It = WorklistMap.find(I);
-    if (It != WorklistMap.end()) {
+    if (It != WorklistMap.end() && It->second < Worklist.size() &&
+        Worklist[It->second] == I) {
       // Don't bother moving everything down, just null out the slot.
       Worklist[It->second] = nullptr;
       WorklistMap.erase(It);
@@ -97,7 +102,6 @@ public:
     if (Worklist.empty())
       return nullptr;
     Instruction *I = Worklist.pop_back_val();
-    WorklistMap.erase(I);
     return I;
   }
 
@@ -121,7 +125,7 @@ public:
 
   /// Check that the worklist is empty and nuke the backing store for the map.
   void zap() {
-    assert(WorklistMap.empty() && "Worklist empty, but map not?");
+    assert(Worklist.empty() && "Worklist not empty?");
     assert(Deferred.empty() && "Deferred instructions left over");
 
     // Do an explicit clear, this shrinks the map if needed.
