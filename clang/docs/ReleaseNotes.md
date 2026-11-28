@@ -1660,6 +1660,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   category priority and top-level directory.
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
+- Add `SignatureColumn` value to `LambdaBodyIndentation` to indent lambda
+  bodies one additional level relative to the column where the lambda
+  signature starts, with the closing brace aligned to the signature column.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
   body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
   and `GNU` styles of `BreakBeforeBraces`.

@@ -1069,6 +1069,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
               FormatStyle::IGLS_OuterIndent);
 
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  CHECK_PARSE("LambdaBodyIndentation: Signature", LambdaBodyIndentation,
+              FormatStyle::LBI_Signature);
+  CHECK_PARSE("LambdaBodyIndentation: OuterScope", LambdaBodyIndentation,
+              FormatStyle::LBI_OuterScope);
+  CHECK_PARSE("LambdaBodyIndentation: SignatureColumn", LambdaBodyIndentation,
+              FormatStyle::LBI_SignatureColumn);
+
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,
               FormatStyle::BFCS_Both);

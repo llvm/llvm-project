@@ -5498,9 +5498,11 @@ the configuration (without a prefix: `Auto`).
 
 : The indentation style of lambda bodies. `Signature` (the default)
   causes the lambda body to be indented one additional level relative to
-  the indentation level of the signature. `OuterScope` forces the lambda
-  body to be indented one additional level relative to the parent scope
-  containing the lambda signature.
+  the indentation level of the signature. `SignatureColumn` causes the
+  lambda body to be indented one additional level relative to the column
+  of the signature, with the closing brace aligned to the signature column.
+  `OuterScope` forces the lambda body to be indented one additional level
+  relative to the parent scope containing the lambda signature.
 
   Possible values:
 
@@ -5528,6 +5530,18 @@ the configuration (without a prefix: `Auto`).
         [](SomeReallyLongLambdaSignatureArgument foo) {
       return;
     }));
+    ```
+
+  - `LBI_SignatureColumn` (in configuration: `SignatureColumn`)
+    Align lambda body relative to the column of the lambda signature,
+    i.e. one additional indentation level from the column where the
+    lambda signature starts, regardless of where the enclosing line
+    starts. The closing brace is aligned with the lambda signature column.
+
+    ```c++
+    someMethod(arg, [](SomeReallyLongLambdaSignatureArgument foo) {
+                      return;
+                    });
     ```
 
 

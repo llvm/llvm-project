@@ -22051,6 +22051,157 @@ TEST_F(FormatTest, FormatsLambdas) {
                "       });\n"
                "}",
                BeforeLambdaBodyStyle);
+
+  // Lambdas with bodies aligned to the signature column.
+  Style = getLLVMStyleWithColumns(60);
+  Style.LambdaBodyIndentation = FormatStyle::LBI_SignatureColumn;
+  verifyFormat("Result doSomething(Promise promise) {\n"
+               "  return promise.then(\n"
+               "      [this, obj = std::move(s)](int bar) mutable {\n"
+               "        return someObject.startAsyncAction().then(\n"
+               "            [this, &obj](Result result) mutable {\n"
+               "              result.processMore();\n"
+               "            });\n"
+               "      });\n"
+               "}",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_SignatureColumn;
+  verifyFormat("void test() {\n"
+               "  std::sort(v.begin(), v.end(), [](const auto &foo, "
+               "const auto &bar) {\n"
+               "                                  return foo.baz < bar.baz &&\n"
+               "                                         foo.qux < bar.qux && "
+               "foo.zot < bar.zot;\n"
+               "                                });\n"
+               "}",
+               Style);
+  verifyFormat("auto f = []() -> int {\n"
+               "           return 4242424242424242424242424242424242424242424"
+               "242424242424242;\n"
+               "         };",
+               "auto f = []() -> int {\n"
+               "return 4242424242424242424242424242424242424242424"
+               "242424242424242;\n"
+               "};",
+               Style);
+  verifyFormat("aFunction(1, b(c(foo, bar, baz, [](d) {\n"
+               "                                  auto f = e(d);\n"
+               "                                  return f;\n"
+               "                                })));",
+               Style);
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar, "
+               "AnotherLongClassName baz)\n"
+               "    : baz{baz}, func{[&] {\n"
+               "                       auto qux = bar;\n"
+               "                       return aFunkyFunctionCall(qux);\n"
+               "                     }} {}",
+               Style);
+
+  Style.ColumnLimit = 0;
+  Style.IndentWidth = 4;
+  verifyFormat("auto it = std::find_if_not(src_.begin() + pos + 1, src_.end(), "
+               "[](char c) {\n"
+               "                                                               "
+               "    return std::isalnum(c) || c == '_';\n"
+               "                                                               "
+               "});",
+               "auto it = std::find_if_not(src_.begin() + pos + 1, src_.end(), "
+               "[](char c) {\n"
+               "    return std::isalnum(c) || c == '_';\n"
+               "});",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_SignatureColumn;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("auto f = []() -> int\n"
+               "         {\n"
+               "           return 42;\n"
+               "         };",
+               Style);
+  Style.BraceWrapping.IndentBraces = true;
+  verifyFormat("auto f = []() -> int\n"
+               "           {\n"
+               "             return 42;\n"
+               "           };",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_SignatureColumn;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = false;
+  Style.BraceWrapping.IndentBraces = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("void test() {\n"
+               "  auto f = [](int x) {\n"
+               "             return x;\n"
+               "           };\n"
+               "}",
+               "void test() {\n"
+               "  auto f = [](int x) {\n"
+               "return x;\n"
+               "};\n"
+               "}",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_SignatureColumn;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("[] {\n"
+               "  return 1;\n"
+               "};",
+               "[] {\n"
+               "return 1;\n"
+               "};",
+               Style);
+
+  verifyFormat("void test() {\n"
+               "  auto f = c ? [] {\n"
+               "                 return 1;\n"
+               "               }\n"
+               "             : 0;\n"
+               "}",
+               "void test() {\n"
+               "  auto f = c ? [] {\n"
+               "return 1;\n"
+               "} : 0;\n"
+               "}",
+               Style);
+  verifyFormat("void test() {\n"
+               "  auto f = c ? []() -> int {\n"
+               "                 return 1;\n"
+               "               }\n"
+               "             : 0;\n"
+               "}",
+               "void test() {\n"
+               "  auto f = c ? []() -> int {\n"
+               "return 1;\n"
+               "} : 0;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, LambdaOuterScopeIndentBraces) {
+  auto Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.IndentBraces = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("void test() {\n"
+               "  auto f = [](int x) {\n"
+               "    return x;\n"
+               "  };\n"
+               "}",
+               "void test() {\n"
+               "  auto f = [](int x) {\n"
+               "return x;\n"
+               "};\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, LambdaWithLineComments) {

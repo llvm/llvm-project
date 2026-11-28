@@ -1522,9 +1522,11 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   if (Style.BraceWrapping.BeforeLambdaBody &&
       Style.BraceWrapping.IndentBraces && Current.is(TT_LambdaLBrace)) {
-    const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
-                          ? CurrentState.Indent
-                          : State.FirstIndent;
+    IndentationAndAlignment From = State.FirstIndent;
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_Signature)
+      From = CurrentState.Indent;
+    else if (Style.LambdaBodyIndentation == FormatStyle::LBI_SignatureColumn)
+      From = CurrentState.LambdaSignatureColumn.value_or(State.FirstIndent);
     return From + Style.IndentWidth;
   }
 
@@ -1537,6 +1539,14 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
       (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_SignatureColumn &&
+        State.NextToken->is(TT_LambdaLBrace)) {
+      unsigned SignatureColumn =
+          CurrentState.LambdaSignatureColumn.value_or(State.FirstIndent);
+      if (Style.BraceWrapping.IndentBraces)
+        SignatureColumn += Style.IndentWidth;
+      return SignatureColumn;
+    }
     if (Current.NestingLevel == 0 ||
         (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
          State.NextToken->is(TT_LambdaLBrace))) {
@@ -1944,6 +1954,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     CurrentState.NestedBlockIndent = State.Column + Current.ColumnWidth + 1;
   if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
     CurrentState.LastSpace = State.Column;
+  if (Current.is(TT_LambdaLSquare) &&
+      Style.LambdaBodyIndentation == FormatStyle::LBI_SignatureColumn)
+    CurrentState.LambdaSignatureColumn = State.Column;
   if (Current.is(TT_RequiresExpression) &&
       Style.RequiresExpressionIndentation == FormatStyle::REI_Keyword) {
     CurrentState.NestedBlockIndent = State.Column;
@@ -1962,7 +1975,16 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       Previous && Previous->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) &&
       Previous->isNot(TT_DictLiteral) && State.Stack.size() > 1 &&
       !CurrentState.HasMultipleNestedBlocks) {
-    if (State.Stack[State.Stack.size() - 2].NestedBlockInlined && Newline)
+    const bool LambdaBeforeConditionalColon = [&] {
+      if (Style.LambdaBodyIndentation != FormatStyle::LBI_SignatureColumn ||
+          Previous->isNot(TT_LambdaLBrace) || !Previous->MatchingParen)
+        return false;
+      const FormatToken *Next =
+          Previous->MatchingParen->getNextNonComment();
+      return Next && Next->is(tok::colon) && Next->is(TT_ConditionalExpr);
+    }();
+    if (State.Stack[State.Stack.size() - 2].NestedBlockInlined && Newline &&
+        !LambdaBeforeConditionalColon)
       for (ParenState &PState : llvm::drop_end(State.Stack))
         PState.NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
@@ -2145,12 +2167,20 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
 void ContinuationIndenter::moveStatePastFakeRParens(LineState &State) {
   for (unsigned i = 0, e = State.NextToken->FakeRParens; i != e; ++i) {
     unsigned VariablePos = State.Stack.back().VariablePos;
+    unsigned QuestionColumn = State.Stack.back().QuestionColumn;
+    auto LambdaSignatureColumn = State.Stack.back().LambdaSignatureColumn;
     if (State.Stack.size() == 1) {
       // Do not pop the last element.
       break;
     }
     State.Stack.pop_back();
     State.Stack.back().VariablePos = VariablePos;
+    // Keep the conditional alignment column across lambda signature scopes so
+    // that a following conditional colon can still be aligned.
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_SignatureColumn &&
+        QuestionColumn != 0)
+      State.Stack.back().QuestionColumn = QuestionColumn;
+    State.Stack.back().LambdaSignatureColumn = LambdaSignatureColumn;
   }
 
   if (State.NextToken->ClosesRequiresClause && Style.IndentRequiresClause) {
@@ -2314,9 +2344,16 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       (CurrentState.NoLineBreak || CurrentState.NoLineBreakInOperand ||
        (Current.is(TT_TemplateOpener) &&
         CurrentState.ContainsUnwrappedBuilder));
+  auto LambdaSignatureColumn = CurrentState.LambdaSignatureColumn;
+  unsigned QuestionColumn = CurrentState.QuestionColumn;
   State.Stack.push_back(
       ParenState(&Current, NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
   auto &NewState = State.Stack.back();
+  // Keep the conditional alignment column across lambda signature scopes so
+  // that a following conditional colon can still be aligned.
+  if (Style.LambdaBodyIndentation == FormatStyle::LBI_SignatureColumn)
+    NewState.QuestionColumn = QuestionColumn;
+  NewState.LambdaSignatureColumn = LambdaSignatureColumn;
   NewState.NestedBlockIndent = NestedBlockIndent;
   NewState.BreakBeforeParameter = BreakBeforeParameter;
   NewState.HasMultipleNestedBlocks = (Current.BlockParameterCount > 1);
@@ -2391,11 +2428,20 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 }
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
-  if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
-      State.NextToken->is(TT_LambdaLBrace) &&
-      !State.Line->MightBeFunctionDecl) {
+  if (State.NextToken->is(TT_LambdaLBrace)) {
     const auto Indent = Style.IndentWidth * Style.BraceWrapping.IndentBraces;
-    State.Stack.back().NestedBlockIndent = State.FirstIndent + Indent;
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+        !State.Line->MightBeFunctionDecl) {
+      State.Stack.back().NestedBlockIndent =
+          State.FirstIndent + (NewLine ? Indent : 0);
+    } else if (Style.LambdaBodyIndentation ==
+               FormatStyle::LBI_SignatureColumn) {
+      unsigned SignatureColumn =
+          State.Stack.back().LambdaSignatureColumn.value_or(State.FirstIndent);
+      if (NewLine)
+        SignatureColumn += Indent;
+      State.Stack.back().NestedBlockIndent = SignatureColumn;
+    }
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.
