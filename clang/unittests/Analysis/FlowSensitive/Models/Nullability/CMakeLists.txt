@@ -1,0 +1,24 @@
+add_clang_unittest(ClangAnalysisFlowSensitiveNullabilityTests
+  AssignmentTest.cpp
+  CheckNullabilityState.cpp
+  JoinTest.cpp
+  PointerNullabilityTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangASTMatchers
+  clangAnalysis
+  clangAnalysisFlowSensitive
+  clangAnalysisFlowSensitiveNullability
+  clangBasic
+  clangFrontend
+  clangLex
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVMTestingAnnotations
+  LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  )

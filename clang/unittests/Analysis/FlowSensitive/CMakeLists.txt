@@ -49,3 +49,5 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   FrontendOpenMP
   Support
   )
+
+add_subdirectory(Models/Nullability)
