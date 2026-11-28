@@ -93,7 +93,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LazyBlockFrequencyInfoPass>();
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
