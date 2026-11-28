@@ -2184,8 +2184,14 @@ SDValue NVPTXTargetLowering::LowerShiftRightParts(SDValue Op,
     SDValue Tmp1 = DAG.getNode(ISD::SRL, dl, VT, ShOpLo, ShAmt);
     SDValue ExtraShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32, ShAmt,
                                      DAG.getConstant(VTBits, dl, MVT::i32));
-    SDValue Tmp2 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, RevShAmt);
-    SDValue FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+    // A constant Amt of 0 would shift ShOpHi by VTBits, which is poison at the
+    // DAG level even though PTX clamps the amount at run time, where this term
+    // can only contribute zeros. Drop it instead of building it.
+    SDValue FalseVal = Tmp1;
+    if (!isNullConstant(ShAmt)) {
+      SDValue Tmp2 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, RevShAmt);
+      FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+    }
     SDValue TrueVal = DAG.getNode(Opc, dl, VT, ShOpHi, ExtraShAmt);
 
     SDValue Cmp = DAG.getSetCC(dl, MVT::i1, ShAmt,
@@ -2243,8 +2249,14 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
     SDValue Tmp1 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, ShAmt);
     SDValue ExtraShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32, ShAmt,
                                      DAG.getConstant(VTBits, dl, MVT::i32));
-    SDValue Tmp2 = DAG.getNode(ISD::SRL, dl, VT, ShOpLo, RevShAmt);
-    SDValue FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+    // A constant Amt of 0 would shift ShOpLo by VTBits, which is poison at the
+    // DAG level even though PTX clamps the amount at run time, where this term
+    // can only contribute zeros. Drop it instead of building it.
+    SDValue FalseVal = Tmp1;
+    if (!isNullConstant(ShAmt)) {
+      SDValue Tmp2 = DAG.getNode(ISD::SRL, dl, VT, ShOpLo, RevShAmt);
+      FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+    }
     SDValue TrueVal = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ExtraShAmt);
 
     SDValue Cmp = DAG.getSetCC(dl, MVT::i1, ShAmt,
