@@ -1224,21 +1224,81 @@ func.func @bubble_up_pack_multiple_different_expanded_dims_through_expand(%arg0:
 
 // -----
 
-func.func @no_bubble_up_pack_outer_dims_permutation_through_expand(%arg0: tensor<32x64xf32>) -> tensor<32x4x2x4x2xf32> {
+func.func @bubble_up_pack_outer_dims_permutation_through_expand(%arg0: tensor<32x64xf32>) -> tensor<32x4x2x4x2xf32> {
   %empty = tensor.empty() : tensor<32x4x2x4x2xf32>
   %expanded = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [4, 8, 64] : tensor<32x64xf32> into tensor<4x8x64xf32>
   %pack = linalg.pack %expanded outer_dims_perm = [2, 0, 1] inner_dims_pos = [1, 2] inner_tiles = [4, 2] into %empty : tensor<4x8x64xf32> -> tensor<32x4x2x4x2xf32>
   return %pack : tensor<32x4x2x4x2xf32>
 }
+// CHECK-LABEL: func.func @bubble_up_pack_outer_dims_permutation_through_expand(
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x8x4x2xf32>
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[ARG0]]
+// CHECK-SAME:      outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [4, 2] into %[[EMPTY]]
+// CHECK-SAME:      : tensor<32x64xf32> -> tensor<32x8x4x2xf32>
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[PACK]] {{\[}}[0], [1, 2], [3], [4]]
+// CHECK-SAME:      output_shape [32, 4, 2, 4, 2] : tensor<32x8x4x2xf32> into tensor<32x4x2x4x2xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<32x4x2x4x2xf32>
+
+// -----
+
+func.func @bubble_up_pack_outer_dims_permutation_through_expand_dynamic(%arg0: tensor<?x32xf32>, %dim: index, %sz0: index) -> tensor<4x8x?x8xf32> {
+  %expanded = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%dim, 4, 8] : tensor<?x32xf32> into tensor<?x4x8xf32>
+  %empty = tensor.empty(%sz0) : tensor<4x8x?x8xf32>
+  %pack = linalg.pack %expanded outer_dims_perm = [1, 2, 0] inner_dims_pos = [0] inner_tiles = [8] into %empty : tensor<?x4x8xf32> -> tensor<4x8x?x8xf32>
+  return %pack : tensor<4x8x?x8xf32>
+}
+// CHECK-DAG:   #[[$MAP:.+]] = affine_map<()[s0] -> (s0 ceildiv 8)>
+// CHECK-LABEL: func.func @bubble_up_pack_outer_dims_permutation_through_expand_dynamic(
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK:         %[[DIM_INPUT:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x32xf32>
+// CHECK:         %[[OUTER:.+]] = affine.apply #[[$MAP]]()[%[[DIM_INPUT]]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty(%[[OUTER]]) : tensor<32x?x8xf32>
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[ARG0]]
+// CHECK-SAME:      outer_dims_perm = [1, 0] inner_dims_pos = [0] inner_tiles = [8] into %[[EMPTY]]
+// CHECK-SAME:      : tensor<?x32xf32> -> tensor<32x?x8xf32>
+// CHECK:         %[[DIM_PACK:.+]] = tensor.dim %[[PACK]], %[[C1]] : tensor<32x?x8xf32>
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[PACK]] {{\[}}[0, 1], [2], [3]]
+// CHECK-SAME:      output_shape [4, 8, %[[DIM_PACK]], 8] : tensor<32x?x8xf32> into tensor<4x8x?x8xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<4x8x?x8xf32>
+
+// -----
+
+func.func @no_bubble_up_pack_outer_dims_permutation_through_expand(%arg0: tensor<32x64xf32>) -> tensor<2x4x32x4x2xf32> {
+  %empty = tensor.empty() : tensor<2x4x32x4x2xf32>
+  %expanded = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [4, 8, 64] : tensor<32x64xf32> into tensor<4x8x64xf32>
+  %pack = linalg.pack %expanded outer_dims_perm = [1, 0, 2] inner_dims_pos = [1, 2] inner_tiles = [4, 2] into %empty : tensor<4x8x64xf32> -> tensor<2x4x32x4x2xf32>
+  return %pack : tensor<2x4x32x4x2xf32>
+}
 // CHECK-LABEL: func.func @no_bubble_up_pack_outer_dims_permutation_through_expand(
 // CHECK-SAME:      %[[ARG0:[a-zA-Z0-9]+]]
-// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x4x2x4x2xf32>
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<2x4x32x4x2xf32>
 // CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1], [2]]
 // CHECK-SAME:      output_shape [4, 8, 64] : tensor<32x64xf32> into tensor<4x8x64xf32>
 // CHECK:         %[[PACK:.+]] = linalg.pack %[[EXPANDED]]
-// CHECK-SAME:      outer_dims_perm = [2, 0, 1] inner_dims_pos = [1, 2] inner_tiles = [4, 2] into %[[EMPTY]]
-// CHECK-SAME:      : tensor<4x8x64xf32> -> tensor<32x4x2x4x2xf32>
-// CHECK:         return %[[PACK]] : tensor<32x4x2x4x2xf32>
+// CHECK-SAME:      outer_dims_perm = [1, 0, 2] inner_dims_pos = [1, 2] inner_tiles = [4, 2] into %[[EMPTY]]
+// CHECK-SAME:      : tensor<4x8x64xf32> -> tensor<2x4x32x4x2xf32>
+// CHECK:         return %[[PACK]] : tensor<2x4x32x4x2xf32>
+
+// -----
+
+func.func @no_bubble_up_pack_outer_dims_permutation_interleaved_through_expand(%arg0: tensor<32x64xf32>) -> tensor<4x8x2x4x4x2xf32> {
+  %empty = tensor.empty() : tensor<4x8x2x4x4x2xf32>
+  %expanded = tensor.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [4, 8, 8, 8] : tensor<32x64xf32> into tensor<4x8x8x8xf32>
+  %pack = linalg.pack %expanded outer_dims_perm = [0, 2, 1, 3] inner_dims_pos = [1, 3] inner_tiles = [4, 2] into %empty : tensor<4x8x8x8xf32> -> tensor<4x8x2x4x4x2xf32>
+  return %pack : tensor<4x8x2x4x4x2xf32>
+}
+// CHECK-LABEL: func.func @no_bubble_up_pack_outer_dims_permutation_interleaved_through_expand(
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<4x8x2x4x4x2xf32>
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1], [2, 3]]
+// CHECK-SAME:      output_shape [4, 8, 8, 8] : tensor<32x64xf32> into tensor<4x8x8x8xf32>
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[EXPANDED]]
+// CHECK-SAME:      outer_dims_perm = [0, 2, 1, 3] inner_dims_pos = [1, 3] inner_tiles = [4, 2] into %[[EMPTY]]
+// CHECK-SAME:      : tensor<4x8x8x8xf32> -> tensor<4x8x2x4x4x2xf32>
+// CHECK:         return %[[PACK]] : tensor<4x8x2x4x4x2xf32>
 
 // -----
 
@@ -1295,6 +1355,20 @@ func.func @no_bubble_up_pack_expanded_padding_through_expand_cannot_reassociate(
 // CHECK-SAME:      inner_dims_pos = [1] inner_tiles = [8] into %[[EMPTY]]
 // CHECK-SAME:      : tensor<3x10x60xf32> -> tensor<3x2x60x8xf32>
 // CHECK:         return %[[PACK]] : tensor<3x2x60x8xf32>
+
+// -----
+
+func.func @no_bubble_up_pack_rank0_through_expand(%arg0: tensor<f32>) -> tensor<1x1xf32> {
+  %empty = tensor.empty() : tensor<1x1xf32>
+  %expanded = tensor.expand_shape %arg0 [] output_shape [1, 1] : tensor<f32> into tensor<1x1xf32>
+  %pack = linalg.pack %expanded outer_dims_perm = [1, 0] inner_dims_pos = [] inner_tiles = [] into %empty : tensor<1x1xf32> -> tensor<1x1xf32>
+  return %pack : tensor<1x1xf32>
+}
+// CHECK-LABEL: func.func @no_bubble_up_pack_rank0_through_expand(
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] []
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[EXPANDED]] outer_dims_perm = [1, 0]
+// CHECK:         return %[[PACK]]
 
 // -----
 
