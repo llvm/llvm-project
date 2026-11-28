@@ -281,13 +281,16 @@ void UnnecessaryCopyInitializationCheck::check(
   const bool IssueFix =
       VarDeclStmt.isSingleDecl() && !NewVar.getLocation().isMacroID();
   const bool IsVarUnused = isVariableUnused(NewVar, BlockStmt, *Result.Context);
+  // A variable marked `[[maybe_unused]]` should not be removed. Suggest a const
+  // reference instead.
+  const bool ShouldRemoveVar = IsVarUnused && !NewVar.hasAttr<UnusedAttr>();
   const bool IsVarOnlyUsedAsConst =
       isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context,
                         // `NewVar` is always of non-pointer type.
                         0);
   const CheckContext Context{
-      NewVar,   BlockStmt,   VarDeclStmt,         *Result.Context,
-      IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};
+      NewVar,   BlockStmt,   VarDeclStmt,     *Result.Context,
+      IssueFix, IsVarUnused, ShouldRemoveVar, IsVarOnlyUsedAsConst};
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
@@ -343,15 +346,18 @@ void UnnecessaryCopyInitializationCheck::handleCopyFromLocalVar(
 
 void UnnecessaryCopyInitializationCheck::diagnoseCopyFromMethodReturn(
     const CheckContext &Ctx) {
+  const bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  // Only say that the variable is used as a const reference if it has uses.
+  const bool OmitUsageNote = IsConstQualified || Ctx.IsVarUnused;
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
            "the %select{|const qualified }0variable %1 of type %2 is "
            "copy-constructed "
            "from a const reference%select{%select{ but is only used as const "
-           "reference|}0| but is never used}3; consider "
+           "reference|}4| but is never used}3; consider "
            "%select{making it a const reference|removing the statement}3")
-      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.Var.getType()
-      << Ctx.IsVarUnused;
+      << IsConstQualified << &Ctx.Var << Ctx.Var.getType()
+      << Ctx.ShouldRemoveVar << OmitUsageNote;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
@@ -363,14 +369,14 @@ void UnnecessaryCopyInitializationCheck::diagnoseCopyFromLocalVar(
            "modified%select{"
            "| and never used}3; consider %select{avoiding the copy|removing "
            "the statement}3")
-      << &Ctx.Var << &OldVar << Ctx.Var.getType() << Ctx.IsVarUnused;
+      << &Ctx.Var << &OldVar << Ctx.Var.getType() << Ctx.ShouldRemoveVar;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
 void UnnecessaryCopyInitializationCheck::maybeIssueFixes(
     const CheckContext &Ctx, DiagnosticBuilder &Diagnostic) {
   if (Ctx.IssueFix) {
-    if (Ctx.IsVarUnused)
+    if (Ctx.ShouldRemoveVar)
       recordRemoval(Ctx.VarDeclStmt, Ctx.ASTCtx, Diagnostic);
     else
       recordFixes(Ctx.Var, Ctx.ASTCtx, Diagnostic);

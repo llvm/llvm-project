@@ -771,6 +771,25 @@ void positiveUnusedReferenceIsRemoved() {
   // CHECK-FIXES: // Comments on a new line should not be deleted.
 }
 
+void positiveMaybeUnusedIsNotRemoved() {
+  [[maybe_unused]] auto FromCall = ExpensiveTypeReference();
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the variable 'FromCall' of type 'ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: {{\[\[maybe_unused\]\]}} const auto& FromCall = ExpensiveTypeReference();
+
+  [[maybe_unused]] const auto ConstFromCall = ExpensiveTypeReference();
+  // CHECK-MESSAGES: [[@LINE-1]]:31: warning: the const qualified variable 'ConstFromCall' of type 'const ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: {{\[\[maybe_unused\]\]}} const auto& ConstFromCall = ExpensiveTypeReference();
+
+  ExpensiveToCopyType Orig;
+  [[maybe_unused]] auto FromVar{Orig};
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: local copy 'FromVar' of the variable 'Orig' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: {{\[\[maybe_unused\]\]}} const auto& FromVar{Orig};
+
+  __attribute__((unused)) auto GnuSpelling = Orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:32: warning: local copy 'GnuSpelling' of the variable 'Orig' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: __attribute__((unused)) const auto& GnuSpelling = Orig;
+}
+
 void positiveLoopedOverObjectIsConst() {
   const Container<ExpensiveToCopyType> Orig;
   for (const auto &Element : Orig) {

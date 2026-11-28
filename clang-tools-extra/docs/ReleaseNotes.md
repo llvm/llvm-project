@@ -409,6 +409,11 @@ infrastructure are described first, followed by tool-specific sections.
   avoid offering fix-its for string literals originating from macro
   expansions.
 
+- Improved {doc}`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check to
+  no longer suggest removing unused variables marked `[[maybe_unused]]`. It
+  suggests a const reference instead.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the
