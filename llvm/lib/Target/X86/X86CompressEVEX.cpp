@@ -18,6 +18,7 @@
 //   f. SETZUCCm (EVEX) -> SETCCm (legacy)
 //   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK/VPMOVMSKB (VEX)
 //   h. VPMOV*2M (EVEX) + masked VMOV* -> VBLENDV* (VEX)
+//   i. VCMP* (EVEX) + masked VMOV*/VBLENDM* -> VCMP* + VBLENDV* (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -51,6 +52,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
@@ -571,8 +573,155 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
   return true;
 }
 
+// Try to compress an FP compare whose mask only feeds a masked move/blend:
+//   vcmpeqps %xmm1, %xmm0, %k1  ->  vcmpeqps %xmm1, %xmm0, %xmm0
+//   vmovaps %xmm2, %xmm3 {%k1}  ->  vblendvps %xmm0, %xmm2, %xmm3, %xmm3
+//
+// Unlike the VPMOV*2M folds this doesn't remove an instruction, so only do it
+// when the scheduler model says the VEX sequence is no slower (e.g. on Zen 4/5,
+// but not on Intel where VBLENDV is slower than a masked move); it is then
+// shorter and doesn't need a mask register. The vector mask needs a free
+// XMM/YMM register: a compare source the compare kills, or the destination of
+// a VBLENDM that isn't also a source.
+static bool tryCompressVCmpBlend(MachineInstr &MI, MachineBasicBlock &MBB,
+                                 const X86Subtarget &ST,
+                                 const TargetSchedModel &SchedModel,
+                                 SmallVectorImpl<MachineInstr *> &ToErase) {
+  unsigned VCmpOpc = 0;
+  unsigned BlendOpc = 0;
+  unsigned ScalarMovOpc = 0;
+  switch (MI.getOpcode()) {
+  case X86::VCMPPSZ128rri:
+    VCmpOpc = X86::VCMPPSrri;
+    BlendOpc = X86::VBLENDVPSrrr;
+    break;
+  case X86::VCMPPSZ256rri:
+    VCmpOpc = X86::VCMPPSYrri;
+    BlendOpc = X86::VBLENDVPSYrrr;
+    break;
+  case X86::VCMPPDZ128rri:
+    VCmpOpc = X86::VCMPPDrri;
+    BlendOpc = X86::VBLENDVPDrrr;
+    break;
+  case X86::VCMPPDZ256rri:
+    VCmpOpc = X86::VCMPPDYrri;
+    BlendOpc = X86::VBLENDVPDYrrr;
+    break;
+  case X86::VCMPSSZrri:
+    VCmpOpc = X86::VCMPSSrri;
+    BlendOpc = X86::VBLENDVPSrrr;
+    ScalarMovOpc = X86::VMOVSSZrrk;
+    break;
+  case X86::VCMPSDZrri:
+    VCmpOpc = X86::VCMPSDrri;
+    BlendOpc = X86::VBLENDVPDrrr;
+    ScalarMovOpc = X86::VMOVSDZrrk;
+    break;
+  default:
+    return false;
+  }
+
+  if (!SchedModel.hasInstrSchedModel() || usesExtendedRegister(MI) ||
+      !checkPredicate(BlendOpc, &ST))
+    return false;
+
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  Register MaskReg = MI.getOperand(0).getReg();
+
+  MachineInstr *BlendMI = nullptr;
+  for (MachineInstr &CurMI : llvm::make_range(
+           std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+    if (CurMI.readsRegister(MaskReg, TRI)) {
+      if (BlendMI)
+        return false; // Mask has multiple uses.
+      BlendMI = &CurMI;
+    }
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!BlendMI)
+        return false;
+      break;
+    }
+  }
+  if (!BlendMI || usesExtendedRegister(*BlendMI))
+    return false;
+
+  for (const MachineInstr &UseMI :
+       MBB.getParent()->getRegInfo().use_instructions(MaskReg))
+    if (UseMI.getParent() != &MBB)
+      return false;
+
+  unsigned UseOpc = BlendMI->getOpcode();
+  bool IsScalar = ScalarMovOpc != 0;
+  bool IsMaskedBlend = false;
+  if (IsScalar) {
+    // The upper elements of the vector mask come from the first compare
+    // source, so this is only valid if the masked move's upper elements
+    // (taken from its own first source) don't matter.
+    if (UseOpc != ScalarMovOpc || !BlendMI->getOperand(3).isUndef())
+      return false;
+  } else {
+    IsMaskedBlend = isCompressibleMaskedBlendUse(BlendOpc, UseOpc);
+    if (!IsMaskedBlend && !isCompressibleBlendVUse(BlendOpc, UseOpc))
+      return false;
+  }
+
+  unsigned MaskOpIdx = IsMaskedBlend ? 1 : 2;
+  if (BlendMI->getOperand(MaskOpIdx).getReg() != MaskReg)
+    return false;
+
+  const MachineOperand &Dst = BlendMI->getOperand(0);
+  const MachineOperand &Passthru = BlendMI->getOperand(IsMaskedBlend ? 2 : 1);
+  const MachineOperand &Src = BlendMI->getOperand(IsScalar ? 4 : 3);
+
+  auto IsFreeUntilBlend = [&](Register Reg) {
+    if (TRI->regsOverlap(Reg, Passthru.getReg()) ||
+        TRI->regsOverlap(Reg, Src.getReg()))
+      return false;
+    for (const MachineInstr &CurMI :
+         llvm::make_range(std::next(MachineBasicBlock::iterator(MI)),
+                          MachineBasicBlock::iterator(*BlendMI)))
+      if (CurMI.readsRegister(Reg, TRI) || CurMI.modifiesRegister(Reg, TRI))
+        return false;
+    return true;
+  };
+
+  Register VecMaskReg;
+  if (IsMaskedBlend && IsFreeUntilBlend(Dst.getReg()))
+    VecMaskReg = Dst.getReg();
+  else if (MI.getOperand(1).isKill() &&
+           IsFreeUntilBlend(MI.getOperand(1).getReg()))
+    VecMaskReg = MI.getOperand(1).getReg();
+  else if (MI.getOperand(2).isKill() &&
+           IsFreeUntilBlend(MI.getOperand(2).getReg()))
+    VecMaskReg = MI.getOperand(2).getReg();
+  else
+    return false;
+
+  unsigned OldLatency = SchedModel.computeInstrLatency(MI.getOpcode()) +
+                        SchedModel.computeInstrLatency(UseOpc);
+  unsigned NewLatency = SchedModel.computeInstrLatency(VCmpOpc) +
+                        SchedModel.computeInstrLatency(BlendOpc);
+  if (NewLatency > OldLatency)
+    return false;
+
+  MI.setDesc(ST.getInstrInfo()->get(VCmpOpc));
+  MI.getOperand(0).setReg(VecMaskReg);
+  MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+
+  MachineInstr *NewMI = BuildMI(MBB, *BlendMI, BlendMI->getDebugLoc(),
+                                ST.getInstrInfo()->get(BlendOpc))
+                            .addReg(Dst.getReg(), getRegState(Dst))
+                            .addReg(Passthru.getReg(), getRegState(Passthru))
+                            .addReg(Src.getReg(), getRegState(Src))
+                            .addReg(VecMaskReg, RegState::Kill);
+  NewMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  ToErase.push_back(BlendMI);
+  return true;
+}
+
 static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
                              const X86Subtarget &ST,
+                             const TargetSchedModel &SchedModel,
                              SmallVectorImpl<MachineInstr *> &ToErase) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
@@ -589,7 +738,8 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
 
   // Specialized mask-producing folds to MOVMSK/VBLENDV first.
-  if (tryCompressMaskProducer(MI, MBB, ST, ToErase))
+  if (tryCompressMaskProducer(MI, MBB, ST, ToErase) ||
+      tryCompressVCmpBlend(MI, MBB, ST, SchedModel, ToErase))
     return true;
 
   auto IsRedundantNewDataDest = [&](unsigned &Opc) {
@@ -753,13 +903,16 @@ static bool runOnMF(MachineFunction &MF) {
   if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD() && !ST.hasZU())
     return false;
 
+  TargetSchedModel SchedModel;
+  SchedModel.init(&ST);
+
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
     SmallVector<MachineInstr *, 4> ToErase;
 
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
-      Changed |= CompressEVEXImpl(MI, MBB, ST, ToErase);
+      Changed |= CompressEVEXImpl(MI, MBB, ST, SchedModel, ToErase);
     }
 
     for (MachineInstr *MI : ToErase) {
