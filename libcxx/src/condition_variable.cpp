@@ -34,7 +34,19 @@ void condition_variable::notify_all() noexcept { __libcpp_condvar_broadcast(&__c
 void condition_variable::wait(unique_lock<mutex>& lk) noexcept {
   if (!lk.owns_lock())
     std::__throw_system_error(EPERM, "condition_variable::wait: mutex not locked");
+#if defined(__APPLE__)
+  int saved_errno = errno;
+  errno           = 0;
+#endif
   int ec = __libcpp_condvar_wait(&__cv_, lk.mutex()->native_handle());
+#if defined(__APPLE__)
+  // On Apple platforms, pthread_cond_wait also returns EINVAL when the kernel
+  // fails the wait, with errno set to EBUSY and the mutex locked again. errno
+  // becomes EINTR if a signal interrupts relocking the mutex.
+  if (ec == EINVAL && (errno == EBUSY || errno == EINTR))
+    ec = 0;
+  errno = saved_errno;
+#endif
   if (ec)
     std::__throw_system_error(ec, "condition_variable wait failed");
 }
@@ -58,7 +70,17 @@ void condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
     ts.tv_sec  = ts_sec_max;
     ts.tv_nsec = giga::num - 1;
   }
+#if defined(__APPLE__)
+  int saved_errno = errno;
+  errno           = 0;
+#endif
   int ec = __libcpp_condvar_timedwait(&__cv_, lk.mutex()->native_handle(), &ts);
+#if defined(__APPLE__)
+  // See condition_variable::wait.
+  if (ec == EINVAL && (errno == EBUSY || errno == EINTR))
+    ec = 0;
+  errno = saved_errno;
+#endif
   if (ec != 0 && ec != ETIMEDOUT)
     std::__throw_system_error(ec, "condition_variable timed_wait failed");
 }
