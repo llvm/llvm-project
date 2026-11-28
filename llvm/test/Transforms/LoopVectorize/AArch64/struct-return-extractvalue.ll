@@ -314,8 +314,9 @@ define void @narrow_extractvalue_of_scalarized_call(ptr noalias %a, ptr noalias 
 ; DEFAULT-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP18]], align 4
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP8]]
 ; DEFAULT-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP19]], align 4
-; DEFAULT-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; DEFAULT-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; DEFAULT-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; DEFAULT-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 0
+; DEFAULT-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 1
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[C]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    store <4 x i32> [[TMP20]], ptr [[TMP21]], align 4

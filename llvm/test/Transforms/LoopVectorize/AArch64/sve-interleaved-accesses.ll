@@ -1609,8 +1609,9 @@ define i32 @load_factor5_umul_index(ptr noalias %p) #1 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <20 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <20 x i32> [[WIDE_VEC]], <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <20 x i32> [[WIDE_VEC]], <20 x i32> poison, <4 x i32> <i32 1, i32 6, i32 11, i32 16>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave5.v20i32(<20 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 0
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI]], [[TMP2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

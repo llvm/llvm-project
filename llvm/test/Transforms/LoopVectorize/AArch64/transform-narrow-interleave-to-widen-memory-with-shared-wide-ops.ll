@@ -21,18 +21,17 @@ define void @store_groups_sharing_first_member(ptr noalias %A, ptr noalias %B, p
 ; VF2-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[STRIDED_VEC5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
 ; VF2-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP1]]
 ; VF2-NEXT:    [[TMP9:%.*]] = mul <2 x i64> [[STRIDED_VEC5]], [[BROADCAST_SPLAT2]]
 ; VF2-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[STRIDED_VEC5]], [[BROADCAST_SPLAT4]]
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP11]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP9]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[C]], i64 [[TMP2]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC6:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC6:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP10]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC6]], ptr [[TMP6]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -151,12 +150,10 @@ define void @store_groups_sharing_members_at_swapped_indices(ptr noalias %A, ptr
 ; VF2-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[TMP1]]
 ; VF2-NEXT:    [[TMP3:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT2]]
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
-; VF2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP8]], <2 x i64> [[TMP3]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP10]], align 8
 ; VF2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[C]], i64 [[TMP4]]
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC3:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP8]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC3]], ptr [[TMP11]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -211,16 +208,16 @@ define void @wide_bin_ops_sharing_operand_with_different_members(ptr noalias %A,
 ; VF2-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[STRIDED_VEC5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
 ; VF2-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[WIDE_LOAD]], [[TMP1]]
 ; VF2-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[STRIDED_VEC5]], [[BROADCAST_SPLAT2]]
 ; VF2-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC5]], [[BROADCAST_SPLAT4]]
 ; VF2-NEXT:    [[TMP5:%.*]] = mul <2 x i64> [[TMP4]], [[TMP4]]
 ; VF2-NEXT:    [[TMP11:%.*]] = mul <2 x i64> [[TMP9]], [[TMP10]]
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP5]], <2 x i64> [[TMP11]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP6]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
