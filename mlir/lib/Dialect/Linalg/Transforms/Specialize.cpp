@@ -47,20 +47,23 @@ using namespace mlir::linalg;
 //         %0 = arith.subf %b, %a : f32
 //         linalg.yield %0: f32
 // Former is linalg.sub(a,b), latter is linalg.sub(b,a).
-static bool areBinOpsSwapped(GenericOp genericOp, bool isTernary) {
+// Returns std::nullopt if the operands are not block arguments in either order.
+static std::optional<bool> areBinOpsSwapped(GenericOp genericOp,
+                                            bool isTernary) {
   Block *body = genericOp.getBody();
   Operation *op = &body->front();
-  bool swapped = false;
-  if (op->getOpOperand(0 + isTernary).get() !=
-      body->getArgument(0 + isTernary)) {
-    swapped = true;
-    assert(op->getOpOperand(0 + isTernary).get() ==
-               body->getArgument(1 + isTernary) &&
-           op->getOpOperand(1 + isTernary).get() ==
-               body->getArgument(0 + isTernary) &&
-           "binary op uses just one block arg");
-  }
-  return swapped;
+  // The mask of a ternary op is not subject to swapping.
+  if (isTernary && op->getOperand(0) != body->getArgument(0))
+    return std::nullopt;
+  Value lhs = op->getOperand(0 + isTernary);
+  Value rhs = op->getOperand(1 + isTernary);
+  BlockArgument lhsArg = body->getArgument(0 + isTernary);
+  BlockArgument rhsArg = body->getArgument(1 + isTernary);
+  if (lhs == lhsArg && rhs == rhsArg)
+    return false;
+  if (lhs == rhsArg && rhs == lhsArg)
+    return true;
+  return std::nullopt;
 }
 
 // Given an elementwise single unary linalg generic op whose body operation is a
@@ -181,8 +184,14 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   Operation *op = &genericOp.getBody()->front();
 
   // Detect variations from canonical forms.
-  bool hasSwappedOperands =
-      (isBinary || isTernary) && areBinOpsSwapped(genericOp, isTernary);
+  bool hasSwappedOperands = false;
+  if (isBinary || isTernary) {
+    std::optional<bool> swapped = areBinOpsSwapped(genericOp, isTernary);
+    if (!swapped)
+      return rewriter.notifyMatchFailure(
+          genericOp, "operands are not block arguments in either order");
+    hasSwappedOperands = *swapped;
+  }
   int scalarOprIdx = -1;
   bool hasScalarOperand = isUnary && op->getNumOperands() == 2 &&
                           findIndexOfScalarOperand(genericOp, scalarOprIdx);
