@@ -69,13 +69,15 @@ static FailureOr<TransferMask> getMaskOp(Operation *loadOp) {
           transferRead.getMask().getDefiningOp<vector::CreateMaskOp>())
     return TransferMask{maskOp, {}};
 
-  // Case 2: Mask is the result of a vector.extract(vector.create_mask).
+  // Case 2: Mask is the result of a vector.extract(vector.create_mask) at a
+  // static position.
   if (auto extractOp =
           transferRead.getMask().getDefiningOp<vector::ExtractOp>())
     if (auto maskOp =
             extractOp.getSource().getDefiningOp<vector::CreateMaskOp>())
-      return TransferMask{maskOp,
-                          SmallVector<int64_t>(extractOp.getStaticPosition())};
+      if (!extractOp.hasDynamicPosition())
+        return TransferMask{
+            maskOp, SmallVector<int64_t>(extractOp.getStaticPosition())};
 
   // All other cases: not supported.
   return failure();
@@ -147,10 +149,26 @@ static bool resultsInSupportedAsyncCopy(MemRefType memrefType,
   assert(vecType.getRank() == 1 && "expected 1-D vector");
   constexpr int64_t kSupportedCpAsyncAlignmentsInBytes[3] = {4, 8, 16};
 
-  // Condition 1: the copy size must be supported.
+  // The copy size must be known at compile time.
+  if (vecType.isScalable())
+    return false;
+
+  // The copy size is computed from the memref element type, so it must be the
+  // vector element type (this is not the case for a memref of vectors).
+  if (memrefType.getElementType() != vecType.getElementType())
+    return false;
+
+  // Condition 1: the copy size must be supported. It is computed from the bit
+  // width of the element type, so only 8-, 16-, 32-, 64- and 128-bit integers
+  // or floats are supported: sub-byte elements are stored in whole bytes, and
+  // index has no bit width.
+  Type elementType = vecType.getElementType();
+  if (!elementType.isIntOrFloat() ||
+      !llvm::is_contained({8u, 16u, 32u, 64u, 128u},
+                          elementType.getIntOrFloatBitWidth()))
+    return false;
   bool supportedCopySize = false;
   int64_t numElements = vecType.getNumElements();
-  Type elementType = vecType.getElementType();
   for (int64_t alignmentInBytes : kSupportedCpAsyncAlignmentsInBytes) {
     if (alignmentInBytes * 8 ==
         numElements * elementType.getIntOrFloatBitWidth()) {
