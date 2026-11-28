@@ -430,6 +430,10 @@ namespace llvm {
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
+    SDValue LowerAsmMemoryOperandAddress(SDValue Addr, unsigned AddrSpace,
+                                         const SDLoc &DL,
+                                         SelectionDAG &DAG) const override;
+
     InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "v")

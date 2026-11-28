@@ -3253,10 +3253,32 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
 /// Parent is the parent node of the addr operand that is being matched.  It
 /// is always a load, store, atomic node, or null.  It is only null when
 /// checking memory operands for inline asm nodes.
+/// Return the segment register implied by address space \p AddrSpace, if any.
+static std::optional<MCRegister> getSegmentRegForAddrSpace(unsigned AddrSpace) {
+  switch (AddrSpace) {
+  case X86AS::GS:
+    return X86::GS;
+  case X86AS::FS:
+    return X86::FS;
+  case X86AS::SS:
+    return X86::SS;
+  default:
+    return std::nullopt;
+  }
+}
+
 bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                  SDValue &Scale, SDValue &Index, SDValue &Disp,
                                  SDValue &Segment, bool HasNDDM) {
   X86ISelAddressMode AM;
+
+  // The address of an inline asm memory operand in a segment relative address
+  // space, see X86TargetLowering::LowerAsmMemoryOperandAddress.
+  if (!Parent && N.getOpcode() == X86ISD::ASM_SEGMENT_ADDR) {
+    if (auto SegReg = getSegmentRegForAddrSpace(N.getConstantOperandVal(1)))
+      AM.Segment = CurDAG->getRegister(*SegReg, MVT::i16);
+    N = N.getOperand(0);
+  }
 
   if (Parent &&
       // This list of opcodes are all the nodes that have an "addr:$ptr" operand

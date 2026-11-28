@@ -65540,6 +65540,22 @@ SDValue X86TargetLowering::LowerAsmOutputForConstraint(
   return Result;
 }
 
+/// Lower the address \p Addr of an indirect memory operand of an inline asm
+/// statement, where \p AddrSpace is the address space of the corresponding
+/// IR pointer.
+SDValue X86TargetLowering::LowerAsmMemoryOperandAddress(
+    SDValue Addr, unsigned AddrSpace, const SDLoc &DL,
+    SelectionDAG &DAG) const {
+  // Memory operands in segment relative address spaces need a segment
+  // override prefix. Retain the address space so that instruction selection
+  // can add the segment register to the memory operand.
+  if (AddrSpace != X86AS::GS && AddrSpace != X86AS::FS &&
+      AddrSpace != X86AS::SS)
+    return Addr;
+  return DAG.getNode(X86ISD::ASM_SEGMENT_ADDR, DL, Addr.getValueType(), Addr,
+                     DAG.getTargetConstant(AddrSpace, DL, MVT::i32));
+}
+
 /// Lower the specified operand into the Ops vector.
 /// If it is invalid, don't add anything to Ops.
 void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
