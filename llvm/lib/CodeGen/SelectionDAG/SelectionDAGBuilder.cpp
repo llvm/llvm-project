@@ -6389,32 +6389,43 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
   return DAG.getNode(Opcode, DL, VT, LHS, RHS, Scale);
 }
 
-// getUnderlyingArgRegs - Find underlying registers used for a truncated,
-// bitcasted, or split argument. Returns a list of <Register, size in bits>
-static void
-getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+// getUnderlyingArgParts - Find the parts of a truncated, bitcasted, or split
+// argument: the registers holding them or, if \p AllowLoads, the frame indices
+// they are loaded from. Returns a list of <part, size in bits>, or false if a
+// part is neither.
+static bool getUnderlyingArgParts(
+    SmallVectorImpl<std::pair<MachineOperand, TypeSize>> &Parts,
+    const SDValue &N, bool AllowLoads) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
-    Regs.emplace_back(cast<RegisterSDNode>(Op)->getReg(),
-                      Op.getValueType().getSizeInBits());
-    return;
+    Parts.emplace_back(
+        MachineOperand::CreateReg(cast<RegisterSDNode>(Op)->getReg(), false),
+        Op.getValueType().getSizeInBits());
+    return true;
+  }
+  case ISD::LOAD: {
+    auto *LD = cast<LoadSDNode>(N);
+    auto *FI = dyn_cast<FrameIndexSDNode>(LD->getBasePtr());
+    if (!AllowLoads || !FI || !ISD::isNormalLoad(LD))
+      return false;
+    Parts.emplace_back(MachineOperand::CreateFI(FI->getIndex()),
+                       N.getValueType().getSizeInBits());
+    return true;
   }
   case ISD::BITCAST:
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
-    return;
+    return getUnderlyingArgParts(Parts, N.getOperand(0), AllowLoads);
   case ISD::BUILD_PAIR:
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
-    for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
-    return;
+    return all_of(N->op_values(), [&](SDValue Op) {
+      return getUnderlyingArgParts(Parts, Op, AllowLoads);
+    });
   default:
-    return;
+    return false;
   }
 }
 
@@ -6537,12 +6548,15 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (FI != std::numeric_limits<int>::max())
     Op = MachineOperand::CreateFI(FI);
 
-  SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
+  SmallVector<std::pair<MachineOperand, TypeSize>, 8> ArgParts;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    // A stack part of an address would need a second level of indirection.
+    if (!getUnderlyingArgParts(ArgParts, N,
+                               Kind == FuncArgumentDbgValueKind::Value))
+      ArgParts.clear();
     Register Reg;
-    if (ArgRegsAndSizes.size() == 1)
-      Reg = ArgRegsAndSizes.front().first;
+    if (ArgParts.size() == 1 && ArgParts.front().first.isReg())
+      Reg = ArgParts.front().first.getReg();
 
     if (Reg && Reg.isVirtual()) {
       MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -6566,11 +6580,11 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   }
 
   if (!Op) {
-    // Create a DBG_VALUE for each decomposed value in ArgRegs to cover Reg
+    // Create a DBG_VALUE for each decomposed value in ArgParts to cover Reg
     auto splitMultiRegDbgValue =
-        [&](ArrayRef<std::pair<Register, TypeSize>> SplitRegs) -> bool {
+        [&](ArrayRef<std::pair<MachineOperand, TypeSize>> SplitParts) -> bool {
       unsigned Offset = 0;
-      for (const auto &[Reg, RegSizeInBits] : SplitRegs) {
+      for (const auto &[Part, RegSizeInBits] : SplitParts) {
         // FIXME: Scalable sizes are not supported in fragment expressions.
         if (RegSizeInBits.isScalable())
           return false;
@@ -6603,8 +6617,12 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           DAG.AddDbgValue(SDV, false);
           continue;
         }
-        MachineInstr *NewMI = MakeVRegDbgValue(
-            Reg, *FragmentExpr, Kind != FuncArgumentDbgValueKind::Value);
+        MachineInstr *NewMI =
+            Part.isReg()
+                ? MakeVRegDbgValue(Part.getReg(), *FragmentExpr,
+                                   Kind != FuncArgumentDbgValueKind::Value)
+                : BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), true, Part,
+                          Variable, *FragmentExpr);
         FuncInfo.ArgDbgValues.push_back(NewMI);
       }
 
@@ -6618,15 +6636,19 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       const auto &TLI = DAG.getTargetLoweringInfo();
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), VMI->second,
                        V->getType(), std::nullopt);
-      if (RFV.occupiesMultipleRegs())
-        return splitMultiRegDbgValue(RFV.getRegsAndSizes());
+      if (RFV.occupiesMultipleRegs()) {
+        SmallVector<std::pair<MachineOperand, TypeSize>, 8> RegParts;
+        for (const auto &[Reg, Size] : RFV.getRegsAndSizes())
+          RegParts.emplace_back(MachineOperand::CreateReg(Reg, false), Size);
+        return splitMultiRegDbgValue(RegParts);
+      }
 
       Op = MachineOperand::CreateReg(VMI->second, false);
       IsIndirect = Kind != FuncArgumentDbgValueKind::Value;
-    } else if (ArgRegsAndSizes.size() > 1) {
+    } else if (ArgParts.size() > 1) {
       // This was split due to the calling convention, and no virtual register
       // mapping exists for the value.
-      return splitMultiRegDbgValue(ArgRegsAndSizes);
+      return splitMultiRegDbgValue(ArgParts);
     }
   }
 

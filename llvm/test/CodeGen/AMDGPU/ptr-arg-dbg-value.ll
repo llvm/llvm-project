@@ -35,11 +35,8 @@ define hidden void @ptr_arg_split_subregs(ptr %arg1) #0 !dbg !9 {
 }
 
 ; FIXME: The 64-bit pointer argument %arg2 will be split between a register and
-; the stack memory. The SelectionDAG though failed to emit the DBG_VALUE for the
-; split part in memory. The two DBG_VALUE instructions emitted in the output pattern
-; are totally misleading. The former represent part of the incoming argument in register
-; while the latter was emitted for the parameter copy to a virtual register inserted
-; at the function entry by DAGBuilder.
+; the stack memory. No DBG_VALUE is emitted for it, as the variable's address
+; cannot be described by the register part alone.
 define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
 ; CHECK-LABEL: ptr_arg_split_reg_mem:
 ; CHECK:       .Lfunc_begin1:
@@ -50,7 +47,6 @@ define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
 ; CHECK-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    .cfi_undefined 2591
-; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr30+0]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; CHECK-NEXT:  .Ltmp2:
