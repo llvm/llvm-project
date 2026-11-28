@@ -26,7 +26,7 @@ define amdgpu_ps bfloat @strict_fma_bf16_sss(bfloat inreg %a, bfloat inreg %b, b
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-NEXT:    v_pk_fma_bf16 v0, s0, s1, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.experimental.constrained.fma.bf16(bfloat %a, bfloat %b, bfloat %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret bfloat %result

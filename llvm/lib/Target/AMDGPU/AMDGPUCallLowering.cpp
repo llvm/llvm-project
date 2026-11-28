@@ -30,18 +30,6 @@ using namespace llvm;
 
 namespace {
 
-/// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
-static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
-                                    Register ValVReg, const CCValAssign &VA) {
-  if (VA.getLocVT().getSizeInBits() < 32) {
-    // 16-bit types are reported as legal for 32-bit registers. We need to
-    // extend and do a 32-bit copy to avoid the verifier complaining about it.
-    return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), ValVReg).getReg(0);
-  }
-
-  return Handler.extendRegister(ValVReg, VA);
-}
-
 struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   AMDGPUOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                              MachineInstrBuilder MIB)
@@ -64,13 +52,13 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA,
                         ISD::ArgFlagsTy Flags = {}) override {
-    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
+    Register ExtReg = extendRegister(ValVReg, VA);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
     // ends up in a VGPR.
     // FIXME: Assert this is a shader return.
-    const SIRegisterInfo *TRI
-      = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT I32 = LLT::integer(32);
@@ -118,33 +106,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  void copyToReg(Register ValVReg, Register PhysReg, const CCValAssign &VA) {
-    if (VA.getLocVT().getSizeInBits() < 32) {
-      // 16-bit types are reported as legal for 32-bit registers. We need to
-      // do a 32-bit copy, and truncate to avoid the verifier complaining
-      // about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
-
-      // If we have signext/zeroext, it applies to the whole 32-bit register
-      // before truncation.
-      auto Extended =
-          buildExtensionHint(VA, Copy.getReg(0), LLT(VA.getLocVT()));
-      LLT ValTy = MRI.getType(ValVReg);
-      if (ValTy.isInteger()) {
-        MIRBuilder.buildTrunc(ValVReg, Extended);
-      } else {
-        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
-                                           Extended);
-        MIRBuilder.buildBitcast(ValVReg, Trunc);
-      }
-      return;
-    }
-
-    IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
-  }
-
-  void readLaneToSGPR(Register ValVReg, Register PhysReg,
-                      const CCValAssign &VA) {
+  void readLaneToSGPR(Register ValVReg, Register PhysReg) {
     // Handle inreg parameters passed through VGPRs due to SGPR exhaustion.
     // When SGPRs are exhausted, the calling convention may allocate inreg
     // parameters to VGPRs. We insert readfirstlane to move the value from
@@ -156,25 +118,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     // because the inreg attribute information is not preserved in MIR. We could
     // use WWM_COPY (or similar instructions) and mark it as foldable to enable
     // later optimization passes to eliminate the redundant readfirstlane.
-    if (VA.getLocVT().getSizeInBits() < 32) {
-      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
-      auto ToSGPR = MIRBuilder
-                        .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
-                                        {MRI.getType(Copy.getReg(0))})
-                        .addReg(Copy.getReg(0));
-      auto Extended =
-          buildExtensionHint(VA, ToSGPR.getReg(0), LLT(VA.getLocVT()));
-      LLT ValTy = MRI.getType(ValVReg);
-      if (ValTy.isInteger()) {
-        MIRBuilder.buildTrunc(ValVReg, Extended);
-      } else {
-        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
-                                           Extended);
-        MIRBuilder.buildBitcast(ValVReg, Trunc);
-      }
-      return;
-    }
-
+    //
+    // An inreg argument is always promoted to at least 32-bit by the calling
+    // convention, so the value is never narrower than the register here.
     auto Copy = MIRBuilder.buildCopy(MRI.getType(ValVReg), PhysReg);
     MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, ValVReg)
         .addReg(Copy.getReg(0));
@@ -190,9 +136,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
 
     // Inreg flag should be the same across SplitArg[i]
     if (Flags.isInReg() && TRI->isVGPR(MRI, PhysReg))
-      readLaneToSGPR(ValVReg, PhysReg, VA);
+      readLaneToSGPR(ValVReg, PhysReg);
     else
-      copyToReg(ValVReg, PhysReg, VA);
+      IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,

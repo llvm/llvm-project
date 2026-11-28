@@ -3871,11 +3871,15 @@ SDValue SITargetLowering::LowerFormalArguments(
       RC = &AMDGPU::VGPR_32RegClass;
     else if (AMDGPU::SGPR_32RegClass.contains(Reg))
       RC = &AMDGPU::SGPR_32RegClass;
+    else if (AMDGPU::VGPR_16RegClass.contains(Reg))
+      RC = &AMDGPU::VGPR_16RegClass;
     else
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    // An inreg argument is always promoted to at least 32-bit by the calling
+    // convention, so RC is never VGPR_16 here.
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.

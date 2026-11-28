@@ -105,17 +105,11 @@ define amdgpu_gfx i16 @return_i16() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 10
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: return_i16:
-; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, 10
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: return_i16:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b16_e32 v0.l, 10
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: return_i16:
+; GFX10PLUS:       ; %bb.0: ; %entry
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, 10
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ret i16 10
 }
@@ -3503,6 +3497,34 @@ entry:
   %val.1 = insertelement <72 x i32> %val.0, i32 24, i32 58
   %ret.1 = call amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val.1)
   ret void
+}
+
+; The half is returned in v40, which is a callee saved register. v40 must not be
+; spilled and restored, otherwise the restore in the epilogue would clobber the
+; returned value. With true16 the value is returned in v40.l, i.e. a subregister
+; of the callee saved register.
+define amdgpu_gfx { [40 x float], half } @return_40xfloat_half(half %x) #0 {
+; GFX9-LABEL: return_40xfloat_half:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f16_e32 v40, 1.0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: return_40xfloat_half:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_f16_e32 v40, 1.0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: return_40xfloat_half:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f16_e32 v40.l, 1.0, v0.l
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %y = fadd half %x, 1.0
+  %r = insertvalue { [40 x float], half } poison, half %y, 1
+  ret { [40 x float], half } %r
 }
 
 ; Ensure all VGPRs are available

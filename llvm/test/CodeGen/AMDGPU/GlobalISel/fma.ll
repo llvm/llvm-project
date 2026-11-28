@@ -1539,7 +1539,7 @@ define amdgpu_ps half @fma_s16_uniform(half inreg %a, half inreg %b, half inreg 
 ; GFX12-LABEL: fma_s16_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s2
 ; GFX12-NEXT:    ; return to shader part epilog
   %fma = call half @llvm.fma.f16(half %a, half %b, half %c)
   ret half %fma

@@ -202,7 +202,9 @@ define amdgpu_ps bfloat @fcmp_ogt_select_bf16_vv(bfloat %a, bfloat %b) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v0 :: v_dual_lshlrev_b32 v3, 16, v1
+; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; GFX1250-NEXT:    v_mov_b16_e32 v3.l, v1.l
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v2 :: v_dual_lshlrev_b32 v3, 16, v3
 ; GFX1250-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v2, v3
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1250-NEXT:    ; return to shader part epilog

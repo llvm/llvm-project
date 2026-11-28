@@ -65,8 +65,8 @@ define i64 @srl_bv_not_last(i16 %a, i16 %b, i16 %c, i16 %d) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b16_e32 v2.h, v3.l
 ; GFX1250-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX1250-NEXT:    v_cvt_u32_u16_e32 v1, v3.l
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_cvt_u32_u16_e32 v1, v2.h
 ; GFX1250-NEXT:    v_alignbit_b32 v0, v2, v0, 16
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %bv0 = insertelement <4 x i16> poison, i16 %a, i32 0

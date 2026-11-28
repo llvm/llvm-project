@@ -25,7 +25,7 @@ define amdgpu_ps bfloat @strict_fmul_bf16_ss(bfloat inreg %a, bfloat inreg %b) #
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_pk_mul_bf16 v0, s0, s1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.experimental.constrained.fmul.bf16(bfloat %a, bfloat %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret bfloat %result
