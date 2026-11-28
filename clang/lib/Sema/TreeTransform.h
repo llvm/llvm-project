@@ -965,6 +965,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   /// Also by default, all of the other Rebuild*Array
   QualType RebuildArrayType(QualType ElementType, ArraySizeModifier SizeMod,
+                            ArraySizeStar Star,
                             const llvm::APInt *Size, Expr *SizeExpr,
                             unsigned IndexTypeQuals, SourceRange BracketsRange);
 
@@ -975,6 +976,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildConstantArrayType(QualType ElementType,
                                     ArraySizeModifier SizeMod,
+                                    ArraySizeStar Star,
                                     const llvm::APInt &Size, Expr *SizeExpr,
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
@@ -986,6 +988,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildIncompleteArrayType(QualType ElementType,
                                       ArraySizeModifier SizeMod,
+                                      ArraySizeStar Star,
                                       unsigned IndexTypeQuals,
                                       SourceRange BracketsRange);
 
@@ -995,7 +998,8 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildVariableArrayType(QualType ElementType,
-                                    ArraySizeModifier SizeMod, Expr *SizeExpr,
+                                    ArraySizeModifier SizeMod,
+                                    ArraySizeStar Star, Expr *SizeExpr,
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
@@ -1006,7 +1010,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildDependentSizedArrayType(QualType ElementType,
                                           ArraySizeModifier SizeMod,
-                                          Expr *SizeExpr,
+                                          ArraySizeStar Star, Expr *SizeExpr,
                                           unsigned IndexTypeQuals,
                                           SourceRange BracketsRange);
 
@@ -6068,6 +6072,7 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
       (T->getSizeExpr() && NewSize != OldSize)) {
     Result = getDerived().RebuildConstantArrayType(ElementType,
                                                    T->getSizeModifier(),
+                                                   T->getSizeStar(),
                                                    T->getSize(), NewSize,
                                              T->getIndexTypeCVRQualifiers(),
                                                    TL.getBracketsRange());
@@ -6101,6 +6106,7 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
       ElementType != T->getElementType()) {
     Result = getDerived().RebuildIncompleteArrayType(ElementType,
                                                      T->getSizeModifier(),
+                                                     T->getSizeStar(),
                                            T->getIndexTypeCVRQualifiers(),
                                                      TL.getBracketsRange());
     if (Result.isNull())
@@ -6145,6 +6151,7 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
       Size != T->getSizeExpr()) {
     Result = getDerived().RebuildVariableArrayType(ElementType,
                                                    T->getSizeModifier(),
+                                                   T->getSizeStar(),
                                                    Size,
                                              T->getIndexTypeCVRQualifiers(),
                                                    TL.getBracketsRange());
@@ -6196,6 +6203,7 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
       size != origSize) {
     Result = getDerived().RebuildDependentSizedArrayType(ElementType,
                                                          T->getSizeModifier(),
+                                                         T->getSizeStar(),
                                                          size,
                                                 T->getIndexTypeCVRQualifiers(),
                                                         TL.getBracketsRange());
@@ -18186,10 +18194,11 @@ QualType TreeTransform<Derived>::RebuildObjCObjectPointerType(
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildArrayType(
-    QualType ElementType, ArraySizeModifier SizeMod, const llvm::APInt *Size,
+    QualType ElementType, ArraySizeModifier SizeMod, ArraySizeStar Star,
+    const llvm::APInt *Size,
     Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
   if (SizeExpr || !Size)
-    return SemaRef.BuildArrayType(ElementType, SizeMod, SizeExpr,
+    return SemaRef.BuildArrayType(ElementType, SizeMod, Star, SizeExpr,
                                   IndexTypeQuals, BracketsRange,
                                   getDerived().getBaseEntity());
 
@@ -18210,41 +18219,43 @@ QualType TreeTransform<Derived>::RebuildArrayType(
   IntegerLiteral *ArraySize
       = IntegerLiteral::Create(SemaRef.Context, *Size, SizeType,
                                /*FIXME*/BracketsRange.getBegin());
-  return SemaRef.BuildArrayType(ElementType, SizeMod, ArraySize,
+  return SemaRef.BuildArrayType(ElementType, SizeMod, Star, ArraySize,
                                 IndexTypeQuals, BracketsRange,
                                 getDerived().getBaseEntity());
 }
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildConstantArrayType(
-    QualType ElementType, ArraySizeModifier SizeMod, const llvm::APInt &Size,
-    Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
-  return getDerived().RebuildArrayType(ElementType, SizeMod, &Size, SizeExpr,
-                                        IndexTypeQuals, BracketsRange);
+    QualType ElementType, ArraySizeModifier SizeMod, ArraySizeStar Star,
+    const llvm::APInt &Size, Expr *SizeExpr, unsigned IndexTypeQuals,
+    SourceRange BracketsRange) {
+  return getDerived().RebuildArrayType(ElementType, SizeMod, Star,
+                                       &Size, SizeExpr, IndexTypeQuals,
+                                       BracketsRange);
 }
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildIncompleteArrayType(
-    QualType ElementType, ArraySizeModifier SizeMod, unsigned IndexTypeQuals,
-    SourceRange BracketsRange) {
-  return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr, nullptr,
-                                       IndexTypeQuals, BracketsRange);
+    QualType ElementType, ArraySizeModifier SizeMod, ArraySizeStar Star,
+    unsigned IndexTypeQuals, SourceRange BracketsRange) {
+  return getDerived().RebuildArrayType(ElementType, SizeMod, Star, nullptr,
+                                       nullptr, IndexTypeQuals, BracketsRange);
 }
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildVariableArrayType(
-    QualType ElementType, ArraySizeModifier SizeMod, Expr *SizeExpr,
-    unsigned IndexTypeQuals, SourceRange BracketsRange) {
-  return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr,
+    QualType ElementType, ArraySizeModifier SizeMod, ArraySizeStar Star,
+    Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
+  return getDerived().RebuildArrayType(ElementType, SizeMod, Star, nullptr,
                                        SizeExpr,
                                        IndexTypeQuals, BracketsRange);
 }
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildDependentSizedArrayType(
-    QualType ElementType, ArraySizeModifier SizeMod, Expr *SizeExpr,
-    unsigned IndexTypeQuals, SourceRange BracketsRange) {
-  return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr,
+    QualType ElementType, ArraySizeModifier SizeMod, ArraySizeStar Star,
+    Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
+  return getDerived().RebuildArrayType(ElementType, SizeMod, Star, nullptr,
                                        SizeExpr,
                                        IndexTypeQuals, BracketsRange);
 }

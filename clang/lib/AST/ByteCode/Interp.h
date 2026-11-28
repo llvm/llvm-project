@@ -2784,7 +2784,8 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   if (ElemSize == 0) {
     QualType PtrT = S.getASTContext().getBaseElementType(LHS.getType());
     QualType ArrayTy = S.getASTContext().getConstantArrayType(
-        PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+        PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal,
+        ArraySizeStar::Normal, 0);
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_pointer_subtraction_zero_size)
         << ArrayTy;

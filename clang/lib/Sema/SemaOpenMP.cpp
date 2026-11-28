@@ -22828,6 +22828,7 @@ static bool actOnOMPReductionKindClause(
         for (llvm::APSInt &Size : ArraySizes)
           PrivateTy = Context.getConstantArrayType(PrivateTy, Size, nullptr,
                                                    ArraySizeModifier::Normal,
+                                                   ArraySizeStar::Normal,
                                                    /*IndexTypeQuals=*/0);
       }
     }
@@ -22854,7 +22855,8 @@ static bool actOnOMPReductionKindClause(
           Type,
           new (Context)
               OpaqueValueExpr(ELoc, Context.getSizeType(), VK_PRValue),
-          ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+          ArraySizeModifier::Normal, ArraySizeStar::Normal,
+          /*IndexTypeQuals=*/0);
     } else if (!ASE && !OASE &&
                Context.getAsArrayType(D->getType().getNonReferenceType())) {
       PrivateTy = D->getType().getNonReferenceType();
@@ -23121,7 +23123,7 @@ static bool actOnOMPReductionKindClause(
         auto *Dim = new (S.Context)
             OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_PRValue);
         QualType ArrayTy = S.Context.getVariableArrayType(
-            PrivateTy, Dim, ArraySizeModifier::Normal,
+            PrivateTy, Dim, ArraySizeModifier::Normal, ArraySizeStar::Normal,
             /*IndexTypeQuals=*/0);
         VarDecl *TempArrayVD =
             buildVarDecl(S, ELoc, ArrayTy, D->getName(),

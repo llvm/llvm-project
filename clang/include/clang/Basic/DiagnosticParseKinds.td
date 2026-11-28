@@ -465,10 +465,9 @@ def err_unexpected_scope_on_base_decltype : Error<
 def err_expected_class_name : Error<"expected class name">;
 def err_expected_class_name_not_template :
   Error<"'typename' is redundant; base classes are implicitly types">;
-def err_unspecified_vla_size_with_static : Error<
-  "'static' may not be used with an unspecified variable length array size">;
-def err_unspecified_size_with_static : Error<
-  "'static' may not be used without an array size">;
+def ext_unspecified_size_with_static : Extension<
+  "ISO C requires a length expression with 'static'">,
+  InGroup<UnspecifiedSizeWithStatic>;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
 def err_expansion_stmt_requires_range : Error<

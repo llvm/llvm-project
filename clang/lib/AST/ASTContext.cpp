@@ -4299,6 +4299,7 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
                                           const llvm::APInt &ArySizeIn,
                                           const Expr *SizeExpr,
                                           ArraySizeModifier ASM,
+                                          ArraySizeStar Star,
                                           unsigned IndexTypeQuals) const {
   assert((EltTy->isDependentType() ||
           EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
@@ -4329,7 +4330,7 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
     SplitQualType canonSplit = getCanonicalType(EltTy).split();
     Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
-                                 ASM, IndexTypeQuals);
+                                 ASM, Star, IndexTypeQuals);
     Canon = getQualifiedType(Canon, canonSplit.Quals);
 
     // Get the new insert position for the node we care about.
@@ -4338,7 +4339,7 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   }
 
   auto *New = ConstantArrayType::Create(*this, EltTy, Canon, ArySize, SizeExpr,
-                                        ASM, IndexTypeQuals);
+                                        ASM, Star, IndexTypeQuals);
   ConstantArrayTypes.insert(New, Token);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4446,6 +4447,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
                                   cat->getSize(),
                                   cat->getSizeExpr(),
                                   cat->getSizeModifier(),
+                                  cat->getSizeStar(),
                                   cat->getIndexTypeCVRQualifiers());
     break;
   }
@@ -4454,7 +4456,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     const auto *dat = cast<DependentSizedArrayType>(ty);
     result = getDependentSizedArrayType(
         getVariableArrayDecayedType(dat->getElementType()), dat->getSizeExpr(),
-        dat->getSizeModifier(), dat->getIndexTypeCVRQualifiers());
+        dat->getSizeModifier(), dat->getSizeStar(),
+        dat->getIndexTypeCVRQualifiers());
     break;
   }
 
@@ -4464,6 +4467,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     result =
         getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
                              /*size*/ nullptr, ArraySizeModifier::Normal,
+                             ArraySizeStar::Normal,
                              iat->getIndexTypeCVRQualifiers());
     break;
   }
@@ -4473,7 +4477,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     const auto *vat = cast<VariableArrayType>(ty);
     result =
         getVariableArrayType(getVariableArrayDecayedType(vat->getElementType()),
-                             /*size*/ nullptr, ArraySizeModifier::Star,
+                             /*size*/ nullptr, ArraySizeModifier::Normal,
+                             ArraySizeStar::Star,
                              vat->getIndexTypeCVRQualifiers());
     break;
   }
@@ -4487,6 +4492,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 /// variable array of the specified element type.
 QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
                                           ArraySizeModifier ASM,
+                                          ArraySizeStar Star,
                                           unsigned IndexTypeQuals) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
   // that have an expression provided for their size.
@@ -4496,13 +4502,13 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
   // FIXME: Check below should look for qualifiers behind sugar.
   if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers()) {
     SplitQualType canonSplit = getCanonicalType(EltTy).split();
-    Canon = getVariableArrayType(QualType(canonSplit.Ty, 0), NumElts, ASM,
+    Canon = getVariableArrayType(QualType(canonSplit.Ty, 0), NumElts, ASM, Star,
                                  IndexTypeQuals);
     Canon = getQualifiedType(Canon, canonSplit.Quals);
   }
 
   auto *New = new (*this, alignof(VariableArrayType))
-      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals);
+      VariableArrayType(EltTy, Canon, NumElts, ASM, Star, IndexTypeQuals);
 
   VariableArrayTypes.push_back(New);
   Types.push_back(New);
@@ -4515,6 +4521,7 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
 QualType
 ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
                                        ArraySizeModifier ASM,
+                                       ArraySizeStar star,
                                        unsigned elementTypeQuals) const {
   assert((!numElements || numElements->isTypeDependent() ||
           numElements->isValueDependent()) &&
@@ -4526,7 +4533,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
   llvm::FoldingSetNodeID ID;
   DependentSizedArrayType::Profile(
       ID, *this, numElements ? QualType(canonElementType.Ty, 0) : elementType,
-      ASM, elementTypeQuals, numElements);
+      ASM, star, elementTypeQuals, numElements);
 
   // Look for an existing type with these properties.
   DependentSizedArrayType *canonTy = DependentSizedArrayTypes.lookup(ID, Token);
@@ -4539,7 +4546,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
       return QualType(canonTy, 0);
 
     auto *newType = new (*this, alignof(DependentSizedArrayType))
-        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
+        DependentSizedArrayType(elementType, QualType(), numElements, ASM, star,
                                 elementTypeQuals);
     DependentSizedArrayTypes.insert(newType, Token);
     Types.push_back(newType);
@@ -4550,7 +4557,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
   if (!canonTy) {
     canonTy = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
-                                numElements, ASM, elementTypeQuals);
+                                numElements, ASM, star, elementTypeQuals);
     DependentSizedArrayTypes.insert(canonTy, Token);
     Types.push_back(canonTy);
   }
@@ -4568,7 +4575,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
   // Otherwise, we need to build a type which follows the spelling
   // of the element type.
   auto *sugaredType = new (*this, alignof(DependentSizedArrayType))
-      DependentSizedArrayType(elementType, canon, numElements, ASM,
+      DependentSizedArrayType(elementType, canon, numElements, ASM, star,
                               elementTypeQuals);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
@@ -4576,9 +4583,10 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
 
 QualType ASTContext::getIncompleteArrayType(QualType elementType,
                                             ArraySizeModifier ASM,
+                                            ArraySizeStar Star,
                                             unsigned elementTypeQuals) const {
   llvm::FoldingSetNodeID ID;
-  IncompleteArrayType::Profile(ID, elementType, ASM, elementTypeQuals);
+  IncompleteArrayType::Profile(ID, elementType, ASM, Star, elementTypeQuals);
 
   llvm::FoldingSetInsertToken Token;
   if (IncompleteArrayType *iat = IncompleteArrayTypes.lookup(ID, Token))
@@ -4593,7 +4601,7 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
   if (!elementType.isCanonical() || elementType.hasLocalQualifiers()) {
     SplitQualType canonSplit = getCanonicalType(elementType).split();
     canon = getIncompleteArrayType(QualType(canonSplit.Ty, 0),
-                                   ASM, elementTypeQuals);
+                                   ASM, Star, elementTypeQuals);
     canon = getQualifiedType(canon, canonSplit.Quals);
 
     // Get the new insert position for the node we care about.
@@ -4602,7 +4610,7 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
   }
 
   auto *newType = new (*this, alignof(IncompleteArrayType))
-      IncompleteArrayType(elementType, canon, ASM, elementTypeQuals);
+      IncompleteArrayType(elementType, canon, ASM, Star, elementTypeQuals);
 
   IncompleteArrayTypes.insert(newType, Token);
   Types.push_back(newType);
@@ -4975,7 +4983,7 @@ ASTContext::getMatrixTypeWithLayout(QualType T,
 
   QualType Result = getConstantArrayType(
       getMatrixTypeWithLayout(CAT->getElementType(), Layout), CAT->getSize(),
-      CAT->getSizeExpr(), CAT->getSizeModifier(),
+      CAT->getSizeExpr(), CAT->getSizeModifier(), CAT->getSizeStar(),
       CAT->getIndexTypeCVRQualifiers());
   if (isa<ArrayParameterType>(CAT))
     Result = getArrayParameterType(Result);
@@ -7189,22 +7197,25 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 
   if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
     return getConstantArrayType(unqualElementType, CAT->getSize(),
-                                CAT->getSizeExpr(), CAT->getSizeModifier(), 0);
+                                CAT->getSizeExpr(), CAT->getSizeModifier(),
+                                CAT->getSizeStar(), 0);
   }
 
   if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT)) {
-    return getIncompleteArrayType(unqualElementType, IAT->getSizeModifier(), 0);
+    return getIncompleteArrayType(unqualElementType, IAT->getSizeModifier(),
+                                  IAT->getSizeStar(), 0);
   }
 
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
     return getVariableArrayType(unqualElementType, VAT->getSizeExpr(),
-                                VAT->getSizeModifier(),
+                                VAT->getSizeModifier(), VAT->getSizeStar(),
                                 VAT->getIndexTypeCVRQualifiers());
   }
 
   const auto *DSAT = cast<DependentSizedArrayType>(AT);
   return getDependentSizedArrayType(unqualElementType, DSAT->getSizeExpr(),
-                                    DSAT->getSizeModifier(), 0);
+                                    DSAT->getSizeModifier(),
+                                    DSAT->getSizeStar(), 0);
 }
 
 /// Attempt to unwrap two types that may both be array types with the same bound
@@ -8151,20 +8162,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
     return cast<ArrayType>(getConstantArrayType(NewEltTy, CAT->getSize(),
                                                 CAT->getSizeExpr(),
                                                 CAT->getSizeModifier(),
+                                                CAT->getSizeStar(),
                                            CAT->getIndexTypeCVRQualifiers()));
   if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
     return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
                                                   IAT->getSizeModifier(),
+                                                  IAT->getSizeStar(),
                                            IAT->getIndexTypeCVRQualifiers()));
 
   if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(ATy))
     return cast<ArrayType>(getDependentSizedArrayType(
         NewEltTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
-        DSAT->getIndexTypeCVRQualifiers()));
+        DSAT->getSizeStar(), DSAT->getIndexTypeCVRQualifiers()));
 
   const auto *VAT = cast<VariableArrayType>(ATy);
   return cast<ArrayType>(
       getVariableArrayType(NewEltTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
+                           VAT->getSizeStar(),
                            VAT->getIndexTypeCVRQualifiers()));
 }
 
@@ -10065,7 +10079,7 @@ static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
   QualType T = Context->getPointerType(Context->CharTy);
   QualType ArrayType = Context->getConstantArrayType(
-      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+      T, Size, nullptr, ArraySizeModifier::Normal, ArraySizeStar::Normal, 0);
   return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
 }
 
@@ -10201,7 +10215,8 @@ static TypedefDecl *CreatePowerABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal,
+      ArraySizeStar::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -10255,7 +10270,8 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef struct __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal,
+      ArraySizeStar::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -10350,7 +10366,8 @@ CreateSystemZBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal,
+      ArraySizeStar::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -10403,7 +10420,8 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal,
+      ArraySizeStar::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -12216,10 +12234,12 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return RHS;
     if (LCAT)
       return getConstantArrayType(ResultType, LCAT->getSize(),
-                                  LCAT->getSizeExpr(), ArraySizeModifier(), 0);
+                                  LCAT->getSizeExpr(), ArraySizeModifier(),
+                                  ArraySizeStar(), 0);
     if (RCAT)
       return getConstantArrayType(ResultType, RCAT->getSize(),
-                                  RCAT->getSizeExpr(), ArraySizeModifier(), 0);
+                                  RCAT->getSizeExpr(), ArraySizeModifier(),
+                                  ArraySizeStar(), 0);
     if (LVAT && getCanonicalType(LHSElem) == getCanonicalType(ResultType))
       return LHS;
     if (RVAT && getCanonicalType(RHSElem) == getCanonicalType(ResultType))
@@ -12238,7 +12258,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     }
     if (getCanonicalType(LHSElem) == getCanonicalType(ResultType)) return LHS;
     if (getCanonicalType(RHSElem) == getCanonicalType(ResultType)) return RHS;
-    return getIncompleteArrayType(ResultType, ArraySizeModifier(), 0);
+    return getIncompleteArrayType(ResultType, ArraySizeModifier(),
+                                  ArraySizeStar(), 0);
   }
   case Type::FunctionNoProto:
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified,
@@ -13957,7 +13978,8 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
   // Get an array type for the string, according to C99 6.4.5. This includes
   // the null terminator character.
   return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1), nullptr,
-                              ArraySizeModifier::Normal, /*IndexTypeQuals*/ 0);
+                              ArraySizeModifier::Normal, ArraySizeStar::Normal,
+                              /*IndexTypeQuals*/ 0);
 }
 
 StringLiteral *
@@ -14378,6 +14400,11 @@ static auto getCommonSizeModifier(const ArrayType *X, const ArrayType *Y) {
   return X->getSizeModifier();
 }
 
+static auto getCommonSizeStar(const ArrayType *X, const ArrayType *Y) {
+  assert(X->getSizeStar() == Y->getSizeStar());
+  return X->getSizeStar();
+}
+
 static auto getCommonIndexTypeCVRQualifiers(const ArrayType *X,
                                             const ArrayType *Y) {
   assert(X->getIndexTypeCVRQualifiers() == Y->getIndexTypeCVRQualifiers());
@@ -14531,7 +14558,8 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                *AY = cast<IncompleteArrayType>(Y);
     return Ctx.getIncompleteArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY),
-        getCommonSizeModifier(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
+        getCommonSizeModifier(AX, AY), getCommonSizeStar(AX, AY),
+        getCommonIndexTypeCVRQualifiers(AX, AY));
   }
   case Type::DependentSizedArray: {
     const auto *AX = cast<DependentSizedArrayType>(X),
@@ -14539,7 +14567,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     return Ctx.getDependentSizedArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY),
         getCommonSizeExpr(Ctx, AX, AY), getCommonSizeModifier(AX, AY),
-        getCommonIndexTypeCVRQualifiers(AX, AY));
+        getCommonSizeStar(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
   }
   case Type::ConstantArray: {
     const auto *AX = cast<ConstantArrayType>(X),
@@ -14550,7 +14578,8 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                                : nullptr;
     return Ctx.getConstantArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY), AX->getSize(), SizeExpr,
-        getCommonSizeModifier(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
+        getCommonSizeModifier(AX, AY), getCommonSizeStar(AX, AY),
+        getCommonIndexTypeCVRQualifiers(AX, AY));
   }
   case Type::ArrayParameter: {
     const auto *AX = cast<ArrayParameterType>(X),
@@ -14561,7 +14590,8 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                                : nullptr;
     auto ArrayTy = Ctx.getConstantArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY), AX->getSize(), SizeExpr,
-        getCommonSizeModifier(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
+        getCommonSizeModifier(AX, AY), getCommonSizeStar(AX, AY),
+        getCommonIndexTypeCVRQualifiers(AX, AY));
     return Ctx.getArrayParameterType(ArrayTy);
   }
   case Type::Atomic: {

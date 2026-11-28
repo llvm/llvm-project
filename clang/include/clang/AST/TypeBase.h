@@ -1847,6 +1847,7 @@ enum class AutoTypeKeyword {
 };
 
 enum class ArraySizeModifier;
+enum class ArraySizeStar;
 enum class ElaboratedTypeKeyword;
 enum class VectorKind;
 
@@ -1950,9 +1951,14 @@ protected:
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
     LLVM_PREFERRED_TYPE(ArraySizeModifier)
-    unsigned SizeModifier : 3;
+    unsigned SizeModifier : 1;
+
+    /// Star from declarations like 'int X[*]'.
+    /// For function parameters only.
+    LLVM_PREFERRED_TYPE(ArraySizeStar)
+    unsigned SizeStar : 1;
   };
-  enum { NumArrayTypeBits = NumTypeBits + 6 };
+  enum { NumArrayTypeBits = NumTypeBits + 5 };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
@@ -3811,10 +3817,13 @@ private:
 };
 
 /// Capture whether this is a normal array (e.g. int X[4])
-/// an array with a static size (e.g. int X[static 4]), or an array
-/// with a star size (e.g. int X[*]).
+/// or an array with a static size (e.g. int X[static 4]).
 /// 'static' is only allowed on function parameters.
-enum class ArraySizeModifier { Normal, Static, Star };
+enum class ArraySizeModifier { Normal, Static };
+
+/// Capture whether this is a normal array (e.g. int X[4])
+/// or an array with a star size (e.g. int X[*]).
+enum class ArraySizeStar { Normal, Star };
 
 /// Represents an array type, per C99 6.7.5.2 - Array Declarators.
 class ArrayType : public Type, public llvm::FoldingSetNode {
@@ -3826,13 +3835,17 @@ protected:
   friend class ASTContext; // ASTContext creates these.
 
   ArrayType(TypeClass tc, QualType et, QualType can, ArraySizeModifier sm,
-            unsigned tq, const Expr *sz = nullptr);
+            ArraySizeStar st, unsigned tq, const Expr *sz = nullptr);
 
 public:
   QualType getElementType() const { return ElementType; }
 
   ArraySizeModifier getSizeModifier() const {
     return ArraySizeModifier(ArrayTypeBits.SizeModifier);
+  }
+
+  ArraySizeStar getSizeStar() const {
+    return ArraySizeStar(ArrayTypeBits.SizeStar);
   }
 
   Qualifiers getIndexTypeQualifiers() const {
@@ -3871,8 +3884,8 @@ class ConstantArrayType : public ArrayType {
   };
 
   ConstantArrayType(QualType Et, QualType Can, uint64_t Width, uint64_t Sz,
-                    ArraySizeModifier SM, unsigned TQ)
-      : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), Size(Sz) {
+                    ArraySizeModifier SM, ArraySizeStar ST, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, ST, TQ, nullptr), Size(Sz) {
     ConstantArrayTypeBits.HasExternalSize = false;
     ConstantArrayTypeBits.SizeWidth = Width / 8;
     // The in-structure size stores the size in bytes rather than bits so we
@@ -3881,8 +3894,8 @@ class ConstantArrayType : public ArrayType {
   }
 
   ConstantArrayType(QualType Et, QualType Can, ExternalSize *SzPtr,
-                    ArraySizeModifier SM, unsigned TQ)
-      : ArrayType(ConstantArray, Et, Can, SM, TQ, SzPtr->SizeExpr),
+                    ArraySizeModifier SM, ArraySizeStar ST, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, ST, TQ, SzPtr->SizeExpr),
         SizePtr(SzPtr) {
     ConstantArrayTypeBits.HasExternalSize = true;
     ConstantArrayTypeBits.SizeWidth = 0;
@@ -3894,11 +3907,12 @@ class ConstantArrayType : public ArrayType {
   static ConstantArrayType *Create(const ASTContext &Ctx, QualType ET,
                                    QualType Can, const llvm::APInt &Sz,
                                    const Expr *SzExpr, ArraySizeModifier SzMod,
-                                   unsigned Qual);
+                                   ArraySizeStar St, unsigned Qual);
 
 protected:
   ConstantArrayType(TypeClass Tc, const ConstantArrayType *ATy, QualType Can)
       : ArrayType(Tc, ATy->getElementType(), Can, ATy->getSizeModifier(),
+                  ATy->getSizeStar(),
                   ATy->getIndexTypeQualifiers().getAsOpaqueValue(), nullptr) {
     ConstantArrayTypeBits.HasExternalSize =
         ATy->ConstantArrayTypeBits.HasExternalSize;
@@ -4008,8 +4022,8 @@ class IncompleteArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 
   IncompleteArrayType(QualType et, QualType can,
-                      ArraySizeModifier sm, unsigned tq)
-      : ArrayType(IncompleteArray, et, can, sm, tq) {}
+                      ArraySizeModifier sm, ArraySizeStar st, unsigned tq)
+      : ArrayType(IncompleteArray, et, can, sm, st, tq) {}
 
 public:
   friend class StmtIteratorBase;
@@ -4022,12 +4036,13 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getSizeModifier(),
+    Profile(ID, getElementType(), getSizeModifier(), getSizeStar(),
             getIndexTypeCVRQualifiers());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
-                      ArraySizeModifier SizeMod, unsigned TypeQuals) {
+                      ArraySizeModifier SizeMod, ArraySizeStar ST,
+                      unsigned TypeQuals) {
     ID.AddPointer(ET.getAsOpaquePtr());
     ID.AddInteger(llvm::to_underlying(SizeMod));
     ID.AddInteger(TypeQuals);
@@ -4069,8 +4084,8 @@ class VariableArrayType : public ArrayType {
   Stmt *SizeExpr;
 
   VariableArrayType(QualType et, QualType can, Expr *e, ArraySizeModifier sm,
-                    unsigned tq)
-      : ArrayType(VariableArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
+                    ArraySizeStar st, unsigned tq)
+      : ArrayType(VariableArray, et, can, sm, st, tq, e), SizeExpr((Stmt *)e) {}
 
 public:
   friend class StmtIteratorBase;
@@ -4117,7 +4132,7 @@ class DependentSizedArrayType : public ArrayType {
   Stmt *SizeExpr;
 
   DependentSizedArrayType(QualType et, QualType can, Expr *e,
-                          ArraySizeModifier sm, unsigned tq);
+                          ArraySizeModifier sm, ArraySizeStar st, unsigned tq);
 
 public:
   friend class StmtIteratorBase;
@@ -4136,12 +4151,12 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getElementType(),
-            getSizeModifier(), getIndexTypeCVRQualifiers(), getSizeExpr());
+    Profile(ID, Context, getElementType(), getSizeModifier(), getSizeStar(),
+            getIndexTypeCVRQualifiers(), getSizeExpr());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType ET, ArraySizeModifier SizeMod,
+                      QualType ET, ArraySizeModifier SizeMod, ArraySizeStar ST,
                       unsigned TypeQuals, Expr *E);
 };
 

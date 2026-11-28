@@ -2397,7 +2397,7 @@ void MicrosoftCXXNameMangler::mangleFunctionArgumentType(QualType T,
     // a decayed IncompleteArrayType.
     if (const auto *AT = getASTContext().getAsArrayType(OriginalType))
       OriginalType = getASTContext().getIncompleteArrayType(
-          AT->getElementType(), AT->getSizeModifier(),
+          AT->getElementType(), AT->getSizeModifier(), AT->getSizeStar(),
           AT->getIndexTypeCVRQualifiers());
 
     TypePtr = OriginalType.getCanonicalType().getAsOpaquePtr();

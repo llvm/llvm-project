@@ -1075,13 +1075,12 @@ void USRGenerator::VisitType(QualType T) {
       case ArraySizeModifier::Static:
         Out << 's';
         break;
-      case ArraySizeModifier::Star:
-        Out << '*';
-        break;
       case ArraySizeModifier::Normal:
         Out << 'n';
         break;
       }
+      if (AT->getSizeStar() == ArraySizeStar::Star)
+        Out << '*';
       if (const auto *const CAT = dyn_cast<ConstantArrayType>(T))
         Out << CAT->getSize();
 

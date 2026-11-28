@@ -2110,16 +2110,11 @@ void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
 }
 
 void TextNodeDumper::VisitArrayType(const ArrayType *T) {
-  switch (T->getSizeModifier()) {
-  case ArraySizeModifier::Normal:
-    break;
-  case ArraySizeModifier::Static:
+  if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << " static";
-    break;
-  case ArraySizeModifier::Star:
+  if (T->getSizeStar() == ArraySizeStar::Star)
     OS << " *";
-    break;
-  }
+
   OS << " " << T->getIndexTypeQualifiers().getAsString();
 }
 

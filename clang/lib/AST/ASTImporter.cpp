@@ -1500,7 +1500,7 @@ ASTNodeImporter::VisitConstantArrayType(const ConstantArrayType *T) {
 
   return Importer.getToContext().getConstantArrayType(
       ToElementType, T->getSize(), ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers());
+      T->getSizeStar(), T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType
@@ -1520,6 +1520,7 @@ ASTNodeImporter::VisitIncompleteArrayType(const IncompleteArrayType *T) {
 
   return Importer.getToContext().getIncompleteArrayType(*ToElementTypeOrErr,
                                                         T->getSizeModifier(),
+                                                        T->getSizeStar(),
                                                 T->getIndexTypeCVRQualifiers());
 }
 
@@ -1531,7 +1532,7 @@ ASTNodeImporter::VisitVariableArrayType(const VariableArrayType *T) {
   if (Err)
     return std::move(Err);
   return Importer.getToContext().getVariableArrayType(
-      ToElementType, ToSizeExpr, T->getSizeModifier(),
+      ToElementType, ToSizeExpr, T->getSizeModifier(), T->getSizeStar(),
       T->getIndexTypeCVRQualifiers());
 }
 
@@ -1546,7 +1547,7 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   // For example, 'int a[]'.
 
   return Importer.getToContext().getDependentSizedArrayType(
-      ToElementType, ToSizeExpr, T->getSizeModifier(),
+      ToElementType, ToSizeExpr, T->getSizeModifier(), T->getSizeStar(),
       T->getIndexTypeCVRQualifiers());
 }
 

@@ -230,7 +230,8 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     llvm::APInt ConstVal(32, StrLength);
     // Return a new array type (C99 6.7.8p22).
     DeclT = S.Context.getConstantArrayType(
-        IAT->getElementType(), ConstVal, nullptr, ArraySizeModifier::Normal, 0);
+        IAT->getElementType(), ConstVal, nullptr, ArraySizeModifier::Normal,
+        ArraySizeStar::Normal, 0);
     updateStringLiteralType(Str, DeclT);
     return;
   }
@@ -2305,7 +2306,8 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
 
     DeclType = SemaRef.Context.getConstantArrayType(
-        elementType, maxElements, nullptr, ArraySizeModifier::Normal, 0);
+        elementType, maxElements, nullptr, ArraySizeModifier::Normal,
+        ArraySizeStar::Normal, 0);
   }
   if (!hadError) {
     // If there are any members of the array that get value-initialized, check
@@ -4472,7 +4474,8 @@ static bool TryInitializerListConstruction(Sema &S,
       E.withConst(),
       llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
                   List->getNumInitsWithEmbedExpanded()),
-      nullptr, clang::ArraySizeModifier::Normal, 0);
+      nullptr, clang::ArraySizeModifier::Normal,
+      clang::ArraySizeStar::Normal, 0);
   InitializedEntity HiddenArray =
       InitializedEntity::InitializeTemporary(ArrayType);
   InitializationKind Kind = InitializationKind::CreateDirectList(
@@ -6083,7 +6086,8 @@ static void TryOrBuildParenListInitialization(
     if (ResultType.isNull()) {
       ResultType = S.Context.getConstantArrayType(
           AT->getElementType(), llvm::APInt(/*numBits=*/32, ArrayLength),
-          /*SizeExpr=*/nullptr, ArraySizeModifier::Normal, 0);
+          /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
+          ArraySizeStar::Normal, 0);
     }
   } else if (auto *RD = Entity.getType()->getAsCXXRecordDecl()) {
     bool IsUnion = RD->isUnion();
@@ -8018,7 +8022,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
           *ResultType = S.Context.getDependentSizedArrayType(
               ArrayT->getElementType(),
               /*NumElts=*/nullptr, ArrayT->getSizeModifier(),
-              ArrayT->getIndexTypeCVRQualifiers());
+              ArrayT->getSizeStar(), ArrayT->getIndexTypeCVRQualifiers());
       }
     }
     if (Kind.getKind() == InitializationKind::IK_Direct &&
@@ -8707,7 +8711,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
                  = S.Context.getAsConstantArrayType(CurInit.get()->getType())) {
             *ResultType = S.Context.getConstantArrayType(
                 IncompleteDest->getElementType(), ConstantSource->getSize(),
-                ConstantSource->getSizeExpr(), ArraySizeModifier::Normal, 0);
+                ConstantSource->getSizeExpr(), ArraySizeModifier::Normal,
+                ArraySizeStar::Normal, 0);
           }
         }
       }
@@ -9032,7 +9037,8 @@ static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
         E.withConst(),
         llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
                     InitList->getNumInitsWithEmbedExpanded()),
-        nullptr, clang::ArraySizeModifier::Normal, 0);
+        nullptr, clang::ArraySizeModifier::Normal,
+        clang::ArraySizeStar::Normal, 0);
     InitializedEntity HiddenArray =
         InitializedEntity::InitializeTemporary(ArrayType);
     return diagnoseListInit(S, HiddenArray, InitList);

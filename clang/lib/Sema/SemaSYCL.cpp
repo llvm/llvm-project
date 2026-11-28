@@ -527,7 +527,8 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
   llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
                              KernelName.size() + 1);
   QualType KernelNameArrayTy = Ctx.getConstantArrayType(
-      KernelNameCharTy, KernelNameSize, nullptr, ArraySizeModifier::Normal, 0);
+      KernelNameCharTy, KernelNameSize, nullptr, ArraySizeModifier::Normal,
+      ArraySizeStar::Normal, 0);
   Expr *KernelNameExpr =
       StringLiteral::Create(Ctx, KernelName, StringLiteralKind::Ordinary,
                             /*Pascal*/ false, KernelNameArrayTy, Loc);

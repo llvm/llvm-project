@@ -125,6 +125,9 @@ let Class = ArrayType in {
   def : Property<"sizeModifier", ArraySizeModifier> {
     let Read = [{ node->getSizeModifier() }];
   }
+  def : Property<"sizeStar", ArraySizeStar> {
+    let Read = [{ node->getSizeStar() }];
+  }
   def : Property<"indexQualifiers", Qualifiers> {
     let Read = [{ Qualifiers::fromCVRMask(node->getIndexTypeCVRQualifiers()) }];
   }
@@ -140,7 +143,7 @@ let Class = ConstantArrayType in {
 
   def : Creator<[{
     return ctx.getConstantArrayType(elementType, sizeValue, size,
-                                    sizeModifier,
+                                    sizeModifier, sizeStar,
                                     indexQualifiers.getCVRQualifiers());
   }]>;
 }
@@ -148,13 +151,13 @@ let Class = ConstantArrayType in {
 let Class = ArrayParameterType in {
   def : Creator<[{ return ctx.getAdjustedParameterType(
                               ctx.getConstantArrayType(elementType,sizeValue,
-                                    size,sizeModifier,
+                                    size, sizeModifier, sizeStar,
                                     indexQualifiers.getCVRQualifiers())); }]>;
 }
 
 let Class = IncompleteArrayType in {
   def : Creator<[{
-    return ctx.getIncompleteArrayType(elementType, sizeModifier,
+    return ctx.getIncompleteArrayType(elementType, sizeModifier, sizeStar,
                                       indexQualifiers.getCVRQualifiers());
   }]>;
 }
@@ -165,7 +168,7 @@ let Class = VariableArrayType in {
   }
 
   def : Creator<[{
-    return ctx.getVariableArrayType(elementType, size, sizeModifier,
+    return ctx.getVariableArrayType(elementType, size, sizeModifier, sizeStar,
                                     indexQualifiers.getCVRQualifiers());
   }]>;
 }
@@ -175,6 +178,7 @@ let Class = DependentSizedArrayType in {
 
   def : Creator<[{
     return ctx.getDependentSizedArrayType(elementType, size, sizeModifier,
+                                          sizeStar,
                                           indexQualifiers.getCVRQualifiers());
   }]>;
 }

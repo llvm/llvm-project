@@ -102,6 +102,7 @@ namespace {
               C.toCharUnitsFromBits(AtomicSizeInBits).getQuantity());
           AtomicTy = C.getConstantArrayType(C.CharTy, Size, nullptr,
                                             ArraySizeModifier::Normal,
+                                            ArraySizeStar::Normal,
                                             /*IndexTypeQuals=*/0);
         }
         AtomicAlign = ValueAlign = lvalue.getAlignment();

@@ -292,7 +292,8 @@ QualType::isNonConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
 //       size is specified by a constant expression that is
 //       value-dependent,
 ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
-                     ArraySizeModifier sm, unsigned tq, const Expr *sz)
+                     ArraySizeModifier sm, ArraySizeStar st, unsigned tq,
+                     const Expr *sz)
     // Note, we need to check for DependentSizedArrayType explicitly here
     // because we use a DependentSizedArrayType with no size expression as the
     // type of a dependent array of unknown bound with a dependent braced
@@ -314,22 +315,24 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
          "only CVR index qualifiers are stored");
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
+  ArrayTypeBits.SizeStar = llvm::to_underlying(st);
 }
 
 ConstantArrayType *
 ConstantArrayType::Create(const ASTContext &Ctx, QualType ET, QualType Can,
                           const llvm::APInt &Sz, const Expr *SzExpr,
-                          ArraySizeModifier SzMod, unsigned Qual) {
+                          ArraySizeModifier SzMod, ArraySizeStar St,
+                          unsigned Qual) {
   bool NeedsExternalSize = SzExpr != nullptr || Sz.ugt(0x0FFFFFFFFFFFFFFF) ||
                            Sz.getBitWidth() > 0xFF;
   if (!NeedsExternalSize)
     return new (Ctx, alignof(ConstantArrayType)) ConstantArrayType(
-        ET, Can, Sz.getBitWidth(), Sz.getZExtValue(), SzMod, Qual);
+        ET, Can, Sz.getBitWidth(), Sz.getZExtValue(), SzMod, St, Qual);
 
   auto *SzPtr = new (Ctx, alignof(ConstantArrayType::ExternalSize))
       ConstantArrayType::ExternalSize(Sz, SzExpr);
   return new (Ctx, alignof(ConstantArrayType))
-      ConstantArrayType(ET, Can, SzPtr, SzMod, Qual);
+      ConstantArrayType(ET, Can, SzPtr, SzMod, St, Qual);
 }
 
 unsigned
@@ -400,21 +403,24 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
 
 QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
   return Ctx.getConstantArrayType(getElementType(), getSize(), getSizeExpr(),
-                                  getSizeModifier(),
+                                  getSizeModifier(), getSizeStar(),
                                   getIndexTypeQualifiers().getAsOpaqueValue());
 }
 
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
-                                                 unsigned tq)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
+                                                 ArraySizeStar st, unsigned tq)
+    : ArrayType(DependentSizedArray, et, can, sm, st, tq, e),
+      SizeExpr((Stmt *)e) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context, QualType ET,
                                       ArraySizeModifier SizeMod,
+                                      ArraySizeStar Star,
                                       unsigned TypeQuals, Expr *E) {
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(SizeMod));
+  ID.AddInteger(llvm::to_underlying(Star));
   ID.AddInteger(TypeQuals);
   if (E)
     E->Profile(ID, Context, true);
@@ -1223,7 +1229,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getConstantArrayType(elementType, T->getSize(), T->getSizeExpr(),
-                                    T->getSizeModifier(),
+                                    T->getSizeModifier(), T->getSizeStar(),
                                     T->getIndexTypeCVRQualifiers());
   }
 
@@ -1236,7 +1242,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getVariableArrayType(elementType, T->getSizeExpr(),
-                                    T->getSizeModifier(),
+                                    T->getSizeModifier(), T->getSizeStar(),
                                     T->getIndexTypeCVRQualifiers());
   }
 
@@ -1249,6 +1255,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getIncompleteArrayType(elementType, T->getSizeModifier(),
+                                      T->getSizeStar(),
                                       T->getIndexTypeCVRQualifiers());
   }
 

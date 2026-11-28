@@ -6607,7 +6607,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::APInt ArraySize(32, NumArgs - First);
       QualType SizeArrayTy = getContext().getConstantArrayType(
           getContext().getSizeType(), ArraySize, nullptr,
-          ArraySizeModifier::Normal,
+          ArraySizeModifier::Normal, ArraySizeStar::Normal,
           /*IndexTypeQuals=*/0);
       auto Tmp = CreateMemTempWithoutCast(SizeArrayTy, "block_sizes");
       llvm::Value *Alloca = Tmp.getPointer();

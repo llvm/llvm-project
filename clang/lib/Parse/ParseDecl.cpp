@@ -8095,8 +8095,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     ConsumeToken();  // Eat the '*'.
 
     if (StaticLoc.isValid()) {
-      Diag(StaticLoc, diag::err_unspecified_vla_size_with_static);
-      StaticLoc = SourceLocation();  // Drop the static.
+      Diag(StaticLoc, diag::ext_unspecified_size_with_static);
     }
     isStar = true;
   } else if (Tok.isNot(tok::r_square)) {
@@ -8116,8 +8115,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     }
   } else {
     if (StaticLoc.isValid()) {
-      Diag(StaticLoc, diag::err_unspecified_size_with_static);
-      StaticLoc = SourceLocation();  // Drop the static.
+      Diag(StaticLoc, diag::ext_unspecified_size_with_static);
     }
   }
 

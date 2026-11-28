@@ -534,6 +534,7 @@ static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
     return AST
         .getConstantArrayType(QualType(ElementTy, 0), CAT->getSize(), nullptr,
                               CAT->getSizeModifier(),
+                              CAT->getSizeStar(),
                               CAT->getIndexTypeCVRQualifiers())
         .getTypePtr();
   }
@@ -7142,7 +7143,8 @@ public:
                                Inits.back()->getEndLoc(), /*isExplicit=*/false);
     llvm::APInt ArySize(64, Inits.size());
     NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr,
-                                              ArraySizeModifier::Normal, 0));
+                                              ArraySizeModifier::Normal,
+                                              ArraySizeStar::Normal, 0));
     return NewInit;
   }
 };

@@ -15520,8 +15520,8 @@ public:
   ///
   /// \returns A suitable array type, if there are no errors. Otherwise,
   /// returns a NULL type.
-  QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
-                          unsigned Quals, SourceRange Brackets,
+  QualType BuildArrayType(QualType T, ArraySizeModifier ASM, ArraySizeStar Star,
+                          Expr *ArraySize, unsigned Quals, SourceRange Brackets,
                           DeclarationName Entity);
 
   /// Diagnose an array of \p NumElements elements of type \p ElementType

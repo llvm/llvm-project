@@ -75,6 +75,7 @@ def APSInt : PropertyType<"llvm::APSInt"> { let PassByReference = 1; }
 def APValue : PropertyType { let PassByReference = 1; }
 def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
+def ArraySizeStar : EnumPropertyType<"ArraySizeStar">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
 def DynAllocKind : PropertyType<"DynAllocKind">;

@@ -168,7 +168,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   QualType ElementType = Context.getObjCIdType().withConst();
   QualType ElementArrayType = Context.getConstantArrayType(
       ElementType, APNumElements, nullptr, ArraySizeModifier::Normal,
-      /*IndexTypeQuals=*/0);
+      ArraySizeStar::Normal, /*IndexTypeQuals=*/0);
 
   // Allocate the temporary array(s).
   Address Objects = CreateMemTemp(ElementArrayType, "objects");
@@ -1863,7 +1863,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   QualType ItemsTy = getContext().getConstantArrayType(
       getContext().getObjCIdType(), llvm::APInt(32, NumItems), nullptr,
-      ArraySizeModifier::Normal, 0);
+      ArraySizeModifier::Normal, ArraySizeStar::Normal, 0);
   Address ItemsPtr = CreateMemTemp(ItemsTy, "items.ptr");
 
   // Emit the collection pointer.  In ARC, we do a retain.

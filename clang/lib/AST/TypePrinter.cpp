@@ -568,7 +568,7 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
 
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
-  else if (T->getSizeModifier() == ArraySizeModifier::Star)
+  if (T->getSizeStar() == ArraySizeStar::Star)
     OS << '*';
 
   if (T->getSizeExpr())
