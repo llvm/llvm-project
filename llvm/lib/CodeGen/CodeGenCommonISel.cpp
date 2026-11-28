@@ -360,3 +360,21 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     }
   }
 }
+
+void llvm::salvageDebugInfoForDeadCopy(const MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) {
+  if (!MI.isCopy())
+    return;
+  const MachineOperand &Dst = MI.getOperand(0);
+  const MachineOperand &Src = MI.getOperand(1);
+  // A physical source may be clobbered before the DBG_VALUE.
+  if (!Dst.getReg().isVirtual() || !Src.getReg().isVirtual() || Src.isUndef())
+    return;
+
+  SmallVector<MachineOperand *, 4> DbgUsers;
+  for (MachineOperand &MO : MRI.use_operands(Dst.getReg()))
+    if (MO.getParent()->isDebugValue() && !MO.getSubReg())
+      DbgUsers.push_back(&MO);
+  if (!DbgUsers.empty())
+    salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
+}

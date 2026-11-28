@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -118,9 +119,9 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
             NeedsProcessing.insert(P);
         }
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
-        // It is possible that some DBG_VALUE instructions refer to this
-        // instruction. They will be deleted in the live debug variable
-        // analysis.
+        salvageDebugInfoForDeadCopy(*MRI, MI);
+        // Remaining DBG_VALUEs referring to this instruction will be deleted
+        // in the live debug variable analysis.
         MI.eraseFromParent();
         AnyChanges = true;
         ++NumDeletes;

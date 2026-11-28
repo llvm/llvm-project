@@ -16,6 +16,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -2473,6 +2474,7 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   while (MRI->use_nodbg_empty(InstToErase->getOperand(0).getReg())) {
     auto &SrcOp = InstToErase->getOperand(1);
     auto SrcReg = SrcOp.isReg() ? SrcOp.getReg() : Register();
+    salvageDebugInfoForDeadCopy(*MRI, *InstToErase);
     InstToErase->eraseFromParent();
     Changed = true;
     InstToErase = nullptr;
