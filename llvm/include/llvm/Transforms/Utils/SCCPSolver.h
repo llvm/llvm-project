@@ -137,7 +137,7 @@ public:
   // block to the 'To' basic block is currently feasible.
   LLVM_ABI bool isEdgeFeasible(BasicBlock *From, BasicBlock *To) const;
 
-  LLVM_ABI std::vector<ValueLatticeElement>
+  LLVM_ABI SmallVector<ValueLatticeElement, 4>
   getStructLatticeValueFor(Value *V) const;
 
   LLVM_ABI void removeLatticeValueFor(Value *V);
