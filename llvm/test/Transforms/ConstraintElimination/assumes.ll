@@ -758,3 +758,35 @@ then:
 exit:
   ret i1 false
 }
+
+; Folding to false only strengthens the assume, so it is still done.
+define void @cond_false_used_by_phi_feeding_assume(i8 %a, i1 %c) {
+; CHECK-LABEL: @cond_false_used_by_phi_feeding_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[EXIT]]
+; CHECK:       then.2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[THEN]] ], [ false, [[THEN_2]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then.2, label %exit
+
+then.2:
+  %c.2 = icmp ugt i8 %a, 20
+  br label %exit
+
+exit:
+  %p = phi i1 [ true, %entry ], [ true, %then ], [ %c.2, %then.2 ]
+  call void @llvm.assume(i1 %p)
+  ret void
+}
