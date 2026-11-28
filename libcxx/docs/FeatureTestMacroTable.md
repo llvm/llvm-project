@@ -166,6 +166,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_variant`                                    | `202106L`       |
 | **C++23**                                              |                 |
 | `__cpp_lib_adaptor_iterator_pair_constructor`          | `202106L`       |
+| `__cpp_lib_algorithm_iterator_requirements`            | *unimplemented* |
 | `__cpp_lib_allocate_at_least`                          | `202302L`       |
 | `__cpp_lib_associative_heterogeneous_erasure`          | *unimplemented* |
 | `__cpp_lib_bind_back`                                  | `202202L`       |
@@ -182,6 +183,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_format_ranges`                              | `202207L`       |
 | `__cpp_lib_formatters`                                 | *unimplemented* |
 | `__cpp_lib_forward_like`                               | `202207L`       |
+| `__cpp_lib_generator`                                  | *unimplemented* |
 | `__cpp_lib_invoke_r`                                   | `202106L`       |
 | `__cpp_lib_ios_noreplace`                              | `202207L`       |
 | `__cpp_lib_is_implicit_lifetime`                       | `202302L`       |
@@ -195,6 +197,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges`                                     | `202406L`       |
 | `__cpp_lib_ranges_as_const`                            | *unimplemented* |
 | `__cpp_lib_ranges_as_rvalue`                           | `202207L`       |
+| `__cpp_lib_ranges_cartesian_product`                   | *unimplemented* |
 | `__cpp_lib_ranges_chunk`                               | *unimplemented* |
 | `__cpp_lib_ranges_chunk_by`                            | `202202L`       |
 | `__cpp_lib_ranges_contains`                            | `202207L`       |
@@ -213,13 +216,17 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_shift`                                      | `202202L`       |
 | `__cpp_lib_spanstream`                                 | *unimplemented* |
 | `__cpp_lib_stacktrace`                                 | *unimplemented* |
+| `__cpp_lib_start_lifetime_as`                          | *unimplemented* |
 | `__cpp_lib_stdatomic_h`                                | `202011L`       |
+| `__cpp_lib_stdbit_h`                                   | *unimplemented* |
+| `__cpp_lib_stdckdint_h`                                | *unimplemented* |
 | `__cpp_lib_string_contains`                            | `202011L`       |
 | `__cpp_lib_string_resize_and_overwrite`                | `202110L`       |
 | `__cpp_lib_to_underlying`                              | `202102L`       |
 | `__cpp_lib_tuple_like`                                 | *unimplemented* |
 | `__cpp_lib_unreachable`                                | `202202L`       |
 | **C++26**                                              |                 |
+| `__cpp_lib_algorithm_default_value_type`               | *unimplemented* |
 | `__cpp_lib_aligned_accessor`                           | `202411L`       |
 | `__cpp_lib_associative_heterogeneous_insertion`        | *unimplemented* |
 | `__cpp_lib_atomic_min_max`                             | `202403L`       |
@@ -234,6 +241,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_constexpr_exceptions`                       | *unimplemented* |
 | `__cpp_lib_constexpr_flat_map`                         | `202502L`       |
 | `__cpp_lib_constexpr_flat_set`                         | `202502L`       |
+| `__cpp_lib_constexpr_format`                           | *unimplemented* |
 | `__cpp_lib_constexpr_forward_list`                     | `202502L`       |
 | `__cpp_lib_constexpr_inplace_vector`                   | *unimplemented* |
 | `__cpp_lib_constexpr_list`                             | `202502L`       |
@@ -287,6 +295,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_indirect`                                   | *unimplemented* |
 | `__cpp_lib_inplace_vector`                             | *unimplemented* |
 | `__cpp_lib_integer_sequence`                           | `202511L`       |
+| `__cpp_lib_is_structural`                              | *unimplemented* |
 | `__cpp_lib_is_sufficiently_aligned`                    | `202411L`       |
 | `__cpp_lib_is_virtual_base_of`                         | `202406L`       |
 | `__cpp_lib_is_within_lifetime`                         | `202603L`       |
@@ -303,6 +312,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges_as_input`                            | *unimplemented* |
 | `__cpp_lib_ranges_cache_latest`                        | *unimplemented* |
 | `__cpp_lib_ranges_concat`                              | `202403L`       |
+| `__cpp_lib_ranges_filter`                              | *unimplemented* |
 | `__cpp_lib_ranges_indices`                             | `202506L`       |
 | `__cpp_lib_ranges_reserve_hint`                        | *unimplemented* |
 | `__cpp_lib_ratio`                                      | `202306L`       |
@@ -316,6 +326,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_smart_ptr_owner_equality`                   | `202306L`       |
 | `__cpp_lib_span_at`                                    | `202311L`       |
 | `__cpp_lib_sstream_from_string_view`                   | `202306L`       |
+| `__cpp_lib_start_lifetime`                             | *unimplemented* |
 | `__cpp_lib_string_subview`                             | `202506L`       |
 | `__cpp_lib_string_view`                                | `202403L`       |
 | `__cpp_lib_submdspan`                                  | *unimplemented* |

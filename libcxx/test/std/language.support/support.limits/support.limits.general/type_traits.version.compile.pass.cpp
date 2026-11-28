@@ -80,6 +80,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_is_swappable
 #    error "__cpp_lib_is_swappable should not be defined before c++17"
 #  endif
@@ -193,6 +197,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_is_swappable
@@ -326,6 +334,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -501,6 +513,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -694,6 +710,10 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -896,6 +916,19 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should be defined in c++26"
+#    endif
+#    if __cpp_lib_is_structural != 202603L
+#      error "__cpp_lib_is_structural should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -1116,6 +1149,19 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should be defined in c++29"
+#    endif
+#    if __cpp_lib_is_structural != 202603L
+#      error "__cpp_lib_is_structural should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
