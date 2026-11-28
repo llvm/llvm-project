@@ -414,6 +414,7 @@ def hlsl_and : HLSLTwoArgBuiltin<"and", "__builtin_hlsl_and"> {
 produces a bool vector or matrix output.
 }];
   let VaryingTypes = [BoolTy];
+  let VaryingLongVector = 1;
 }
 
 // Returns True if any components of the x parameter are non-zero;
@@ -1380,6 +1381,7 @@ def hlsl_or : HLSLTwoArgBuiltin<"or", "__builtin_hlsl_or"> {
  produces a bool vector or matrix output.
 }];
   let VaryingTypes = [BoolTy];
+  let VaryingLongVector = 1;
 }
 
 // Returns the value Val, raised to the power Pow.
