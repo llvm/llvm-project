@@ -1306,6 +1306,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                    MVT::v4i32}) {
       setOperationAction(ISD::AVGFLOORS, VT, Legal);
       setOperationAction(ISD::AVGFLOORU, VT, Legal);
+      setOperationAction(ISD::AVGSUBFLOORS, VT, Legal);
+      setOperationAction(ISD::AVGSUBFLOORU, VT, Legal);
       setOperationAction(ISD::AVGCEILS, VT, Legal);
       setOperationAction(ISD::AVGCEILU, VT, Legal);
       setOperationAction(ISD::ABDS, VT, Legal);
@@ -7306,6 +7308,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opcode = IsSignedAdd
                           ? (IsRoundingAdd ? ISD::AVGCEILS : ISD::AVGFLOORS)
                           : (IsRoundingAdd ? ISD::AVGCEILU : ISD::AVGFLOORU);
+    return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
+  }
+  case Intrinsic::aarch64_neon_shsub:
+  case Intrinsic::aarch64_neon_uhsub: {
+    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_shsub
+                          ? ISD::AVGSUBFLOORS
+                          : ISD::AVGSUBFLOORU;
     return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
