@@ -11,6 +11,7 @@ CommandGuide/index
 OptBisect
 SymbolizerMarkupFormat
 PDB/index
+CodeViewPacks
 GarbageCollection
 Statepoints
 LibFuzzer
@@ -92,6 +93,10 @@ XRayFDRFormat
 
 {doc}`The Microsoft PDB File Format <PDB/index>`
 :   A detailed description of the Microsoft PDB (Program Database) file format.
+
+{doc}`CodeViewPacks`
+:   An experimental format that shares CodeView debug information between COFF
+    objects, how llvm-cvpack produces it and how LLD links it.
 
 ### Garbage Collection
 

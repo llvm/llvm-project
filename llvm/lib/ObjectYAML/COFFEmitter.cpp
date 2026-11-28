@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/ObjectYAML/ContiguousBlobAccumulator.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
@@ -178,6 +179,11 @@ static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
                                 ContiguousBlobAccumulator &CBA) {
   if (!S.SectionData || S.SectionData->binary_size() == 0) {
     if (S.Name == ".debug$S") {
+      // A .debug$S that holds only symbols needs no string table.
+      if (!CP.StringsAndChecksums.hasStrings() &&
+          !CodeViewYAML::requiresStringTable(S.DebugS))
+        CP.StringsAndChecksums.setStrings(
+            std::make_shared<codeview::DebugStringTableSubsection>());
       assert(CP.StringsAndChecksums.hasStrings() &&
              "Object file does not have debug string table!");
       S.SectionData = toDebugS(S.DebugS, CP.StringsAndChecksums, CP.Allocator);

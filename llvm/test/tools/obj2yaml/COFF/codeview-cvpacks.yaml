@@ -1,0 +1,118 @@
+## CodeView pack records round-trip through structured YAML, and a
+## .debug$S that holds only symbols needs no string table.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: obj2yaml %t.obj > %t.yaml
+# RUN: FileCheck %s < %t.yaml
+# RUN: yaml2obj %t.yaml -o %t.2.obj
+# RUN: cmp %t.obj %t.2.obj
+
+# CHECK:      - Kind:            LF_CVPACK_LIST
+# CHECK-NEXT:   CVPackList:
+# CHECK-NEXT:     PackId:          00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+# CHECK:      - Kind:            LF_CVPACK_ORIGIN
+# CHECK-NEXT:   CVPackOrigin:
+# CHECK-NEXT:     OriginalFileSize: 4096
+# CHECK-NEXT:     OriginalFileHash: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+# CHECK-NEXT:     DebugHHeader:    C5C9330100000200
+# CHECK-NEXT:     Edits:
+# CHECK-NEXT:       - SectionIndex:    70000
+# CHECK-NEXT:         Kind:            SymbolStream
+# CHECK-NEXT:         OriginalOffset:  4
+# CHECK-NEXT:         OriginalLength:  36
+# CHECK-NEXT:         PackedLength:    24
+# CHECK-NEXT:         RestorationFragments:
+# CHECK-NEXT:           - Offset:          8
+# CHECK-NEXT:             Bytes:           F1000000
+# CHECK-NEXT:       - SectionIndex:    70001
+# CHECK-NEXT:         Kind:            DebugH
+# CHECK-NEXT:         OriginalOffset:  0
+# CHECK-NEXT:         OriginalLength:  24
+# CHECK-NEXT:         PackedLength:    8
+# CHECK-NOT:          RestorationFragments
+# CHECK:      - Kind:            LF_CVPACK_MAP
+# CHECK-NEXT:   CVPackMap:
+# CHECK-NEXT:     Entries:
+# CHECK-NEXT:       - Skip:            0
+# CHECK-NEXT:         Slot:            0
+# CHECK-NEXT:         Count:           3
+# CHECK-NEXT:         FirstDelta:      5
+# CHECK-NEXT:       - Skip:            2
+# CHECK-NEXT:         Slot:            0
+# CHECK-NEXT:         Count:           1
+# CHECK-NEXT:         FirstDelta:      -4
+# CHECK:      - Kind:            LF_MODIFIER
+# CHECK:      - Kind:            S_CVPACK_MAP
+# CHECK-NEXT:   CVPackMap:
+# CHECK-NEXT:     Entries:
+# CHECK-NEXT:       - Skip:            1
+# CHECK-NEXT:         Slot:            0
+# CHECK-NEXT:         Count:           2
+# CHECK-NEXT:         FirstDelta:      0
+# CHECK:      - Kind:            S_UDT
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_CVPACK_LIST
+        CVPackList:
+          PackId:          00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF
+      - Kind:            LF_CVPACK_ORIGIN
+        CVPackOrigin:
+          OriginalFileSize: 4096
+          OriginalFileHash: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          DebugHHeader:    C5C9330100000200
+          Edits:
+            - SectionIndex:    70000
+              Kind:            SymbolStream
+              OriginalOffset:  4
+              OriginalLength:  36
+              PackedLength:    24
+              RestorationFragments:
+                - Offset:          8
+                  Bytes:           F1000000
+            - SectionIndex:    70001
+              Kind:            DebugH
+              OriginalOffset:  0
+              OriginalLength:  24
+              PackedLength:    8
+      - Kind:            LF_CVPACK_MAP
+        CVPackMap:
+          Entries:
+            - Skip:            0
+              Slot:            0
+              Count:           3
+              FirstDelta:      5
+            - Skip:            2
+              Slot:            0
+              Count:           1
+              FirstDelta:      -4
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    116
+          Modifiers:       [ None, Const ]
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_CVPACK_MAP
+            CVPackMap:
+              Entries:
+                - Skip:            1
+                  Slot:            0
+                  Count:           2
+                  FirstDelta:      0
+          - Kind:            S_UDT
+            UDTSym:
+              Type:            4096
+              UDTName:         local
+symbols:         []
+...

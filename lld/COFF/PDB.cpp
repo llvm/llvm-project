@@ -8,6 +8,7 @@
 
 #include "PDB.h"
 #include "COFFLinkerContext.h"
+#include "CVPacks.h"
 #include "Chunks.h"
 #include "Config.h"
 #include "DebugTypes.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -53,6 +55,7 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::codeview::cvpack;
 using namespace lld;
 using namespace lld::coff;
 
@@ -124,7 +127,8 @@ public:
   void writeSymbolRecord(SectionChunk *debugChunk,
                          ArrayRef<uint8_t> sectionContents, CVSymbol sym,
                          size_t alignedSize, uint32_t &nextRelocIndex,
-                         std::vector<uint8_t> &storage);
+                         std::vector<uint8_t> &storage,
+                         bool fromCVPack = false);
 
   /// Add the section map and section contributions to the PDB.
   void addSections(ArrayRef<uint8_t> sectionTable);
@@ -542,18 +546,31 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
                                   ArrayRef<uint8_t> sectionContents,
                                   CVSymbol sym, size_t alignedSize,
                                   uint32_t &nextRelocIndex,
-                                  std::vector<uint8_t> &storage) {
+                                  std::vector<uint8_t> &storage,
+                                  bool fromCVPack) {
   // Allocate space for the new record at the end of the storage.
   storage.resize(storage.size() + alignedSize);
   auto recordBytes = MutableArrayRef<uint8_t>(storage).take_back(alignedSize);
 
   // Copy the symbol record and relocate it.
-  debugChunk->writeAndRelocateSubsection(sectionContents, sym.data(),
-                                         nextRelocIndex, recordBytes.data());
+  if (fromCVPack)
+    memcpy(recordBytes.data(), sym.data().data(), sym.length());
+  else
+    debugChunk->writeAndRelocateSubsection(sectionContents, sym.data(),
+                                           nextRelocIndex, recordBytes.data());
   fixRecordAlignment(recordBytes, sym.length());
 
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
+  // A pack record's type indices are the pack's: map them to the object's.
+  if (fromCVPack) {
+    if (Error e = remapTypeIndices(recordBytes, true,
+                                   debugChunk->file->packTypeIndexMap)) {
+      consumeError(std::move(e));
+      replaceWithSkipRecord(recordBytes);
+      return;
+    }
+  }
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
     Log(ctx) << "ignoring unknown symbol record with kind 0x"
              << utohexstr(sym.kind());
@@ -565,6 +582,81 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   translateIdSymbols(recordBytes, source);
 }
 
+struct SymbolWithOrigin {
+  CVSymbol symbol;
+  bool fromCVPack;
+};
+
+static Expected<SmallVector<SymbolWithOrigin, 16>>
+readSymbolRecordsWithCVPacks(ArrayRef<uint8_t> bytes, ObjFile &file) {
+  SmallVector<CVSymbol, 16> records;
+  if (Error e =
+          forEachCodeViewRecord<CVSymbol>(bytes, [&](CVSymbol symbol) -> Error {
+            records.push_back(symbol);
+            return Error::success();
+          }))
+    return std::move(e);
+
+  size_t mapCount = 0;
+  while (mapCount < records.size() &&
+         records[mapCount].kind() == SymbolKind::S_CVPACK_MAP)
+    ++mapCount;
+  if (mapCount == 0) {
+    SmallVector<SymbolWithOrigin, 16> result;
+    for (CVSymbol symbol : records) {
+      if (symbol.kind() == SymbolKind::S_CVPACK_MAP)
+        return createStringError(
+            inconvertibleErrorCode(),
+            "S_CVPACK_MAP is not leading in its subsection");
+      result.push_back({symbol, false});
+    }
+    return result;
+  }
+  for (size_t i = mapCount; i != records.size(); ++i)
+    if (records[i].kind() == SymbolKind::S_CVPACK_MAP)
+      return createStringError(inconvertibleErrorCode(),
+                               "S_CVPACK_MAP is not leading in its subsection");
+
+  auto map = decodeSymbolMap(ArrayRef<CVSymbol>(records).take_front(mapCount));
+  if (!map)
+    return map.takeError();
+  const auto &symbols = file.cvPack->view().Symbols;
+  auto segments =
+      expandRangeMap(*map, symbols.size(), records.size() - mapCount, 0);
+  if (!segments)
+    return segments.takeError();
+
+  SmallVector<SymbolWithOrigin, 16> result;
+  size_t inlineIndex = mapCount;
+  for (const RangeMapSegment &segment : *segments) {
+    if (!segment.IsPackReference) {
+      for (uint64_t i = 0; i != segment.Count; ++i)
+        result.push_back({records[inlineIndex++], false});
+      continue;
+    }
+    for (uint64_t i = 0; i != segment.Count; ++i)
+      result.push_back({symbols[segment.FirstIndex + i], true});
+  }
+  return result;
+}
+
+/// Call fn for each symbol record of a symbols subsection. The records that a
+/// packed object moved to a CodeView pack are visited in their place.
+static Error
+forEachSymbolRecord(ObjFile &file, ArrayRef<uint8_t> symsBuffer,
+                    function_ref<Error(CVSymbol sym, bool fromCVPack)> fn) {
+  if (!file.hasCVPackData)
+    return forEachCodeViewRecord<CVSymbol>(
+        symsBuffer, [&](CVSymbol sym) { return fn(sym, false); });
+  auto symbols = readSymbolRecordsWithCVPacks(symsBuffer, file);
+  if (!symbols)
+    return symbols.takeError();
+  for (const SymbolWithOrigin &item : *symbols)
+    if (Error e = fn(item.symbol, item.fromCVPack))
+      return e;
+  return Error::success();
+}
+
 void PDBLinker::analyzeSymbolSubsection(
     SectionChunk *debugChunk, uint32_t &moduleSymOffset,
     uint32_t &nextRelocIndex, std::vector<StringTableFixup> &stringTableFixups,
@@ -574,7 +666,7 @@ void PDBLinker::analyzeSymbolSubsection(
 
   uint32_t scopeLevel = 0;
   std::vector<uint8_t> storage;
-  ArrayRef<uint8_t> sectionContents = debugChunk->getContents();
+  ArrayRef<uint8_t> sectionContents = getDebugContents(debugChunk);
 
   ArrayRef<uint8_t> symsBuffer;
   cantFail(symData.readBytes(0, symData.getLength(), symsBuffer));
@@ -582,8 +674,8 @@ void PDBLinker::analyzeSymbolSubsection(
   if (symsBuffer.empty())
     Warn(ctx) << "empty symbols subsection in " << file->getName();
 
-  Error ec = forEachCodeViewRecord<CVSymbol>(
-      symsBuffer, [&](CVSymbol sym) -> llvm::Error {
+  Error ec = forEachSymbolRecord(
+      *file, symsBuffer, [&](CVSymbol sym, bool fromCVPack) -> llvm::Error {
         // Track the current scope.
         if (symbolOpensScope(sym.kind()))
           ++scopeLevel;
@@ -598,7 +690,7 @@ void PDBLinker::analyzeSymbolSubsection(
         if (symbolGoesInGlobalsStream(sym, scopeLevel)) {
           storage.clear();
           writeSymbolRecord(debugChunk, sectionContents, sym, alignedSize,
-                            nextRelocIndex, storage);
+                            nextRelocIndex, storage, fromCVPack);
           addGlobalSymbol(builder.getGsiBuilder(),
                           file->moduleDBI->getModuleIndex(), moduleSymOffset,
                           storage);
@@ -643,7 +735,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
         debugChunk->getSectionName() != ".debug$S")
       continue;
 
-    ArrayRef<uint8_t> sectionContents = debugChunk->getContents();
+    ArrayRef<uint8_t> sectionContents = getDebugContents(debugChunk);
     auto contents =
         SectionChunk::consumeDebugMagic(sectionContents, ".debug$S");
     DebugSubsectionArray subsections;
@@ -661,8 +753,8 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
       ArrayRef<uint8_t> symsBuffer;
       BinaryStreamRef sr = ss.getRecordData();
       cantFail(sr.readBytes(0, sr.getLength(), symsBuffer));
-      auto ec = forEachCodeViewRecord<CVSymbol>(
-          symsBuffer, [&](CVSymbol sym) -> llvm::Error {
+      auto ec = forEachSymbolRecord(
+          *file, symsBuffer, [&](CVSymbol sym, bool fromCVPack) -> llvm::Error {
             // Track the current scope. Only update records in the postmerge
             // pass.
             if (symbolOpensScope(sym.kind()))
@@ -675,7 +767,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
               uint32_t alignedSize =
                   alignTo(sym.length(), alignOf(CodeViewContainer::Pdb));
               writeSymbolRecord(debugChunk, sectionContents, sym, alignedSize,
-                                nextRelocIndex, storage);
+                                nextRelocIndex, storage, fromCVPack);
             }
             return Error::success();
           });
@@ -746,7 +838,7 @@ translateStringTableIndex(COFFLinkerContext &ctx, uint32_t objIndex,
 void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
   // Note that we are processing the *unrelocated* section contents. They will
   // be relocated later during PDB writing.
-  ArrayRef<uint8_t> contents = debugChunk->getContents();
+  ArrayRef<uint8_t> contents = getDebugContents(debugChunk);
   contents = SectionChunk::consumeDebugMagic(contents, ".debug$S");
   DebugSubsectionArray subsections;
   BinaryStreamReader reader(contents, llvm::endianness::little);
@@ -820,7 +912,7 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
 
 void DebugSHandler::advanceRelocIndex(SectionChunk *sc,
                                       ArrayRef<uint8_t> subsec) {
-  ptrdiff_t vaBegin = subsec.data() - sc->getContents().data();
+  ptrdiff_t vaBegin = subsec.data() - getDebugContents(sc).data();
   assert(vaBegin > 0);
   auto relocs = sc->getRelocs();
   for (; nextRelocIndex < relocs.size(); ++nextRelocIndex) {
@@ -851,7 +943,7 @@ public:
 Error UnrelocatedDebugSubsection::commit(BinaryStreamWriter &writer) const {
   std::vector<uint8_t> relocatedBytes(subsec.size());
   uint32_t tmpRelocIndex = relocIndex;
-  debugChunk->writeAndRelocateSubsection(debugChunk->getContents(), subsec,
+  debugChunk->writeAndRelocateSubsection(getDebugContents(debugChunk), subsec,
                                          tmpRelocIndex, relocatedBytes.data());
 
   // Remap type indices in inlinee line records in place. Skip the remapping if
@@ -945,7 +1037,7 @@ void DebugSHandler::finish() {
     uint32_t relocIndex = subsec.relocIndex;
     auto unrelocatedRvaStart = subsecData.take_front(sizeof(uint32_t));
     uint8_t relocatedRvaStart[sizeof(uint32_t)];
-    debugChunk->writeAndRelocateSubsection(debugChunk->getContents(),
+    debugChunk->writeAndRelocateSubsection(getDebugContents(debugChunk),
                                            unrelocatedRvaStart, relocIndex,
                                            &relocatedRvaStart[0]);
     // Use of memcpy here avoids violating type-based aliasing rules.
@@ -1158,6 +1250,18 @@ void PDBLinker::addObjectsToPDB() {
     // Merge type information from input files using global type hashing.
     if (ctx.config.debugGHashes)
       tMerger.mergeTypesWithGHash();
+
+    // Restore the function debug info that packed objects moved to packs.
+    {
+      llvm::TimeTraceScope timeScope("Expand packed function debug info");
+      parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+        if (!file->hasCVPackData)
+          return;
+        if (Error e = expandCVPackFunctionDebug(file))
+          Fatal(ctx) << "invalid packed function debug info in "
+                     << toString(file) << ": " << std::move(e);
+      });
+    }
 
     // Merge dependencies and then regular objects.
     {
@@ -1738,17 +1842,26 @@ static uint32_t getSecrelReloc(Triple::ArchType arch) {
 // that are used to interpret the line table, and the offset of Addr in the line
 // table are stored in the output arguments. Returns whether a line table was
 // found.
+// The function debug info of a packed object may be in a CodeView pack: it is
+// restored into restored, which must outlive the outputs.
 static bool findLineTable(const SectionChunk *c, uint32_t addr,
                           DebugStringTableSubsectionRef &cvStrTab,
                           DebugChecksumsSubsectionRef &checksums,
                           DebugLinesSubsectionRef &lines,
-                          uint32_t &offsetInLinetable) {
+                          uint32_t &offsetInLinetable,
+                          std::vector<std::vector<uint8_t>> &restored) {
   ExitOnError exitOnErr;
   const uint32_t secrelReloc = getSecrelReloc(c->getArch());
 
   for (SectionChunk *dbgC : c->file->getDebugChunks()) {
     if (dbgC->getSectionName() != ".debug$S")
       continue;
+    ArrayRef<uint8_t> dbgContents = getDebugContents(dbgC);
+    if (std::optional<std::vector<uint8_t>> data =
+            restoreCVPackFunctionLines(dbgC)) {
+      restored.push_back(std::move(*data));
+      dbgContents = restored.back();
+    }
 
     // Build a mapping of SECREL relocations in dbgC that refer to `c`.
     DenseMap<uint32_t, uint32_t> secrels;
@@ -1763,7 +1876,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     }
 
     ArrayRef<uint8_t> contents =
-        SectionChunk::consumeDebugMagic(dbgC->getContents(), ".debug$S");
+        SectionChunk::consumeDebugMagic(dbgContents, ".debug$S");
     DebugSubsectionArray subsections;
     BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
@@ -1785,7 +1898,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
         ArrayRef<uint8_t> bytes;
         auto ref = ss.getRecordData();
         exitOnErr(ref.readLongestContiguousChunk(0, bytes));
-        size_t offsetInDbgC = bytes.data() - dbgC->getContents().data();
+        size_t offsetInDbgC = bytes.data() - dbgContents.data();
 
         // Check whether this line table refers to C.
         auto i = secrels.find(offsetInDbgC);
@@ -1828,8 +1941,10 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   DebugChecksumsSubsectionRef checksums;
   DebugLinesSubsectionRef lines;
   uint32_t offsetInLinetable;
+  std::vector<std::vector<uint8_t>> restored;
 
-  if (!findLineTable(c, addr, cvStrTab, checksums, lines, offsetInLinetable))
+  if (!findLineTable(c, addr, cvStrTab, checksums, lines, offsetInLinetable,
+                     restored))
     return std::nullopt;
 
   std::optional<uint32_t> nameIndex;

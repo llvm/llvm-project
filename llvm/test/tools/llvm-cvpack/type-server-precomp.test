@@ -1,0 +1,88 @@
+## Objects whose type indices do not only number their own records are staged
+## unchanged: objects that refer to a type server (/Zi) or to a precompiled
+## header object (/Yu), and precompiled header objects (/Yc), which hold their
+## types in .debug$P. Each object is given twice, so that its records are
+## shared and would otherwise move to a pack.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj zi.yaml -o zi1.obj
+# RUN: yaml2obj zi.yaml -o zi2.obj
+# RUN: yaml2obj yu.yaml -o yu1.obj
+# RUN: yaml2obj yu.yaml -o yu2.obj
+# RUN: yaml2obj yc.yaml -o yc1.obj
+# RUN: yaml2obj yc.yaml -o yc2.obj
+# RUN: llvm-cvpack pack --pack-path=packs --out-dir=stage zi1.obj zi2.obj \
+# RUN:   yu1.obj yu2.obj yc1.obj yc2.obj
+# RUN: FileCheck %s < stage/cvpacks.json
+# RUN: cmp zi1.obj stage/zi1.obj
+# RUN: cmp yu1.obj stage/yu1.obj
+# RUN: cmp yc1.obj stage/yc1.obj
+
+# CHECK-COUNT-6: "packs": []
+# CHECK:         "packs": [],
+# CHECK-NEXT:    "new_packs": []
+
+#--- zi.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_TYPESERVER2
+        TypeServer2:
+          Guid:            '{01234567-0123-0123-0123-0123456789AB}'
+          Age:             1
+          Name:            'vc140.pdb'
+symbols:         []
+...
+
+#--- yu.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_PRECOMP
+        Precomp:
+          StartTypeIndex:  4096
+          TypesCount:      1
+          Signature:       1
+          PrecompFilePath: 'yc.obj'
+      - Kind:            LF_POINTER
+        Pointer:
+          ReferentType:    4096
+          Attrs:           65548
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    116
+          Modifiers:       [ Const ]
+symbols:         []
+...
+
+#--- yc.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$P'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    PrecompTypes:
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    116
+          Modifiers:       [ Const ]
+      - Kind:            LF_ENDPRECOMP
+        EndPrecomp:
+          Signature:       1
+symbols:         []
+...

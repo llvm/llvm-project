@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -29,12 +30,14 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugSymbolRVASubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -62,6 +65,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(InlineeInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CrossModuleExport)
 LLVM_YAML_IS_SEQUENCE_VECTOR(YAMLCrossModuleImport)
 LLVM_YAML_IS_SEQUENCE_VECTOR(YAMLFrameData)
+LLVM_YAML_IS_SEQUENCE_VECTOR(HexFormattedString)
 
 LLVM_YAML_DECLARE_SCALAR_TRAITS(HexFormattedString, QuotingType::None)
 LLVM_YAML_DECLARE_ENUM_TRAITS(DebugSubsectionKind)
@@ -217,6 +221,84 @@ struct YAMLFrameDataSubsection : public YAMLSubsectionBase {
   std::vector<YAMLFrameData> Frames;
 };
 
+/// A subsection whose body is written as given.
+class RawDebugSubsection : public DebugSubsection {
+public:
+  RawDebugSubsection(uint32_t Kind, std::vector<uint8_t> Body)
+      : DebugSubsection(static_cast<DebugSubsectionKind>(Kind)),
+        Body(std::move(Body)) {}
+  uint32_t calculateSerializedSize() const override { return Body.size(); }
+  Error commit(BinaryStreamWriter &Writer) const override {
+    return Writer.writeBytes(Body);
+  }
+
+private:
+  std::vector<uint8_t> Body;
+};
+
+/// The content of a COMDAT .debug$S section whose function debug info moved
+/// to a CodeView pack.
+struct YAMLCVPackFunctionRefSubsection : public YAMLSubsectionBase {
+  YAMLCVPackFunctionRefSubsection()
+      : YAMLSubsectionBase(static_cast<DebugSubsectionKind>(
+            cvpack::FunctionRefSubsectionKind)) {}
+
+  void map(IO &IO) override;
+  std::shared_ptr<DebugSubsection>
+  toCodeViewSubsection(BumpPtrAllocator &Allocator,
+                       const codeview::StringsAndChecksums &SC) const override {
+    return std::make_shared<RawDebugSubsection>(
+        cvpack::FunctionRefSubsectionKind, cvpack::encodeFunctionRefBody(Ref));
+  }
+
+  cvpack::FunctionRef Ref;
+};
+
+/// The source files of a CodeView pack's function debug info.
+struct YAMLCVPackFilesSubsection : public YAMLSubsectionBase {
+  YAMLCVPackFilesSubsection()
+      : YAMLSubsectionBase(
+            static_cast<DebugSubsectionKind>(cvpack::PackFilesSubsectionKind)) {
+  }
+
+  void map(IO &IO) override;
+  std::shared_ptr<DebugSubsection>
+  toCodeViewSubsection(BumpPtrAllocator &Allocator,
+                       const codeview::StringsAndChecksums &SC) const override {
+    std::vector<cvpack::PackFileEntry> Entries;
+    for (const SourceFileChecksumEntry &File : Files)
+      Entries.push_back(
+          {File.FileName, uint8_t(File.Kind), File.ChecksumBytes.Bytes});
+    return std::make_shared<RawDebugSubsection>(
+        cvpack::PackFilesSubsectionKind,
+        cantFail(cvpack::encodePackFiles(Entries)));
+  }
+
+  std::vector<SourceFileChecksumEntry> Files;
+};
+
+/// The function debug info of a CodeView pack, one entry per function.
+struct YAMLCVPackFunctionsSubsection : public YAMLSubsectionBase {
+  YAMLCVPackFunctionsSubsection()
+      : YAMLSubsectionBase(static_cast<DebugSubsectionKind>(
+            cvpack::PackFunctionsSubsectionKind)) {}
+
+  void map(IO &IO) override;
+  std::shared_ptr<DebugSubsection>
+  toCodeViewSubsection(BumpPtrAllocator &Allocator,
+                       const codeview::StringsAndChecksums &SC) const override {
+    std::vector<ArrayRef<uint8_t>> Bodies;
+    for (const HexFormattedString &Function : Functions)
+      Bodies.push_back(Function.Bytes);
+    std::vector<uint8_t> Body;
+    cvpack::encodePackFunctions(Bodies, Body);
+    return std::make_shared<RawDebugSubsection>(
+        cvpack::PackFunctionsSubsectionKind, std::move(Body));
+  }
+
+  std::vector<HexFormattedString> Functions;
+};
+
 struct YAMLCoffSymbolRVASubsection : public YAMLSubsectionBase {
   YAMLCoffSymbolRVASubsection()
       : YAMLSubsectionBase(DebugSubsectionKind::CoffSymbolRVA) {}
@@ -365,6 +447,23 @@ void YAMLCoffSymbolRVASubsection::map(IO &IO) {
   IO.mapRequired("RVAs", RVAs);
 }
 
+void YAMLCVPackFunctionRefSubsection::map(IO &IO) {
+  IO.mapTag("!CVPackFunctionRef", true);
+  IO.mapRequired("Slot", Ref.Slot);
+  IO.mapRequired("Ordinal", Ref.Ordinal);
+  IO.mapRequired("OriginalSize", Ref.OriginalSize);
+}
+
+void YAMLCVPackFilesSubsection::map(IO &IO) {
+  IO.mapTag("!CVPackFiles", true);
+  IO.mapRequired("Files", Files);
+}
+
+void YAMLCVPackFunctionsSubsection::map(IO &IO) {
+  IO.mapTag("!CVPackFunctions", true);
+  IO.mapRequired("Functions", Functions);
+}
+
 void MappingTraits<YAMLDebugSubsection>::mapping(
     IO &IO, YAMLDebugSubsection &Subsection) {
   if (!IO.outputting()) {
@@ -389,6 +488,13 @@ void MappingTraits<YAMLDebugSubsection>::mapping(
       Subsection.Subsection = std::make_shared<YAMLFrameDataSubsection>();
     } else if (IO.mapTag("!COFFSymbolRVAs")) {
       Subsection.Subsection = std::make_shared<YAMLCoffSymbolRVASubsection>();
+    } else if (IO.mapTag("!CVPackFunctionRef")) {
+      Subsection.Subsection =
+          std::make_shared<YAMLCVPackFunctionRefSubsection>();
+    } else if (IO.mapTag("!CVPackFiles")) {
+      Subsection.Subsection = std::make_shared<YAMLCVPackFilesSubsection>();
+    } else if (IO.mapTag("!CVPackFunctions")) {
+      Subsection.Subsection = std::make_shared<YAMLCVPackFunctionsSubsection>();
     } else {
       llvm_unreachable("Unexpected subsection tag!");
     }
@@ -739,6 +845,15 @@ YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(
   return Result;
 }
 
+bool llvm::CodeViewYAML::requiresStringTable(
+    ArrayRef<YAMLDebugSubsection> Subsections) {
+  // CodeView pack subsections carry the ignore bit and use no strings.
+  return llvm::any_of(Subsections, [](const YAMLDebugSubsection &SS) {
+    return SS.Subsection->Kind != DebugSubsectionKind::Symbols &&
+           !(uint32_t(SS.Subsection->Kind) & 0x80000000);
+  });
+}
+
 Expected<std::vector<std::shared_ptr<DebugSubsection>>>
 llvm::CodeViewYAML::toCodeViewSubsectionList(
     BumpPtrAllocator &Allocator, ArrayRef<YAMLDebugSubsection> Subsections,
@@ -788,7 +903,45 @@ struct SubsectionConversionVisitor : public DebugSubsectionVisitor {
 
 Error SubsectionConversionVisitor::visitUnknown(
     DebugUnknownSubsectionRef &Unknown) {
-  return make_error<CodeViewError>(cv_error_code::operation_unsupported);
+  uint32_t Kind = uint32_t(Unknown.kind());
+  if (Kind != cvpack::FunctionRefSubsectionKind &&
+      Kind != cvpack::PackFilesSubsectionKind &&
+      Kind != cvpack::PackFunctionsSubsectionKind)
+    return make_error<CodeViewError>(cv_error_code::operation_unsupported);
+  ArrayRef<uint8_t> Body;
+  BinaryStreamReader Reader(Unknown.getData());
+  if (Error E = Reader.readBytes(Body, Reader.bytesRemaining()))
+    return E;
+  if (Kind == cvpack::FunctionRefSubsectionKind) {
+    auto Ref = cvpack::decodeFunctionRefBody(Body);
+    if (!Ref)
+      return Ref.takeError();
+    auto Result = std::make_shared<YAMLCVPackFunctionRefSubsection>();
+    Result->Ref = *Ref;
+    Subsection.Subsection = Result;
+  } else if (Kind == cvpack::PackFilesSubsectionKind) {
+    auto Files = cvpack::decodePackFiles(Body);
+    if (!Files)
+      return Files.takeError();
+    auto Result = std::make_shared<YAMLCVPackFilesSubsection>();
+    for (const cvpack::PackFileEntry &File : *Files) {
+      SourceFileChecksumEntry Entry;
+      Entry.FileName = File.Name;
+      Entry.Kind = static_cast<FileChecksumKind>(File.ChecksumKind);
+      Entry.ChecksumBytes.Bytes = File.Checksum;
+      Result->Files.push_back(Entry);
+    }
+    Subsection.Subsection = Result;
+  } else {
+    auto Functions = cvpack::decodePackFunctions(Body);
+    if (!Functions)
+      return Functions.takeError();
+    auto Result = std::make_shared<YAMLCVPackFunctionsSubsection>();
+    for (ArrayRef<uint8_t> Function : *Functions)
+      Result->Functions.push_back({Function});
+    Subsection.Subsection = Result;
+  }
+  return Error::success();
 }
 
 Error SubsectionConversionVisitor::visitLines(

@@ -20,6 +20,7 @@ add_lld_library(lldCOFF
   PDB.cpp
   SymbolTable.cpp
   Symbols.cpp
+  CVPacks.cpp
   Writer.cpp
 
   LINK_COMPONENTS
@@ -28,6 +29,7 @@ add_lld_library(lldCOFF
   BitWriter
   Core
   DebugInfoCodeView
+  DebugInfoCVPack
   DebugInfoDWARF
   DebugInfoMSF
   DebugInfoPDB

@@ -1,0 +1,17 @@
+## A packed input that a run does not pack again is staged as its original
+## object, which needs no pack: with --prune, the run deletes the pack the
+## input was packed against.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-a.yaml -o %t/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-b.yaml -o %t/b.obj
+# RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/stage1 %t/a.obj %t/b.obj
+
+## Alone, a.obj shares nothing: the rebase packs nothing and writes no pack.
+# RUN: llvm-cvpack rebase --prune \
+# RUN:   --pack-path=%t/packs --out-dir=%t/stage2 %t/stage1/a.obj
+# RUN: FileCheck %s < %t/stage2/cvpacks.json
+# CHECK:      "staged": "a.obj",
+# CHECK-NEXT: "packs": []
+# RUN: %python %S/Inputs/check-files-equal.py %t/a.obj %t/stage2/a.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t/a.dll %t/stage2/a.obj

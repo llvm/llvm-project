@@ -1,0 +1,15 @@
+# The type records of packed objects come from the pack, which is next to them.
+
+# RUN: rm -rf %t && mkdir -p %t/orig
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+# RUN: llvm-readobj --codeview %t/stage/a.obj | FileCheck %s --check-prefix=PACKED
+# PACKED-NOT: LF_MODIFIER
+
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t/a.dll %t/stage/a.obj
+# RUN: llvm-pdbutil dump -types %t/a.pdb | FileCheck %s
+
+# CHECK: Showing 1 records
+# CHECK: LF_MODIFIER
+# CHECK: referent = 0x0074 (int)

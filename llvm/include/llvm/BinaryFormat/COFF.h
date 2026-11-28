@@ -837,7 +837,11 @@ struct ImportHeader {
 
 enum CodeViewIdentifiers {
   DEBUG_SECTION_MAGIC = 0x4,
-  DEBUG_HASHES_SECTION_MAGIC = 0x133C9C5
+  DEBUG_HASHES_SECTION_MAGIC = 0x133C9C5,
+  // The .debug$T signature of an object whose type stream refers to CodeView
+  // packs ("CVP1"). Readers that do not know packs reject the section instead
+  // of misreading its type indices.
+  DEBUG_CVPACK_SECTION_MAGIC = 0x31505643
 };
 
 // These flags show up in the @feat.00 symbol. They appear to be some kind of

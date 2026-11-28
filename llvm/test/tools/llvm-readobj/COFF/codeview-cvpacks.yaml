@@ -1,0 +1,64 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-readobj --codeview %t.obj | FileCheck %s
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_CVPACK_LIST
+        CVPackList:
+          PackId:          0000000000000000000000000000000000000000000000000000000000000000
+      - Kind:            LF_CVPACK_MAP
+        CVPackMap:
+          Entries:
+            - Skip:            1
+              Slot:            0
+              Count:           2
+              FirstDelta:      0
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    116
+          Modifiers:       [ None ]
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    117
+          Modifiers:       [ None ]
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_CVPACK_MAP
+            CVPackMap:
+              Entries:
+                - Skip:            0
+                  Slot:            0
+                  Count:           1
+                  FirstDelta:      0
+symbols:         []
+...
+
+## The pack records consume no type index. The map's first entry skips one
+## inline record, then maps two pack records: the inline records are 0x1000
+## and 0x1003.
+# CHECK: LF_CVPACK_LIST {
+# CHECK: PackId (
+# CHECK: LF_CVPACK_MAP {
+# CHECK: RangeCount: 1
+# CHECK: Skip: 1
+# CHECK: Count: 2
+# CHECK: Modifier (0x1000) {
+# CHECK: ModifiedType: 0x74
+# CHECK: Modifier (0x1003) {
+# CHECK: ModifiedType: 0x75
+# CHECK: S_CVPACK_MAP {
+# CHECK: RangeCount: 1
+# CHECK: Skip: 0
+# CHECK: Slot: 0
+# CHECK: Count: 1
+# CHECK: FirstDelta: 0

@@ -8,6 +8,7 @@
 
 #include "DebugTypes.h"
 #include "COFFLinkerContext.h"
+#include "CVPacks.h"
 #include "Chunks.h"
 #include "InputFiles.h"
 #include "PDB.h"
@@ -587,14 +588,70 @@ void PrecompSource::registerMapping() {
 //===----------------------------------------------------------------------===//
 
 void TpiSource::loadGHashes() {
-  if (std::optional<ArrayRef<uint8_t>> debugH = getDebugH(file)) {
+  std::optional<ArrayRef<uint8_t>> debugH = getDebugH(file);
+  if (!file->hasCVPackData && debugH) {
     ghashes = getHashesFromDebugH(*debugH);
     ownedGHashes = false;
   } else {
-    CVTypeArray types;
-    BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
-    cantFail(reader.readArray(types, reader.getLength()));
-    assignGHashesFromVector(GloballyHashedType::hashTypes(types));
+    if (!file->hasCVPackData) {
+      CVTypeArray types;
+      BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
+      cantFail(reader.readArray(types, reader.getLength()));
+      assignGHashesFromVector(GloballyHashedType::hashTypes(types));
+    } else {
+      // Hash the inline records over a transient table of every logical
+      // record, then keep only theirs: the pack records' hashes stay in the
+      // packs.
+      const CVPackLogicalTypes &logical = file->packedTypes;
+      std::vector<GloballyHashedType> hashes(logical.size());
+      for (const CVPackLogicalTypes::Segment &s : logical.getSegments()) {
+        if (!s.isPacked())
+          continue;
+        const LoadedCVPack &pack = *file->cvPack;
+        for (uint32_t i = 0; i != s.count; ++i) {
+          assert(s.first + i < pack.gHashes.size());
+          const GloballyHashedType &h = pack.gHashes[s.first + i];
+          if (h.empty())
+            Fatal(ctx) << "CodeView pack record was not hashed for "
+                       << file->getName();
+          hashes[s.localFirst + i] = h;
+        }
+      }
+
+      bool unresolved = true;
+      while (unresolved) {
+        unresolved = false;
+        size_t resolvedThisPass = 0;
+        for (const CVPackLogicalTypes::Segment &s : logical.getSegments()) {
+          if (s.isPacked())
+            continue;
+          for (uint32_t i = 0; i != s.count; ++i) {
+            GloballyHashedType &h = hashes[s.localFirst + i];
+            if (!h.empty())
+              continue;
+            h = GloballyHashedType::hashType(
+                logical.inlineType(file->debugTypes, s.first + i), hashes,
+                hashes);
+            if (h.empty())
+              unresolved = true;
+            else
+              ++resolvedThisPass;
+          }
+        }
+        if (unresolved && resolvedThisPass == 0)
+          Fatal(ctx)
+              << "cannot resolve CodeView type references in packed object "
+              << file->getName();
+      }
+
+      std::vector<GloballyHashedType> inlineHashes(logical.numInline());
+      for (const CVPackLogicalTypes::Segment &s : logical.getSegments())
+        if (!s.isPacked())
+          std::copy_n(hashes.begin() + s.localFirst, s.count,
+                      inlineHashes.begin() + s.first);
+      assignGHashesFromVector(std::move(inlineHashes));
+      packedTypes = &logical;
+    }
   }
 
   fillIsItemIndexFromDebugT();
@@ -611,6 +668,13 @@ void TpiSource::assignGHashesFromVector(
   memcpy(hashes, hashVec.data(), hashVec.size() * sizeof(GloballyHashedType));
   ghashes = ArrayRef(hashes, hashVec.size());
   ownedGHashes = true;
+}
+
+GloballyHashedType TpiSource::getPackedGHash(uint32_t index) const {
+  CVPackLogicalTypes::Location l = packedTypes->locate(index);
+  if (!l.isPacked())
+    return ghashes[l.index];
+  return file->cvPack->gHashes[l.index];
 }
 
 // Faster way to iterate type records. forEachTypeChecked is faster than
@@ -630,12 +694,24 @@ static void forEachTypeChecked(ArrayRef<uint8_t> types,
 // thread over single-threaded ghashing.
 void TpiSource::fillIsItemIndexFromDebugT() {
   uint32_t index = 0;
-  isItemIndex.resize(ghashes.size());
-  forEachTypeChecked(file->debugTypes, [&](const CVType &ty) {
-    if (isIdRecord(ty.kind()))
-      isItemIndex.set(index);
-    ++index;
-  });
+  isItemIndex.resize(numGHashTypes());
+  if (packedTypes) {
+    for (const CVPackLogicalTypes::Segment &s : packedTypes->getSegments()) {
+      for (uint32_t i = 0; i != s.count; ++i) {
+        CVType type =
+            getCVPackLogicalType(*packedTypes, file->debugTypes, *file->cvPack,
+                                 {s.first + i, s.packed});
+        if (isIdRecord(type.kind()))
+          isItemIndex.set(s.localFirst + i);
+      }
+    }
+  } else {
+    forEachTypeChecked(file->debugTypes, [&](const CVType &ty) {
+      if (isIdRecord(ty.kind()))
+        isItemIndex.set(index);
+      ++index;
+    });
+  }
 }
 
 void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
@@ -732,16 +808,58 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
          "missing desired record");
 }
 
+void TpiSource::mergeUniquePackedTypeRecords() {
+  assert(file && packedTypes);
+  llvm::sort(uniqueTypes);
+
+  auto typeAt = [&](CVPackLogicalTypes::Location l) {
+    return getCVPackLogicalType(*packedTypes, file->debugTypes, *file->cvPack,
+                                l);
+  };
+  unsigned nbTpiRecs = 0;
+  unsigned nbIpiRecs = 0;
+  for (uint32_t index : uniqueTypes) {
+    CVType type = typeAt(packedTypes->locate(index));
+    size_t newSize = alignTo(type.length(), 4);
+    (isIdRecord(type.kind()) ? nbIpiRecs : nbTpiRecs) += newSize;
+  }
+  assert(mergedTpi.recs.empty() && mergedIpi.recs.empty());
+  mergedTpi.recs.reserve(nbTpiRecs);
+  mergedIpi.recs.reserve(nbIpiRecs);
+
+  SmallVector<uint8_t, 512> remappedRecord;
+  for (uint32_t index : uniqueTypes) {
+    CVPackLogicalTypes::Location location = packedTypes->locate(index);
+    CVType type = typeAt(location);
+    if (location.isPacked()) {
+      remappedRecord.assign(type.data().begin(), type.data().end());
+      if (Error e = cvpack::remapTypeIndices(remappedRecord, false,
+                                             file->packTypeIndexMap))
+        Fatal(ctx) << "invalid packed CodeView type in " << file->getName()
+                   << ": " << std::move(e);
+      type = CVType(remappedRecord);
+    }
+    mergeTypeRecord(TypeIndex::fromArrayIndex(index), type);
+  }
+
+  assert(uniqueTypes.size() ==
+             mergedTpi.recSizes.size() + mergedIpi.recSizes.size() &&
+         "missing desired packed type record");
+}
+
 void TpiSource::remapTpiWithGHashes(GHashState *g) {
   assert(ctx.config.debugGHashes && "ghashes must be enabled");
   fillMapFromGHashes(g);
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
-  mergeUniqueTypeRecords(file->debugTypes);
+  if (packedTypes)
+    mergeUniquePackedTypeRecords();
+  else
+    mergeUniqueTypeRecords(file->debugTypes);
   // TODO: Free all unneeded ghash resources now that we have a full index map.
 
   if (ctx.config.showSummary) {
-    nbTypeRecords = ghashes.size();
+    nbTypeRecords = numGHashTypes();
     nbTypeRecordsBytes = file->debugTypes.size();
   }
 }
@@ -992,7 +1110,7 @@ public:
 
   /// Get the ghash key for this cell.
   GloballyHashedType getGHash(const COFFLinkerContext &ctx) const {
-    return ctx.tpiSourceList[getTpiSrcIdx()]->ghashes[getGHashIdx()];
+    return ctx.tpiSourceList[getTpiSrcIdx()]->getGHash(getGHashIdx());
   }
 
   /// The priority function for the cell. The data is stored such that lower
@@ -1072,6 +1190,57 @@ TypeMerger::TypeMerger(COFFLinkerContext &c, llvm::BumpPtrAllocator &alloc)
 TypeMerger::~TypeMerger() = default;
 
 void TypeMerger::mergeTypesWithGHash() {
+  // Decode packed type streams, which object parsing leaves to this parallel
+  // phase.
+  {
+    llvm::TimeTraceScope timeScope("Expand packed types");
+    ScopedTimer t0(ctx.loadGHashTimer);
+    parallelForEach(ctx.tpiSourceList, [&](TpiSource *source) {
+      ObjFile *file = source->file;
+      if (!file || !file->cvPackExpansionPending)
+        return;
+      if (Error e = expandPackedTypeStream(
+              file->debugTypes, *file->cvPack, false, file->packedTypes,
+              file->expandedPackedTypes, file->packTypeIndexMap))
+        Fatal(ctx) << "invalid packed CodeView types in " << toString(file)
+                   << ": " << std::move(e);
+      file->cvPackExpansionPending = false;
+    });
+  }
+
+  // CodeView packs referenced by the objects. Each pack record is hashed and
+  // inserted into the ghash table once per link, not once per reference.
+  struct PackState {
+    LoadedCVPack *pack;
+    // Smallest (source index << 32 | record index) referencing each record.
+    std::unique_ptr<std::atomic<uint64_t>[]> minRef;
+    std::vector<uint32_t> cell;
+  };
+  std::vector<PackState> packStates;
+  DenseMap<LoadedCVPack *, uint32_t> packStateIndex;
+  // Per source, the PackState index of its CodeView pack.
+  std::vector<uint32_t> sourcePackState(ctx.tpiSourceList.size(), 0);
+  for (size_t tpiSrcIdx = 0; tpiSrcIdx != ctx.tpiSourceList.size();
+       ++tpiSrcIdx) {
+    TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
+    if (!source->file || source->file->packedTypes.empty())
+      continue;
+    LoadedCVPack *pack = source->file->cvPack;
+    auto [it, inserted] = packStateIndex.try_emplace(pack, packStates.size());
+    if (inserted)
+      packStates.push_back({pack, nullptr, {}});
+    sourcePackState[tpiSrcIdx] = it->second;
+  }
+  if (!packStates.empty()) {
+    llvm::TimeTraceScope timeScope("Hash CodeView packs");
+    ScopedTimer t0(ctx.loadGHashTimer);
+    std::vector<LoadedCVPack *> packs;
+    for (PackState &state : packStates)
+      packs.push_back(state.pack);
+    if (Error e = computeCVPackGHashes(packs))
+      Fatal(ctx) << "cannot hash CodeView packs: " << std::move(e);
+  }
+
   // Load ghashes. Do type servers and PCH objects first.
   {
     llvm::TimeTraceScope timeScope("Load GHASHes");
@@ -1093,9 +1262,23 @@ void TypeMerger::mergeTypesWithGHash() {
   // but it would require implementing rehashing, and this table is generally
   // small compared to total memory usage, at eight bytes per input type record,
   // and most input type records are larger than eight bytes.
+  //
+  // The records of objects with packed types are inserted once per used pack
+  // record, not once per reference, so they only count that many insertions.
+  // A quarter of headroom keeps the probes short.
   size_t tableSize = 0;
-  for (TpiSource *source : ctx.tpiSourceList)
-    tableSize += source->ghashes.size();
+  size_t numInsertions = 0;
+  for (TpiSource *source : ctx.tpiSourceList) {
+    tableSize += source->numGHashTypes();
+    numInsertions +=
+        source->packedTypes ? source->ghashes.size() : source->numGHashTypes();
+  }
+  if (!packStates.empty()) {
+    for (PackState &state : packStates)
+      for (const std::atomic<uint8_t> &used : state.pack->used)
+        numInsertions += used.load(std::memory_order_relaxed) != 0;
+    tableSize = std::min(tableSize, numInsertions + numInsertions / 4 + 1);
+  }
 
   // Cap the table size so that we can use 32-bit cell indices. Type indices are
   // also 32-bit, so this is an inherent PDB file format limit anyway.
@@ -1108,15 +1291,64 @@ void TypeMerger::mergeTypesWithGHash() {
   // position. Because the table does not rehash, the position will not change
   // under insertion. After insertion is done, the value of the cell can be read
   // to retrieve the final PDB type index.
+  // Packed type records have the same ghash in every object that references the
+  // same (pack, index). Insert each of them once, with the priority of the
+  // earliest (source, record) that references it, so that the winners are the
+  // same as for the materialized objects.
+  for (PackState &state : packStates) {
+    size_t n = state.pack->view().Types.size();
+    state.minRef = std::make_unique<std::atomic<uint64_t>[]>(n);
+    for (size_t i = 0; i != n; ++i)
+      state.minRef[i].store(UINT64_MAX, std::memory_order_relaxed);
+    state.cell.assign(n, 0);
+  }
+  if (!packStates.empty()) {
+    parallelFor(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
+      TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
+      if (!source->packedTypes)
+        return;
+      PackState &state = packStates[sourcePackState[tpiSrcIdx]];
+      for (const CVPackLogicalTypes::Segment &seg :
+           source->packedTypes->getSegments()) {
+        if (!seg.isPacked())
+          continue;
+        for (uint32_t k = 0; k != seg.count; ++k) {
+          uint32_t i = seg.localFirst + k;
+          if (source->shouldOmitFromPdb(i))
+            continue;
+          std::atomic<uint64_t> &slot = state.minRef[seg.first + k];
+          uint64_t mine = (uint64_t(tpiSrcIdx) << 32) | i;
+          uint64_t current = slot.load(std::memory_order_relaxed);
+          while (mine < current &&
+                 !slot.compare_exchange_weak(current, mine,
+                                             std::memory_order_relaxed))
+            ;
+        }
+      }
+    });
+    for (PackState &state : packStates) {
+      parallelFor(0, state.pack->view().Types.size(), [&](size_t index) {
+        uint64_t winner = state.minRef[index].load(std::memory_order_relaxed);
+        if (winner == UINT64_MAX)
+          return;
+        uint32_t tpiSrcIdx = winner >> 32;
+        uint32_t i = static_cast<uint32_t>(winner);
+        TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
+        state.cell[index] = ghashState.table.insert(
+            ctx, state.pack->gHashes[index],
+            GHashCell(source->isItemIndex.test(i), tpiSrcIdx, i));
+      });
+    }
+  }
+
   parallelFor(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
     TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
-    source->indexMapStorage.resize(source->ghashes.size());
-    for (uint32_t i = 0, e = source->ghashes.size(); i < e; i++) {
+    source->indexMapStorage.resize(source->numGHashTypes());
+    auto insertOne = [&](uint32_t i, GloballyHashedType ghash) {
       if (source->shouldOmitFromPdb(i)) {
         source->indexMapStorage[i] = TypeIndex(SimpleTypeKind::NotTranslated);
-        continue;
+        return;
       }
-      GloballyHashedType ghash = source->ghashes[i];
       bool isItem = source->isItemIndex.test(i);
       uint32_t cellIdx =
           ghashState.table.insert(ctx, ghash, GHashCell(isItem, tpiSrcIdx, i));
@@ -1124,6 +1356,27 @@ void TypeMerger::mergeTypesWithGHash() {
       // Store the ghash cell index as a type index in indexMapStorage. Later
       // we will replace it with the PDB type index.
       source->indexMapStorage[i] = TypeIndex::fromArrayIndex(cellIdx);
+    };
+    if (!source->packedTypes) {
+      for (uint32_t i = 0, e = source->ghashes.size(); i < e; i++)
+        insertOne(i, source->ghashes[i]);
+      return;
+    }
+    for (const CVPackLogicalTypes::Segment &seg :
+         source->packedTypes->getSegments()) {
+      if (!seg.isPacked()) {
+        for (uint32_t k = 0; k != seg.count; ++k)
+          insertOne(seg.localFirst + k, source->ghashes[seg.first + k]);
+        continue;
+      }
+      const PackState &state = packStates[sourcePackState[tpiSrcIdx]];
+      for (uint32_t k = 0; k != seg.count; ++k) {
+        uint32_t i = seg.localFirst + k;
+        source->indexMapStorage[i] =
+            source->shouldOmitFromPdb(i)
+                ? TypeIndex(SimpleTypeKind::NotTranslated)
+                : TypeIndex::fromArrayIndex(state.cell[seg.first + k]);
+      }
     }
   });
 
@@ -1230,7 +1483,7 @@ void TypeMerger::clearGHashes() {
 // Fill in a TPI or IPI index map using ghashes. For each source type, use its
 // ghash to lookup its final type index in the PDB, and store that in the map.
 void TpiSource::fillMapFromGHashes(GHashState *g) {
-  for (size_t i = 0, e = ghashes.size(); i < e; ++i) {
+  for (size_t i = 0, e = indexMapStorage.size(); i < e; ++i) {
     TypeIndex fakeCellIndex = indexMapStorage[i];
     if (fakeCellIndex.isSimple())
       indexMapStorage[i] = fakeCellIndex;

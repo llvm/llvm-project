@@ -1,0 +1,74 @@
+## A pack holds the records of the objects of one machine. A run packs the
+## inputs of the most common machine and stages the others unchanged, and the
+## packs of another machine are not candidates for the base.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj x64.yaml -o x64-a.obj
+# RUN: yaml2obj x64.yaml -o x64-b.obj
+# RUN: yaml2obj arm64.yaml -o arm64-a.obj
+# RUN: yaml2obj arm64.yaml -o arm64-b.obj
+# RUN: yaml2obj arm64.yaml -o arm64-c.obj
+
+## Three ARM64 inputs and two x64 ones: the pack is for ARM64.
+# RUN: llvm-cvpack pack --pack-path=packs --out-dir=stage1 \
+# RUN:   x64-a.obj x64-b.obj arm64-a.obj arm64-b.obj arm64-c.obj
+# RUN: FileCheck %s --check-prefix=FIRST < stage1/cvpacks.json
+# FIRST:      "staged": "arm64-a.obj",
+# FIRST-NEXT: "packs": [
+# FIRST-NEXT:   "{{[0-9a-f]+}}"
+# FIRST:      "staged": "x64-a.obj",
+# FIRST-NEXT: "packs": []
+# RUN: cmp x64-a.obj stage1/x64-a.obj
+# RUN: %python -c "import json,shutil; p=json.load(open('stage1/cvpacks.json'))['base']; shutil.copyfile('packs/' + p + '.cvp', 'pack.cvp'); open('base.rsp','w').write('--base=' + p)"
+# RUN: llvm-cvpack dump pack.cvp | FileCheck %s --check-prefix=DUMP
+# DUMP: Machine: 0xAA64
+
+## Alone, the x64 inputs do not use the ARM64 pack: the run writes an x64 pack.
+# RUN: llvm-cvpack pack --pack-path=packs --out-dir=stage2 \
+# RUN:   x64-a.obj x64-b.obj
+# RUN: FileCheck %s --check-prefix=SECOND < stage2/cvpacks.json
+# SECOND:      "staged": "x64-a.obj",
+# SECOND-NEXT: "packs": [
+# SECOND-NEXT:   "{{[0-9a-f]+}}"
+# SECOND-NOT:  "base_bytes"
+
+## Named by --base, a pack for another machine is an error.
+# RUN: not llvm-cvpack pack @base.rsp --pack-path=packs \
+# RUN:   --out-dir=stage3 x64-a.obj 2>&1 | FileCheck %s --check-prefix=BASE
+# BASE: is for another machine than the inputs
+
+#--- x64.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         8
+          BitOffset:       0
+symbols:         []
+...
+
+#--- arm64.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         8
+          BitOffset:       0
+symbols:         []
+...

@@ -1,0 +1,45 @@
+# A packed object names its pack by content id, and no option says where packs
+# are. A pack is searched next to the object or the archive that names it, next
+# to the output file, then as a library is: in the current directory, and in
+# the directories of /libpath and of LIB. The other tests link objects that
+# have their pack next to them.
+
+# RUN: rm -rf %t && mkdir -p %t/orig %t/bin
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/objs \
+# RUN:   %t/orig/a.obj %t/orig/b.obj
+
+# In none of them: the error lists the directories in the order searched. The
+# output directory is also a /libpath directory, and is listed once.
+# RUN: env LLD_IN_TEST=1 not lld-link /noentry /dll /nodefaultlib /debug \
+# RUN:   /lldignoreenv /libpath:%t/nowhere /libpath:%t/bin /out:%t/bin/a.dll \
+# RUN:   %t/objs/a.obj > %t/missing.txt 2>&1
+# RUN: FileCheck %s --check-prefix=MISSING < %t/missing.txt
+# RUN: FileCheck %s --check-prefix=ONCE < %t/missing.txt
+# MISSING:  error: missing CodeView pack {{[0-9a-f]+}}.cvp; searched: {{[^,]*}}objs, {{[^,]*}}bin, ., {{[^,]*}}nowhere{{.*}}; required by {{.*}}a.obj
+# ONCE:     tmp{{[/\\]}}bin{{[,;]}}
+# ONCE-NOT: tmp{{[/\\]}}bin{{[,;]}}
+
+# /libpath, and LIB.
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /lldignoreenv \
+# RUN:   /libpath:%t/packs /out:%t/bin/a.dll %t/objs/a.obj
+# RUN: env LIB=%t/packs lld-link /noentry /dll /nodefaultlib /debug \
+# RUN:   /out:%t/bin/a.dll %t/objs/a.obj
+
+# Next to the output file.
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /lldignoreenv \
+# RUN:   /out:%t/packs/a.dll %t/objs/a.obj
+
+# Next to the archive that holds the object.
+# RUN: llvm-lib /out:%t/packs/ab.lib %t/objs/a.obj %t/objs/b.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /lldignoreenv \
+# RUN:   /out:%t/bin/a.dll /wholearchive:%t/packs/ab.lib
+# RUN: llvm-pdbutil dump -types %t/bin/a.pdb | FileCheck %s
+# CHECK: Showing 1 records
+# CHECK: LF_MODIFIER
+
+# In the current directory.
+# RUN: cd %t/packs
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /lldignoreenv \
+# RUN:   /out:%t/bin/a.dll %t/objs/a.obj

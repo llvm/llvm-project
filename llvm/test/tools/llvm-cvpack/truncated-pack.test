@@ -1,0 +1,38 @@
+## A pack in the pack directories that does not load, such as a truncated file,
+## is ignored with a warning, unless --base names it.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: yaml2obj %s -o %t/a.obj
+# RUN: yaml2obj %s -o %t/b.obj
+# RUN: llvm-cvpack pack --pack-path=%t/packs \
+# RUN:   --out-dir=%t/stage1 %t/a.obj %t/b.obj
+
+## Half of the pack, under another id.
+# RUN: %python -c "import glob; p=glob.glob(r'%t/packs/*.cvp')[0]; d=open(p,'rb').read(); open(r'%t/packs/' + 'f'*64 + '.cvp','wb').write(d[:len(d)//2])"
+# RUN: llvm-cvpack pack --pack-path=%t/packs \
+# RUN:   --out-dir=%t/stage2 %t/a.obj %t/b.obj 2>&1 | FileCheck %s
+# CHECK: warning: ignoring ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff.cvp: The end of the file was unexpectedly encountered
+# RUN: cmp %t/stage1/a.obj %t/stage2/a.obj
+
+# RUN: not llvm-cvpack pack \
+# RUN:   --base=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
+# RUN:   --pack-path=%t/packs --out-dir=%t/stage3 %t/a.obj 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BASE
+# BASE: error: The end of the file was unexpectedly encountered
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         8
+          BitOffset:       0
+symbols:         []
+...

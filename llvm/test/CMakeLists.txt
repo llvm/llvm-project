@@ -91,6 +91,7 @@ set(LLVM_TEST_DEPENDS
   llvm-cgdata
   llvm-cov
   llvm-ctxprof-util
+  llvm-cvpack
   llvm-cvtres
   llvm-cxxdump
   llvm-cxxfilt

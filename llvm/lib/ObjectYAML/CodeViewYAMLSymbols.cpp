@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
@@ -22,6 +23,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/ObjectYAML/CodeViewYAMLPacks.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
@@ -312,6 +314,38 @@ struct UnknownSymbolRecord : public SymbolRecordBase {
   }
 
   std::vector<uint8_t> Data;
+};
+
+/// S_CVPACK_MAP, encoded and validated by the CVPacks library.
+struct CVPackMapSymbol : public SymbolRecordBase {
+  explicit CVPackMapSymbol(codeview::SymbolKind K) : SymbolRecordBase(K) {}
+
+  void map(yaml::IO &io) override { io.mapRequired("Entries", Map.Entries); }
+
+  CVSymbol toCodeViewSymbol(BumpPtrAllocator &Allocator,
+                            CodeViewContainer Container) const override {
+    // One YAML record is one map chunk.
+    auto Records = codeview::cvpack::encodeSymbolMap(Map);
+    if (!Records)
+      report_fatal_error(Twine("invalid S_CVPACK_MAP: ") +
+                         toString(Records.takeError()));
+    if (Records->size() != 1)
+      report_fatal_error("S_CVPACK_MAP entries must fit in one record");
+    const std::vector<uint8_t> &Record = Records->front();
+    uint8_t *Buffer = Allocator.Allocate<uint8_t>(Record.size());
+    ::memcpy(Buffer, Record.data(), Record.size());
+    return CVSymbol(ArrayRef<uint8_t>(Buffer, Record.size()));
+  }
+
+  Error fromCodeViewSymbol(CVSymbol CVS) override {
+    auto Decoded = codeview::cvpack::decodeSymbolMap(ArrayRef<CVSymbol>(CVS));
+    if (!Decoded)
+      return Decoded.takeError();
+    Map = std::move(*Decoded);
+    return Error::success();
+  }
+
+  codeview::cvpack::RangeMap Map;
 };
 
 template <> void SymbolRecordImpl<ScopeEndSym>::map(IO &IO) {}
@@ -706,6 +740,8 @@ CodeViewYAML::SymbolRecord::fromCodeViewSymbol(CVSymbol Symbol) {
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)           \
   SYMBOL_RECORD(EnumName, EnumVal, ClassName)
   switch (Symbol.kind()) {
+  case SymbolKind::S_CVPACK_MAP:
+    return fromCodeViewSymbolImpl<CVPackMapSymbol>(Symbol);
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
   default:
     return fromCodeViewSymbolImpl<UnknownSymbolRecord>(Symbol);
@@ -737,6 +773,9 @@ void MappingTraits<CodeViewYAML::SymbolRecord>::mapping(
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)           \
   SYMBOL_RECORD(EnumName, EnumVal, ClassName)
   switch (Kind) {
+  case SymbolKind::S_CVPACK_MAP:
+    mapSymbolRecordImpl<CVPackMapSymbol>(IO, "CVPackMap", Kind, Obj);
+    break;
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
   default:
     mapSymbolRecordImpl<UnknownSymbolRecord>(IO, "UnknownSym", Kind, Obj);

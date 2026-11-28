@@ -55,6 +55,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-dis
     llvm-dlltool
     llvm-dwarfdump
+    llvm-cvpack
     llvm-lib
     llvm-lipo
     llvm-mc

@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMDebugInfoCodeView
   CodeViewError.cpp
   CodeViewRecordIO.cpp
   ContinuationRecordBuilder.cpp
+  CVPacks.cpp
   CVSymbolVisitor.cpp
   CVTypeVisitor.cpp
   DebugChecksumsSubsection.cpp

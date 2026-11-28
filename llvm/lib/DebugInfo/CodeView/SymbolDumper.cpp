@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
@@ -29,9 +30,11 @@ namespace {
 class CVSymbolDumperImpl : public SymbolVisitorCallbacks {
 public:
   CVSymbolDumperImpl(TypeCollection &Types, SymbolDumpDelegate *ObjDelegate,
-                     ScopedPrinter &W, CPUType CPU, bool PrintRecordBytes)
+                     ScopedPrinter &W, CPUType CPU, bool PrintRecordBytes,
+                     bool HasCVPacks)
       : Types(Types), ObjDelegate(ObjDelegate), W(W), CompilationCPUType(CPU),
-        PrintRecordBytes(PrintRecordBytes), InFunctionScope(false) {}
+        PrintRecordBytes(PrintRecordBytes), InFunctionScope(false),
+        HasCVPacks(HasCVPacks) {}
 
 /// CVSymbolVisitor overrides.
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
@@ -60,6 +63,7 @@ private:
 
   bool PrintRecordBytes;
   bool InFunctionScope;
+  bool HasCVPacks;
 };
 }
 
@@ -69,6 +73,8 @@ static StringRef getSymbolKindName(SymbolKind Kind) {
   case EnumName:                                                               \
     return #Name;
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  case SymbolKind::S_CVPACK_MAP:
+    return "S_CVPACK_MAP";
   default:
     break;
   }
@@ -95,6 +101,10 @@ void CVSymbolDumperImpl::printLocalVariableAddrGap(
 }
 
 void CVSymbolDumperImpl::printTypeIndex(StringRef FieldName, TypeIndex TI) {
+  if (HasCVPacks) {
+    W.printHex(FieldName, TI.getIndex());
+    return;
+  }
   codeview::printTypeIndex(W, FieldName, TI, Types);
 }
 
@@ -717,6 +727,21 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
+  if (CVR.kind() == SymbolKind::S_CVPACK_MAP) {
+    CVSymbol MapRecord[] = {CVR};
+    auto Map = cvpack::decodeSymbolMap(MapRecord);
+    if (!Map)
+      return Map.takeError();
+    W.printNumber("RangeCount", Map->Entries.size());
+    for (const cvpack::RangeMapEntry &Entry : Map->Entries) {
+      ListScope S(W, "Range");
+      W.printNumber("Skip", Entry.Skip);
+      W.printNumber("Slot", Entry.Slot);
+      W.printNumber("Count", Entry.Count);
+      W.printNumber("FirstDelta", Entry.FirstDelta);
+    }
+    return Error::success();
+  }
   W.printNumber("Length", CVR.length());
   return Error::success();
 }
@@ -725,7 +750,7 @@ Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
   CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, CompilationCPUType,
-                            PrintRecordBytes);
+                            PrintRecordBytes, HasCVPacks);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
@@ -739,7 +764,7 @@ Error CVSymbolDumper::dump(const CVSymbolArray &Symbols) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
   CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, CompilationCPUType,
-                            PrintRecordBytes);
+                            PrintRecordBytes, HasCVPacks);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);

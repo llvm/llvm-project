@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "COFFLinkerContext.h"
+#include "CVPacks.h"
 #include "Symbols.h"
 #include "llvm/BinaryFormat/COFF.h"
 
@@ -37,5 +38,8 @@ COFFLinkerContext::COFFLinkerContext()
       symbolMergingTimer("Symbol Merging", addObjectsTimer),
       publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer),
       tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
-      diskCommitTimer("Commit to Disk", totalPdbLinkTimer) {}
+      diskCommitTimer("Commit to Disk", totalPdbLinkTimer),
+      cvPackCache(std::make_unique<CVPackCache>(*this)) {}
+
+COFFLinkerContext::~COFFLinkerContext() = default;
 } // namespace lld::coff

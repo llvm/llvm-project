@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
@@ -112,7 +113,8 @@ static inline bool isCodeViewDebugSubsection(object::SectionRef Section,
   if (Reader.bytesRemaining() < sizeof(uint32_t))
     return false;
   cantFail(Reader.readInteger(Magic));
-  if (Magic != COFF::DEBUG_SECTION_MAGIC)
+  if (Magic != COFF::DEBUG_SECTION_MAGIC &&
+      !cvpack::isPackedTypeStreamMagic(Name, Magic))
     return false;
   return true;
 }

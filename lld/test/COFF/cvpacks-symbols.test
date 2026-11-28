@@ -1,0 +1,22 @@
+# The global S_UDT and S_CONSTANT symbols of packed objects come from the pack,
+# and reach the PDB as in a link of the originals.
+
+# RUN: rm -rf %t && mkdir -p %t/orig
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+# RUN: llvm-readobj --codeview %t/stage/a.obj | FileCheck %s --check-prefix=PACKED
+# PACKED-NOT: S_UDT
+# PACKED-NOT: S_CONSTANT
+# PACKED:     Kind: S_CVPACK_MAP
+# PACKED-NOT: S_UDT
+# PACKED-NOT: S_CONSTANT
+
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t/a.dll \
+# RUN:   %t/stage/a.obj %t/stage/b.obj
+# RUN: llvm-pdbutil dump -globals %t/a.pdb | FileCheck %s
+
+# CHECK:      S_CONSTANT [size = 12] `K`
+# CHECK-NEXT:   type = 0x0074 (int), value = 7
+# CHECK:      S_UDT [size = 12] `abc`
+# CHECK-NEXT:   original type = 0x1000

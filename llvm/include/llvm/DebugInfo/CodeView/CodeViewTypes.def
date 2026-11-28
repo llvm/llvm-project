@@ -90,6 +90,13 @@ TYPE_RECORD(LF_STRING_ID, 0x1605, StringId)
 TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLine)
 TYPE_RECORD(LF_UDT_MOD_SRC_LINE, 0x1607, UdtModSourceLine)
 
+// Experimental CodeView pack records. Their payloads are handled by the
+// CVPacks library rather than TypeRecordMapping.
+CV_TYPE(LF_CVPACK_LIST, 0x1700)
+CV_TYPE(LF_CVPACK_ORIGIN, 0x1701)
+CV_TYPE(LF_CVPACK_MAP, 0x1702)
+
+
 TYPE_RECORD(LF_METHODLIST, 0x1206, MethodOverloadList)
 
 TYPE_RECORD(LF_PRECOMP, 0x1509, Precomp)

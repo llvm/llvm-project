@@ -9,6 +9,7 @@
 #ifndef LLD_COFF_DEBUGTYPES_H
 #define LLD_COFF_DEBUGTYPES_H
 
+#include "CVPacks.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,6 +80,10 @@ protected:
       ArrayRef<uint8_t> debugTypes,
       TypeIndex beginIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex));
 
+  /// Merge unique records from a packed source without expanding the packed
+  /// records into a second byte stream.
+  void mergeUniquePackedTypeRecords();
+
   // Use the ghash table to construct a map from source type index to
   // destination PDB type index. Usable for either TPI or IPI.
   void fillMapFromGHashes(GHashState *m);
@@ -135,8 +140,26 @@ public:
   llvm::ArrayRef<TypeIndex> ipiMap;
 
   /// Array of global type hashes, indexed by TypeIndex. May be calculated on
-  /// demand, or present in input object files.
+  /// demand, or present in input object files. For an object with packed
+  /// types, only the hashes of its inline records, in inline order: the hashes
+  /// of its pack records are those of the packs.
   llvm::ArrayRef<llvm::codeview::GloballyHashedType> ghashes;
+
+  /// The logical type stream of an object with packed types, null otherwise.
+  const CVPackLogicalTypes *packedTypes = nullptr;
+
+  /// The number of type records, which ghash type merging indexes.
+  uint32_t numGHashTypes() const {
+    return packedTypes ? packedTypes->size() : ghashes.size();
+  }
+
+  /// The global hash of a type record.
+  llvm::codeview::GloballyHashedType getGHash(uint32_t index) const {
+    if (LLVM_LIKELY(!packedTypes))
+      return ghashes[index];
+    return getPackedGHash(index);
+  }
+  llvm::codeview::GloballyHashedType getPackedGHash(uint32_t index) const;
 
   /// When ghashing is used, record the mapping from LF_[M]FUNC_ID to function
   /// type index here. Both indices are PDB indices, not object type indexes.

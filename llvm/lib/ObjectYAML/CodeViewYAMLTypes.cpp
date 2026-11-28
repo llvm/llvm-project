@@ -14,15 +14,19 @@
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/ObjectYAML/CodeViewYAMLPacks.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -138,6 +142,162 @@ template <> struct LeafRecordImpl<FieldListRecord> : public LeafRecordBase {
 
   std::vector<MemberRecord> Members;
 };
+
+// CodeView pack bookkeeping records do not go through TypeRecordMapping: the
+// CVPacks library encodes and validates them, so a round trip through YAML
+// gives the same bytes.
+static CVType insertCVPackRecord(AppendingTypeTableBuilder &TS,
+                                 Expected<std::vector<uint8_t>> Record,
+                                 const char *What) {
+  if (!Record)
+    report_fatal_error(Twine("invalid ") + What + ": " +
+                       toString(Record.takeError()));
+  ArrayRef<uint8_t> Bytes(*Record);
+  TS.insertRecordBytes(Bytes);
+  return CVType(TS.records().back());
+}
+
+struct CVPackListLeaf : public LeafRecordBase {
+  explicit CVPackListLeaf(TypeLeafKind K) : LeafRecordBase(K) {}
+
+  void map(yaml::IO &io) override { io.mapRequired("PackId", Id); }
+  CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const override {
+    return insertCVPackRecord(TS, cvpack::encodePackList(Id), "LF_CVPACK_LIST");
+  }
+  Error fromCodeViewRecord(CVType Type) override {
+    auto Decoded = cvpack::decodePackList(Type);
+    if (!Decoded)
+      return Decoded.takeError();
+    Id = *Decoded;
+    return Error::success();
+  }
+
+  cvpack::PackId Id{};
+};
+
+struct CVPackOriginLeaf : public LeafRecordBase {
+  explicit CVPackOriginLeaf(TypeLeafKind K) : LeafRecordBase(K) {}
+
+  void map(yaml::IO &io) override {
+    MappingTraits<cvpack::Origin>::mapping(io, Data);
+  }
+  CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const override {
+    return insertCVPackRecord(TS, cvpack::encodeOrigin(Data),
+                              "LF_CVPACK_ORIGIN");
+  }
+  Error fromCodeViewRecord(CVType Type) override {
+    auto Decoded = cvpack::decodeOrigin(Type);
+    if (!Decoded)
+      return Decoded.takeError();
+    Data = std::move(*Decoded);
+    return Error::success();
+  }
+
+  cvpack::Origin Data;
+};
+
+struct CVPackMapLeaf : public LeafRecordBase {
+  explicit CVPackMapLeaf(TypeLeafKind K) : LeafRecordBase(K) {}
+
+  void map(yaml::IO &io) override { io.mapRequired("Entries", Map.Entries); }
+  CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const override {
+    // One YAML record is one map chunk.
+    auto Records = cvpack::encodeTypeMap(Map);
+    if (Records && Records->size() != 1)
+      report_fatal_error("LF_CVPACK_MAP entries must fit in one record");
+    return insertCVPackRecord(
+        TS,
+        Records ? Expected<std::vector<uint8_t>>(std::move(Records->front()))
+                : Expected<std::vector<uint8_t>>(Records.takeError()),
+        "LF_CVPACK_MAP");
+  }
+  Error fromCodeViewRecord(CVType Type) override {
+    auto Decoded = cvpack::decodeTypeMap(ArrayRef<CVType>(Type));
+    if (!Decoded)
+      return Decoded.takeError();
+    Map = std::move(*Decoded);
+    return Error::success();
+  }
+
+  cvpack::RangeMap Map;
+};
+
+} // end namespace detail
+} // end namespace CodeViewYAML
+} // end namespace llvm
+
+void ScalarTraits<cvpack::PackId>::output(const cvpack::PackId &Value, void *,
+                                          raw_ostream &OS) {
+  OS << toHex(Value, /*LowerCase=*/true);
+}
+
+StringRef ScalarTraits<cvpack::PackId>::input(StringRef Scalar, void *,
+                                              cvpack::PackId &Value) {
+  std::string Bytes;
+  if (Scalar.size() != 2 * Value.size() || !tryGetFromHex(Scalar, Bytes))
+    return "expected 64 hex digits";
+  llvm::copy(Bytes, Value.begin());
+  return StringRef();
+}
+
+void ScalarEnumerationTraits<cvpack::OriginEditKind>::enumeration(
+    IO &IO, cvpack::OriginEditKind &Value) {
+  IO.enumCase(Value, "TypeStream", cvpack::OriginEditKind::TypeStream);
+  IO.enumCase(Value, "SymbolStream", cvpack::OriginEditKind::SymbolStream);
+  IO.enumCase(Value, "DebugH", cvpack::OriginEditKind::DebugH);
+  IO.enumCase(Value, "Directive", cvpack::OriginEditKind::Directive);
+  IO.enumCase(Value, "AddedDirectiveSection",
+              cvpack::OriginEditKind::AddedDirectiveSection);
+}
+
+void MappingTraits<cvpack::RangeMapEntry>::mapping(
+    IO &IO, cvpack::RangeMapEntry &Entry) {
+  IO.mapRequired("Skip", Entry.Skip);
+  IO.mapRequired("Slot", Entry.Slot);
+  IO.mapRequired("Count", Entry.Count);
+  IO.mapRequired("FirstDelta", Entry.FirstDelta);
+}
+
+static void mapCVPackBytes(IO &IO, const char *Key,
+                           std::vector<uint8_t> &Bytes) {
+  BinaryRef Binary;
+  if (IO.outputting())
+    Binary = BinaryRef(Bytes);
+  IO.mapRequired(Key, Binary);
+  if (!IO.outputting()) {
+    SmallString<64> Storage;
+    raw_svector_ostream OS(Storage);
+    Binary.writeAsBinary(OS);
+    Bytes.assign(Storage.begin(), Storage.end());
+  }
+}
+
+void MappingTraits<cvpack::RestorationFragment>::mapping(
+    IO &IO, cvpack::RestorationFragment &Fragment) {
+  IO.mapRequired("Offset", Fragment.Offset);
+  mapCVPackBytes(IO, "Bytes", Fragment.Bytes);
+}
+
+void MappingTraits<cvpack::OriginEdit>::mapping(IO &IO,
+                                                cvpack::OriginEdit &Edit) {
+  IO.mapRequired("SectionIndex", Edit.SectionIndex);
+  IO.mapRequired("Kind", Edit.Kind);
+  IO.mapRequired("OriginalOffset", Edit.OriginalOffset);
+  IO.mapRequired("OriginalLength", Edit.OriginalLength);
+  IO.mapRequired("PackedLength", Edit.PackedLength);
+  IO.mapOptional("RestorationFragments", Edit.RestorationFragments);
+}
+
+void MappingTraits<cvpack::Origin>::mapping(IO &IO, cvpack::Origin &Data) {
+  IO.mapRequired("OriginalFileSize", Data.OriginalFileSize);
+  IO.mapRequired("OriginalFileHash", Data.OriginalFileHash);
+  mapCVPackBytes(IO, "DebugHHeader", Data.DebugHHeader);
+  IO.mapRequired("Edits", Data.Edits);
+}
+
+namespace llvm {
+namespace CodeViewYAML {
+namespace detail {
 
 struct MemberRecordBase {
   TypeLeafKind Kind;
@@ -725,6 +885,16 @@ static inline Expected<LeafRecord> fromCodeViewRecordImpl(CVType Type) {
 }
 
 Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
+  switch (Type.kind()) {
+  case LF_CVPACK_LIST:
+    return fromCodeViewRecordImpl<CVPackListLeaf>(Type);
+  case LF_CVPACK_ORIGIN:
+    return fromCodeViewRecordImpl<CVPackOriginLeaf>(Type);
+  case LF_CVPACK_MAP:
+    return fromCodeViewRecordImpl<CVPackMapLeaf>(Type);
+  default:
+    break;
+  }
 #define TYPE_RECORD(EnumName, EnumVal, ClassName)                              \
   case EnumName:                                                               \
     return fromCodeViewRecordImpl<LeafRecordImpl<ClassName##Record>>(Type);
@@ -770,11 +940,30 @@ static void mapLeafRecordImpl(IO &IO, const char *Class, TypeLeafKind Kind,
     IO.mapRequired(Class, *Obj.Leaf);
 }
 
+template <typename LeafT>
+static void mapCVPackLeaf(IO &IO, const char *Class, TypeLeafKind Kind,
+                          LeafRecord &Obj) {
+  if (!IO.outputting())
+    Obj.Leaf = std::make_shared<LeafT>(Kind);
+  IO.mapRequired(Class, *Obj.Leaf);
+}
+
 void MappingTraits<LeafRecord>::mapping(IO &IO, LeafRecord &Obj) {
   TypeLeafKind Kind;
   if (IO.outputting())
     Kind = Obj.Leaf->Kind;
   IO.mapRequired("Kind", Kind);
+
+  switch (Kind) {
+  case LF_CVPACK_LIST:
+    return mapCVPackLeaf<CVPackListLeaf>(IO, "CVPackList", Kind, Obj);
+  case LF_CVPACK_ORIGIN:
+    return mapCVPackLeaf<CVPackOriginLeaf>(IO, "CVPackOrigin", Kind, Obj);
+  case LF_CVPACK_MAP:
+    return mapCVPackLeaf<CVPackMapLeaf>(IO, "CVPackMap", Kind, Obj);
+  default:
+    break;
+  }
 
 #define TYPE_RECORD(EnumName, EnumVal, ClassName)                              \
   case EnumName:                                                               \
@@ -830,7 +1019,10 @@ llvm::CodeViewYAML::fromDebugT(ArrayRef<uint8_t> DebugTorP,
   uint32_t Magic;
 
   Err(Reader.readInteger(Magic));
-  assert(Magic == COFF::DEBUG_SECTION_MAGIC &&
+  // A packed object's type stream has its own signature; toDebugT derives it
+  // from the leading LF_CVPACK_LIST.
+  assert((Magic == COFF::DEBUG_SECTION_MAGIC ||
+          Magic == COFF::DEBUG_CVPACK_SECTION_MAGIC) &&
          "Invalid .debug$T or .debug$P section!");
 
   std::vector<LeafRecord> Result;
@@ -857,7 +1049,10 @@ ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugT(ArrayRef<LeafRecord> Leafs,
   BinaryStreamWriter Writer(Output, llvm::endianness::little);
   ExitOnError Err("Error writing type record to " + std::string(SectionName) +
                   " section");
-  Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
+  // The type stream of a packed object starts with its pack list.
+  bool Packed = !Leafs.empty() && Leafs[0].Leaf->Kind == LF_CVPACK_LIST;
+  Err(Writer.writeInteger<uint32_t>(Packed ? COFF::DEBUG_CVPACK_SECTION_MAGIC
+                                           : COFF::DEBUG_SECTION_MAGIC));
   for (const auto &R : TS.records()) {
     Err(Writer.writeBytes(R));
   }

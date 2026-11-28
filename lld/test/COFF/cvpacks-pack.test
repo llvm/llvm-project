@@ -1,0 +1,39 @@
+# RUN: rm -rf %t %t-stage %t-collision-stage && mkdir %t
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-a.yaml -o %t/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-b.yaml -o %t/b.obj
+# RUN: llvm-cvpack pack --out-dir=%t-stage %t/a.obj %t/b.obj
+# RUN: FileCheck %s --check-prefix=MANIFEST < %t-stage/cvpacks.json
+# RUN: llvm-readobj --codeview %t-stage/a.obj | FileCheck %s --check-prefix=PACKED
+# RUN: %python -c "import json,shutil; p=json.load(open(r'%t-stage/cvpacks.json'))['packs'][0]; shutil.copyfile(r'%t-stage/' + p + '.cvp', r'%t-pack.cvp')"
+# RUN: llvm-cvpack dump %t-pack.cvp | FileCheck %s --check-prefix=PACKDUMP
+# RUN: llvm-cvpack materialize %t-stage/a.obj -o %t-restored-a.obj
+# RUN: %python %S/Inputs/check-files-equal.py %t/a.obj %t-restored-a.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t-packed.dll %t-stage/a.obj %t-stage/b.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t-original.dll %t/a.obj %t/b.obj
+# RUN: llvm-pdbutil dump -types %t-packed.pdb | FileCheck %s --check-prefix=PDB
+# RUN: mkdir %t/collision-a %t/collision-b
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-a.yaml -o %t/collision-a/shared.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-pack-b.yaml -o %t/collision-b/SHARED.obj
+# RUN: llvm-cvpack pack --out-dir=%t-collision-stage %t/collision-a/shared.obj %t/collision-b/SHARED.obj
+# RUN: FileCheck %s --check-prefix=COLLISION < %t-collision-stage/cvpacks.json
+
+# MANIFEST: "objects": [
+# MANIFEST: "source":
+# MANIFEST: "staged": "a.obj"
+# MANIFEST: "packs": [
+# MANIFEST: "staged": "b.obj"
+# MANIFEST: "packs": [
+# MANIFEST: "packs": [
+
+# PACKED: LF_CVPACK_LIST {
+# PACKED: LF_CVPACK_ORIGIN {
+# PACKED: LF_CVPACK_MAP {
+
+# PACKDUMP: CVPack:
+# PACKDUMP: LF_BITFIELD
+
+# PDB: Showing 1 records
+# PDB: LF_BITFIELD
+
+# COLLISION: "staged": "shared.obj"
+# COLLISION: "staged": "{{[0-9a-f]+}}-SHARED.obj"

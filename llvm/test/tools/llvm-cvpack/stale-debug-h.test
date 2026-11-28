@@ -1,0 +1,26 @@
+An object whose .debug$H holds a few hashes that differ from its records (an
+older compiler wrote such hashes for some LF_VTSHAPE records) still has its
+.debug$H dropped: the differing hashes are kept in the origin record, and the
+object materializes back to its exact bytes.
+
+RUN: rm -rf %t && mkdir -p %t/orig
+RUN: yaml2obj %S/Inputs/debug-h.yaml -o %t/orig/b.obj
+RUN: %python %S/Inputs/corrupt-debug-h.py %t/orig/b.obj %t/orig/a.obj 3
+RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/stage \
+RUN:   %t/orig/a.obj %t/orig/b.obj
+
+RUN: llvm-readobj --sections %t/stage/a.obj | FileCheck %s --check-prefix=DEBUGH
+DEBUGH:      Name: .debug$H
+DEBUGH-NEXT: VirtualSize:
+DEBUGH-NEXT: VirtualAddress:
+DEBUGH-NEXT: RawDataSize: 0x8{{$}}
+
+RUN: llvm-readobj --codeview %t/stage/a.obj | FileCheck %s --check-prefix=ORIGIN
+ORIGIN:      Kind: 3
+ORIGIN-NEXT: OriginalOffset: 0
+ORIGIN-NEXT: OriginalLength:
+ORIGIN-NEXT: PackedLength: 8
+ORIGIN-NEXT: RestorationFragments: 1
+
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage/a.obj -o %t/a.restored.obj
+RUN: cmp %t/orig/a.obj %t/a.restored.obj

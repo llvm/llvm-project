@@ -27,7 +27,7 @@ public:
   COFFLinkerContext();
   COFFLinkerContext(const COFFLinkerContext &) = delete;
   COFFLinkerContext &operator=(const COFFLinkerContext &) = delete;
-  ~COFFLinkerContext() = default;
+  ~COFFLinkerContext();
 
   LinkerDriver driver;
   SymbolTable symtab;
@@ -117,6 +117,7 @@ public:
   std::optional<PDBStats> pdbStats;
 
   Configuration config;
+  std::unique_ptr<class CVPackCache> cvPackCache;
 
   DynamicRelocsChunk *dynamicRelocs = nullptr;
 };

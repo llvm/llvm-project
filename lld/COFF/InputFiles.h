@@ -9,6 +9,7 @@
 #ifndef LLD_COFF_INPUT_FILES_H
 #define LLD_COFF_INPUT_FILES_H
 
+#include "CVPacks.h"
 #include "Config.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -226,6 +227,19 @@ public:
 
   // The .debug$P or .debug$T section data if present. Empty otherwise.
   ArrayRef<uint8_t> debugTypes;
+  bool hasCVPackData = false;
+  std::vector<uint8_t> expandedPackedTypes;
+  LoadedCVPack *cvPack = nullptr;
+  llvm::codeview::cvpack::IndexRemap packTypeIndexMap;
+  // The packed stream is expanded in parallel when the types are merged.
+  bool cvPackExpansionPending = false;
+  // The logical type stream of a packed object, unless it is materialized.
+  CVPackLogicalTypes packedTypes;
+  // Contents of the live COMDAT .debug$S sections whose function debug info
+  // moved to a pack, restored before the PDB is built. See getDebugContents.
+  llvm::DenseMap<const SectionChunk *, llvm::ArrayRef<uint8_t>>
+      cvPackFunctionDebug;
+  std::vector<uint8_t> cvPackFunctionStorage;
 
   std::optional<std::pair<StringRef, uint32_t>>
   getVariableLocation(StringRef var);

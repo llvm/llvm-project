@@ -116,6 +116,11 @@ struct YAMLDebugSubsection {
   std::shared_ptr<detail::YAMLSubsectionBase> Subsection;
 };
 
+/// Whether writing these subsections needs a debug string table. Symbols
+/// subsections, and subsections with the ignore bit, can be written without
+/// one.
+LLVM_ABI bool requiresStringTable(ArrayRef<YAMLDebugSubsection> Subsections);
+
 LLVM_ABI Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
 toCodeViewSubsectionList(BumpPtrAllocator &Allocator,
                          ArrayRef<YAMLDebugSubsection> Subsections,

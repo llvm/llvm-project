@@ -263,6 +263,7 @@ tools.extend(
         "llvm-cov",
         "llvm-ctxprof-util",
         "llvm-cxxdump",
+        "llvm-cvpack",
         "llvm-cvtres",
         "llvm-debuginfod-find",
         "llvm-debuginfo-analyzer",

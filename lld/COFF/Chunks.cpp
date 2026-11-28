@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -797,7 +798,10 @@ ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> data,
   uint32_t expectedMagic = sectionName == ".debug$H"
                                ? DEBUG_HASHES_SECTION_MAGIC
                                : DEBUG_SECTION_MAGIC;
-  if (magic != expectedMagic) {
+  // InputFiles checks that the type stream of a packed object starts with its
+  // pack list.
+  if (magic != expectedMagic &&
+      !codeview::cvpack::isPackedTypeStreamMagic(sectionName, magic)) {
     warn("ignoring section " + sectionName + " with unrecognized magic 0x" +
          utohexstr(magic));
     return {};

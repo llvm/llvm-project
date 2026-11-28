@@ -199,6 +199,8 @@ CV_SYMBOL(S_SOURCELINK, 0x117e)
 CV_SYMBOL(S_DEFRANGE_CONSTVAL_ON_ENTRY, 0x117f)
 CV_SYMBOL(S_DEFRANGE_GLOBALSYM_ON_ENTRY, 0x1180)
 CV_SYMBOL(S_ALTOBJNAME, 0x1181)
+// Experimental CodeView pack symbol map; handled by the CVPacks library.
+CV_SYMBOL(S_CVPACK_MAP, 0x1200)
 
 // Known symbol types
 SYMBOL_RECORD(S_END                  , 0x0006, ScopeEndSym)

@@ -1,0 +1,165 @@
+Pack step over clang-generated objects: records with type references and
+global S_UDT/S_CONSTANT symbols move to the pack, .debug$H is dropped, a later
+pack step references the existing pack, and links of the packed
+objects are byte-identical to links of the originals.
+
+The inputs were compiled with
+  clang-cl /c /Z7 -gcodeview-ghash /O1 /GS- /Zl /GR-
+from these sources (shared.h, segment.h, a.cpp to d.cpp):
+
+  // shared.h
+  struct Vec { float x, y; float length() const; };
+  constexpr int kDims = 2;
+  enum class Color { Red, Green };
+  struct Shape { virtual ~Shape(); Vec origin; Shape *next; Color color; };
+  using VecAlias = Vec;
+  inline float dot(const Vec &a, const Vec &b) { return a.x * b.x + a.y * b.y; }
+  // segment.h
+  #include "shared.h"
+  struct Segment {
+    Vec from, to; Shape *owner;
+    float span() const { return dot(from, to); }
+  };
+  // a.cpp
+  #include "shared.h"
+  extern "C" int _fltused = 0;
+  struct Particle { Vec pos; int id; };
+  Particle gParticle;
+  VecAlias gAlias;
+  float fa(Shape *s) { return dot(s->origin, gParticle.pos) + kDims; }
+  // b.cpp
+  #include "shared.h"
+  Vec gOrigin;
+  float fb(Shape &s, Color c) { return dot(s.origin, gOrigin) + (c == Color::Red) + kDims; }
+  // c.cpp
+  #include "segment.h"
+  Segment gSegment;
+  float fc(Segment *s) { return s->span() + kDims; }
+  // d.cpp
+  #include "segment.h"
+  float fd(const Segment &s, Color c) { return s.span() + (c == Color::Green); }
+
+RUN: rm -rf %t && mkdir -p %t/orig %t/work
+RUN: yaml2obj %S/Inputs/cvpacks-src-a.yaml -o %t/orig/a.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-b.yaml -o %t/orig/b.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-c.yaml -o %t/orig/c.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-d.yaml -o %t/orig/d.obj
+
+First build: a.obj and b.obj share Vec, Shape, Color, dot and kDims. --verbose
+prints a summary of the run.
+RUN: llvm-cvpack pack --verbose --pack-path=%t/packs --out-dir=%t/stage1 \
+RUN:   %t/orig/a.obj %t/orig/b.obj 2>&1 | FileCheck %s --check-prefix=STEP1
+STEP1: 2 objects, 2 packed (0 reusing existing packs), 0 staged unchanged after errors; {{[0-9]+}} -> {{[0-9]+}} object bytes; new pack {{[0-9a-f]+}} ({{[0-9]+}} bytes, 19 records, 2 symbols, 0 packs in dedup set)
+
+RUN: llvm-readobj --sections %t/stage1/a.obj | FileCheck %s --check-prefix=DEBUGH
+DEBUGH:      Name: .debug$H
+DEBUGH-NEXT: VirtualSize:
+DEBUGH-NEXT: VirtualAddress:
+DEBUGH-NEXT: RawDataSize: 0x8{{$}}
+
+RUN: %python -c "import json,shutil; p=json.load(open(r'%t/stage1/cvpacks.json'))['packs'][0]; shutil.copyfile(r'%t/packs/' + p + '.cvp', r'%t/pack1.cvp')"
+RUN: llvm-cvpack dump %t/pack1.cvp | FileCheck %s --check-prefix=PACK1
+PACK1:     Types: 19
+PACK1-NEXT: Symbols: 2
+PACK1:     LF_FIELDLIST
+PACK1:     Name: x
+PACK1:     LF_STRUCTURE
+PACK1-NEXT: MemberCount: 3
+PACK1:     Name: Vec
+PACK1:     Name: Shape
+PACK1:     Kind: S_CONSTANT
+PACK1-NEXT: Type: const int
+PACK1:     Name: kDims
+PACK1:     Kind: S_UDT
+PACK1:     UDTName: Vec
+
+Every staged object materializes back to its original bytes.
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage1/a.obj -o %t/a.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/a.obj %t/a.restored.obj
+
+Packing the staged objects again: packed inputs whose packs are in the dedup
+set are staged unchanged, and no pack is written.
+RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/stage1b \
+RUN:   %t/stage1/a.obj %t/stage1/b.obj
+RUN: FileCheck %s --check-prefix=REUSED < %t/stage1b/cvpacks.json
+REUSED:      "staged": "a.obj",
+REUSED-NEXT: "packs": [
+REUSED-NEXT:   "[[PACK:[0-9a-f]+]]"
+REUSED:      "staged": "b.obj",
+REUSED-NEXT: "packs": [
+REUSED-NEXT:   "[[PACK]]"
+REUSED:      "new_packs": [],
+REUSED-NEXT: "base": "[[PACK]]",
+RUN: %python %S/Inputs/check-files-equal.py %t/stage1/a.obj %t/stage1b/a.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage1/b.obj %t/stage1b/b.obj
+
+Compiling a.obj and b.obj again gives the same objects: every packed record is
+in the existing pack, so each object references it and no pack is written.
+RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/stage1c \
+RUN:   %t/orig/a.obj %t/orig/b.obj
+RUN: FileCheck %s --check-prefix=REUSED < %t/stage1c/cvpacks.json
+RUN: %python %S/Inputs/check-files-equal.py %t/stage1/a.obj %t/stage1c/a.obj
+
+Later build: c.obj and d.obj share Segment, which the first pack lacks. They
+reference the first pack for the records it holds and keep Segment, and no
+pack is written.
+RUN: llvm-cvpack pack --auto-rebase=no \
+RUN:   --pack-path=%t/packs --out-dir=%t/stage2 %t/orig/c.obj %t/orig/d.obj
+The manifest lists every pack a staged object needs, which a cache must
+restore with it.
+RUN: FileCheck %s --check-prefix=MANIFEST2 < %t/stage2/cvpacks.json
+MANIFEST2:      "staged": "c.obj",
+MANIFEST2-NEXT: "packs": [
+MANIFEST2-NEXT:   "[[BASE:[0-9a-f]+]]"
+MANIFEST2:      "staged": "d.obj",
+MANIFEST2-NEXT: "packs": [
+MANIFEST2-NEXT:   "[[BASE]]"
+MANIFEST2:      ],
+MANIFEST2-NEXT: "packs": [
+MANIFEST2-NEXT:   "[[BASE]]"
+MANIFEST2-NEXT: ],
+MANIFEST2-NEXT: "new_packs": [],
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage2/c.obj -o %t/c.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/c.obj %t/c.restored.obj
+
+A CI build that restores a.obj and b.obj from the cache (packed) and compiles
+c.obj and d.obj: the packed inputs are staged unchanged, and c.obj and d.obj
+are staged as in the later build.
+An object staged unchanged lists no pack: "packs": [] only matches the entry
+of such an object.
+RUN: llvm-cvpack pack --auto-rebase=no \
+RUN:   --pack-path=%t/packs --out-dir=%t/stage-mixed %t/stage1/a.obj %t/stage1/b.obj \
+RUN:   %t/orig/c.obj %t/orig/d.obj
+RUN: FileCheck %s --check-prefix=MIXED < %t/stage-mixed/cvpacks.json
+MIXED-NOT: "packs": []
+MIXED:     "new_packs": [],
+RUN: %python %S/Inputs/check-files-equal.py %t/stage1/a.obj %t/stage-mixed/a.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage1/b.obj %t/stage-mixed/b.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage2/c.obj %t/stage-mixed/c.obj
+
+A rebase ignores existing packs: it writes a new base for c.obj and d.obj
+although the first pack is in the dedup set.
+RUN: llvm-cvpack rebase --pack-path=%t/packs-rebase \
+RUN:   --pack-path=%t/packs --out-dir=%t/stage3 %t/orig/c.obj %t/orig/d.obj
+RUN: FileCheck %s --check-prefix=REBASE-MANIFEST < %t/stage3/cvpacks.json
+REBASE-MANIFEST:      "new_packs": [
+REBASE-MANIFEST-NEXT:   "{{[0-9a-f]+}}"
+RUN: %python -c "import json,shutil; p=json.load(open(r'%t/stage3/cvpacks.json'))['packs'][0]; shutil.copyfile(r'%t/packs-rebase/' + p + '.cvp', r'%t/pack3.cvp')"
+RUN: llvm-cvpack dump %t/pack3.cvp | FileCheck %s --check-prefix=REBASE
+REBASE:      Types: 29
+REBASE-NEXT: Symbols: 2
+
+Links of objects from both pack generations equal links of the originals,
+with and without global type hashes. The packs are in a directory of their
+own, which the links search as they search for a library.
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/orig/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj', 'c.obj', 'd.obj')]"
+RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll /libpath:%t/packs a.obj b.obj c.obj d.obj
+RUN: %python -c "import shutil; shutil.copyfile(r'%t/work/out.pdb', r'%t/orig.pdb'); shutil.copyfile(r'%t/work/out.dll', r'%t/orig.dll')"
+RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug:noghash /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll /libpath:%t/packs a.obj b.obj c.obj d.obj
+RUN: %python -c "import shutil; shutil.copyfile(r'%t/work/out.pdb', r'%t/orig-noghash.pdb')"
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/stage1/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj')]; [shutil.copyfile(r'%t/stage2/' + f, r'%t/work/' + f) for f in ('c.obj', 'd.obj')]"
+RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll /libpath:%t/packs a.obj b.obj c.obj d.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig.pdb %t/work/out.pdb
+RUN: %python %S/Inputs/check-files-equal.py %t/orig.dll %t/work/out.dll
+RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug:noghash /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll /libpath:%t/packs a.obj b.obj c.obj d.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig-noghash.pdb %t/work/out.pdb
