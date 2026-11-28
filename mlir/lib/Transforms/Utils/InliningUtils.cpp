@@ -309,10 +309,13 @@ static LogicalResult inlineRegionImpl(
                                     postInsertBlock->getIterator());
   Block *firstNewBlock = &*newBlocks.begin();
 
-  // Remap the locations of the inlined operations if a valid source location
-  // was provided.
-  if (inlineLoc && !llvm::isa<UnknownLoc>(*inlineLoc))
+  // Remap the inlined operations' locations only if a callsite location was
+  // provided, preserving caller scope even when its source position is unknown.
+  if (inlineLoc) {
+    if (llvm::isa<UnknownLoc>(*inlineLoc))
+      inlineLoc = FileLineColLoc::get(src->getContext(), "", 0, 0);
     remapInlinedLocations(newBlocks, *inlineLoc);
+  }
 
   // If the blocks were moved in-place, make sure to remap any necessary
   // operands.
