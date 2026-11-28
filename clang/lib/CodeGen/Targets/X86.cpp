@@ -1259,9 +1259,24 @@ static void addX86InterruptAttrs(const FunctionDecl *FD, llvm::GlobalValue *GV,
 
   const auto *PtrTy = FD->getParamDecl(0)->getType()->castAs<PointerType>();
   llvm::Type *ByValTy = CGM.getTypes().ConvertType(PtrTy->getPointeeType());
+  // byval marks parameter 0 as the address of the frame the processor pushed,
+  // which the backend models as five stack slots (CC_X86_Intr) of 8 bytes in
+  // 64-bit mode, including x32, and 4 bytes otherwise. The byval type must not
+  // claim less than that: optimizations treat accesses past its end as
+  // undefined. Use the five slots when the frame's type gives no size: void,
+  // or unsized, e.g. an incomplete struct ("struct interrupt_frame;" in GCC's
+  // documentation).
+  bool Is64Bit = CGM.getTarget().getTriple().isArch64Bit();
+  llvm::IntegerType *SlotTy = Is64Bit ? CGM.Int64Ty : CGM.Int32Ty;
+  if (PtrTy->getPointeeType()->isVoidType() || !ByValTy->isSized())
+    ByValTy = llvm::ArrayType::get(SlotTy, 5);
   llvm::Attribute NewAttr = llvm::Attribute::getWithByValType(
     Fn->getContext(), ByValTy);
   Fn->addParamAttr(0, NewAttr);
+  // The frame is slot-aligned; in 64-bit mode the processor aligns RSP to 16
+  // bytes before pushing it.
+  Fn->addParamAttr(0, llvm::Attribute::getWithAlignment(
+                          Fn->getContext(), llvm::Align(Is64Bit ? 8 : 4)));
 }
 
 void X86_32TargetCodeGenInfo::setTargetAttributes(
