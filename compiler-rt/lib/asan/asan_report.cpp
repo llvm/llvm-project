@@ -706,6 +706,13 @@ int __asan_get_report_dealloc_address(uptr* out_addr, uptr* out_size) {
       *out_size = err.NewDeleteTypeMismatch.delete_size;
     return 1;
   }
+  if (err.kind == kErrorKindFreeSizeMismatch) {
+    if (out_addr)
+      *out_addr = err.FreeSizeMismatch.addr_description.addr;
+    if (out_size)
+      *out_size = err.FreeSizeMismatch.delete_size;
+    return 1;
+  }
   if (err.kind == kErrorKindFreeNotMalloced) {
     if (out_addr)
       *out_addr = err.FreeNotMalloced.addr_description.Address();
