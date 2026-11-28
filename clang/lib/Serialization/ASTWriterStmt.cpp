@@ -3089,6 +3089,7 @@ void ASTStmtWriter::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
   Record.AddSourceLocation(D->getTargetCallLoc());
+  Record.push_back(static_cast<unsigned>(D->getUnsupportedVariantArgs()));
   Code = serialization::STMT_OMP_DISPATCH_DIRECTIVE;
 }
 

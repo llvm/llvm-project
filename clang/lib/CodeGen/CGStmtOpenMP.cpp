@@ -6210,6 +6210,86 @@ void CodeGenFunction::EmitOMPBarrierDirective(const OMPBarrierDirective &S) {
   CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_barrier);
 }
 
+/// Emit 'if (Cond) Alt; else Else;' for a clause of a dispatch construct that
+/// selects \p Alt, or just \p Else if the clause is absent or there is no
+/// alternative to select.
+static void emitDispatchSelection(CodeGenFunction &CGF, const Expr *Cond,
+                                  const Stmt *Alt,
+                                  const RegionCodeGenTy &Else) {
+  if (!Cond || !Alt) {
+    Else(CGF);
+    return;
+  }
+  auto &&ThenGen = [Alt](CodeGenFunction &CGF, PrePostActionTy &) {
+    CGF.EmitStmt(Alt);
+  };
+  CGF.CGM.getOpenMPRuntime().emitIfClause(CGF, Cond, ThenGen, Else);
+}
+
+void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
+  // FIXME: Setting the default-device-var ICV for the 'device' clause, and the
+  // argument adjustments required by a variant's 'adjust_args' and
+  // 'append_args' clauses, are not implemented yet.
+  if (S.hasClausesOfKind<OMPDeviceClause>()) {
+    CGM.ErrorUnsupported(&S,
+                         "OpenMP dispatch directive with a 'device' clause");
+    return;
+  }
+  switch (S.getUnsupportedVariantArgs()) {
+  case OMPDispatchDirective::VariantArgsKind::None:
+    break;
+  case OMPDispatchDirective::VariantArgsKind::AdjustArgs:
+    CGM.ErrorUnsupported(&S, "OpenMP dispatch directive calling a function "
+                             "variant with an 'adjust_args' clause");
+    return;
+  case OMPDispatchDirective::VariantArgsKind::AppendArgs:
+    CGM.ErrorUnsupported(&S, "OpenMP dispatch directive calling a function "
+                             "variant with an 'append_args' clause");
+    return;
+  }
+
+  // A 'depend' clause on 'dispatch' behaves as if it were on a 'taskwait'
+  // construct encountered immediately before the dispatch region. A 'nowait'
+  // clause does not affect it.
+  if (S.hasClausesOfKind<OMPDependClause>()) {
+    OMPTaskDataTy Data;
+    buildDependences(S, Data);
+    CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
+  }
+
+  const Expr *NoVariantsCond = nullptr;
+  if (const auto *C = S.getSingleClause<OMPNovariantsClause>())
+    NoVariantsCond = C->getCondition();
+  const Expr *NoContextCond = nullptr;
+  if (const auto *C = S.getSingleClause<OMPNocontextClause>())
+    NoContextCond = C->getCondition();
+
+  // Sema provides the alternative statements to run when 'novariants' or
+  // 'nocontext' is true; each is null if it would call the same function as
+  // the associated statement. Emit:
+  //
+  //   if (novariants) NoVariantsStmt;
+  //   else if (nocontext) NoContextStmt;
+  //   else <associated statement>;
+  auto &&CodeGen = [&S, NoVariantsCond, NoContextCond](
+                       CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    const Stmt *Body = S.getInnermostCapturedStmt()->getCapturedStmt();
+    auto &&EmitBody = [Body](CodeGenFunction &CGF, PrePostActionTy &) {
+      CGF.EmitStmt(Body);
+    };
+    auto &&EmitNoContextSelection = [&S, NoContextCond,
+                                     &EmitBody](CodeGenFunction &CGF,
+                                                PrePostActionTy &) {
+      emitDispatchSelection(CGF, NoContextCond, S.getNoContextStmt(), EmitBody);
+    };
+    emitDispatchSelection(CGF, NoVariantsCond, S.getNoVariantsStmt(),
+                          EmitNoContextSelection);
+  };
+  OMPLexicalScope Scope(*this, S, OMPD_unknown);
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_dispatch, CodeGen);
+}
+
 void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   OMPTaskDataTy Data;
   // Build list of dependences

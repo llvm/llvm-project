@@ -220,4 +220,49 @@ void test_three()
   #pragma omp dispatch
   z1.operator=(z);
 }
+
+void bar_disp(int);
+void bar_noctx(int);
+#pragma omp declare variant(bar_disp) match(construct={dispatch})
+#pragma omp declare variant(bar_noctx) match(user={condition(1)})
+void bar(int);
+
+// The alternative forms of the associated statement selected by 'novariants'
+// and 'nocontext' are dumped, but not printed.
+//DUMP: FunctionDecl{{.*}} test_four
+void test_four(int a, bool c1, bool c2)
+{
+  //PRINT: #pragma omp dispatch novariants(c1) nocontext(c2)
+  //PRINT-NEXT: bar(a);
+  //DUMP: OMPDispatchDirective
+  //DUMP: OMPNovariantsClause
+  //DUMP: OMPNocontextClause
+  //DUMP: novariants: CallExpr
+  //DUMP-NEXT: ImplicitCastExpr
+  //DUMP-NEXT: DeclRefExpr {{.*}} Function {{.*}} 'bar' 'void (int)'
+  //DUMP: nocontext: PseudoObjectExpr
+  //DUMP-NEXT: CallExpr
+  //DUMP-NEXT: ImplicitCastExpr
+  //DUMP-NEXT: DeclRefExpr {{.*}} Function {{.*}} 'bar' 'void (int)'
+  //DUMP: CallExpr
+  //DUMP-NEXT: ImplicitCastExpr
+  //DUMP-NEXT: DeclRefExpr {{.*}} Function {{.*}} 'bar_noctx' 'void (int)'
+  //DUMP: CapturedStmt
+  //DUMP: DeclRefExpr {{.*}} Function {{.*}} 'bar_disp' 'void (int)'
+  #pragma omp dispatch novariants(c1) nocontext(c2)
+  bar(a);
+
+  // No alternative is recorded when it would call the same function as the
+  // associated statement.
+  //PRINT: #pragma omp dispatch novariants(c1) nocontext(c2)
+  //PRINT-NEXT: foo(a, &a);
+  //DUMP: OMPDispatchDirective
+  //DUMP: OMPNovariantsClause
+  //DUMP: OMPNocontextClause
+  //DUMP-NOT: novariants:
+  //DUMP-NOT: nocontext:
+  //DUMP: CapturedStmt
+  #pragma omp dispatch novariants(c1) nocontext(c2)
+  foo(a, &a);
+}
 #endif // HEADER

@@ -11836,6 +11836,56 @@ static Expr *getDirectCallExpr(Expr *E) {
   return nullptr;
 }
 
+/// Return the function called by \p E, the call-site of a dispatch target-call
+/// as it appears in the associated statement. If a declare variant was
+/// selected for the call this is the variant, otherwise the base function.
+static const FunctionDecl *
+getDispatchSelectedCallee(const Expr *E, const CallExpr *TargetCall) {
+  E = E->IgnoreParenCasts()->IgnoreImplicit();
+  if (const auto *POE = dyn_cast<PseudoObjectExpr>(E))
+    if (const auto *CE =
+            dyn_cast<CallExpr>(POE->getResultExpr()->IgnoreImplicit()))
+      return CE->getDirectCallee();
+  return TargetCall->getDirectCallee();
+}
+
+/// Return the declare variant attribute of the variant of \p FD that is the
+/// best match for a call in \p OMPCtx, whether or not a call to that variant
+/// can be built.
+static OMPDeclareVariantAttr *
+getBestDeclareVariantAttr(ASTContext &Context, const FunctionDecl *FD,
+                          const TargetOMPContext &OMPCtx) {
+  SmallVector<VariantMatchInfo, 4> VMIs;
+  SmallVector<OMPDeclareVariantAttr *, 4> Attrs;
+  for (; FD; FD = FD->getPreviousDecl()) {
+    for (OMPDeclareVariantAttr *A :
+         FD->specific_attrs<OMPDeclareVariantAttr>()) {
+      VariantMatchInfo VMI;
+      A->getTraitInfo().getAsVariantMatchInfo(Context, VMI);
+      if (!isVariantApplicableInContext(VMI, OMPCtx, /*DeviceSetOnly=*/false))
+        continue;
+      VMIs.push_back(VMI);
+      Attrs.push_back(A);
+    }
+  }
+  int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+  return BestIdx < 0 ? nullptr : Attrs[BestIdx];
+}
+
+/// Build the alternative form of a dispatch associated statement in which the
+/// target-call is replaced by \p NewCall. If \p AssignLHS is non-null, the
+/// statement has the form 'AssignLHS = target-call(...)'.
+static Stmt *buildDispatchAlternative(Sema &SemaRef, Expr *AssignLHS,
+                                      SourceLocation AssignLoc, Expr *NewCall) {
+  ExprResult Res = NewCall;
+  if (AssignLHS)
+    Res = SemaRef.BuildBinOp(/*S=*/nullptr, AssignLoc, BO_Assign, AssignLHS,
+                             NewCall);
+  if (Res.isUsable())
+    Res = SemaRef.ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
+  return Res.isUsable() ? Res.get() : nullptr;
+}
+
 StmtResult
 SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
                                          Stmt *AStmt, SourceLocation StartLoc,
@@ -11851,9 +11901,18 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
   //   target-call ( [expression-list] );
 
   SourceLocation TargetCallLoc;
+  Stmt *NoVariantsStmt = nullptr;
+  Stmt *NoContextStmt = nullptr;
+  OMPDispatchDirective::VariantArgsKind UnsupportedVariantArgs =
+      OMPDispatchDirective::VariantArgsKind::None;
 
   if (!SemaRef.CurContext->isDependentContext()) {
     Expr *TargetCall = nullptr;
+    // The target-call as it appears in the statement, possibly wrapped in a
+    // PseudoObjectExpr selecting a declare variant.
+    Expr *CallSite = nullptr;
+    Expr *AssignLHS = nullptr;
+    SourceLocation AssignLoc;
 
     auto *E = dyn_cast<Expr>(S);
     if (!E) {
@@ -11864,26 +11923,95 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
     E = E->IgnoreParenCasts()->IgnoreImplicit();
 
     if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-      if (BO->getOpcode() == BO_Assign)
-        TargetCall = getDirectCallExpr(BO->getRHS());
+      if (BO->getOpcode() == BO_Assign) {
+        CallSite = BO->getRHS();
+        TargetCall = getDirectCallExpr(CallSite);
+        AssignLHS = BO->getLHS();
+        AssignLoc = BO->getOperatorLoc();
+      }
     } else {
-      if (auto *COCE = dyn_cast<CXXOperatorCallExpr>(E))
-        if (COCE->getOperator() == OO_Equal)
-          TargetCall = getDirectCallExpr(COCE->getArg(1));
-      if (!TargetCall)
+      if (auto *COCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+        if (COCE->getOperator() == OO_Equal) {
+          CallSite = COCE->getArg(1);
+          TargetCall = getDirectCallExpr(CallSite);
+          AssignLHS = COCE->getArg(0);
+          AssignLoc = COCE->getOperatorLoc();
+        }
+      }
+      if (!TargetCall) {
+        CallSite = E;
         TargetCall = getDirectCallExpr(E);
+        AssignLHS = nullptr;
+      }
     }
     if (!TargetCall) {
       Diag(E->getBeginLoc(), diag::err_omp_dispatch_statement_call);
       return StmtError();
     }
     TargetCallLoc = TargetCall->getExprLoc();
+
+    // The target-call in the associated statement was resolved with 'dispatch'
+    // in the construct context. Build the alternatives selected at run time by
+    // the 'novariants' and 'nocontext' clauses. Either is left null if it
+    // would call the same function as the associated statement.
+    auto *BaseCall = cast<CallExpr>(TargetCall);
+    const FunctionDecl *Selected =
+        getDispatchSelectedCallee(CallSite, BaseCall);
+
+    // FIXME: Adjusting and appending the arguments of a call to a variant, as
+    // required by its 'adjust_args' and 'append_args' clauses, is not
+    // implemented yet. Record whether the best matching variant with 'dispatch'
+    // in the construct context has either, for codegen to diagnose. Both
+    // clauses require a 'dispatch' context selector, so no such variant matches
+    // without 'dispatch' in the context, as the 'nocontext' clause allows. A
+    // variant with 'append_args' is never selected by ActOnOpenMPCall, as a
+    // call to it cannot be built from the base function's arguments, so look
+    // for the best match directly.
+    SmallVector<llvm::omp::TraitProperty, 8> DispatchTraits(
+        DSAStack->getConstructTraits());
+    DispatchTraits.push_back(
+        llvm::omp::TraitProperty::construct_dispatch_dispatch);
+    TargetOMPContext OMPCtx(
+        getASTContext(), [](StringRef) {}, SemaRef.getCurFunctionDecl(),
+        DispatchTraits, getOpenMPDeviceNum());
+    if (const OMPDeclareVariantAttr *A = getBestDeclareVariantAttr(
+            getASTContext(), BaseCall->getDirectCallee(), OMPCtx)) {
+      if (llvm::any_of(A->adjustArgs(), [](const OMPAdjustArgsDescriptor *D) {
+            return D->AdjustOp != OMPC_ADJUST_ARGS_nothing;
+          }))
+        UnsupportedVariantArgs =
+            OMPDispatchDirective::VariantArgsKind::AdjustArgs;
+      else if (A->appendArgs_size())
+        UnsupportedVariantArgs =
+            OMPDispatchDirective::VariantArgsKind::AppendArgs;
+    }
+
+    // 'novariants': call the base function itself.
+    if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses) &&
+        Selected != BaseCall->getDirectCallee())
+      NoVariantsStmt =
+          buildDispatchAlternative(SemaRef, AssignLHS, AssignLoc, BaseCall);
+
+    // 'nocontext': select a variant as if the call were not enclosed by the
+    // dispatch construct. The dispatch construct trait has already been
+    // removed from the context by ActOnOpenMPRegionEnd.
+    if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses)) {
+      ExprResult NoContextCall = ActOnOpenMPCall(
+          BaseCall, /*Scope=*/nullptr, BaseCall->getBeginLoc(),
+          MultiExprArg(BaseCall->getArgs(), BaseCall->getNumArgs()),
+          BaseCall->getRParenLoc(), /*ExecConfig=*/nullptr);
+      if (NoContextCall.isUsable() &&
+          getDispatchSelectedCallee(NoContextCall.get(), BaseCall) != Selected)
+        NoContextStmt = buildDispatchAlternative(SemaRef, AssignLHS, AssignLoc,
+                                                 NoContextCall.get());
+    }
   }
 
   SemaRef.setFunctionHasBranchProtectedScope();
 
-  return OMPDispatchDirective::Create(getASTContext(), StartLoc, EndLoc,
-                                      Clauses, AStmt, TargetCallLoc);
+  return OMPDispatchDirective::Create(
+      getASTContext(), StartLoc, EndLoc, Clauses, AStmt, NoVariantsStmt,
+      NoContextStmt, TargetCallLoc, UnsupportedVariantArgs);
 }
 
 static bool checkGenericLoopLastprivate(Sema &S, ArrayRef<OMPClause *> Clauses,

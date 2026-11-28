@@ -6513,6 +6513,26 @@ class OMPDispatchDirective final : public OMPExecutableDirective {
   /// Set the location of the target-call.
   void setTargetCallLoc(SourceLocation Loc) { TargetCallLoc = Loc; }
 
+public:
+  /// The argument adjustment required by the function variant that may be
+  /// selected for the target-call, as specified by its 'adjust_args' or
+  /// 'append_args' clause.
+  // FIXME: Neither adjustment is implemented yet; this is recorded so that
+  // codegen can diagnose it.
+  enum class VariantArgsKind { None, AdjustArgs, AppendArgs };
+
+private:
+  VariantArgsKind UnsupportedVariantArgs = VariantArgsKind::None;
+
+  void setUnsupportedVariantArgs(VariantArgsKind K) {
+    UnsupportedVariantArgs = K;
+  }
+
+  enum { NoVariantsOffset, NoContextOffset, NumChildren };
+
+  void setNoVariantsStmt(Stmt *S) { Data->getChildren()[NoVariantsOffset] = S; }
+  void setNoContextStmt(Stmt *S) { Data->getChildren()[NoContextOffset] = S; }
+
   /// Build directive with the given start and end location.
   ///
   /// \param StartLoc Starting location of the directive kind.
@@ -6537,12 +6557,22 @@ public:
   /// \param EndLoc Ending Location of the directive.
   /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param NoVariantsStmt The associated statement with the target-call
+  /// replaced by a call to the base function, used when the 'novariants'
+  /// clause evaluates to true; null if that would be the associated statement.
+  /// \param NoContextStmt The associated statement with the target-call
+  /// replaced by the variant selected without 'dispatch' in the construct
+  /// context, used when the 'nocontext' clause evaluates to true; null if that
+  /// would be the associated statement.
   /// \param TargetCallLoc Location of the target-call.
+  /// \param UnsupportedVariantArgs The argument adjustment, not implemented
+  /// yet, required by a function variant that may be selected.
   ///
   static OMPDispatchDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-         SourceLocation TargetCallLoc);
+         Stmt *NoVariantsStmt, Stmt *NoContextStmt,
+         SourceLocation TargetCallLoc, VariantArgsKind UnsupportedVariantArgs);
 
   /// Creates an empty directive with the place for \a NumClauses
   /// clauses.
@@ -6555,6 +6585,26 @@ public:
 
   /// Return location of target-call.
   SourceLocation getTargetCallLoc() const { return TargetCallLoc; }
+
+  /// Return the argument adjustment, not implemented yet, required by a
+  /// function variant that may be selected for the target-call.
+  VariantArgsKind getUnsupportedVariantArgs() const {
+    return UnsupportedVariantArgs;
+  }
+
+  /// Return the statement to execute when the 'novariants' clause is true, or
+  /// null if it is the same as the associated statement.
+  Stmt *getNoVariantsStmt() { return Data->getChildren()[NoVariantsOffset]; }
+  const Stmt *getNoVariantsStmt() const {
+    return Data->getChildren()[NoVariantsOffset];
+  }
+
+  /// Return the statement to execute when the 'nocontext' clause is true, or
+  /// null if it is the same as the associated statement.
+  Stmt *getNoContextStmt() { return Data->getChildren()[NoContextOffset]; }
+  const Stmt *getNoContextStmt() const {
+    return Data->getChildren()[NoContextOffset];
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPDispatchDirectiveClass;

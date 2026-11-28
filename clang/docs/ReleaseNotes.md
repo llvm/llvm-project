@@ -1886,6 +1886,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Optimization remarks for a loop associated with an OpenMP loop directive now
   point at the loop instead of the `#pragma omp` line.
 
+- Added code generation for the `dispatch` construct, with its `novariants`,
+  `nocontext` and `depend` clauses. The `device` clause, and calls to function
+  variants with `adjust_args` or `append_args` clauses, are diagnosed as not
+  yet supported.
+
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,

@@ -4134,6 +4134,7 @@ public:
       const OMPTargetTeamsGenericLoopDirective &S);
   void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
+  void EmitOMPDispatchDirective(const OMPDispatchDirective &S);
   void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
   void EmitOMPAssumeDirective(const OMPAssumeDirective &S);
 
