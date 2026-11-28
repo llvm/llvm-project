@@ -1978,6 +1978,61 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   return vector::BitCastOp::create(rewriter, loc, i4VecType, mergedHiLowOp);
 }
 
+/// Rewrite the i8 -> i2 truncation into two levels of deinterleave and a
+/// series of bitwise ops to avoid leaving LLVM to scramble with peephole
+/// optimizations.
+static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
+                                Value srcValue) {
+  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(8) &&
+         "Expected i8 type");
+
+  // 1. De-interleave twice to group the i8 elements by their position within
+  // the destination byte.
+  // in          = [0,1,2,3,4,5,6,7]
+  // evenOdd     = [0,2,4,6], [1,3,5,7]
+  // evenEvenOdd = [0,4], [2,6]
+  // oddEvenOdd  = [1,5], [3,7]
+  auto evenOdd = vector::DeinterleaveOp::create(rewriter, loc, srcValue);
+  auto evenEvenOdd =
+      vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultEven());
+  auto oddEvenOdd =
+      vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultOdd());
+
+  // 2. Zero out the upper side of each i8 element, then move the low i2 to
+  // its position in the byte. Position 3 needs no mask, the upper bits are
+  // shifted out.
+  VectorType deinterI8VecType = evenEvenOdd.getResultVectorType();
+  constexpr int8_t i8LowBitMask = 0x03;
+  Value zeroOutMask = arith::ConstantOp::create(
+      rewriter, loc, DenseElementsAttr::get(deinterI8VecType, i8LowBitMask));
+  auto shiftLeft = [&](Value value, int8_t bitsToShift) {
+    Value shiftValues = arith::ConstantOp::create(
+        rewriter, loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
+    return arith::ShLIOp::create(rewriter, loc, value, shiftValues);
+  };
+  Value elem0 = arith::AndIOp::create(rewriter, loc,
+                                      evenEvenOdd.getResultEven(), zeroOutMask);
+  Value elem1 =
+      shiftLeft(arith::AndIOp::create(rewriter, loc, oddEvenOdd.getResultEven(),
+                                      zeroOutMask),
+                2);
+  Value elem2 =
+      shiftLeft(arith::AndIOp::create(rewriter, loc, evenEvenOdd.getResultOdd(),
+                                      zeroOutMask),
+                4);
+  Value elem3 = shiftLeft(oddEvenOdd.getResultOdd(), 6);
+
+  // 3. Merge the four i2 values.
+  Value merged = arith::OrIOp::create(rewriter, loc, elem0, elem1);
+  merged = arith::OrIOp::create(rewriter, loc, merged, elem2);
+  merged = arith::OrIOp::create(rewriter, loc, merged, elem3);
+
+  // 4. Generate a bitcast vector<Xxi8> -> vector<4Xxi2>.
+  auto i2VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI2Type());
+  return vector::BitCastOp::create(rewriter, loc, i2VecType, merged);
+}
+
 namespace {
 /// Rewrite bitcast(trunci) to a sequence of shuffles and bitwise ops that take
 /// advantage of high-level information to avoid leaving LLVM to scramble with
@@ -2175,9 +2230,9 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
   }
 };
 
-/// Rewrite the i8 -> i4 part of any truncation into a deinterleave and
-/// bitwise ops that take advantage of high-level information to avoid leaving
-/// LLVM to scramble with peephole optimizations.
+/// Rewrite the i8 -> i4 or i8 -> i2 part of any truncation into deinterleaves
+/// and bitwise ops that take advantage of high-level information to avoid
+/// leaving LLVM to scramble with peephole optimizations.
 ///
 /// For example:
 ///    arith.trunci %in : vector<8xi32> to vector<8xi4>
@@ -2186,11 +2241,36 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 ///   %cst = arith.constant dense<15> : vector<4xi8>
 ///   %cst_0 = arith.constant dense<4> : vector<4xi8>
-///   %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
-///   %2 = arith.andi %0, %cst : vector<4xi8>
-///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
-///   %4 = arith.ori %2, %3 : vector<4xi8>
-///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
+///   %0 = arith.trunci %in : vector<8xi32> to vector<8xi8>
+///   %1, %2 = vector.deinterleave %0 : vector<8xi8> -> vector<4xi8>
+///   %3 = arith.andi %1, %cst : vector<4xi8>
+///   %4 = arith.shli %2, %cst_0 : vector<4xi8>
+///   %5 = arith.ori %3, %4 : vector<4xi8>
+///   %6 = vector.bitcast %5 : vector<4xi8> to vector<8xi4>
+///
+/// and, with four elements per byte,
+///    arith.trunci %in : vector<4xi32> to vector<4xi2>
+///
+/// is rewritten as:
+///
+///   %cst = arith.constant dense<3> : vector<1xi8>
+///   %cst_0 = arith.constant dense<2> : vector<1xi8>
+///   %cst_1 = arith.constant dense<4> : vector<1xi8>
+///   %cst_2 = arith.constant dense<6> : vector<1xi8>
+///   %0 = arith.trunci %in : vector<4xi32> to vector<4xi8>
+///   %1, %2 = vector.deinterleave %0 : vector<4xi8> -> vector<2xi8>
+///   %3, %4 = vector.deinterleave %1 : vector<2xi8> -> vector<1xi8>
+///   %5, %6 = vector.deinterleave %2 : vector<2xi8> -> vector<1xi8>
+///   %7 = arith.andi %3, %cst : vector<1xi8>
+///   %8 = arith.andi %5, %cst : vector<1xi8>
+///   %9 = arith.shli %8, %cst_0 : vector<1xi8>
+///   %10 = arith.andi %4, %cst : vector<1xi8>
+///   %11 = arith.shli %10, %cst_1 : vector<1xi8>
+///   %12 = arith.shli %6, %cst_2 : vector<1xi8>
+///   %13 = arith.ori %7, %9 : vector<1xi8>
+///   %14 = arith.ori %13, %11 : vector<1xi8>
+///   %15 = arith.ori %14, %12 : vector<1xi8>
+///   %16 = vector.bitcast %15 : vector<1xi8> to vector<4xi2>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using Base::Base;
@@ -2205,10 +2285,6 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
       return failure();
 
     if (failed(commonConversionPrecondition(rewriter, srcVecType, truncOp)))
-      return failure();
-
-    // TODO: Add support for truncating to i2.
-    if (dstVecType.getElementType().getIntOrFloatBitWidth() == 2)
       return failure();
 
     // Check general alignment preconditions. We invert the src/dst type order
@@ -2226,8 +2302,11 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
             ? srcValue
             : arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
 
-    // Rewrite the i8 -> i4 truncation part.
-    Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
+    // Rewrite the i8 -> i4 / i8 -> i2 truncation part. The alignment
+    // precondition above only admits these two widths.
+    Value subByteTrunc = dstVecType.getElementTypeBitWidth() == 2
+                             ? rewriteI8ToI2Trunc(rewriter, loc, i8TruncVal)
+                             : rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
 
     // Finalize the rewrite.
     rewriter.replaceOp(truncOp, subByteTrunc);

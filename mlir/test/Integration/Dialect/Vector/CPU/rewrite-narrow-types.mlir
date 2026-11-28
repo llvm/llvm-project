@@ -164,6 +164,27 @@ func.func @fext(%a: vector<5xi8>) {
   return
 }
 
+func.func @print_as_i1_8xi2(%v : vector<8xi2>) {
+  %bitsi16 = vector.bitcast %v : vector<8xi2> to vector<16xi1>
+  vector.print %bitsi16 : vector<16xi1>
+  return
+}
+
+func.func @ftrunc_i2(%a: vector<8xi8>) {
+  %0 = arith.trunci %a : vector<8xi8> to vector<8xi2>
+  func.call @print_as_i1_8xi2(%0) : (vector<8xi2>) -> ()
+  //      CHECK: (
+  // CHECK-SAME: 1, 1,
+  // CHECK-SAME: 0, 1,
+  // CHECK-SAME: 1, 0,
+  // CHECK-SAME: 0, 0,
+  // CHECK-SAME: 1, 1,
+  // CHECK-SAME: 0, 1,
+  // CHECK-SAME: 1, 0,
+  // CHECK-SAME: 0, 0 )
+  return
+}
+
 func.func @fcst_maskedload(%A: memref<?xi4>, %passthru: vector<6xi4>) -> vector<6xi4> {
   %c0 = arith.constant 0: index
   %mask = vector.constant_mask [3] : vector<6xi1>
@@ -193,6 +214,11 @@ func.func @entry() {
     0xef, 0xee, 0xed, 0xec, 0xeb
   ]> : vector<5xi8>
   func.call @fext(%v4) : (vector<5xi8>) -> ()
+
+  %v5 = arith.constant dense<[
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0x02, 0x01, 0x00
+  ]> : vector<8xi8>
+  func.call @ftrunc_i2(%v5) : (vector<8xi8>) -> ()
 
   // Set up memory.
   %c0 = arith.constant 0: index
