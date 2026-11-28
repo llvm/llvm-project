@@ -220,6 +220,7 @@ define i32 @lds_then_dma.tensor.singlethread(<4 x i32> inreg %D0, <8 x i32> inre
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -246,6 +247,7 @@ define i32 @lds_then_dma.tensor.wave(<4 x i32> inreg %D0, <8 x i32> inreg %D1, p
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -271,6 +273,7 @@ define i32 @lds_then_dma.tensor.wg(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release, !mmra !0
@@ -295,6 +298,7 @@ define i32 @lds_then_dma.tensor.agent(<4 x i32> inreg %D0, <8 x i32> inreg %D1, 
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("agent") release, !mmra !0
@@ -319,6 +323,7 @@ define i32 @lds_then_dma.tensor.system(<4 x i32> inreg %D0, <8 x i32> inreg %D1,
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence release, !mmra !0
@@ -344,6 +349,7 @@ define i32 @lds_then_dma.tensor.singlethread.partial(<4 x i32> inreg %D0, <8 x i
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -373,6 +379,7 @@ define i32 @lds_then_dma.tensor.wave.partial(<4 x i32> inreg %D0, <8 x i32> inre
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -402,6 +409,7 @@ define i32 @lds_then_dma.tensor.wg.partial(<4 x i32> inreg %D0, <8 x i32> inreg 
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -431,6 +439,7 @@ define i32 @lds_then_dma.tensor.agent.partial(<4 x i32> inreg %D0, <8 x i32> inr
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -460,6 +469,7 @@ define i32 @lds_then_dma.tensor.system.partial(<4 x i32> inreg %D0, <8 x i32> in
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]

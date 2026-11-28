@@ -1974,6 +1974,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixTDM(MI);
   if (ST.hasTransF16ToPartialVGPRWriteHazard())
     fixTransF16ToPartialVGPRWriteHazard(MI);
+  if (ST.hasTDMContextSaveHazard())
+    fixTDMContextSaveHazard(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -4673,5 +4675,21 @@ bool GCNHazardRecognizer::fixTransF16ToPartialVGPRWriteHazard(
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0, ST));
 
+  return true;
+}
+
+bool GCNHazardRecognizer::fixTDMContextSaveHazard(MachineInstr *MI) {
+  if (!SIInstrInfo::usesTENSOR_CNT(*MI))
+    return false;
+
+  // The V_NOP has to be the very next instruction that issues, also when
+  // that would be another tensor instruction, a branch or s_endpgm.
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineBasicBlock::iterator NextI =
+      skipMetaInstructionsForward(std::next(MI->getIterator()), MBB->end());
+  if (NextI != MBB->end() && NextI->getOpcode() == AMDGPU::V_NOP_e32)
+    return false;
+
+  BuildMI(*MBB, NextI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   return true;
 }
