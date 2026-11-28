@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -350,6 +351,136 @@ SmallVector<Value> x86::amx::TileMulIOp::getIntrinsicOperands(
   SmallVector<Value> intrinsicOperands = {tsza[0],          tszb[1],
                                           tsza[1],          adaptor.getAcc(),
                                           adaptor.getLhs(), adaptor.getRhs()};
+
+  return intrinsicOperands;
+}
+
+LogicalResult x86::amx::TileMovRowOp::verify() {
+  AMXTileType tileType = getTileType();
+
+  if (failed(verifyTileSize(*this, tileType)))
+    return failure();
+
+  Type tileElemTy = tileType.getElementType();
+  if (!tileElemTy.isF32() && !tileElemTy.isInteger(32))
+    return emitOpError("unsupported tile element type");
+
+  // Verify the row index if it is a constant.
+  if (auto rowIdx = getRowIndex().getDefiningOp<arith::ConstantIntOp>()) {
+    int64_t row = rowIdx.value();
+
+    if (row < 0 || row >= tileType.getDimSize(0))
+      return emitOpError("row index ")
+             << row << " is out of bounds for tile with "
+             << tileType.getDimSize(0) << " rows";
+  }
+
+  // Verify the rows operand if it is a constant.
+  if (auto rows = getRows().getDefiningOp<arith::ConstantIntOp>()) {
+    if (rows.value() != tileType.getDimSize(0))
+      return emitOpError("rows operand (")
+             << rows.value() << ") does not match tile row dimension ("
+             << tileType.getDimSize(0) << ")";
+  }
+
+  // Verify the colsb operand if it is a constant.
+  if (auto colsb = getColsb().getDefiningOp<arith::ConstantIntOp>()) {
+    unsigned expectedColsb =
+        tileType.getDimSize(1) * tileElemTy.getIntOrFloatBitWidth() / 8;
+
+    if (colsb.value() != expectedColsb)
+      return emitOpError("colsb operand (")
+             << colsb.value() << ") does not match tile column size in bytes ("
+             << expectedColsb << ")";
+  }
+
+  return success();
+}
+
+LogicalResult x86::ace::TileMulFOutProdOp::verify() {
+  VectorType lhsType = cast<VectorType>(getLhs().getType());
+  VectorType rhsType = cast<VectorType>(getRhs().getType());
+  AMXTileType accType = getAccTileType();
+
+  if (failed(verifyTileSize(*this, accType)))
+    return failure();
+
+  if (!accType.getElementType().isF32())
+    return emitOpError("expected an F32 accumulator tile");
+
+  Type lhsElem = lhsType.getElementType();
+  Type rhsElem = rhsType.getElementType();
+  if (lhsElem.isBF16() || rhsElem.isBF16()) {
+    if (lhsElem != rhsElem)
+      return emitOpError("expected both input vectors to be BF16");
+    if (lhsType.getNumElements() != 32 || rhsType.getNumElements() != 32)
+      return emitOpError("expected 32-element BF16 input vectors");
+    if (getScale())
+      return emitOpError("unexpected scale for BF16 input vectors");
+    return success();
+  }
+
+  if (lhsType.getNumElements() != 64 || rhsType.getNumElements() != 64)
+    return emitOpError("expected 64-element FP8 input vectors");
+  if (!getScale())
+    return emitOpError("expected scale for FP8 input vectors");
+
+  return success();
+}
+
+LogicalResult x86::ace::TileMulIOutProdOp::verify() {
+  VectorType lhsType = cast<VectorType>(getLhs().getType());
+  VectorType rhsType = cast<VectorType>(getRhs().getType());
+  AMXTileType accType = getAccTileType();
+
+  if (failed(verifyTileSize(*this, accType)))
+    return failure();
+
+  if (lhsType.getNumElements() != 64 || rhsType.getNumElements() != 64)
+    return emitOpError("expected 64-element input vectors");
+
+  if (!lhsType.getElementType().isInteger(8) ||
+      !rhsType.getElementType().isInteger(8))
+    return emitOpError("expected INT8 input vectors");
+
+  if (!accType.getElementType().isInteger(32))
+    return emitOpError("expected an I32 accumulator tile");
+  return success();
+}
+
+SmallVector<Value> x86::ace::TileMulFOutProdOp::getIntrinsicOperands(
+    ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
+    RewriterBase &rewriter) {
+  auto loc = getLoc();
+  Adaptor adaptor(operands, *this);
+
+  x86::amx::TileType accType = getAccTileType();
+  SmallVector<Value> tszacc = getTileSizes(loc, accType, rewriter);
+
+  SmallVector<Value> intrinsicOperands = {tszacc[0], tszacc[1]};
+  if (std::optional<uint8_t> scale = getScale()) {
+    Type llvmInt8Type = rewriter.getIntegerType(8);
+    intrinsicOperands.push_back(LLVM::ConstantOp::create(
+        rewriter, loc, llvmInt8Type, rewriter.getI8IntegerAttr(*scale)));
+  }
+  intrinsicOperands.append(
+      {adaptor.getAcc(), adaptor.getLhs(), adaptor.getRhs()});
+
+  return intrinsicOperands;
+}
+
+SmallVector<Value> x86::ace::TileMulIOutProdOp::getIntrinsicOperands(
+    ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
+    RewriterBase &rewriter) {
+  auto loc = getLoc();
+  Adaptor adaptor(operands, *this);
+
+  x86::amx::TileType accType = getAccTileType();
+  SmallVector<Value> tszacc = getTileSizes(loc, accType, rewriter);
+
+  SmallVector<Value> intrinsicOperands = {tszacc[0], tszacc[1],
+                                          adaptor.getAcc(), adaptor.getLhs(),
+                                          adaptor.getRhs()};
 
   return intrinsicOperands;
 }
