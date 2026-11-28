@@ -3477,7 +3477,7 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
     }
 
     if (Scope->isBreakOrContinueScope() &&
-        Scope->getPrecedingLabel() == Target) {
+        llvm::is_contained(Scope->getPrecedingLabels(), Target)) {
       Found = Scope;
       break;
     }

@@ -39,7 +39,7 @@ using namespace clang;
 
 StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
                                   ParsedStmtContext StmtCtx,
-                                  LabelDecl *PrecedingLabel) {
+                                  llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   StmtResult Res;
 
   // We may get back a null statement if we found a #pragma. Keep going until
@@ -47,16 +47,16 @@ StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
   StmtVector Stmts;
   do {
     Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc,
-                                      PrecedingLabel);
+                                      PrecedingLabels);
   } while (!Res.isInvalid() && !Res.get());
 
   return Res;
 }
 
-StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
-                                               ParsedStmtContext StmtCtx,
-                                               SourceLocation *TrailingElseLoc,
-                                               LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseStatementOrDeclaration(
+    StmtVector &Stmts, ParsedStmtContext StmtCtx,
+    SourceLocation *TrailingElseLoc,
+    llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -77,7 +77,7 @@ StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,
-      PrecedingLabel);
+      PrecedingLabels);
   MaybeDestroyTemplateIds();
 
   takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
@@ -134,7 +134,7 @@ private:
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
     SourceLocation *TrailingElseLoc, ParsedAttributes &CXX11Attrs,
-    ParsedAttributes &GNUAttrs, LabelDecl *PrecedingLabel) {
+    ParsedAttributes &GNUAttrs, llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -168,7 +168,7 @@ Retry:
       takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
 
       // identifier ':' statement
-      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
+      return ParseLabeledStatement(CXX11Attrs, StmtCtx, PrecedingLabels);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -269,11 +269,11 @@ Retry:
         // Trying to parse this as a regular 'for' statement instead yields
         // better error recovery.
         ConsumeToken();
-        return ParseForStatement(TrailingElseLoc, PrecedingLabel);
+        return ParseForStatement(TrailingElseLoc, PrecedingLabels);
       }
 
       SourceLocation TemplateLoc = ConsumeToken();
-      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabels,
                                      TemplateLoc);
     }
 
@@ -284,9 +284,10 @@ Retry:
   }
 
   case tok::kw_case:                // C99 6.8.1: labeled-statement
-    return ParseCaseStatement(StmtCtx);
+    return ParseCaseStatement(StmtCtx, /*MissingCase=*/false, ExprResult(),
+                              PrecedingLabels);
   case tok::kw_default:             // C99 6.8.1: labeled-statement
-    return ParseDefaultStatement(StmtCtx);
+    return ParseDefaultStatement(StmtCtx, PrecedingLabels);
 
   case tok::l_brace:                // C99 6.8.2: compound-statement
     return ParseCompoundStatement();
@@ -298,12 +299,12 @@ Retry:
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
     return ParseIfStatement(TrailingElseLoc);
   case tok::kw_switch:              // C99 6.8.4.2: switch-statement
-    return ParseSwitchStatement(TrailingElseLoc, PrecedingLabel);
+    return ParseSwitchStatement(TrailingElseLoc, PrecedingLabels);
 
   case tok::kw_while:               // C99 6.8.5.1: while-statement
-    return ParseWhileStatement(TrailingElseLoc, PrecedingLabel);
+    return ParseWhileStatement(TrailingElseLoc, PrecedingLabels);
   case tok::kw_do:                  // C99 6.8.5.2: do-statement
-    Res = ParseDoStatement(PrecedingLabel);
+    Res = ParseDoStatement(PrecedingLabels);
     SemiError = "do/while";
     break;
   case tok::kw_for:                 // C99 6.8.5.3: for-statement
@@ -316,11 +317,11 @@ Retry:
       Tok.setKind(tok::kw_template);
       SourceLocation TemplateLoc = ConsumeToken();
       Tok.setKind(tok::kw_for);
-      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabels,
                                      TemplateLoc);
     }
 
-    return ParseForStatement(TrailingElseLoc, PrecedingLabel);
+    return ParseForStatement(TrailingElseLoc, PrecedingLabels);
 
   case tok::kw_goto:                // C99 6.8.6.1: goto-statement
     Res = ParseGotoStatement();
@@ -519,7 +520,7 @@ Retry:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
     return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs,
-                               PrecedingLabel);
+                               PrecedingLabels);
 
   case tok::annot_pragma_dump:
     ProhibitAttributes(CXX11Attrs);
@@ -719,8 +720,10 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   }
 }
 
-StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
-                                         ParsedStmtContext StmtCtx) {
+StmtResult
+Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
+                              ParsedStmtContext StmtCtx,
+                              llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
 
@@ -740,6 +743,10 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   LabelDecl *LD = Actions.LookupOrCreateLabel(
       IdentTok.getIdentifierInfo(), IdentTok.getLocation(), /*GnuLabelLoc=*/{},
       /*IsLabelStmt=*/true);
+  llvm::SmallVector<LabelDecl *, 2> Labels(PrecedingLabels.begin(),
+                                           PrecedingLabels.end());
+  if (LD)
+    Labels.push_back(LD);
 
   // Read label attributes, if present.
   StmtResult SubStmt;
@@ -761,7 +768,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
       SubStmt = ParseStatementOrDeclarationAfterAttributes(
           Stmts, StmtCtx, /*TrailingElseLoc=*/nullptr, EmptyCXX11Attrs,
-          TempAttrs, LD);
+          TempAttrs, Labels);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
         SubStmt = Actions.ActOnAttributedStmt(TempAttrs, SubStmt.get());
     }
@@ -775,7 +782,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
 
   // If we've not parsed a statement yet, parse one now.
   if (SubStmt.isUnset())
-    SubStmt = ParseStatement(nullptr, StmtCtx, LD);
+    SubStmt = ParseStatement(nullptr, StmtCtx, Labels);
 
   // Broken substmt shouldn't prevent the label from being added to the AST.
   if (SubStmt.isInvalid())
@@ -797,8 +804,10 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
                                 SubStmt.get());
 }
 
-StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
-                                      bool MissingCase, ExprResult Expr) {
+StmtResult
+Parser::ParseCaseStatement(ParsedStmtContext StmtCtx, bool MissingCase,
+                           ExprResult Expr,
+                           llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
 
   // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
@@ -907,7 +916,8 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     // continue parsing the sub-stmt.
     if (Case.isInvalid()) {
       if (TopLevelCase.isInvalid())  // No parsed case stmts.
-        return ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+        return ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx,
+                              PrecedingLabels);
       // Otherwise, just don't add it as a nested case.
     } else {
       // If this is the first case statement we parsed, it becomes TopLevelCase.
@@ -932,7 +942,8 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     DiagnoseLabelAtEndOfCompoundStatement();
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
   } else {
-    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+    SubStmt =
+        ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx, PrecedingLabels);
   }
 
   // Install the body into the most deeply-nested case.
@@ -948,7 +959,9 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   return TopLevelCase;
 }
 
-StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
+StmtResult
+Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx,
+                              llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert(Tok.is(tok::kw_default) && "Not a default stmt!");
 
   // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
@@ -981,7 +994,8 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
     DiagnoseLabelAtEndOfCompoundStatement();
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
   } else {
-    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+    SubStmt =
+        ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx, PrecedingLabels);
   }
 
   // Broken sub-stmt shouldn't prevent forming the case statement properly.
@@ -1681,8 +1695,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                              ThenStmt.get(), ElseLoc, ElseStmt.get());
 }
 
-StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                                        LabelDecl *PrecedingLabel) {
+StmtResult
+Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                             llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
@@ -1747,7 +1762,7 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   // See comments in ParseIfStatement for why we create a scope for the
   // condition and a new scope for substatement in C++.
   //
-  getCurScope()->EnterSwitchBody(PrecedingLabel);
+  getCurScope()->EnterSwitchBody(PrecedingLabels);
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   // We have incremented the mangling number for the SwitchScope and the
@@ -1765,8 +1780,9 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnFinishSwitchStmt(SwitchLoc, Switch.get(), Body.get());
 }
 
-StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
-                                       LabelDecl *PrecedingLabel) {
+StmtResult
+Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                            llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
@@ -1807,7 +1823,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnWhileStmt(WhileLoc);
-  getCurScope()->EnterLoopBody(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabels);
 
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1839,7 +1855,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnWhileStmt(WhileLoc, LParen, Cond, RParen, Body.get());
 }
 
-StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
+StmtResult
+Parser::ParseDoStatement(llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   assert(Tok.is(tok::kw_do) && "Not a do stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
 
@@ -1852,7 +1869,7 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnDoStmt(DoLoc);
-  getCurScope()->EnterLoopBody(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabels);
 
   // C99 6.8.5p5 - In C99, the body of the do statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause. We only do this
@@ -1981,9 +1998,10 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
       std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel,
-                                     CXXExpansionStmtDecl *ESD) {
+StmtResult
+Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                          llvm::ArrayRef<LabelDecl *> PrecedingLabels,
+                          CXXExpansionStmtDecl *ESD) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2336,7 +2354,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
 
   // Set this only right before parsing the body to disallow break/continue in
   // the other parts.
-  getCurScope()->EnterLoopBody(PrecedingLabel);
+  getCurScope()->EnterLoopBody(PrecedingLabels);
 
   bool BodyStartsWithAttr = Tok.isOneOf(tok::l_square, tok::kw___attribute);
   SourceLocation BodyBeginLoc = Tok.getLocation();
@@ -2526,11 +2544,11 @@ StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
   return Actions.ActOnEndOfDeferStmt(Res.get(), getCurScope());
 }
 
-StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
-                                       ParsedStmtContext StmtCtx,
-                                       SourceLocation *TrailingElseLoc,
-                                       ParsedAttributes &Attrs,
-                                       LabelDecl *PrecedingLabel) {
+StmtResult
+Parser::ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                            SourceLocation *TrailingElseLoc,
+                            ParsedAttributes &Attrs,
+                            llvm::ArrayRef<LabelDecl *> PrecedingLabels) {
   // Create temporary attribute list.
   ParsedAttributes TempAttrs(AttrFactory);
 
@@ -2555,7 +2573,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
   ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
   StmtResult S = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
-      PrecedingLabel);
+      PrecedingLabels);
 
   Attrs.takeAllPrependingFrom(TempAttrs);
 
@@ -2776,9 +2794,10 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   return Actions.ActOnCXXCatchBlock(CatchLoc, ExceptionDecl, Block.get());
 }
 
-StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
-                                           LabelDecl *PrecedingLabel,
-                                           SourceLocation TemplateLoc) {
+StmtResult
+Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                llvm::ArrayRef<LabelDecl *> PrecedingLabels,
+                                SourceLocation TemplateLoc) {
   assert(Tok.is(tok::kw_for));
 
   CXXExpansionStmtDecl *ExpansionDecl =
@@ -2791,7 +2810,7 @@ StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
     ++TParamDepthGuard;
 
     StmtResult SR =
-        ParseForStatement(TrailingElseLoc, PrecedingLabel, ExpansionDecl);
+        ParseForStatement(TrailingElseLoc, PrecedingLabels, ExpansionDecl);
     if (SR.isInvalid())
       return SR;
 

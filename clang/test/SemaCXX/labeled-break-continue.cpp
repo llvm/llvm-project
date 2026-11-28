@@ -86,3 +86,25 @@ void f7() {
     });
   }
 }
+
+void f8() {
+  a: b: while (true) {
+    break a;
+    continue a;
+    break b;
+    continue b;
+  }
+}
+
+void f9() {
+  switch (0) {
+  a: default: while (true) {
+    break a;
+    continue a;
+  }
+  b: case 0: while (true) {
+    break b;
+    continue b;
+  }
+  }
+}

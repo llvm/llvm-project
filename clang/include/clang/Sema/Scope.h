@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -253,9 +254,9 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
-  /// If this scope belongs to a loop or switch statement, the label that
-  /// directly precedes it, if any.
-  LabelDecl *PrecedingLabel;
+  /// If this scope belongs to a loop or switch statement, the labels that
+  /// directly precede it, if any.
+  llvm::SmallVector<LabelDecl *, 2> PrecedingLabels;
 
   void setFlags(Scope *Parent, unsigned F);
 
@@ -270,8 +271,10 @@ public:
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
-  /// Get the label that precedes this scope.
-  LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
+  /// Get the labels that precede this scope.
+  llvm::ArrayRef<LabelDecl *> getPrecedingLabels() const {
+    return PrecedingLabels;
+  }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
@@ -623,10 +626,10 @@ public:
   bool Contains(const Scope& rhs) const { return Depth < rhs.Depth; }
 
   /// Mark that we're entering the body of a loop (for, while, do).
-  void EnterLoopBody(LabelDecl *PrecedingLabel);
+  void EnterLoopBody(llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// Mark that we're entering the body of a switch statement.
-  void EnterSwitchBody(LabelDecl *PrecedingLabel);
+  void EnterSwitchBody(llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// Mark that we're leaving the body of a loop; this is only needed for do
   /// loops where the condition follows the loop body.

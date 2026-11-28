@@ -46,26 +46,26 @@ void f2() {
 
 void f3() {
   a: b: c: d: while (true) {
-    break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-    break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-    break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+    break a;
+    break b;
+    break c;
     break d;
 
-    continue a; // expected-error {{'continue' label does not name an enclosing loop}}
-    continue b; // expected-error {{'continue' label does not name an enclosing loop}}
-    continue c; // expected-error {{'continue' label does not name an enclosing loop}}
+    continue a;
+    continue b;
+    continue c;
     continue d;
 
     e: while (true) {
-      break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      break a;
+      break b;
+      break c;
       break d;
       break e;
 
-      continue a; // expected-error {{'continue' label does not name an enclosing loop}}
-      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
-      continue c; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue a;
+      continue b;
+      continue c;
       continue d;
       continue e;
     }
@@ -169,5 +169,18 @@ void f8() {
   l2: // no-warning
   while (true) {
     continue l2;
+  }
+}
+
+void f9() {
+  switch (0) {
+  a: default: while (true) {
+    break a;
+    continue a;
+  }
+  b: case 0: while (true) {
+    break b;
+    continue b;
+  }
   }
 }

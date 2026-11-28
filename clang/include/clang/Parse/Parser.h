@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
@@ -7385,7 +7386,7 @@ public:
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
                  ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt,
-                 LabelDecl *PrecedingLabel = nullptr);
+                 llvm::ArrayRef<LabelDecl *> PrecedingLabels = {});
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
   /// \verbatim
@@ -7441,12 +7442,13 @@ public:
   StmtResult
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                               SourceLocation *TrailingElseLoc = nullptr,
-                              LabelDecl *PrecedingLabel = nullptr);
+                              llvm::ArrayRef<LabelDecl *> PrecedingLabels = {});
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs, LabelDecl *PrecedingLabel);
+      ParsedAttributes &DeclSpecAttrs,
+      llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7463,7 +7465,8 @@ public:
   /// \endverbatim
   ///
   StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
-                                   ParsedStmtContext StmtCtx);
+                                   ParsedStmtContext StmtCtx,
+                                   llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// ParseCaseStatement
   /// \verbatim
@@ -7472,9 +7475,10 @@ public:
   /// [GNU]   'case' constant-expression '...' constant-expression ':' statement
   /// \endverbatim
   ///
-  StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
-                                bool MissingCase = false,
-                                ExprResult Expr = ExprResult());
+  StmtResult
+  ParseCaseStatement(ParsedStmtContext StmtCtx, bool MissingCase = false,
+                     ExprResult Expr = ExprResult(),
+                     llvm::ArrayRef<LabelDecl *> PrecedingLabels = {});
 
   /// ParseDefaultStatement
   /// \verbatim
@@ -7483,7 +7487,9 @@ public:
   /// \endverbatim
   /// Note that this does not parse the 'statement' at the end.
   ///
-  StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
+  StmtResult
+  ParseDefaultStatement(ParsedStmtContext StmtCtx,
+                        llvm::ArrayRef<LabelDecl *> PrecedingLabels = {});
 
   StmtResult ParseCompoundStatement(bool isStmtExpr = false);
 
@@ -7572,7 +7578,7 @@ public:
   /// [C++]   'switch' '(' condition ')' statement
   /// \endverbatim
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                                  LabelDecl *PrecedingLabel);
+                                  llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7581,7 +7587,7 @@ public:
   /// [C++]   'while' '(' condition ')' statement
   /// \endverbatim
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc,
-                                 LabelDecl *PrecedingLabel);
+                                 llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7589,7 +7595,7 @@ public:
   ///         'do' statement 'while' '(' expression ')' ';'
   /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement(LabelDecl *PrecedingLabel);
+  StmtResult ParseDoStatement(llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   /// ParseForStatement
   /// \verbatim
@@ -7617,7 +7623,7 @@ public:
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               LabelDecl *PrecedingLabel,
+                               llvm::ArrayRef<LabelDecl *> PrecedingLabels,
                                CXXExpansionStmtDecl *ESD = nullptr);
 
   void ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
@@ -7691,14 +7697,15 @@ public:
   ///       expression
   ///       expansion-init-list
   /// \endverbatim
-  StmtResult ParseExpansionStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel,
-                                     SourceLocation TemplateLoc);
+  StmtResult
+  ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                          llvm::ArrayRef<LabelDecl *> PrecedingLabels,
+                          SourceLocation TemplateLoc);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs,
-                                 LabelDecl *PrecedingLabel);
+                                 llvm::ArrayRef<LabelDecl *> PrecedingLabels);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 

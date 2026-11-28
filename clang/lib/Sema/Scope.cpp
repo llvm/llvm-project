@@ -99,7 +99,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
-  PrecedingLabel = nullptr;
+  PrecedingLabels.clear();
   NRVO = std::nullopt;
 }
 
@@ -113,23 +113,23 @@ bool Scope::containedInPrototypeScope() const {
   return false;
 }
 
-void Scope::EnterLoopBody(LabelDecl *LD) {
+void Scope::EnterLoopBody(llvm::ArrayRef<LabelDecl *> Labels) {
   Flags |= BreakScope | ContinueScope;
   BreakParent = ContinueParent = this;
-  PrecedingLabel = LD;
+  PrecedingLabels.assign(Labels.begin(), Labels.end());
 }
 
-void Scope::EnterSwitchBody(LabelDecl *LD) {
+void Scope::EnterSwitchBody(llvm::ArrayRef<LabelDecl *> Labels) {
   Flags |= BreakScope;
   BreakParent = this;
-  PrecedingLabel = LD;
+  PrecedingLabels.assign(Labels.begin(), Labels.end());
 }
 
 void Scope::LeaveLoopBody() {
   Flags &= ~(BreakScope | ContinueScope);
   BreakParent = getParent()->BreakParent;
   ContinueParent = getParent()->ContinueParent;
-  PrecedingLabel = nullptr;
+  PrecedingLabels.clear();
 }
 
 // The algorithm for updating NRVO candidate is as follows:
