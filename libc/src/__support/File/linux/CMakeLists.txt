@@ -5,14 +5,16 @@ add_object_library(
     file.cpp
   HDRS
     file.h
+    ../platform_file.h
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.func.free
+    libc.hdr.stdint_proxy
     libc.hdr.stdio_macros
-    libc.hdr.types.mode_t
     libc.hdr.sys_stat_macros
     libc.hdr.types.FILE
+    libc.hdr.types.mode_t
     libc.hdr.types.off_t
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.new

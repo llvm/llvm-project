@@ -27,29 +27,27 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-FileIOResult linux_file_write(File *, const void *, size_t);
-FileIOResult linux_file_read(File *, void *, size_t);
-ErrorOr<off_t> linux_file_seek(File *, off_t, int);
-int linux_file_close(File *);
+class LinuxFile;
 
-// Returns true iff |f| is actually a LinuxFile, as opposed to some other
-// File subclass (e.g. CookieFile, MemoryFile) that doesn't have a real
-// file descriptor. Used because File has no RTTI/type tag: every LinuxFile
-// always registers these exact four callbacks, and no other subclass does.
-bool is_linux_file(const File *f);
+struct FilePlatform {
+  using StreamBase = LinuxFile;
+
+  static FileIOResult write(File *f, const void *data, size_t size);
+  static FileIOResult read(File *f, void *buf, size_t size);
+  static ErrorOr<off_t> seek(File *f, off_t offset, int whence);
+  static int close(File *f);
+};
 
 class LinuxFile : public File {
   int fd;
 
-  friend int linux_file_close(File *);
+  friend struct FilePlatform;
 
 protected:
-  // For subclasses which need to do extra cleanup when the file is closed.
-  constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
-                      int buffer_mode, bool owned, FileMode mode,
-                      CloseFunc *close_func)
-      : File(&linux_file_write, &linux_file_read, &linux_file_seek, close_func,
-             buffer, buffer_size, buffer_mode, owned, mode),
+  constexpr LinuxFile(DispatchKind dispatch_kind, uint8_t *buffer,
+                      size_t buffer_size, int buffer_mode, bool owned,
+                      FileMode mode, int file_descriptor = -1)
+      : File(dispatch_kind, buffer, buffer_size, buffer_mode, owned, mode),
         fd(file_descriptor) {}
 
   // Closes the underlying file descriptor. Returns 0 on success, or an error
@@ -59,8 +57,8 @@ protected:
 public:
   constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
                       int buffer_mode, bool owned, FileMode mode)
-      : LinuxFile(file_descriptor, buffer, buffer_size, buffer_mode, owned,
-                  mode, &linux_file_close) {}
+      : File(buffer, buffer_size, buffer_mode, owned, mode),
+        fd(file_descriptor) {}
 
   // Allocates a FileT owning a new default-size buffer. FileT must be
   // LinuxFile or a subclass with LinuxFile's constructor signature.
@@ -91,6 +89,9 @@ public:
 
   int reopen_unlocked(const char *path, const char *mode);
 };
+
+using CustomFile = CustomFileImpl<LinuxFile>;
+using CookieFile = CookieFileImpl<LinuxFile>;
 
 // Create a File object and associate it with a fd.
 ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode);

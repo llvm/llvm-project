@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/limits.h"

@@ -590,6 +590,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
@@ -607,6 +608,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -625,6 +627,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -641,6 +644,7 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.hdr.types.wchar_t
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -658,6 +662,7 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.hdr.types.wchar_t
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -675,6 +680,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -693,6 +699,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -711,6 +718,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -729,6 +737,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -747,6 +756,7 @@ add_entrypoint_object(
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.File.platform_file
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config

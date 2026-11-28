@@ -13,9 +13,16 @@ add_libc_test(
     file_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
     libc.hdr.wchar_macros
+    libc.hdr.types.off_t
     libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.scope
     libc.src.__support.File.file
     libc.src.__support.error_or
     libc.test.UnitTest.MemoryMatcher

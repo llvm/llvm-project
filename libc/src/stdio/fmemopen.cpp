@@ -21,7 +21,9 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/File/file_mode.h"
+#include "src/__support/File/platform_file.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
@@ -30,7 +32,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace {
 
-class MemoryFile : public File {
+class MemoryFile : public CustomFile {
   // The stdio buffer is separate from the memory used as the file's contents.
   // In particular, ungetc and setvbuf must not modify or free that memory.
   uint8_t stream_buffer[DEFAULT_BUFFER_SIZE];
@@ -40,9 +42,10 @@ class MemoryFile : public File {
   size_t end = 0;
   bool owns_storage;
   bool append;
+  bool detached = false;
 
   static FileIOResult memory_read(File *f, void *data, size_t size) {
-    auto *mf = reinterpret_cast<MemoryFile *>(f);
+    auto *mf = static_cast<MemoryFile *>(f);
     if (size == 0 || mf->position >= mf->end)
       return 0;
     size_t available = mf->end - mf->position;
@@ -53,7 +56,7 @@ class MemoryFile : public File {
   }
 
   static FileIOResult memory_write(File *f, const void *data, size_t size) {
-    auto *mf = reinterpret_cast<MemoryFile *>(f);
+    auto *mf = static_cast<MemoryFile *>(f);
     if (size == 0)
       return 0;
     size_t start = mf->append ? mf->end : mf->position;
@@ -75,7 +78,7 @@ class MemoryFile : public File {
   }
 
   static ErrorOr<off_t> memory_seek(File *f, off_t offset, int whence) {
-    auto *mf = reinterpret_cast<MemoryFile *>(f);
+    auto *mf = static_cast<MemoryFile *>(f);
     size_t base;
     switch (whence) {
     case SEEK_SET:
@@ -102,20 +105,31 @@ class MemoryFile : public File {
     return static_cast<off_t>(next);
   }
 
-  static int memory_close(File *f) {
-    auto *mf = reinterpret_cast<MemoryFile *>(f);
-    File::remove_file(mf);
-    if (mf->owns_storage)
+  static void memory_detach(File *f) {
+    auto *mf = static_cast<MemoryFile *>(f);
+    if (mf->owns_storage) {
       delete[] mf->storage;
+      mf->storage = nullptr;
+      mf->owns_storage = false;
+    }
+    mf->detached = true;
+  }
+
+  static int memory_close(File *f) {
+    auto *mf = static_cast<MemoryFile *>(f);
+    File::remove_file(mf);
+    int retval = mf->detached ? mf->close_fd() : 0;
+    memory_detach(mf);
     delete mf;
-    return 0;
+    return retval;
   }
 
 public:
   MemoryFile(uint8_t *storage, size_t capacity, bool owns_storage,
              FileMode mode)
-      : File(&memory_write, &memory_read, &memory_seek, &memory_close,
-             stream_buffer, sizeof(stream_buffer), _IOFBF, false, mode),
+      : CustomFile({&memory_write, &memory_read, &memory_seek, &memory_close,
+                    &memory_detach},
+                   stream_buffer, sizeof(stream_buffer), _IOFBF, false, mode),
         storage(storage), capacity(capacity), owns_storage(owns_storage),
         append(mode.is_append()) {
     if (mode.is_read()) {

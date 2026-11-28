@@ -22,6 +22,7 @@
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -30,10 +31,13 @@
 #include "hdr/types/off_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/libc_errno.h"
 
 using LlvmLibcFOpenCookieTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 struct StringStream {
   char *buf;
@@ -148,8 +152,8 @@ TEST_F(LlvmLibcFOpenCookieTest, WriteOnlyCookieTest) {
   constexpr char WRITE_DATA[] = "Hello,writeonly!";
   ASSERT_EQ(sizeof(WRITE_DATA),
             LIBC_NAMESPACE::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f));
-  // Flushing will ensure the data to be written to the string stream.
-  ASSERT_EQ(0, LIBC_NAMESPACE::fflush(f));
+  // fflush(nullptr) flushes all open streams, including fopencookie streams.
+  ASSERT_EQ(0, LIBC_NAMESPACE::fflush(nullptr));
   ASSERT_STREQ(WRITE_DATA, ss->buf);
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fseek(f, 0, SEEK_SET));
@@ -279,6 +283,12 @@ ssize_t failing_write(void *, const char *, size_t) { return -1; }
 
 int failing_seek(void *, off_t *, int) { return -1; }
 
+static int failing_close(void *cookie) {
+  if (cookie != nullptr)
+    ++(*static_cast<int *>(cookie));
+  return -1;
+}
+
 TEST_F(LlvmLibcFOpenCookieTest, FailingCallbacksAreErrors) {
   constexpr cookie_io_functions_t FAILING_FUNCS = {
       &failing_read, &failing_write, &failing_seek, nullptr};
@@ -308,4 +318,51 @@ TEST_F(LlvmLibcFOpenCookieTest, FailingCallbacksAreErrors) {
   ASSERT_ERRNO_EQ(EIO);
   LIBC_NAMESPACE::fclose(f);
   libc_errno = 0;
+
+  constexpr cookie_io_functions_t NULL_FUNCS = {nullptr, nullptr, nullptr,
+                                                nullptr};
+  f = LIBC_NAMESPACE::fopencookie(nullptr, "r+", NULL_FUNCS);
+  ASSERT_NE(f, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_null(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(f), Succeeds(0)); });
+  ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fread(data, 1, sizeof(data), f));
+  ASSERT_NE(LIBC_NAMESPACE::feof(f), 0);
+  ASSERT_EQ(0, LIBC_NAMESPACE::ferror(f));
+  ASSERT_THAT(LIBC_NAMESPACE::fseek(f, 0, SEEK_SET), Fails(ESPIPE));
+  // Per fopencookie(3), a null write hook discards output without error.
+  ASSERT_EQ(sizeof(data), LIBC_NAMESPACE::fwrite(data, 1, sizeof(data), f));
+  ASSERT_THAT(LIBC_NAMESPACE::fflush(f), Succeeds(0));
+  ASSERT_EQ(0, LIBC_NAMESPACE::ferror(f));
+  close_null.release();
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(f), Succeeds(0));
+
+  int close_calls = 0;
+  constexpr cookie_io_functions_t FAILING_CLOSE_FUNCS = {
+      nullptr, nullptr, nullptr, &failing_close};
+  f = LIBC_NAMESPACE::fopencookie(&close_calls, "r", FAILING_CLOSE_FUNCS);
+  ASSERT_NE(f, nullptr);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(f), Fails(EIO, EOF));
+  ASSERT_EQ(1, close_calls);
 }
+
+TEST_F(LlvmLibcFOpenCookieTest, InvalidMode) {
+  constexpr cookie_io_functions_t NULL_FUNCS = {nullptr, nullptr, nullptr,
+                                                nullptr};
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(nullptr, "invalid", NULL_FUNCS);
+  ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_EQ(f, nullptr);
+
+  f = LIBC_NAMESPACE::fopencookie(nullptr, "", NULL_FUNCS);
+  ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_EQ(f, nullptr);
+}
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+TEST_F(LlvmLibcFOpenCookieTest, NullModeCrash) {
+  constexpr cookie_io_functions_t NULL_FUNCS = {nullptr, nullptr, nullptr,
+                                                nullptr};
+  ASSERT_DEATH(
+      [&] { LIBC_NAMESPACE::fopencookie(nullptr, nullptr, NULL_FUNCS); },
+      WITH_SIGNAL(-1));
+}
+#endif

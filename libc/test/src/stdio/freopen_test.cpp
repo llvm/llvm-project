@@ -19,7 +19,9 @@
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/fileno.h"
+#include "src/stdio/fmemopen.h"
 #include "src/stdio/fopen.h"
+#include "src/stdio/fopencookie.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/freopen.h"
 #include "src/stdio/fwrite.h"
@@ -32,6 +34,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/macros/properties/os.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -343,6 +346,84 @@ TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
       Fails(ENOENT, static_cast<void *>(nullptr)));
 }
 #endif
+
+TEST_F(LlvmLibcFreopenTest, ReopenFmemopenStream) {
+  const auto FILENAME = libc_make_test_file_path("freopen_fmemopen.test");
+  const auto NON_EXISTENT =
+      libc_make_test_file_path("freopen_fmemopen_missing.test");
+  char storage[16] = {0};
+  ::FILE *mem_file = LIBC_NAMESPACE::fmemopen(storage, sizeof(storage), "w+");
+  ASSERT_NE(mem_file, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_mem_file(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(mem_file), Succeeds(0)); });
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite("abc", 1, 3, mem_file),
+              Succeeds(static_cast<size_t>(3)));
+
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "invalid", mem_file),
+              Fails(EINVAL, static_cast<void *>(nullptr)));
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "r", mem_file),
+              Fails(EBADF, static_cast<void *>(nullptr)));
+  EXPECT_EQ(storage[0], '\0');
+
+  constexpr char FILE_CONTENT[] = "Reopened from fmemopen";
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "w", mem_file),
+              Succeeds(static_cast<void *>(mem_file)));
+  EXPECT_STREQ(storage, "abc");
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(FILE_CONTENT, 1, sizeof(FILE_CONTENT) - 1,
+                                     mem_file),
+              Succeeds(sizeof(FILE_CONTENT) - 1));
+
+  close_mem_file.release();
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(mem_file), Succeeds(0));
+  verify_file_content(FILENAME, FILE_CONTENT);
+
+  // Also verify an fmemopen stream owning its heap buffer releases it cleanly
+  // even when reopening onto a path fails (matching NonExistentFileFailure,
+  // fclose frees the stream object and reports EBADF).
+  ::FILE *owned_mem = LIBC_NAMESPACE::fmemopen(nullptr, 16, "w+");
+  ASSERT_NE(owned_mem, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_owned_mem(
+      [&] { (void)LIBC_NAMESPACE::fclose(owned_mem); });
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(NON_EXISTENT, "r", owned_mem),
+              Fails(ENOENT, static_cast<void *>(nullptr)));
+  close_owned_mem.release();
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(owned_mem), Fails(EBADF, EOF));
+}
+
+static ssize_t count_cookie_writes(void *cookie, const char *, size_t size) {
+  ++(*static_cast<size_t *>(cookie));
+  return static_cast<ssize_t>(size);
+}
+
+TEST_F(LlvmLibcFreopenTest, CookieStreamFailure) {
+  const auto FILENAME = libc_make_test_file_path("freopen_cookie_stream.test");
+  size_t cookie_writes = 0;
+  constexpr cookie_io_functions_t COOKIE_FUNCS = {nullptr, &count_cookie_writes,
+                                                  nullptr, nullptr};
+  ::FILE *cookie_file =
+      LIBC_NAMESPACE::fopencookie(&cookie_writes, "r+", COOKIE_FUNCS);
+  ASSERT_NE(cookie_file, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_cookie(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(cookie_file), Succeeds(0)); });
+
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite("abc", 1, 3, cookie_file),
+              Succeeds(static_cast<size_t>(3)));
+  EXPECT_EQ(cookie_writes, static_cast<size_t>(0));
+
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "invalid", cookie_file),
+              Fails(EINVAL, static_cast<void *>(nullptr)));
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "invalid", cookie_file),
+              Fails(EINVAL, static_cast<void *>(nullptr)));
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "w", cookie_file),
+              Fails(EBADF, static_cast<void *>(nullptr)));
+  ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "r", cookie_file),
+              Fails(EBADF, static_cast<void *>(nullptr)));
+  EXPECT_EQ(cookie_writes, static_cast<size_t>(0));
+
+  close_cookie.release();
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(cookie_file), Succeeds(0));
+  EXPECT_EQ(cookie_writes, static_cast<size_t>(1));
+}
 
 TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
   const auto FILENAME = libc_make_test_file_path("freopen_null_stream.test");
