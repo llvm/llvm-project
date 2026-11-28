@@ -8,6 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vnni | FileCheck %s --check-prefixes=AVX512,AVX512VNNI,AVX512VNNI-NOVLX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl,+avx512vnni | FileCheck %s --check-prefixes=AVX512,AVX512VNNI,AVX512VNNI-VLX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl,+avx512bw,+avxvnni,+avxvnniint16 | FileCheck %s --check-prefixes=AVX512-VEXVNNI
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vnni,+avxvnni | FileCheck %s --check-prefixes=VNNI-NOVLX-VEX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx10.2 | FileCheck %s --check-prefixes=AVX10,AVX10-512
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx10.2,+prefer-256-bit | FileCheck %s --check-prefixes=AVX10,AVX10-256
 
@@ -157,6 +158,11 @@ define <4 x i32> @partial_reduce_sumla_i8_v4i32(<4 x i32> %acc, <16 x i8> %a, <1
 ; AVX512-VEXVNNI:       # %bb.0:
 ; AVX512-VEXVNNI-NEXT:    {vex} vpdpbusd %xmm1, %xmm2, %xmm0
 ; AVX512-VEXVNNI-NEXT:    retq
+; VNNI-NOVLX-VEX-LABEL: partial_reduce_sumla_i8_v4i32:
+; VNNI-NOVLX-VEX:       # %bb.0:
+; VNNI-NOVLX-VEX-NEXT:    {{[{]}}vex{{[}]}} vpdpbusd %xmm1, %xmm2, %xmm0
+; VNNI-NOVLX-VEX-NEXT:    retq
+;
 ;
 ; AVX10-LABEL: partial_reduce_sumla_i8_v4i32:
 ; AVX10:       # %bb.0:
@@ -378,6 +384,11 @@ define <8 x i32> @partial_reduce_sumla_i8_v8i32(<8 x i32> %acc, <32 x i8> %a, <3
 ; AVX512-VEXVNNI:       # %bb.0:
 ; AVX512-VEXVNNI-NEXT:    {vex} vpdpbusd %ymm1, %ymm2, %ymm0
 ; AVX512-VEXVNNI-NEXT:    retq
+; VNNI-NOVLX-VEX-LABEL: partial_reduce_sumla_i8_v8i32:
+; VNNI-NOVLX-VEX:       # %bb.0:
+; VNNI-NOVLX-VEX-NEXT:    {{[{]}}vex{{[}]}} vpdpbusd %ymm1, %ymm2, %ymm0
+; VNNI-NOVLX-VEX-NEXT:    retq
+;
 ;
 ; AVX10-LABEL: partial_reduce_sumla_i8_v8i32:
 ; AVX10:       # %bb.0:

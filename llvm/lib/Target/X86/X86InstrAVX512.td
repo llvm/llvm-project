@@ -12740,6 +12740,44 @@ defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 
 defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1,
                               [HasVNNI, HasVLX], [HasVNNI]>, PD;
 
+multiclass avx512_ternary_lowering<string InstrStr, SDNode OpNode,
+                                   AVX512VLVectorVTInfo _, Predicate prd> {
+  let Predicates = [prd, NoVLX] in {
+    def : Pat<(_.info256.VT (OpNode (_.info256.VT _.info256.RC:$acc),
+                                    _.info256.RC:$src1,
+                                    _.info256.RC:$src2)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zrr")
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info256.RC:$acc, _.info256.SubRegIdx),
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info256.RC:$src1, _.info256.SubRegIdx),
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info256.RC:$src2, _.info256.SubRegIdx)),
+              _.info256.SubRegIdx)>;
+
+    def : Pat<(_.info128.VT (OpNode (_.info128.VT _.info128.RC:$acc),
+                                    _.info128.RC:$src1,
+                                    _.info128.RC:$src2)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zrr")
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info128.RC:$acc, _.info128.SubRegIdx),
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info128.RC:$src1, _.info128.SubRegIdx),
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info128.RC:$src2, _.info128.SubRegIdx)),
+              _.info128.SubRegIdx)>;
+  }
+}
+
+// Use the 512-bit VPDPBUSD/VPDPBUSDS/VPDPWSSD/VPDPWSSDS forms to implement the
+// 128/256-bit ones in case NoVLX.
+defm : avx512_ternary_lowering<"VPDPBUSD", X86Vpdpbusd, avx512vl_i32_info, HasVNNI>;
+defm : avx512_ternary_lowering<"VPDPBUSDS", X86Vpdpbusds, avx512vl_i32_info, HasVNNI>;
+defm : avx512_ternary_lowering<"VPDPWSSD", X86Vpdpwssd, avx512vl_i32_info, HasVNNI>;
+defm : avx512_ternary_lowering<"VPDPWSSDS", X86Vpdpwssds, avx512vl_i32_info, HasVNNI>;
+
 // Patterns to match VPDPWSSD from existing instructions/intrinsics.
 let Predicates = [HasVNNI] in {
   def : Pat<(v16i32 (add VR512:$src1,
