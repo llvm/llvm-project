@@ -2749,6 +2749,8 @@ math_test(name = "log10f16")
 
 math_test(name = "log2f16")
 
+math_test(name = "log1pf16")
+
 math_test(name = "log2p1f16")
 
 math_test(
