@@ -1138,23 +1138,90 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   if (FromFile) {
     // We're supposed to start looking from after a particular file. Search
     // the include path until we find that file or run out of files.
-    ConstSearchDirIterator TmpCurDir = CurDir;
-    ConstSearchDirIterator TmpFromDir = nullptr;
-    while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
-               Filename, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
-               Includers, SearchPath, RelativePath, RequestingModule,
-               SuggestedModule, /*IsMapped=*/nullptr,
-               /*IsFrameworkFound=*/nullptr, SkipCache)) {
-      // Keep looking as if this file did a #include_next.
-      TmpFromDir = TmpCurDir;
-      ++TmpFromDir;
-      if (&FE->getFileEntry() == FromFile) {
-        // Found it.
-        FromDir = TmpFromDir;
-        CurDir = TmpCurDir;
-        break;
+    // Filename may differ from FromFile's name (e.g. #include_next <wchar.h>
+    // from __mbstate_t.h), so locate FromFile by its own name instead.
+    auto FindFromFile = [&](StringRef LocateName) {
+      bool SameName = LocateName == Filename;
+      ConstSearchDirIterator TmpCurDir = CurDir;
+      ConstSearchDirIterator TmpFromDir = nullptr;
+      while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
+                 LocateName, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
+                 Includers, SameName ? SearchPath : nullptr,
+                 SameName ? RelativePath : nullptr, RequestingModule,
+                 SameName ? SuggestedModule : nullptr, /*IsMapped=*/nullptr,
+                 /*IsFrameworkFound=*/nullptr, SkipCache,
+                 /*BuildSystemModule=*/false, /*OpenFile=*/true,
+                 /*CacheFailures=*/true, /*DiagnoseShadowing=*/false)) {
+        // The file was not found through a search directory (e.g. it was
+        // named by an absolute path), so there is nothing to continue from.
+        if (!TmpCurDir)
+          return false;
+        // Keep looking as if this file did a #include_next.
+        TmpFromDir = TmpCurDir;
+        ++TmpFromDir;
+        if (&FE->getFileEntry() == FromFile) {
+          // Found it.
+          FromDir = TmpFromDir;
+          CurDir = TmpCurDir;
+          return true;
+        }
       }
-    }
+      return false;
+    };
+
+    // Candidate names for FromFile. A module header is entered under the path
+    // given in its module map (relative to the module's root directory), so
+    // that is the name it was found as, even if nested search directories
+    // (-Ix -Ix/sub) make it reachable under several names. Otherwise, fall back
+    // to its path relative to each search directory containing it, innermost
+    // first. Directories are matched by identity, as the file may have been
+    // reached via another spelling (e.g. "./x/...").
+    SmallVector<std::string, 4> Names;
+    if (CurLexerSubmodule)
+      for (Module::HeaderKind HK :
+           {Module::HK_Normal, Module::HK_Textual, Module::HK_Private,
+            Module::HK_PrivateTextual})
+        for (const Module::Header &H : CurLexerSubmodule->getHeaders(HK))
+          if (&H.Entry.getFileEntry() == FromFile &&
+              !H.PathRelativeToRootModuleDirectory.empty())
+            Names.push_back(H.PathRelativeToRootModuleDirectory);
+    StringRef BaseName;
+    if (CurPPLexer)
+      if (OptionalFileEntryRef CurFE = CurPPLexer->getFileEntry()) {
+        StringRef Path = CurFE->getName();
+        BaseName = llvm::sys::path::filename(Path);
+        auto IsSearchDir = [&](DirectoryEntryRef Dir) {
+          auto Matches = [&](const DirectoryLookup &DL) {
+            OptionalDirectoryEntryRef DLDir = DL.getDirRef();
+            return DLDir && *DLDir == Dir;
+          };
+          return CurDir ? Matches(*CurDir)
+                        : llvm::any_of(HeaderInfo.search_dir_range(), Matches);
+        };
+        SmallString<128> Rel(BaseName);
+        for (StringRef Parent = llvm::sys::path::parent_path(Path);
+             !Parent.empty(); Parent = llvm::sys::path::parent_path(Parent)) {
+          if (OptionalDirectoryEntryRef Dir =
+                  FileMgr.getOptionalDirectoryRef(Parent))
+            if (IsSearchDir(*Dir))
+              Names.push_back(Rel.str().str());
+          StringRef Name = llvm::sys::path::filename(Parent);
+          if (Name.empty())
+            break;
+          SmallString<128> NewRel(Name);
+          llvm::sys::path::append(NewRel, Rel);
+          Rel = NewRel;
+        }
+      }
+    // A same-name #include_next is most likely how the file was found.
+    if (llvm::is_contained(Names, Filename))
+      Names.insert(Names.begin(), Filename.str());
+    if (!BaseName.empty() && BaseName != Filename)
+      Names.push_back(BaseName.str());
+    Names.push_back(Filename.str());
+    for (const std::string &Name : Names)
+      if (FindFromFile(Name))
+        break;
   }
 
   // Do a standard file entry lookup.
@@ -2138,12 +2205,18 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
     Lookup = nullptr;
     Diag(IncludeNextTok, diag::pp_include_next_in_primary);
   } else if (CurLexerSubmodule) {
-    // Start looking up in the directory *after* the one in which the current
-    // file would be found, if any.
     assert(CurPPLexer && "#include_next directive in macro?");
-    if (auto FE = CurPPLexer->getFileEntry())
-      LookupFromFile = *FE;
-    Lookup = nullptr;
+    if (Lookup) {
+      // The file was found by walking the search path, so we know the exact
+      // directory it came from. Start looking after it.
+      ++Lookup;
+    } else {
+      // The file was not found via a search directory (e.g. it was reached
+      // through a module map). Start looking in the directory *after* the one
+      // in which the current file would be found, if any.
+      if (auto FE = CurPPLexer->getFileEntry())
+        LookupFromFile = *FE;
+    }
   } else if (!Lookup) {
     // The current file was not found by walking the include path. Either it
     // is the primary file (handled above), or it was found by absolute path,
