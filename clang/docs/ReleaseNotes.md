@@ -1377,7 +1377,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed incorrect comparisons between `ObjCProtocolLoc` nodes stored in a
   `DynTypedNode`. This subsequently fixes incorrect nodes found by
   `ASTContext::getParents()` for an `ObjCProtocolLoc`.
-  
+
+- Fixed `DeclContext::lookup` on a C translation unit not finding enumerators
+  declared in a precompiled header or module. (#GH246166) 
+
 #### Miscellaneous Bug Fixes
 
 - Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
