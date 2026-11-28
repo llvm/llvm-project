@@ -3960,6 +3960,7 @@ protected:
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
 
   using redecl_range = redeclarable_base::redecl_range;

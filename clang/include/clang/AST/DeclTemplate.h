@@ -823,6 +823,7 @@ protected:
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
   friend class ASTReader;
 
@@ -992,6 +993,7 @@ protected:
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
 
   /// Load any lazily-loaded specializations from the external source.
@@ -2310,6 +2312,7 @@ protected:
 public:
 
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
   friend class TemplateDeclInstantiator;
 
@@ -3072,6 +3075,7 @@ protected:
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
 
   /// Load any lazily-loaded specializations from the external source.

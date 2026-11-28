@@ -326,6 +326,7 @@ private:
 protected:
   friend class ASTDeclMerger;
   friend class ASTDeclReader;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
   friend class ASTReader;
@@ -1467,6 +1468,8 @@ enum class LinkageSpecLanguageIDs;
 class DeclContext {
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
+  /// For clang-repl's error-recovery.
+  friend class ASTDeclUnmerger;
   /// For checking the new bits in the Serialization part.
   friend class ASTDeclWriter;
   /// For reconcileExternalVisibleStorage, CreateStoredDeclsMap,

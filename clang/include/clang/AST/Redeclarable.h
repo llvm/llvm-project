@@ -189,6 +189,7 @@ public:
   friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class DeclStateReverter;
   friend class IncrementalParser;
 
   Redeclarable(const ASTContext &Ctx)
