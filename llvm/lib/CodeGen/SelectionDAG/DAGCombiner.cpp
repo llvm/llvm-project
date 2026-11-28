@@ -15808,11 +15808,20 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       (Frozen && !Load->hasNUsesOfValue(1, 0)))
     return {};
 
-  if (NonNegZExt) {
+  SDValue V(Load, 0);
+  EVT SrcVT = V.getValueType();
+  auto HasExtLoad = [&](ISD::LoadExtType Kind) {
+    return TLI.isLoadLegalOrCustom(VT, SrcVT, Load->getAlign(),
+                                   Load->getAddressSpace(), Kind, false);
+  };
+  // Look for signed compares that benefit from widening without introducing
+  // an illegal compare or losing a supported extending load.
+  if (NonNegZExt && TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
+      (!TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT) ||
+       !TLI.isZExtFree(V, VT)) &&
+      (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    SDValue V(Load, 0);
-    EVT SrcVT = V.getValueType();
     bool PreferSigned = false;
     for (SDUse &Use : Load->uses()) {
       if (Use.getResNo() != V.getResNo())
@@ -15834,39 +15843,9 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
         PreferSigned = false;
         break;
       }
-      if (!ISD::isSignedIntSetCC(CC))
-        continue;
-      // The multi-use fold widens SETCC, but leaves SELECT_CC narrow.
-      if (IsSetCC && !TLI.isTypeLegal(VT)) {
-        PreferSigned = false;
-        break;
-      }
-      if (!TLI.isTypeLegal(SrcVT) || !TLI.isZExtFree(V, VT)) {
-        PreferSigned = true;
-        continue;
-      }
-      // Widening can bring two sign tests to the same width for (a | b) < 0.
-      if (IsSetCC && CC == ISD::SETLT && isNullConstant(User->getOperand(1)))
-        for (SDUse &CmpUse : User->uses()) {
-          SDNode *Or = CmpUse.getUser();
-          if (Or->getOpcode() != ISD::OR)
-            continue;
-          SDValue Peer = Or->getOperand(1 - CmpUse.getOperandNo());
-          if (Peer.getOpcode() == ISD::SETCC &&
-              Peer.getOperand(0).getValueType() == VT &&
-              Peer->getOperandCondCode(2) == ISD::SETLT &&
-              isNullConstant(Peer.getOperand(1)))
-            PreferSigned = true;
-        }
+      PreferSigned |= ISD::isSignedIntSetCC(CC);
     }
-    // For example, MSP430's byte load already supplies a word-sized offset
-    // and its signed byte compare doesn't need a separate sign extension.
-    auto HasExtLoad = [&](ISD::LoadExtType Kind) {
-      return TLI.isLoadLegalOrCustom(VT, SrcVT, Load->getAlign(),
-                                     Load->getAddressSpace(), Kind, false);
-    };
-    if (PreferSigned &&
-        (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
+    if (PreferSigned) {
       ExtLoadType = ISD::SEXTLOAD;
       ExtOpc = ISD::SIGN_EXTEND;
     }
