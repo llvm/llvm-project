@@ -1,11 +1,18 @@
 static_library("SourceTransformation") {
   output_name = "clangScalableStaticAnalysisSourceTransformation"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
+
+  # Needed to reach
+  # clang/lib/ScalableStaticAnalysis/Analyses/SSAFAnalysesCommon.h, a private
+  # header shared by the two libraries.
+  include_dirs = [ "//clang/lib/ScalableStaticAnalysis/Analyses" ]
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysis/Analyses",
     "//clang/lib/ScalableStaticAnalysis/Core",
     "//clang/lib/Tooling/Core",
+    "//clang/lib/Tooling/Refactoring",
     "//llvm/lib/Support",
   ]
   sources = [
