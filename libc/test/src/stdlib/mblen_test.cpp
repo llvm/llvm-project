@@ -61,6 +61,7 @@ TEST_F(LlvmLibcMBLenTest, ThreeByte) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcMBLenTest, FourByte) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -74,6 +75,17 @@ TEST_F(LlvmLibcMBLenTest, FourByte) {
   ASSERT_EQ(n, -1);
   ASSERT_ERRNO_SUCCESS();
 }
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+// UTF-16 mblen cannot process surrogate pair
+TEST_F(LlvmLibcMBLenTest, RejectFourByte) {
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4),
+                      static_cast<char>(0xA1)}; // 🤡 clown emoji
+  int n = LIBC_NAMESPACE::mblen(ch, 4);
+  ASSERT_EQ(n, -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif
 
 TEST_F(LlvmLibcMBLenTest, InvalidByte) {
   const char ch[1] = {static_cast<char>(0x80)};

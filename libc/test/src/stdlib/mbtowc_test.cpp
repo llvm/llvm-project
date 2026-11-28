@@ -58,6 +58,7 @@ TEST_F(LlvmLibcMBToWCTest, ThreeByte) {
   ASSERT_ERRNO_EQ(EILSEQ);
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcMBToWCTest, FourByte) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -72,6 +73,18 @@ TEST_F(LlvmLibcMBToWCTest, FourByte) {
   ASSERT_EQ(n, -1);
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+// UTF-16 mbtowc cannot process surrogate pair
+TEST_F(LlvmLibcMBToWCTest, RejectFourByte) {
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4),
+                      static_cast<char>(0xA1)}; // 🤡 clown emoji
+  wchar_t dest[2];
+  int n = LIBC_NAMESPACE::mbtowc(dest, ch, 4);
+  ASSERT_EQ(n, -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif
 
 TEST_F(LlvmLibcMBToWCTest, InvalidByte) {
   const char ch[1] = {static_cast<char>(0x80)};

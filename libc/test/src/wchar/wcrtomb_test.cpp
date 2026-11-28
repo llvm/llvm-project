@@ -11,6 +11,7 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
+#include "src/wchar/mbsinit.h"
 #include "src/wchar/wcrtomb.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
@@ -55,6 +56,8 @@ TEST_F(LlvmLibcWCRToMBTest, ThreeByte) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+// UTF-16 wcrtomb cannot process this
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcWCRToMBTest, FourByte) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
@@ -69,6 +72,7 @@ TEST_F(LlvmLibcWCRToMBTest, FourByte) {
   ASSERT_EQ(mb[3], static_cast<char>(0xa1));
   ASSERT_ERRNO_SUCCESS();
 }
+#endif
 
 TEST_F(LlvmLibcWCRToMBTest, NullString) {
   mbstate_t state;
@@ -79,8 +83,10 @@ TEST_F(LlvmLibcWCRToMBTest, NullString) {
   // should be equivalent to the call wcrtomb(buf, L'\0', state)
   size_t cnt1 = LIBC_NAMESPACE::wcrtomb(nullptr, wc, &state);
   ASSERT_ERRNO_SUCCESS();
+  ASSERT_TRUE(LIBC_NAMESPACE::mbsinit(&state) != 0);
   size_t cnt2 = LIBC_NAMESPACE::wcrtomb(mb, L'\0', &state);
   ASSERT_ERRNO_SUCCESS();
+  ASSERT_TRUE(LIBC_NAMESPACE::mbsinit(&state) != 0);
 
   ASSERT_EQ(cnt1, cnt2);
 }
@@ -93,6 +99,8 @@ TEST_F(LlvmLibcWCRToMBTest, NullState) {
   ASSERT_EQ(cnt, static_cast<size_t>(1));
 }
 
+// UTF-16 wcrtomb cannot process this
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcWCRToMBTest, InvalidWchar) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
@@ -102,6 +110,7 @@ TEST_F(LlvmLibcWCRToMBTest, InvalidWchar) {
   ASSERT_EQ(cnt, static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+#endif
 
 TEST_F(LlvmLibcWCRToMBTest, InvalidMBState) {
   mbstate_t *state;
@@ -114,3 +123,30 @@ TEST_F(LlvmLibcWCRToMBTest, InvalidMBState) {
   ASSERT_EQ(cnt, static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EINVAL);
 }
+
+// Tests unique to UTF-16 wcrtomb
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+TEST_F(LlvmLibcWCRToMBTest, InvalidWchar) {
+  mbstate_t state;
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
+  wchar_t wc = 0xdc00;
+  char mb[4];
+  size_t cnt = LIBC_NAMESPACE::wcrtomb(mb, wc, &state);
+  ASSERT_EQ(cnt, static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EILSEQ);
+  ASSERT_TRUE(LIBC_NAMESPACE::mbsinit(&state) != 0);
+}
+
+// We fail with EILSEQ on high surrogate, since we have no way to consume a
+// surrogate pair across 2 consecutive calls, unlike with c16rtomb
+TEST_F(LlvmLibcWCRToMBTest, HighSurrogate) {
+  mbstate_t state;
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
+  wchar_t wc = 0xd800;
+  char mb[4];
+  size_t cnt = LIBC_NAMESPACE::wcrtomb(mb, wc, &state);
+  ASSERT_EQ(cnt, static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EILSEQ);
+  ASSERT_TRUE(LIBC_NAMESPACE::mbsinit(&state) != 0);
+}
+#endif
