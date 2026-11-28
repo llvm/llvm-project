@@ -1010,13 +1010,13 @@ define i32 @s_udiv_i32(i32 inreg %x, i32 inreg %y) {
 ; GFX12-SDAG-NEXT:    s_cvt_f32_u32 s2, s1
 ; GFX12-SDAG-NEXT:    s_sub_co_i32 s3, 0, s1
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    v_s_rcp_f32 s2, s2
 ; GFX12-SDAG-NEXT:    s_mul_f32 s2, s2, 0x4f7ffffe
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_cvt_u32_f32 s2, s2
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_mul_i32 s3, s3, s2
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_mul_hi_u32 s3, s2, s3
@@ -1056,13 +1056,12 @@ define i32 @s_udiv_i32(i32 inreg %x, i32 inreg %y) {
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_mov_b32 s7, s5
 ; GFX12-GISEL-NEXT:    v_s_rcp_f32 s1, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    s_mul_f32 s1, s1, 0x4f7ffffe
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cvt_u32_f32 s4, s1
 ; GFX12-GISEL-NEXT:    s_sub_co_i32 s1, 0, s2
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_mul_i32 s6, s1, s4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, s5
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
