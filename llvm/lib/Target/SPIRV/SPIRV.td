@@ -23,6 +23,19 @@ class Proc<string Name, list<SubtargetFeature> Features>
 
 def : Proc<"generic", []>;
 
+defvar IntelIGCATargets = [
+  "igca_10", "igca_10r",
+  "igca_15", "igca_15r", "igca_15ra",
+  "igca_20", "igca_20c", "igca_20ca",
+  "igca_30", "igca_30r",
+  "igca_35", "igca_35r", "igca_35ra",
+  "igca_40", "igca_40r",
+  "igca_50", "igca_50r",
+  "igca_60", "igca_60r",
+];
+foreach igca = IntelIGCATargets in
+  def : Proc<igca, []>;
+
 def SPIRVInstPrinter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
   bit isMCAsmWriter = 1;

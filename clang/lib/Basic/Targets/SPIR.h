@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
+#include "OffloadTarget.h"
 #include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
@@ -21,6 +22,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -70,7 +72,7 @@ static constexpr LangASMap SPIRDefIsGenMap = {
 };
 
 // Base class for SPIR and SPIR-V target info.
-class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public OffloadTargetInfo {
   std::unique_ptr<TargetInfo> HostTarget;
 
 protected:
@@ -78,7 +80,7 @@ protected:
   const TargetInfo *getHostTarget() const { return HostTarget.get(); }
 
   BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : TargetInfo(Triple) {
+      : OffloadTargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
            "Invalid architecture for SPIR or SPIR-V.");
     TLSSupported = false;
@@ -326,6 +328,29 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    if (!tripleAcceptsTargetCPU())
+      return;
+    Values.push_back(OffloadArchToString(OffloadArch::getGeneric()));
+    llvm::IntelGPU::fillValidIGCATargetList(Values);
+  }
+
+protected:
+  bool isSupportedOffloadArch(OffloadArch Arch) const override {
+    if (!tripleAcceptsTargetCPU())
+      return false;
+    // Valid offload archs for SPIRV:
+    return Arch.isGeneric() || Arch.isIntelIGCA();
+  }
+
+private:
+  /// Chipstar, Vulkan, and AMDHSA SPIRV triples shouldn't accept a -target-cpu,
+  /// but a SPIRV triple with an "unknown" OS should be able to.
+  bool tripleAcceptsTargetCPU() const {
+    llvm::Triple::OSType OS = getTriple().getOS();
+    return OS == llvm::Triple::UnknownOS;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRVTargetInfo {
@@ -434,6 +459,7 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
+
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
