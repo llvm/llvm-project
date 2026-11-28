@@ -2177,6 +2177,28 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #    endif
   u32 instr = *(u32 *)pc;
   return (instr >> 21) & 1 ? Write : Read;
+#  elif defined(__alpha__)
+  // sc_pc is the faulting instruction. Decode it rather than use
+  // sc_traparg_a2: qemu-user always reports 0 (a load) there.
+  uptr pc = ucontext->uc_mcontext.sc_pc;
+  if (pc == addr)
+    return Unknown;  // instruction fetch
+  u32 op = *(u32*)pc >> 26;
+  switch (op) {
+    case 0x0a:  // ldbu
+    case 0x0b:  // ldq_u
+    case 0x0c:  // ldwu
+      return Read;
+    case 0x0d:  // stw
+    case 0x0e:  // stb
+    case 0x0f:  // stq_u
+      return Write;
+  }
+  // 0x20-0x23 and 0x28-0x2b are FP and integer loads; 0x24-0x27 and
+  // 0x2c-0x2f the matching stores.
+  if (op >= 0x20 && op <= 0x2f)
+    return op & 4 ? Write : Read;
+  return Unknown;
 #  elif defined(__riscv)
 #    if SANITIZER_FREEBSD
   unsigned long pc = ucontext->uc_mcontext.mc_gpregs.gp_sepc;
