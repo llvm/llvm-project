@@ -108,6 +108,7 @@
 #include "math/erfcf16.h"
 #include "math/erff.h"
 #include "math/erff16.h"
+#include "math/erfbf16.h"
 #include "math/exp.h"
 #include "math/exp10.h"
 #include "math/exp10f.h"

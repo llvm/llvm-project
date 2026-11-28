@@ -5729,6 +5729,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erfbf16_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.erfbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+)
+
+add_fp_unittest(
   erfcf16_test
   SUITE
     libc-math-smoke-tests

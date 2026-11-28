@@ -138,6 +138,7 @@ else()
       libc.src.__support.math.erfcf16
       libc.src.__support.math.erff
       libc.src.__support.math.erff16
+    libc.src.__support.math.erfbf16
       libc.src.__support.math.exp
       libc.src.__support.math.exp2
       libc.src.__support.math.exp2f
