@@ -2,12 +2,15 @@
 
 // DEFINE: %{optimize} = opt -passes=mem2reg -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove
+// -fno-clangir-call-conv-lowering once those types are supported.
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
 // RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
@@ -40,11 +43,11 @@
 // CPP-LABEL: @_Z18test_svrintx_f16_zu10__SVBool_tu13__SVFloat16_t(
 svfloat16_t test_svrintx_f16_z(svbool_t pg, svfloat16_t op) MODE_ATTR
 {
-// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[8] x !cir.f16>
+// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[8] x !cir.f16, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[ZERO]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.vector<[8] x !cir.f16>) -> !cir.vector<[8] x !cir.f16>
+// CIR-SAME:   (!cir.vector<[8] x !cir.f16, sve_data>, !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[8] x !cir.f16, sve_data>) -> !cir.vector<[8] x !cir.f16, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x half> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
@@ -57,11 +60,11 @@ svfloat16_t test_svrintx_f16_z(svbool_t pg, svfloat16_t op) MODE_ATTR
 // CPP-LABEL: @_Z18test_svrintx_f32_zu10__SVBool_tu13__SVFloat32_t(
 svfloat32_t test_svrintx_f32_z(svbool_t pg, svfloat32_t op) MODE_ATTR
 {
-// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[4] x !cir.float>
+// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[4] x !cir.float, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[ZERO]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !cir.float>) -> !cir.vector<[4] x !cir.float>
+// CIR-SAME:   (!cir.vector<[4] x !cir.float, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !cir.float, sve_data>) -> !cir.vector<[4] x !cir.float, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x float> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
@@ -74,11 +77,11 @@ svfloat32_t test_svrintx_f32_z(svbool_t pg, svfloat32_t op) MODE_ATTR
 // CPP-LABEL: @_Z18test_svrintx_f64_zu10__SVBool_tu13__SVFloat64_t(
 svfloat64_t test_svrintx_f64_z(svbool_t pg, svfloat64_t op) MODE_ATTR
 {
-// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[2] x !cir.double>
+// CIR:       %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<[2] x !cir.double, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[ZERO]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !cir.int<u, 1>>, !cir.vector<[2] x !cir.double>) -> !cir.vector<[2] x !cir.double>
+// CIR-SAME:   (!cir.vector<[2] x !cir.double, sve_data>, !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[2] x !cir.double, sve_data>) -> !cir.vector<[2] x !cir.double, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x double> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
@@ -92,9 +95,9 @@ svfloat64_t test_svrintx_f64_z(svbool_t pg, svfloat64_t op) MODE_ATTR
 svfloat16_t test_svrintx_f16_m(svfloat16_t inactive, svbool_t pg, svfloat16_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.vector<[8] x !cir.f16>) -> !cir.vector<[8] x !cir.f16>
+// CIR-SAME:   (!cir.vector<[8] x !cir.f16, sve_data>, !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[8] x !cir.f16, sve_data>) -> !cir.vector<[8] x !cir.f16, sve_data>
 
 // LLVM-SAME: <vscale x 8 x half> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x half> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
@@ -108,9 +111,9 @@ svfloat16_t test_svrintx_f16_m(svfloat16_t inactive, svbool_t pg, svfloat16_t op
 svfloat32_t test_svrintx_f32_m(svfloat32_t inactive, svbool_t pg, svfloat32_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !cir.float>) -> !cir.vector<[4] x !cir.float>
+// CIR-SAME:   (!cir.vector<[4] x !cir.float, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !cir.float, sve_data>) -> !cir.vector<[4] x !cir.float, sve_data>
 
 // LLVM-SAME: <vscale x 4 x float> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x float> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
@@ -124,9 +127,9 @@ svfloat32_t test_svrintx_f32_m(svfloat32_t inactive, svbool_t pg, svfloat32_t op
 svfloat64_t test_svrintx_f64_m(svfloat64_t inactive, svbool_t pg, svfloat64_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !cir.int<u, 1>>, !cir.vector<[2] x !cir.double>) -> !cir.vector<[2] x !cir.double>
+// CIR-SAME:   (!cir.vector<[2] x !cir.double, sve_data>, !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[2] x !cir.double, sve_data>) -> !cir.vector<[2] x !cir.double, sve_data>
 
 // LLVM-SAME: <vscale x 2 x double> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x double> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
@@ -139,11 +142,11 @@ svfloat64_t test_svrintx_f64_m(svfloat64_t inactive, svbool_t pg, svfloat64_t op
 // CPP-LABEL: @_Z18test_svrintx_f16_xu10__SVBool_tu13__SVFloat16_t(
 svfloat16_t test_svrintx_f16_x(svbool_t pg, svfloat16_t op) MODE_ATTR
 {
-// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[8] x !cir.f16>
+// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[8] x !cir.f16, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.vector<[8] x !cir.f16>) -> !cir.vector<[8] x !cir.f16>
+// CIR-SAME:   (!cir.vector<[8] x !cir.f16, sve_data>, !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[8] x !cir.f16, sve_data>) -> !cir.vector<[8] x !cir.f16, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x half> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
@@ -156,11 +159,11 @@ svfloat16_t test_svrintx_f16_x(svbool_t pg, svfloat16_t op) MODE_ATTR
 // CPP-LABEL: @_Z18test_svrintx_f32_xu10__SVBool_tu13__SVFloat32_t(
 svfloat32_t test_svrintx_f32_x(svbool_t pg, svfloat32_t op) MODE_ATTR
 {
-// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[4] x !cir.float>
+// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[4] x !cir.float, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !cir.float>) -> !cir.vector<[4] x !cir.float>
+// CIR-SAME:   (!cir.vector<[4] x !cir.float, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !cir.float, sve_data>) -> !cir.vector<[4] x !cir.float, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x float> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
@@ -173,11 +176,11 @@ svfloat32_t test_svrintx_f32_x(svbool_t pg, svfloat32_t op) MODE_ATTR
 // CPP-LABEL: @_Z18test_svrintx_f64_xu10__SVBool_tu13__SVFloat64_t(
 svfloat64_t test_svrintx_f64_x(svbool_t pg, svfloat64_t op) MODE_ATTR
 {
-// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[2] x !cir.double>
+// CIR:       %[[UNDEF:.*]] = cir.const #cir.undef : !cir.vector<[2] x !cir.double, sve_data>
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:   (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.frintx" %[[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
-// CIR-SAME:   (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !cir.int<u, 1>>, !cir.vector<[2] x !cir.double>) -> !cir.vector<[2] x !cir.double>
+// CIR-SAME:   (!cir.vector<[2] x !cir.double, sve_data>, !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[2] x !cir.double, sve_data>) -> !cir.vector<[2] x !cir.double, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x double> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])

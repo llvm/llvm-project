@@ -95,7 +95,6 @@ public:
 private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   const X86Subtarget *STI = nullptr;
   MachineLoopInfo *MLI = nullptr;
   TargetSchedModel TSchedModel;
@@ -167,7 +166,6 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   MRI = &MF.getRegInfo();
   TII = STI->getInstrInfo();
-  TRI = STI->getRegisterInfo();
   TSchedModel.init(STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside

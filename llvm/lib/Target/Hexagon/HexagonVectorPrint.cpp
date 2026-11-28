@@ -46,7 +46,6 @@ namespace {
 class HexagonVectorPrint : public MachineFunctionPass {
   const HexagonSubtarget *QST = nullptr;
   const HexagonInstrInfo *QII = nullptr;
-  const HexagonRegisterInfo *QRI = nullptr;
 
 public:
   static char ID;
@@ -123,7 +122,6 @@ static bool getInstrVecReg(const MachineInstr &MI, unsigned &Reg) {
 bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
   bool Changed = false;
   QST = &Fn.getSubtarget<HexagonSubtarget>();
-  QRI = QST->getRegisterInfo();
   QII = QST->getInstrInfo();
   std::vector<MachineInstr *> VecPrintList;
   for (auto &MBB : Fn)

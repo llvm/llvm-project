@@ -98,6 +98,10 @@ public:
 
   void Dump(Stream *s);
 
+  lldb::LanguageType GetLanguageType() const { return m_language; }
+
+  void SetLanguageType(lldb::LanguageType lang_type) { m_language = lang_type; }
+
 private:
   union {
     lldb::user_id_t m_user_id;
@@ -106,6 +110,7 @@ private:
 
   unsigned m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
       m_is_self : 1, m_is_dynamic_cxx : 2, m_is_forcefully_completed : 1;
+  lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
 };
 
 } // namespace lldb_private

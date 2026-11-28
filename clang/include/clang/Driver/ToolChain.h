@@ -98,10 +98,7 @@ public:
     CST_Libstdcxx
   };
 
-  enum RuntimeLibType {
-    RLT_CompilerRT,
-    RLT_Libgcc
-  };
+  enum RuntimeLibType { RLT_None, RLT_CompilerRT, RLT_Libgcc };
 
   enum UnwindLibType {
     UNW_None,

@@ -2790,72 +2790,6 @@ TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
   EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic-hsa"));
 }
 
-TEST(TargetParserTest, testAMDGPUparseArchR600) {
-  // Canonical R600 GPU names map to their own GPUKind and round-trip through
-  // getArchNameR600.
-  struct CanonicalGPU {
-    StringRef Name;
-    AMDGPU::GPUKind Kind;
-    bool HasFMA;
-  };
-  static const CanonicalGPU Canonicals[] = {
-      {"r600", AMDGPU::GK_R600, false},
-      {"r630", AMDGPU::GK_R630, false},
-      {"rs880", AMDGPU::GK_RS880, false},
-      {"rv670", AMDGPU::GK_RV670, false},
-      {"rv710", AMDGPU::GK_RV710, false},
-      {"rv730", AMDGPU::GK_RV730, false},
-      {"rv770", AMDGPU::GK_RV770, false},
-      {"cedar", AMDGPU::GK_CEDAR, false},
-      {"cypress", AMDGPU::GK_CYPRESS, true},
-      {"juniper", AMDGPU::GK_JUNIPER, false},
-      {"redwood", AMDGPU::GK_REDWOOD, false},
-      {"sumo", AMDGPU::GK_SUMO, false},
-      {"barts", AMDGPU::GK_BARTS, false},
-      {"caicos", AMDGPU::GK_CAICOS, false},
-      {"cayman", AMDGPU::GK_CAYMAN, true},
-      {"turks", AMDGPU::GK_TURKS, false},
-  };
-  for (const CanonicalGPU &G : Canonicals) {
-    EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
-    EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
-    EXPECT_EQ(AMDGPU::getFeatureBitsetR600(G.Kind).test(AMDGPU::R600_FEAT_FMAF),
-              G.HasFMA)
-        << G.Name;
-  }
-
-  // Aliases resolve to the canonical GPUKind but are not returned by
-  // getArchNameR600.
-  struct AliasGPU {
-    StringRef Alias;
-    AMDGPU::GPUKind Kind;
-  };
-  static const AliasGPU Aliases[] = {
-      {"rv630", AMDGPU::GK_R600},  {"rv635", AMDGPU::GK_R600},
-      {"rs780", AMDGPU::GK_RS880}, {"rv610", AMDGPU::GK_RS880},
-      {"rv620", AMDGPU::GK_RS880}, {"rv740", AMDGPU::GK_RV770},
-      {"palm", AMDGPU::GK_CEDAR},  {"hemlock", AMDGPU::GK_CYPRESS},
-      {"sumo2", AMDGPU::GK_SUMO},  {"aruba", AMDGPU::GK_CAYMAN},
-  };
-  for (const AliasGPU &A : Aliases) {
-    EXPECT_EQ(AMDGPU::parseArchR600(A.Alias), A.Kind) << A.Alias;
-    EXPECT_NE(AMDGPU::getArchNameR600(A.Kind), A.Alias) << A.Alias;
-  }
-
-  // Unknown and AMDGCN names do not parse as R600 GPUs.
-  EXPECT_EQ(AMDGPU::parseArchR600(""), AMDGPU::GK_NONE);
-  EXPECT_EQ(AMDGPU::parseArchR600("not-a-cpu"), AMDGPU::GK_NONE);
-  EXPECT_EQ(AMDGPU::parseArchR600("gfx900"), AMDGPU::GK_NONE);
-
-  // All canonical and alias names appear in the valid-arch list.
-  SmallVector<StringRef, 0> Values;
-  AMDGPU::fillValidArchListR600(Values);
-  for (const CanonicalGPU &G : Canonicals)
-    EXPECT_TRUE(llvm::is_contained(Values, G.Name)) << G.Name;
-  for (const AliasGPU &A : Aliases)
-    EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
-}
-
 TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
   auto HasFeature = [](StringRef GPU, StringRef Feature) {
     StringMap<bool> Features;
@@ -3395,8 +3329,6 @@ TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
 
   EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_NONE),
             std::nullopt);
-  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_R600),
-            std::nullopt);
 
   EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(Triple::NoSubArch),
             std::nullopt);
@@ -3706,9 +3638,6 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx600:xnack+").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx900:").has_value());
-  // A non-AMDGCN triple has no target-id features.
-  EXPECT_FALSE(
-      TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
 }
 
 TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {

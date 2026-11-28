@@ -285,7 +285,7 @@ public:
 
   enum class SmallIntABICompatKind {
     Platform, // Compat with platform ABI (high bits unspecified).
-    Clang,    // Compat with old Clang ABI (high bits zero/sign-extended).
+    Clang23,  // Compat with old Clang ABI (high bits zero/sign-extended).
     Both,     // Compat with both. Extend in caller, don't assume in callee.
   };
 
@@ -566,6 +566,9 @@ public:
 
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
+
+  /// "<plugin>,<arg>" values of -fpass-plugin-arg=.
+  std::vector<std::string> PassPluginArgs;
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;

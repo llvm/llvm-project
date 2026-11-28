@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 
+#include "ConcurrentStringPool.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
@@ -24,8 +25,7 @@
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/StringSaver.h"
+
 #include <array>
 #include <memory>
 #include <optional>
@@ -34,43 +34,13 @@
 namespace clang {
 namespace doc {
 
-class ConcurrentStringPool {
-public:
-  StringRef intern(StringRef Name) {
-    if (Name.empty())
-      return StringRef();
-
-    llvm::sys::SmartScopedLock<true> Lock(PoolMutex);
-    return Saver.save(Name);
-  }
-
-private:
-  llvm::sys::SmartMutex<true> PoolMutex;
-  llvm::BumpPtrAllocator Alloc;
-  llvm::UniqueStringSaver Saver{Alloc};
-};
-
 ConcurrentStringPool &getGlobalStringPool();
 
 llvm::BumpPtrAllocator &getTransientArena();
 llvm::BumpPtrAllocator &getPersistentArena();
 
 inline StringRef internString(const Twine &T) {
-  if (T.isTriviallyEmpty())
-    return StringRef();
-
-  if (T.isSingleStringRef()) {
-    StringRef S = T.getSingleStringRef();
-    if (S.empty())
-      return StringRef();
-    return getGlobalStringPool().intern(S);
-  }
-
-  SmallString<128> Buffer;
-  StringRef S = T.toStringRef(Buffer);
-  if (S.empty())
-    return StringRef();
-  return getGlobalStringPool().intern(S);
+  return getGlobalStringPool().save(T);
 }
 
 template <typename T>

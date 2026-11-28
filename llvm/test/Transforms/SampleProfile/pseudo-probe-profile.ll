@@ -2,6 +2,8 @@
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s -check-prefix=YAML --input-file %t.opt.yaml
 ; RUN: opt < %t -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-remove-probe -S | FileCheck %s -check-prefix=REMOVE-PROBE
+;; -sample-profile-inline-limit-max below the default min has no effect for a non-CS profile.
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-inline-limit-max=5000 -sample-profile-use-profi=0 -S | FileCheck %s
 
 ; REMOVE-PROBE-NOT: call void @llvm.pseudoprobe
 ; REMOVE-PROBE-NOT: !llvm.pseudo_probe_desc

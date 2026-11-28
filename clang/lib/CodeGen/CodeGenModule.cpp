@@ -22,6 +22,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGOpenMPRuntimeGPU.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
@@ -72,7 +73,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -90,10 +90,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-
-static llvm::cl::opt<bool> LimitedCoverage(
-    "limited-coverage-experimental", llvm::cl::Hidden,
-    llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
@@ -350,6 +346,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+/// AMDGCN, and the AMDGCN-flavoured SPIR-V that lowers to it, share one
+/// classifier.
+static bool usesAMDGPUABI(const llvm::Triple &T) {
+  return T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD);
+}
+
 bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
@@ -358,10 +360,12 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
-  // promotion rules and resource types are not modeled yet.
+  if (usesAMDGPUABI(T))
+    return true;
+
+  // HLSL's integer promotion rules and resource types are not modeled yet.
   if (T.isSPIRV())
-    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+    return !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -415,14 +419,14 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
   if (T.isOSDarwin() || T.isPS()) {
-    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
   } else {
     switch (CGOpts.getSmallIntABICompat()) {
     case CodeGenOptions::SmallIntABICompatKind::Platform:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
       break;
-    case CodeGenOptions::SmallIntABICompatKind::Clang:
-      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    case CodeGenOptions::SmallIntABICompatKind::Clang23:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
       break;
     case CodeGenOptions::SmallIntABICompatKind::Both:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
@@ -437,6 +441,19 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
+
+  if (usesAMDGPUABI(T)) {
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.PrivateAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+    Opts.CoerceGenericPtrArgToGlobal =
+        T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   switch (T.getArch()) {
   default:
@@ -582,7 +599,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              const CodeGenOptions &CGO, llvm::Module &M,
                              DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
-    : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
+    : CLOpts(getCodeGenCLOptions(M.getContext())), Context(C),
+      LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
@@ -1895,6 +1913,12 @@ void CodeGenModule::Release() {
   if (getLangOpts().OpenMPIsTargetDevice)
     getModule().addModuleFlag(llvm::Module::Max, "openmp-device",
                               LangOpts.OpenMP);
+
+  // Enable lowering of dynamic local memory to kernel arguments on SPIR-V.
+  if (getTriple().isSPIRV() &&
+      (LangOpts.SYCLIsDevice || LangOpts.OpenMPIsTargetDevice))
+    getModule().addModuleFlag(llvm::Module::Max, "spirv-dynamic-local-memory",
+                              1);
 
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.
   if (LangOpts.OpenCL || (LangOpts.CUDAIsDevice && getTriple().isSPIRV())) {
@@ -3494,7 +3518,7 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
 /// Get the feature delta from the default feature map for the given target CPU.
 static std::vector<std::string>
 getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
-                           llvm::StringMap<bool> &FeatureMap) {
+                           const llvm::StringMap<bool> &FeatureMap) {
   llvm::StringMap<bool> DefaultFeatureMap;
   CGM.getTarget().initFeatureMap(
       DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
@@ -3538,8 +3562,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                 llvm::join(CanonicalFeatures, ","));
   };
   if (TD || TV || SD || TC) {
-    llvm::StringMap<bool> FeatureMap;
-    getContext().getFunctionFeatureMap(FeatureMap, GD);
+    const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -3581,14 +3604,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // Otherwise just add the existing target cpu and target features to the
     // function.
     if (SetTargetFeatures && getTarget().getTriple().isAMDGPU()) {
-      llvm::StringMap<bool> FeatureMap;
-      if (FD) {
-        getContext().getFunctionFeatureMap(FeatureMap, GD);
-      } else {
-        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
-                                   TargetCPU,
-                                   getTarget().getTargetOpts().Features);
-      }
+      const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
     } else if (getTarget().getTriple().isSPIRV() &&
                getTarget().getTriple().getVendor() == llvm::Triple::AMD) {
@@ -8422,9 +8438,10 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
     if (!cast<FunctionDecl>(D)->doesThisDeclarationHaveABody())
       break;
     SourceManager &SM = getContext().getSourceManager();
-    if (LimitedCoverage && SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
+    if (CLOpts.limited_coverage_experimental &&
+        SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
       break;
-    if (!llvm::coverage::SystemHeadersCoverage &&
+    if (!CLOpts.system_headers_coverage &&
         SM.isInSystemHeader(D->getBeginLoc()))
       break;
     DeferredEmptyCoverageMappingDecls.try_emplace(D, true);

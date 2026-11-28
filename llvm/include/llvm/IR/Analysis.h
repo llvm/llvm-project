@@ -117,7 +117,7 @@ public:
   /// Construct a special preserved set that preserves all passes.
   static PreservedAnalyses all() {
     PreservedAnalyses PA;
-    PA.PreservedIDs.insert(&AllAnalysesKey);
+    PA.PreservesAll = true;
     return PA;
   }
 
@@ -205,6 +205,7 @@ public:
     }
     PreservedIDs.remove_if(
         [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
+    PreservesAll &= Arg.PreservesAll;
   }
 
   /// Intersect this set with a temporary other set in place.
@@ -226,6 +227,7 @@ public:
     }
     PreservedIDs.remove_if(
         [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
+    PreservesAll &= Arg.PreservesAll;
   }
 
   /// A checker object that makes it easy to query for whether an analysis or
@@ -248,8 +250,7 @@ public:
     ///  - the analysis is explicitly preserved or
     ///  - all analyses are preserved.
     bool preserved() {
-      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
-                              PA.PreservedIDs.count(ID));
+      return !IsAbandoned && (PA.PreservesAll || PA.PreservedIDs.count(ID));
     }
 
     /// Return true if the checker's analysis was not abandoned, i.e. it was not
@@ -262,8 +263,7 @@ public:
     ///  - all analyses are preserved.
     template <typename AnalysisSetT> bool preservedSet() {
       AnalysisSetKey *SetID = AnalysisSetT::ID();
-      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
-                              PA.PreservedIDs.count(SetID));
+      return !IsAbandoned && (PA.PreservesAll || PA.PreservedIDs.count(SetID));
     }
   };
 
@@ -290,8 +290,7 @@ public:
   /// This is used primarily to optimize for the common case of a transformation
   /// which makes no changes to the IR.
   bool areAllPreserved() const {
-    return NotPreservedAnalysisIDs.empty() &&
-           PreservedIDs.count(&AllAnalysesKey);
+    return NotPreservedAnalysisIDs.empty() && PreservesAll;
   }
 
   /// Directly test whether a set of analyses is preserved.
@@ -306,15 +305,12 @@ public:
   /// This is only true when no analyses have been explicitly abandoned.
   bool allAnalysesInSetPreserved(AnalysisSetKey *SetID) const {
     return NotPreservedAnalysisIDs.empty() &&
-           (PreservedIDs.count(&AllAnalysesKey) || PreservedIDs.count(SetID));
+           (PreservesAll || PreservedIDs.count(SetID));
   }
 
 private:
-  /// A special key used to indicate all analyses.
-  LLVM_ABI static AnalysisSetKey AllAnalysesKey;
-
   /// The IDs of analyses and analysis sets that are preserved.
-  SmallPtrSet<void *, 2> PreservedIDs;
+  SmallPtrSet<void *, 8> PreservedIDs;
 
   /// The IDs of explicitly not-preserved analyses.
   ///
@@ -324,6 +320,9 @@ private:
   ///
   /// Also, a given ID should never occur both here and in `PreservedIDs`.
   SmallPtrSet<AnalysisKey *, 2> NotPreservedAnalysisIDs;
+
+  /// Whether all analyses are preserved unless explicitly abandoned.
+  bool PreservesAll = false;
 };
 } // namespace llvm
 

@@ -45,6 +45,7 @@ cc_library(
         "TypeSystem/Fortran/*.h",
     ]),
     deps = [
+        ":LanguageCPlusPlusOptions",
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
@@ -939,6 +940,18 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Demangle",
         "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "LanguageCPlusPlusOptions",
+    strip_include_prefix = "Language/CPlusPlus",
+    tbl_outs = {"Language/CPlusPlus/LanguageCPlusPlusOptions.inc": ["-gen-lldb-option-defs"]},
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Language/CPlusPlus/LanguageCPlusPlusOptions.td",
+    deps = [
+        "//lldb:CommandsTdFiles",
+        "//lldb:CoreTdFiles",
     ],
 )
 

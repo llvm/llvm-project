@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -acc-recipe-materialization | FileCheck %s
-// RUN: mlir-opt %s -acc-recipe-materialization -acc-compute-lowering | FileCheck %s --check-prefix=LOWER
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(acc-recipe-materialization,func.func(acc-compute-lowering))' | FileCheck %s --check-prefix=LOWER
 
 acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator <add> init {
 ^bb0(%arg0: memref<f64>):

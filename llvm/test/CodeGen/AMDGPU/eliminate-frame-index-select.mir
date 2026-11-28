@@ -4,7 +4,6 @@
 # by v_readfirstlane_b32 in eliminateFrameIndex.
 ---
 name:            test_s_cselect_b32
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 12}
 machineFunctionInfo:
@@ -66,7 +65,6 @@ body:             |
 # eliminateFrameIndex.
 ---
 name:            test_v_cndmask_e32
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 12}
 machineFunctionInfo:
@@ -97,7 +95,6 @@ body:             |
 # eliminateFrameIndex.
 ---
 name:            test_v_cndmask_e64
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 12}
 machineFunctionInfo:

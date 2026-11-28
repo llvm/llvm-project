@@ -558,6 +558,13 @@ public:
   /// other callers using the locked accessors.
   LockedPtr<ObjectFile> GetObjectFileLocked();
 
+  /// Get the entry point address of this module's object file.
+  ///
+  /// \return
+  ///     An invalid Address if there is no object file or the object file
+  ///     has no entry point.
+  Address GetObjectFileEntryPointAddress();
+
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
   /// created by the symbol vendor.

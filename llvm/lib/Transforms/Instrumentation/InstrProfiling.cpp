@@ -120,8 +120,10 @@ static void makeAtomic(Instruction *Load, Instruction *Store) {
   auto *Addend = Addition->getOperand(1);
 
   IRBuilder<> Builder(Load);
-  Builder.CreateAtomicRMW(AtomicRMWInst::Add, Store->getOperand(1), Addend,
-                          MaybeAlign(), AtomicOrdering::Monotonic);
+  Builder
+      .CreateAtomicRMW(AtomicRMWInst::Add, Store->getOperand(1), Addend,
+                       MaybeAlign(), AtomicOrdering::Monotonic)
+      ->setNoSanitizeMetadata();
   Store->eraseFromParent();
   Addition->eraseFromParent();
   Load->eraseFromParent();
@@ -229,8 +231,8 @@ private:
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
 
-  /// Returns true if profile counter updates should be atomic.
-  bool isAtomic() const;
+  /// Returns true if profile counter updates in \p F should be atomic.
+  bool isAtomic(const Function &F) const;
 
   /// Return true if profile sampling is enabled.
   bool isSamplingEnabled() const;
@@ -395,12 +397,16 @@ public:
       // Generate the relaxed atomic RMW if we've asked for it and no more
       // promotion is possible.
       if ((IsAtomic && !TargetLoop) || Opts.atomic_counter_update_promoted)
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
-                                MaybeAlign(), AtomicOrdering::Monotonic);
+        Builder
+            .CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
+                             MaybeAlign(), AtomicOrdering::Monotonic)
+            ->setNoSanitizeMetadata();
       else {
         LoadInst *OldVal = Builder.CreateLoad(Ty, Addr, "pgocount.promoted");
+        OldVal->setNoSanitizeMetadata();
         auto *NewVal = Builder.CreateAdd(OldVal, LiveInValue);
         auto *NewStore = Builder.CreateStore(NewVal, Addr);
+        NewStore->setNoSanitizeMetadata();
 
         // Now update the parent loop's candidate list:
         if (TargetLoop)
@@ -828,8 +834,11 @@ bool InstrLowerer::isCounterPromotionEnabled() const {
   return valueOr(Opts.do_counter_promotion, Options.DoCounterPromotion);
 }
 
-bool InstrLowerer::isAtomic() const {
-  return Options.Atomic || Opts.instrprof_atomic_counter_update_all;
+bool InstrLowerer::isAtomic(const Function &F) const {
+  // Non-atomic counter updates are data races, which ThreadSanitizer would
+  // report. Use atomic updates in functions that TSan instruments.
+  return valueOr(Opts.instrprof_atomic_counter_update_all,
+                 Options.Atomic || F.hasFnAttribute(Attribute::SanitizeThread));
 }
 
 static void doAtomicCheck(Function *F) {
@@ -871,7 +880,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
     BasicBlock *BB = CounterLoad->getParent();
     Loop *ParentLoop = LI.getLoopFor(BB);
     if (!ParentLoop) {
-      if (isAtomic())
+      if (isAtomic(*F))
         makeAtomic(CounterLoad, CounterStore);
       continue;
     }
@@ -884,11 +893,11 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   // iteratively hoisted outside the loop nest.
   for (auto *Loop : llvm::reverse(Loops)) {
     PGOCounterPromoter Promoter(Opts, LoopPromotionCandidates, *Loop, LI,
-                                BFI.get(), isAtomic());
+                                BFI.get(), isAtomic(*F));
     Promoter.run(&TotalCountersPromoted);
   }
 
-  if (isAtomic() && Opts.verify_atomic_counter_promoted)
+  if (isAtomic(*F) && Opts.verify_atomic_counter_promoted)
     doAtomicCheck(F);
 }
 
@@ -1149,11 +1158,20 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  // Optimizations can merge the counter update with a user access, and then
+  // ThreadSanitizer ends up instrumenting the counter access - and can report
+  // it as a data race. Making updates atomic cures this.
+  Function *F = CoverInstruction->getFunction();
+  bool MakeAtomic =
+      F->hasFnAttribute(Attribute::SanitizeThread) && isAtomic(*F);
   if (Opts.conditional_counter_update) {
     Instruction *SplitBefore = CoverInstruction->getNextNode();
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
-    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    auto *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Load->setNoSanitizeMetadata();
+    if (MakeAtomic)
+      Load->setAtomic(AtomicOrdering::Monotonic);
     Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
         SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
@@ -1161,7 +1179,10 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   }
 
   // We store zero to represent that this block is covered.
-  Builder.CreateStore(Builder.getInt8(0), Addr);
+  auto *Store = Builder.CreateStore(Builder.getInt8(0), Addr);
+  Store->setNoSanitizeMetadata();
+  if (MakeAtomic)
+    Store->setAtomic(AtomicOrdering::Monotonic);
   CoverInstruction->eraseFromParent();
 }
 
@@ -1298,15 +1319,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
   // If promotion is enabled then delay generating atomic updates until
   // after promotion is done.
-  if ((!isCounterPromotionEnabled() && isAtomic()) ||
+  if ((!isCounterPromotionEnabled() && isAtomic(*Inc->getFunction())) ||
       (Inc->getIndex()->isNullValue() && Opts.atomic_first_counter)) {
-    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    Builder
+        .CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(), MaybeAlign(),
+                         AtomicOrdering::Monotonic)
+        ->setNoSanitizeMetadata();
   } else {
     Value *IncStep = Inc->getStep();
-    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    auto *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    Load->setNoSanitizeMetadata();
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
+    Store->setNoSanitizeMetadata();
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
@@ -1366,8 +1391,12 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   // Load profile bitmap byte.
   //  %mcdc.bits = load i8, ptr %4, align 1
   auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
+  Bitmap->setNoSanitizeMetadata();
 
-  if (isAtomic()) {
+  if (isAtomic(*Update->getFunction())) {
+    if (Update->getFunction()->hasFnAttribute(Attribute::SanitizeThread))
+      Bitmap->setAtomic(AtomicOrdering::Monotonic);
+
     // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
     // Note, just-loaded Bitmap might not be up-to-date. Use it just for
     // early testing.
@@ -1381,8 +1410,10 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
     // Execute if (unlikely(ShouldStore)).
     Builder.SetInsertPoint(ThenBranch);
-    Builder.CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    Builder
+        .CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
+                         MaybeAlign(), AtomicOrdering::Monotonic)
+        ->setNoSanitizeMetadata();
   } else {
     // Perform logical OR of profile bitmap byte and shifted bit offset.
     //  %8 = or i8 %mcdc.bits, %7
@@ -1390,7 +1421,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
     // Store the updated profile bitmap byte.
     //  store i8 %8, ptr %3, align 1
-    Builder.CreateStore(Result, BitmapByteAddr);
+    Builder.CreateStore(Result, BitmapByteAddr)->setNoSanitizeMetadata();
   }
 
   Update->eraseFromParent();
@@ -1749,6 +1780,17 @@ InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
   return GV;
 }
 
+/// Return the scope in which to describe \p F's profile variables for debug
+/// info correlation, or null if the module has no debug info. A function
+/// without debug info has no subprogram, so its variables are described at the
+/// scope of the module's first compile unit.
+static DIScope *getCorrelationScope(const Function &F) {
+  if (DISubprogram *SP = F.getSubprogram())
+    return SP;
+  auto CUs = F.getParent()->debug_compile_units();
+  return CUs.empty() ? nullptr : *CUs.begin();
+}
+
 GlobalVariable *
 InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
@@ -1766,8 +1808,9 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
       Opts.profile_correlate == ProfCorrelatorKind::DebugInfo) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
-    if (auto *SP = Fn->getSubprogram()) {
-      DIBuilder DB(M, true, SP->getUnit());
+    if (DIScope *Scope = getCorrelationScope(*Fn)) {
+      auto *SP = dyn_cast<DISubprogram>(Scope);
+      DIBuilder DB(M, true, SP ? SP->getUnit() : cast<DICompileUnit>(Scope));
       Metadata *FunctionNameAnnotation[] = {
           MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
           MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
@@ -1781,13 +1824,15 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
           MDNode::get(Ctx, NumBitmapBitsAnnotation),
       });
       auto *DICounter = DB.createGlobalVariableExpression(
-          SP, BitmapPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
+          Scope, BitmapPtr->getName(), /*LinkageName=*/StringRef(),
+          Scope->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Bitmap Type"),
           BitmapPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       BitmapPtr->addDebugInfo(DICounter);
-      DB.finalizeSubprogram(SP);
+      if (SP)
+        DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 
@@ -1838,8 +1883,9 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   if (Opts.profile_correlate == ProfCorrelatorKind::DebugInfo) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
-    if (auto *SP = Fn->getSubprogram()) {
-      DIBuilder DB(M, true, SP->getUnit());
+    if (DIScope *Scope = getCorrelationScope(*Fn)) {
+      auto *SP = dyn_cast<DISubprogram>(Scope);
+      DIBuilder DB(M, true, SP ? SP->getUnit() : cast<DICompileUnit>(Scope));
       Metadata *FunctionNameAnnotation[] = {
           MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
           MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
@@ -1858,13 +1904,15 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
           MDNode::get(Ctx, NumCountersAnnotation),
       });
       auto *DICounter = DB.createGlobalVariableExpression(
-          SP, CounterPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
+          Scope, CounterPtr->getName(), /*LinkageName=*/StringRef(),
+          Scope->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Data Type"),
           CounterPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
-      DB.finalizeSubprogram(SP);
+      if (SP)
+        DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 

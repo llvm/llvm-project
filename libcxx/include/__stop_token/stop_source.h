@@ -32,19 +32,19 @@ inline constexpr nostopstate_t nostopstate{};
 
 class stop_source {
 public:
-  _LIBCPP_HIDE_FROM_ABI stop_source() : __state_(new __stop_state()) { __state_->__increment_stop_source_counter(); }
+  stop_source() : __state_(new __stop_state()) { __state_->__increment_stop_source_counter(); }
 
-  _LIBCPP_HIDE_FROM_ABI explicit stop_source(nostopstate_t) noexcept : __state_(nullptr) {}
+  explicit stop_source(nostopstate_t) noexcept : __state_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI stop_source(const stop_source& __other) noexcept : __state_(__other.__state_) {
+  stop_source(const stop_source& __other) noexcept : __state_(__other.__state_) {
     if (__state_) {
       __state_->__increment_stop_source_counter();
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI stop_source(stop_source&& __other) noexcept = default;
+  stop_source(stop_source&& __other) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI stop_source& operator=(const stop_source& __other) noexcept {
+  stop_source& operator=(const stop_source& __other) noexcept {
     // increment `__other` first so that we don't hit 0 in case of self-assignment
     if (__other.__state_) {
       __other.__state_->__increment_stop_source_counter();
@@ -56,29 +56,27 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI stop_source& operator=(stop_source&&) noexcept = default;
+  stop_source& operator=(stop_source&&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI ~stop_source() {
+  ~stop_source() {
     if (__state_) {
       __state_->__decrement_stop_source_counter();
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(stop_source& __other) noexcept { __state_.swap(__other.__state_); }
+  void swap(stop_source& __other) noexcept { __state_.swap(__other.__state_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI stop_token get_token() const noexcept { return stop_token(__state_); }
+  [[nodiscard]] stop_token get_token() const noexcept { return stop_token(__state_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool stop_possible() const noexcept { return __state_ != nullptr; }
+  [[nodiscard]] bool stop_possible() const noexcept { return __state_ != nullptr; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool stop_requested() const noexcept {
-    return __state_ != nullptr && __state_->__stop_requested();
-  }
+  [[nodiscard]] bool stop_requested() const noexcept { return __state_ != nullptr && __state_->__stop_requested(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool request_stop() noexcept { return __state_ && __state_->__request_stop(); }
+  bool request_stop() noexcept { return __state_ && __state_->__request_stop(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend bool operator==(const stop_source&, const stop_source&) noexcept = default;
+  [[nodiscard]] friend bool operator==(const stop_source&, const stop_source&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI friend void swap(stop_source& __lhs, stop_source& __rhs) noexcept { __lhs.swap(__rhs); }
+  friend void swap(stop_source& __lhs, stop_source& __rhs) noexcept { __lhs.swap(__rhs); }
 
 private:
   __intrusive_shared_ptr<__stop_state> __state_;

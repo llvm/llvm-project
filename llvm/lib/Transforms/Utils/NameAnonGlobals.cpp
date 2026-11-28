@@ -84,5 +84,9 @@ PreservedAnalyses NameAnonGlobalPass::run(Module &M,
   if (!nameUnamedGlobals(M))
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  // Only names of globals were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

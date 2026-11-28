@@ -23,6 +23,7 @@ target_link_libraries(cir-opt
   MLIRCIR
   MLIRCIRTransforms
   MLIRDialect
+  MLIRGPUDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRMemRefDialect

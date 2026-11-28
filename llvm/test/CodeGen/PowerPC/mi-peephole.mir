@@ -4,7 +4,6 @@
 ---
 name:            testRLDIC
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }

@@ -5,11 +5,11 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=BSS=1 a.s -o a.o
-# RUN: ld.lld --section-start=.note=0x200300 a.o -o a
+# RUN: ld.lld --section-start=.note=0x200300 a.o -z nolrodata-after-bss -o a
 # RUN: llvm-readelf -S -l -sX a | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a1.o
-# RUN: ld.lld --section-start=.note=0x200300 a1.o -o a1
+# RUN: ld.lld --section-start=.note=0x200300 a1.o -z nolrodata-after-bss -o a1
 # RUN: llvm-readelf -S -sX a1 | FileCheck %s --check-prefix=CHECK1
 
 # RUN: ld.lld -T b.lds -z norelro a.o -z lrodata-after-bss -z nolrodata-after-bss -o b --fatal-warnings
@@ -19,12 +19,19 @@
 # RUN: llvm-readelf -S -l -sX a3 | FileCheck %s --check-prefix=CHECK3
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 c.s -o c.o
-# RUN: ld.lld c.o -o c
+# RUN: ld.lld c.o -z nolrodata-after-bss -o c
 # RUN: llvm-readelf -S -l c | FileCheck %s --check-prefix=CHECK4
+# RUN: ld.lld c.o -o c1
+# RUN: llvm-readelf -S c1 | FileCheck %s --check-prefix=CHECK6
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 d.s -o d.o
 # RUN: ld.lld d.o -z keep-text-section-prefix -o d
 # RUN: llvm-readelf -S d | FileCheck %s --check-prefix=CHECK5
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 e.s -o e.o
+# RUN: ld.lld e.o -o e
+# RUN: llvm-readelf -sX e | FileCheck %s --check-prefix=CHECK7
+# RUN: not ld.lld e.o -z nolrodata-after-bss 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # CHECK:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
@@ -101,12 +108,12 @@
 # CHECK3-NEXT:  .relro_padding    NOBITS          0000000000202306 000306 000cfa 00  WA  0   0  1
 # CHECK3-NEXT:  .data             PROGBITS        0000000000203306 000306 000001 00  WA  0   0  1
 # CHECK3-NEXT:  .bss              NOBITS          0000000000203307 000307 001800 00  WA  0   0  1
-## We spend (size(.bss) + size(.lbss)) % MAXPAGESIZE bytes.
-# CHECK3-NEXT:  .lbss             NOBITS          0000000000204b07 000307 001201 00 WAl  0   0  1
-# CHECK3-NEXT:  .lrodata          PROGBITS        0000000000206d08 000d08 000002 00  Al  0   0  1
-# CHECK3-NEXT:  .ldata            PROGBITS        0000000000207d0a 000d0a 000002 00 WAl  0   0  1
-# CHECK3-NEXT:  .ldata2           PROGBITS        0000000000207d0c 000d0c 000001 00 WAl  0   0  1
-# CHECK3-NEXT:  .comment          PROGBITS        0000000000000000 000d0d {{.*}} 01  MS  0   0  1
+## We spend size(.bss) % MAXPAGESIZE bytes for .bss.
+# CHECK3-NEXT:  .lrodata          PROGBITS        0000000000205b07 000b07 000002 00  Al  0   0  1
+# CHECK3-NEXT:  .ldata            PROGBITS        0000000000206b09 000b09 000002 00 WAl  0   0  1
+# CHECK3-NEXT:  .ldata2           PROGBITS        0000000000206b0b 000b0b 000001 00 WAl  0   0  1
+# CHECK3-NEXT:  .lbss             NOBITS          0000000000206b0c 000b0c 001201 00 WAl  0   0  1
+# CHECK3-NEXT:  .comment          PROGBITS        0000000000000000 000b0c {{.*}} 01  MS  0   0  1
 
 # CHECK3:       Program Headers:
 # CHECK3-NEXT:    Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
@@ -114,15 +121,15 @@
 # CHECK3-NEXT:    LOAD  0x000000 0x0000000000200000 0x0000000000200000 0x000302 0x000302 R   0x1000
 # CHECK3-NEXT:    LOAD  0x000304 0x0000000000201304 0x0000000000201304 0x000001 0x000001 R E 0x1000
 # CHECK3-NEXT:    LOAD  0x000305 0x0000000000202305 0x0000000000202305 0x000001 0x000cfb RW  0x1000
-# CHECK3-NEXT:    LOAD  0x000306 0x0000000000203306 0x0000000000203306 0x000001 0x002a02 RW  0x1000
-# CHECK3-NEXT:    LOAD  0x000d08 0x0000000000206d08 0x0000000000206d08 0x000002 0x000002 R   0x1000
-# CHECK3-NEXT:    LOAD  0x000d0a 0x0000000000207d0a 0x0000000000207d0a 0x000003 0x000003 RW  0x1000
+# CHECK3-NEXT:    LOAD  0x000306 0x0000000000203306 0x0000000000203306 0x000001 0x001801 RW  0x1000
+# CHECK3-NEXT:    LOAD  0x000b07 0x0000000000205b07 0x0000000000205b07 0x000002 0x000002 R   0x1000
+# CHECK3-NEXT:    LOAD  0x000b09 0x0000000000206b09 0x0000000000206b09 0x000003 0x001204 RW  0x1000
 # CHECK3-NEXT:    TLS   0x000305 0x0000000000202305 0x0000000000202305 0x000001 0x000003 R   0x1
 
 # CHECK3:       0000000000201304     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _start
 # CHECK3-NEXT:  0000000000201305     0 NOTYPE  GLOBAL DEFAULT [[#]] (.text)   _etext
 # CHECK3-NEXT:  0000000000203307     0 NOTYPE  GLOBAL DEFAULT [[#]] (.data)   _edata
-# CHECK3-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
+# CHECK3-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.lbss)   _end
 
 # CHECK4:      .note      NOTE
 # CHECK4-NEXT: .ltext     PROGBITS
@@ -137,11 +144,29 @@
 # CHECK4-NEXT: .comment   PROGBITS
 
 ## .ltext.hot and .ltext.unlikely are kept separate with -z keep-text-section-prefix.
+# CHECK5:      .text.hot       PROGBITS
+# CHECK5-NEXT: .text.unlikely  PROGBITS
 # CHECK5:      .ltext.hot      PROGBITS
 # CHECK5-NEXT: .ltext.unlikely PROGBITS
 # CHECK5-NEXT: .ltext          PROGBITS
-# CHECK5:      .text.hot       PROGBITS
-# CHECK5-NEXT: .text.unlikely  PROGBITS
+
+# CHECK6:      .note      NOTE
+# CHECK6-NEXT: .rodata    PROGBITS
+# CHECK6-NEXT: .text      PROGBITS
+# CHECK6-NEXT: .data      PROGBITS
+# CHECK6-NEXT: .bss       NOBITS
+# CHECK6-NEXT: .ltext     PROGBITS
+# CHECK6-NEXT: .lrodata   PROGBITS
+# CHECK6-NEXT: .ldata     PROGBITS
+# CHECK6-NEXT: .lbss      NOBITS
+# CHECK6-NEXT: .ltext_w   PROGBITS
+# CHECK6-NEXT: .comment   PROGBITS
+
+## .text and .ltext are in the same PT_LOAD.
+# CHECK7: (.text) _etext
+
+# ERR: error: e.o:(.text+0x3): relocation R_X86_64_PC32 out of range: {{.*}}; references '__ehdr_start'
+# ERR: error: e.o:(.text+0x8): relocation R_X86_64_PLT32 out of range: {{.*}}; references 'f'
 
 #--- a.s
 .globl _start, _etext, _edata, _end
@@ -221,3 +246,19 @@ h:
 .section .text.hot.f4,"ax",@progbits; ret
 .section .text.unlikely.f5,"ax",@progbits; ret
 .section .text.f6,"ax",@progbits; ret
+
+#--- e.s
+## Small code references __ehdr_start and a .ltext symbol with 32-bit
+## relocations. Neither .ltext2 nor .lbss is in between by default.
+.globl _start, _etext
+_start:
+  leaq __ehdr_start(%rip), %rax
+  call f
+
+.section .ltext,"axl",@progbits
+.globl f
+f:
+  ret
+
+.section .ltext2,"axl",@nobits; .space 0x90000000
+.section .lbss,"awl",@nobits; .space 0x90000000

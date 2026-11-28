@@ -729,6 +729,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
+                         TM.getTargetTriple().getDefaultWCharSize(),
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
@@ -749,7 +750,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   EnableExtLdPromotion = false;
   StackPointerRegisterToSaveRestore = 0;
   BooleanContents = UndefinedBooleanContent;
-  BooleanFloatContents = UndefinedBooleanContent;
   BooleanVectorContents = UndefinedBooleanContent;
   SchedPreferenceInfo = Sched::ILP;
   GatherAllAliasesMaxDepth = 18;

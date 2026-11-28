@@ -14,7 +14,6 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
-#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,7 +31,6 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "dag-patterns"
@@ -118,6 +116,16 @@ bool TypeSetByHwMode::isPossible() const {
 
 bool TypeSetByHwMode::insert(const ValueTypeByHwMode &VVT) {
   bool Changed = false;
+  if (hasDefault()) {
+    for (const auto &P : VVT) {
+      unsigned M = P.first;
+      if (M == DefaultMode || hasMode(M))
+        continue;
+      Map.try_emplace(M, Map.begin()->second);
+      Changed = true;
+    }
+  }
+
   bool ContainsDefault = false;
   MVT DT = MVT::Other;
 
@@ -150,7 +158,7 @@ bool TypeSetByHwMode::constrain(const TypeSetByHwMode &VTS) {
       unsigned M = I.first;
       if (M == DefaultMode || hasMode(M))
         continue;
-      Map.try_emplace(M, Map.at(DefaultMode));
+      Map.try_emplace(M, Map.begin()->second);
       Changed = true;
     }
   }
@@ -4821,6 +4829,12 @@ void CodeGenDAGPatterns::GenerateVariants() {
   // intentionally do not reconsider these.  Any variants of added patterns have
   // already been added.
   //
+  // A variant can only duplicate a pattern with the same top level
+  // predicates, so index the patterns by them.
+  DenseMap<const ListInit *, SmallVector<unsigned, 0>> PatternsByPredicates;
+  for (unsigned I = 0, E = PatternsToMatch.size(); I != E; ++I)
+    PatternsByPredicates[PatternsToMatch[I].getPredicates()].push_back(I);
+
   for (unsigned i = 0, e = PatternsToMatch.size(); i != e; ++i) {
     MultipleUseVarSet DepVars;
     std::vector<TreePatternNodePtr> Variants;
@@ -4845,12 +4859,9 @@ void CodeGenDAGPatterns::GenerateVariants() {
                  dbgs() << "\n");
 
       // Scan to see if an instruction or explicit pattern already matches this.
+      const ListInit *Preds = PatternsToMatch[i].getPredicates();
       bool AlreadyExists = false;
-      for (unsigned p = 0, e = PatternsToMatch.size(); p != e; ++p) {
-        // Skip if the top level predicates do not match.
-        if ((i != p) && (PatternsToMatch[i].getPredicates() !=
-                         PatternsToMatch[p].getPredicates()))
-          continue;
+      for (unsigned p : PatternsByPredicates[Preds]) {
         // Check to see if this variant already exists.
         if (Variant->isIsomorphicTo(PatternsToMatch[p].getSrcPattern(),
                                     DepVars)) {
@@ -4864,6 +4875,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
         continue;
 
       // Otherwise, add it to the list of patterns we have.
+      PatternsByPredicates[Preds].push_back(PatternsToMatch.size());
       PatternsToMatch.emplace_back(
           PatternsToMatch[i].getSrcRecord(), PatternsToMatch[i].getPredicates(),
           Variant, PatternsToMatch[i].getDstPatternShared(),

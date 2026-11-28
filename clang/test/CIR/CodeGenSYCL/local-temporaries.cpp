@@ -95,7 +95,7 @@ void take_ref(const S &s);
 // CIR-NEXT: cir.return
 
 // CIR-LABEL: cir.func {{.*}}@_Z4nrvov(
-// CIR-NEXT: %[[__RETVAL:.*]] = cir.alloca "__retval" align(4) init : !cir.ptr<!rec_S>
+// CIR-NEXT: %[[__RETVAL:.*]] = cir.alloca "" align(4) init return_slot : !cir.ptr<!rec_S>
 // CIR-NEXT: %[[__RETVAL_ASCAST:.*]] = cir.cast address_space %[[__RETVAL]] : !cir.ptr<!rec_S> -> !cir.ptr<!rec_S, target_address_space(4)>
 // CIR-NEXT: %[[TMP0:.*]] = cir.const #cir.zero : !rec_S
 // CIR-NEXT: cir.store align(4) %[[TMP0]], %[[__RETVAL_ASCAST]] : !rec_S, !cir.ptr<!rec_S, target_address_space(4)>

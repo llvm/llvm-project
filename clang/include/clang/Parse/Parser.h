@@ -1544,11 +1544,12 @@ private:
                                    ArrayRef<const DeclRefExpr *> ParamRefs,
                                    bool ReenteredProtoParams);
 
-  /// Helper function to move LateParsedTypeAttribute pointers from one list
-  /// to another. Filters type attributes from \p From and appends them to \p
-  /// To.
-  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                         LateParsedAttrList &From);
+  /// Moves the late-parsed type attributes out of \p From, appending a pointer
+  /// to each one's LateParsedTypeAttrInfo to \p To. \p To does not own the
+  /// LateParsedTypeAttribute objects: the caller must keep them alive while
+  /// \p To is in use (in a C record, CurRecordLateParsedTypeAttrs does).
+  static void TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                          LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
@@ -2812,11 +2813,13 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      LateParsedAttrList *LateParamAttrs = nullptr) {
     return ParseParameterDeclarationClause(
         D.getContext(), attrs, ParamInfo, EllipsisLoc,
         D.getCXXScopeSpec().isSet() &&
-            D.isFunctionDeclaratorAFunctionDeclaration());
+            D.isFunctionDeclaratorAFunctionDeclaration(),
+        LateParamAttrs);
   }
 
   /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
@@ -2857,7 +2860,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false,
+      LateParsedAttrList *LateParamAttrs = nullptr);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
@@ -4124,8 +4128,9 @@ private:
   /// suffix.
   bool isPostfixExpressionSuffixStart() {
     tok::TokenKind K = Tok.getKind();
-    return (K == tok::l_square || K == tok::l_paren || K == tok::period ||
-            K == tok::arrow || K == tok::plusplus || K == tok::minusminus);
+    return (K == tok::l_square || K == tok::l_paren || K == tok::lesslessless ||
+            K == tok::period || K == tok::arrow || K == tok::plusplus ||
+            K == tok::minusminus);
   }
 
   /// Once the leading part of a postfix-expression is parsed, this

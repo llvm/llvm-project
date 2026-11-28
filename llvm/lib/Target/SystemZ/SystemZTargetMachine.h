@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <optional>
@@ -26,9 +27,23 @@
 namespace llvm {
 
 class SystemZTargetMachine : public CodeGenTargetMachineImpl {
+  const SystemZOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<SystemZSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, SoftFloat, BackChain;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             SoftFloat == RHS.SoftFloat && BackChain == RHS.BackChain;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<SystemZSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   SystemZTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -37,6 +52,8 @@ public:
                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
   ~SystemZTargetMachine() override;
+
+  const SystemZOptions &getCLOpts() const { return CLOpts; }
 
   const SystemZSubtarget *getSubtargetImpl(const Function &) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,

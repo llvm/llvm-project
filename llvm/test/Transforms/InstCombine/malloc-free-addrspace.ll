@@ -74,11 +74,11 @@ entry:
 declare noalias ptr addrspace(200) @calloc(i64, i64) addrspace(200)  nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
 declare noalias ptr addrspace(200) @malloc(i64) addrspace(200) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 declare noalias ptr addrspace(200) @aligned_alloc(i64, i64) addrspace(200) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
-declare noalias ptr addrspace(200) @strdup(ptr addrspace(200) %arg) addrspace(200)
-declare void @free(ptr addrspace(200)) addrspace(200) allockind("free") "alloc-family"="malloc"
+declare noalias ptr addrspace(200) @strdup(ptr addrspace(200) %arg) addrspace(200) allockind("alloc") "alloc-family"="malloc"
+declare void @free(ptr addrspace(200) allocptr) addrspace(200) allockind("free") "alloc-family"="malloc"
 ; new/delete
-declare noalias ptr addrspace(200) @_Znwm(i64) addrspace(200)
-declare void @_ZdlPv(ptr addrspace(200)) addrspace(200)
+declare noalias ptr addrspace(200) @_Znwm(i64) addrspace(200) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znwm"
+declare void @_ZdlPv(ptr addrspace(200) allocptr) addrspace(200) allockind("free") "alloc-family"="_Znwm"
 ; new[]/delete[]
-declare noalias ptr addrspace(200) @_Znam(i64) addrspace(200)
-declare void @_ZdaPv(ptr addrspace(200)) addrspace(200)
+declare noalias ptr addrspace(200) @_Znam(i64) addrspace(200) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znam"
+declare void @_ZdaPv(ptr addrspace(200) allocptr) addrspace(200) allockind("free") "alloc-family"="_Znam"

@@ -147,9 +147,22 @@ protected:
   bool ExpandWaitcntProfiling = false;
   const AMDGPU::HardwareLimits &Limits;
 
-  // Soft waitcnts whose erasures are postponed so we can confirm if they're
-  // truly redundant or if they're waiting on a loop-carried dependency.
+  // Waitcnt erasures postponed until loop-carried dependencies are known.
   DenseSet<MachineInstr *> DeferredErasures;
+
+  // S_WAITCNT_DEPCTR operand updates, postponed for the same reason.
+  DenseMap<MachineInstr *, unsigned> DeferredDepctrEncs;
+
+  void deferDepctrUpdate(MachineInstr &MI, unsigned Enc) {
+    unsigned DefaultEnc = AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST);
+    if (Enc == DefaultEnc) {
+      DeferredDepctrEncs.erase(&MI);
+      DeferredErasures.insert(&MI);
+      return;
+    }
+    DeferredErasures.erase(&MI);
+    DeferredDepctrEncs[&MI] = Enc;
+  }
 
 public:
   WaitcntGenerator() = delete;
@@ -187,15 +200,7 @@ public:
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
                           MachineBasicBlock::instr_iterator It) = 0;
 
-  bool eraseDeferredWaitcnts() {
-    bool Modified = false;
-    for (MachineInstr *MI : DeferredErasures) {
-      MI->eraseFromParent();
-      Modified = true;
-    }
-    DeferredErasures.clear();
-    return Modified;
-  }
+  bool applyDeferredWaitcnts();
 
   // Transform a soft waitcnt into a normal one.
   bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
@@ -598,6 +603,29 @@ public:
     LastFlatDsCnt = ScoreUBs[AMDGPU::DS_CNT];
   }
 
+  bool hasPendingXcntOnlyVmem() const {
+    return LastXcntOnlyVmem > ScoreLBs[AMDGPU::X_CNT] &&
+           LastXcntOnlyVmem <= ScoreUBs[AMDGPU::X_CNT];
+  }
+
+  void setPendingXcntOnlyVmem() { LastXcntOnlyVmem = ScoreUBs[AMDGPU::X_CNT]; }
+
+  // Return true if an xcnt event not tracked by asynccnt may still be
+  // outstanding after \p Wait. Waiting for a counter to reach zero completes
+  // its operations, which also drains their xcnt.
+  bool hasPendingNonAsyncXcnt(
+      const AMDGPU::Waitcnt &Wait = AMDGPU::Waitcnt()) const {
+    if (hasPendingXcntOnlyVmem() || (hasPendingEvent(HWEvents::SMEM_GROUP) &&
+                                     Wait.get(AMDGPU::KM_CNT) != 0))
+      return true;
+    for (AMDGPU::InstCounterType T : {AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT,
+                                      AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT}) {
+      if (Wait.get(T) != 0 && hasPendingEvent(T))
+        return true;
+    }
+    return false;
+  }
+
   bool hasPendingGDS() const {
     return LastGDS > ScoreLBs[AMDGPU::DS_CNT] &&
            LastGDS <= ScoreUBs[AMDGPU::DS_CNT];
@@ -735,6 +763,10 @@ private:
   // Remember the last flat memory operation.
   unsigned LastFlatDsCnt = 0;
   unsigned LastFlatLoadCnt = 0;
+  // Remember the last VMEM operation that increments xcnt but neither loadcnt
+  // nor storecnt, such as a prefetch or an LDS-only FLAT. Async LDS DMA is
+  // excluded: it is covered by ASYNC_ACCESS instead.
+  unsigned LastXcntOnlyVmem = 0;
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
   // Number of VA_VDST ordered XDL writes issued so far. Only differences
@@ -994,8 +1026,13 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
       setScoreLB(T, getScoreUB(T) - 1);
       PendingEvents -= OtherEvent;
     }
-    for (const MachineOperand &Op : Inst.all_uses())
+    for (const MachineOperand &Op : Inst.all_uses()) {
+      // Async ops have an implicit use of ASYNCcnt, which is not a real
+      // register.
+      if (Op.getReg() == AMDGPU::ASYNCcnt)
+        continue;
       setScoreByOperand(Op, T, CurrScore);
+    }
   } else if (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR ||
              T == AMDGPU::VM_VSRC) {
     // Match the score to the VGPR destination or source registers as
@@ -1334,11 +1371,18 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
     UpdateWait.set(AMDGPU::X_CNT, ~0u);
   // If we have pending store we cannot optimize XCnt because we do not wait for
   // stores. VMEM loads retun in order, so if we only have loads XCnt is
-  // decremented to the same number as LOADCnt.
+  // decremented to the same number as LOADCnt. That does not hold while a
+  // VMEM operation that LOADCnt does not count is in flight.
   if (CheckWait.get(AMDGPU::LOAD_CNT) != ~0u &&
       hasPendingEvent(HWEvents::VMEM_GROUP) &&
-      !hasPendingEvent(AMDGPU::STORE_CNT) &&
+      !hasPendingEvent(AMDGPU::STORE_CNT) && !hasPendingXcntOnlyVmem() &&
+      !hasPendingEvent(HWEvents::ASYNC_ACCESS) &&
       CheckWait.get(AMDGPU::X_CNT) >= CheckWait.get(AMDGPU::LOAD_CNT))
+    UpdateWait.set(AMDGPU::X_CNT, ~0u);
+  // asynccnt==0 completes every async op, which also drains their xcnt.
+  if (CheckWait.get(AMDGPU::ASYNC_CNT) == 0 &&
+      hasPendingEvent(HWEvents::ASYNC_ACCESS) &&
+      !hasPendingNonAsyncXcnt(CheckWait))
     UpdateWait.set(AMDGPU::X_CNT, ~0u);
   simplifyWaitcnt(UpdateWait, AMDGPU::X_CNT);
 }
@@ -1603,12 +1647,15 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
       PendingEvents -= HWEvents::SMEM_GROUP;
   }
   if (T == AMDGPU::LOAD_CNT && hasPendingEvent(HWEvents::VMEM_GROUP) &&
-      !hasPendingEvent(AMDGPU::STORE_CNT)) {
+      !hasPendingEvent(AMDGPU::STORE_CNT) && !hasPendingXcntOnlyVmem() &&
+      !hasPendingEvent(HWEvents::ASYNC_ACCESS)) {
     if (!hasMixedPendingEvents(AMDGPU::X_CNT))
       applyWaitcnt(AMDGPU::X_CNT, Count);
     else if (Count == 0)
       PendingEvents -= HWEvents::VMEM_GROUP;
   }
+  if (T == AMDGPU::ASYNC_CNT && Count == 0 && !hasPendingNonAsyncXcnt())
+    applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
 void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait,
@@ -1685,6 +1732,19 @@ static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
 
   MO.setImm(NewEnc);
   return true;
+}
+
+bool WaitcntGenerator::applyDeferredWaitcnts() {
+  bool Modified = false;
+  for (auto [MI, Enc] : DeferredDepctrEncs)
+    Modified |= updateOperandIfDifferent(*MI, AMDGPU::OpName::simm16, Enc);
+  DeferredDepctrEncs.clear();
+  for (MachineInstr *MI : DeferredErasures) {
+    MI->eraseFromParent();
+    Modified = true;
+  }
+  DeferredErasures.clear();
+  return Modified;
 }
 
 bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
@@ -2039,27 +2099,14 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       if (WaitcntDepctrInstr == nullptr) {
         WaitcntDepctrInstr = &II;
       } else {
-        // S_WAITCNT_DEPCTR requires special care. Don't remove a
-        // duplicate if it is waiting on things other than VA_VDST or
-        // VM_VSRC. If that is the case, just make sure the VA_VDST and
-        // VM_VSRC subfields of the operand are set to the "no wait"
-        // values.
-
+        // The duplicate's VA_VDST and VM_VSRC waits are now carried by the
+        // first S_WAITCNT_DEPCTR, so clear them here. Keep the duplicate if
+        // it still waits on other fields.
         unsigned Enc = static_cast<unsigned>(
             TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm());
         Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
-        // Encode min(VA_VDST_RD, VA_VDST_WR) into the single hardware field
-        unsigned VaVdst = std::min(Wait.get(AMDGPU::VA_VDST_RD),
-                                   Wait.get(AMDGPU::VA_VDST_WR));
-        Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, VaVdst);
-
-        if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
-          Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
-          Modified |= promoteSoftWaitCnt(&II);
-        } else {
-          II.eraseFromParent();
-          Modified = true;
-        }
+        Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
+        deferDepctrUpdate(II, Enc);
       }
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       // Architectures higher than GFX10 do not have direct loads to
@@ -2235,22 +2282,11 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     Wait.set(AMDGPU::VA_VDST_WR, ~0u);
     Wait.set(AMDGPU::VM_VSRC, ~0u);
 
-    // If that new encoded Depctr immediate would actually still wait
-    // for anything, update the instruction's operand. Otherwise it can
-    // just be deleted.
-    if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
-      Modified |= updateOperandIfDifferent(*WaitcntDepctrInstr,
-                                           AMDGPU::OpName::simm16, Enc);
-      LLVM_DEBUG(It.isEnd() ? dbgs() << "applyPreexistingWaitcnt\n"
-                                     << "New Instr at block end: "
-                                     << *WaitcntDepctrInstr << '\n'
-                            : dbgs() << "applyPreexistingWaitcnt\n"
-                                     << "Old Instr: " << *It << "New Instr: "
-                                     << *WaitcntDepctrInstr << '\n');
-    } else {
-      WaitcntDepctrInstr->eraseFromParent();
-      Modified = true;
-    }
+    // Keep the original operand until the end of the pass: a later visit
+    // through a backedge may need the wait this visit found redundant.
+    deferDepctrUpdate(*WaitcntDepctrInstr, Enc);
+    LLVM_DEBUG(dbgs() << "applyPreexistingWaitcnt: deferred depctr encoding "
+                      << Enc << " for " << *WaitcntDepctrInstr);
   }
 
   return Modified;
@@ -2800,6 +2836,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->setPendingGDS();
     }
   } else if (TII.isFLAT(Inst)) {
+    if (InstEvents.contains(HWEvents::VMEM_GROUP) &&
+        !TII.mayAccessVMEMThroughFlat(Inst) &&
+        !InstEvents.contains(HWEvents::ASYNC_ACCESS))
+      ScoreBrackets->setPendingXcntOnlyVmem();
+
     if (Inst.mayLoadOrStore() && TII.mayAccessVMEMThroughFlat(Inst) &&
         TII.mayAccessLDSThroughFlat(Inst, TgSplit) &&
         !SIInstrInfo::isLDSDMA(Inst)) {
@@ -2958,6 +2999,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     if (T == AMDGPU::LOAD_CNT)
       StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
+
+    if (T == AMDGPU::X_CNT)
+      StrictDom |= mergeScore(M, LastXcntOnlyVmem, Other.LastXcntOnlyVmem);
 
     if (T == AMDGPU::DS_CNT) {
       StrictDom |= mergeScore(M, LastFlatDsCnt, Other.LastFlatDsCnt);
@@ -3707,7 +3751,7 @@ bool SIInsertWaitcnts::run() {
     }
   } while (Repeat);
 
-  Modified |= WCG->eraseDeferredWaitcnts();
+  Modified |= WCG->applyDeferredWaitcnts();
 
   if (ST.hasScalarStores()) {
     SmallVector<MachineBasicBlock *, 4> EndPgmBlocks;

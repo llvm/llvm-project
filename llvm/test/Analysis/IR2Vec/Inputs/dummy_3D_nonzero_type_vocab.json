@@ -88,6 +88,7 @@
         "Function": [0, 0, 0],
         "Pointer": [0, 0, 0],
         "Constant": [0, 0, 0],
-        "Variable": [0, 0, 0]
+        "Variable": [0, 0, 0],
+        "Label": [0, 0, 0]
     }
 }

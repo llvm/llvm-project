@@ -697,10 +697,6 @@ public:
 } // namespace
 
 void DLTIDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
-      >();
   addInterfaces<TargetDataLayoutInterface>();
   ModuleOp::attachInterface<ModuleDLTIQueryOpInterface>(*getContext());
 }

@@ -4,7 +4,6 @@
 
 ---
 name: hoist_move
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: hoist_move
   ; GCN: bb.0:
@@ -36,7 +35,6 @@ body:             |
 ...
 ---
 name: no_hoist_cmp
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: no_hoist_cmp
   ; GCN: bb.0:
@@ -68,7 +66,6 @@ body:             |
 ...
 ---
 name: allowable_hoist_cmp
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: allowable_hoist_cmp
   ; GCN: bb.0:
@@ -100,7 +97,6 @@ body:             |
 ...
 ---
 name: no_hoist_readfirstlane
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: no_hoist_readfirstlane
   ; GCN: bb.0:

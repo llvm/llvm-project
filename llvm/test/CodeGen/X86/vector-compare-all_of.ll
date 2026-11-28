@@ -1474,18 +1474,18 @@ define i1 @PR116977(<32 x i8> %a, <32 x i8> %b, <32 x i8> %v) {
 ;
 ; AVX1-LABEL: PR116977:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm2, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm2
-; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; AVX1-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

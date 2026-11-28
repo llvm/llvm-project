@@ -77,6 +77,24 @@ define <2 x i64> @scalarize_v2i64_splat_mask(ptr %p, i1 %mask, <2 x i64> %passth
   ret <2 x i64> %ret
 }
 
+; A select with a scalar condition between two splats is also a splat mask.
+define <2 x i64> @scalarize_v2i64_select_splat_mask(ptr %p, i1 %c, <2 x i64> %passthrough) {
+; CHECK-LABEL: @scalarize_v2i64_select_splat_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[C:%.*]], <2 x i1> splat (i1 true), <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[MASK_FIRST:%.*]] = extractelement <2 x i1> [[MASK]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_FIRST]], label [[COND_LOAD:%.*]], label [[TMP1:%.*]]
+; CHECK:       cond.load:
+; CHECK-NEXT:    [[RET_COND_LOAD:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    br label [[TMP1]]
+; CHECK:       1:
+; CHECK-NEXT:    [[RET:%.*]] = phi <2 x i64> [ [[RET_COND_LOAD]], [[COND_LOAD]] ], [ [[PASSTHROUGH:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret <2 x i64> [[RET]]
+;
+  %mask = select i1 %c, <2 x i1> splat (i1 true), <2 x i1> zeroinitializer
+  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> %mask, <2 x i64> %passthrough)
+  ret <2 x i64> %ret
+}
+
 ; This use a byte sized but non power of 2 element size. This used to crash due to bad alignment calculation.
 define <2 x i24> @scalarize_v2i24(ptr %p, <2 x i1> %mask, <2 x i24> %passthru) {
 ; CHECK-LABEL: @scalarize_v2i24(

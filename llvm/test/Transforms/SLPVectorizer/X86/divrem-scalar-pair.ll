@@ -77,8 +77,8 @@ define void @udiv_urem_both_stored(ptr %p, ptr %q, ptr %a, ptr %b) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[P]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void

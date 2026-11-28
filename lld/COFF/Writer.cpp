@@ -264,7 +264,8 @@ private:
   void sortExceptionTables();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
-  void sortBySectionOrder(std::vector<Chunk *> &chunks);
+  void sortBySectionOrder(std::vector<Chunk *> &chunks,
+                          function_ref<int(const SectionChunk *)> priority);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
   void fixTlsAlignment(SymbolTable &symtab);
@@ -491,12 +492,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   DenseMap<uint64_t, Defined *> lastThunks;
   DenseMap<std::pair<ObjFile *, Defined *>, uint32_t> thunkSymtabIndices;
   size_t thunksSize = 0;
-  // Recheck Chunks.size() each iteration, since we can insert more
-  // elements into it.
-  for (size_t i = 0; i != os->chunks.size(); ++i) {
-    SectionChunk *sc = dyn_cast<SectionChunk>(os->chunks[i]);
+  // Append thunks without repeatedly shifting the remaining chunks.
+  std::vector<Chunk *> newChunks;
+  newChunks.reserve(os->chunks.size());
+  for (Chunk *c : os->chunks) {
+    newChunks.push_back(c);
+    SectionChunk *sc = dyn_cast<SectionChunk>(c);
     if (!sc) {
-      auto chunk = cast<NonSectionChunk>(os->chunks[i]);
+      auto chunk = cast<NonSectionChunk>(c);
       if (uint32_t size = chunk->extendRanges()) {
         thunksSize += size;
         addressesChanged = true;
@@ -504,7 +507,6 @@ bool Writer::createThunks(OutputSection *os, int margin) {
       continue;
     }
     MachineTypes machine = sc->getMachine();
-    size_t thunkInsertionSpot = i + 1;
 
     // Try to get a good enough estimate of where new thunks will be placed.
     // Offset this by the size of the new thunks added so far, to make the
@@ -530,6 +532,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
       uint64_t s = sym->getRVA();
 
+      // A target in the relocation's own chunk needs no margin: thunks are
+      // only inserted between chunks, so this distance cannot change.
+      if (auto *dr = dyn_cast<DefinedRegular>(sym))
+        if (dr->getChunk() == sc &&
+            isInRange(rel.Type, s, sc->getRVA() + rel.VirtualAddress, 0,
+                      machine))
+          continue;
+
       if (isInRange(rel.Type, s, p, margin, machine))
         continue;
 
@@ -540,8 +550,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
             thunkInsertionRVA); // Estimate of where it will be located.
-        os->chunks.insert(os->chunks.begin() + thunkInsertionSpot, thunkChunk);
-        thunkInsertionSpot++;
+        newChunks.push_back(thunkChunk);
         thunksSize += thunkChunk->getSize();
         thunkInsertionRVA += thunkChunk->getSize();
         addressesChanged = true;
@@ -586,6 +595,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
     sc->setRelocs(newRelocs);
   }
+  os->chunks.swap(newChunks);
   return addressesChanged;
 }
 
@@ -852,11 +862,13 @@ static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
 }
 
 // For /order.
-void Writer::sortBySectionOrder(std::vector<Chunk *> &chunks) {
-  auto getPriority = [&ctx = ctx](const Chunk *c) {
+void Writer::sortBySectionOrder(
+    std::vector<Chunk *> &chunks,
+    function_ref<int(const SectionChunk *)> priority) {
+  auto getPriority = [=](const Chunk *c) {
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
-        return ctx.config.order.lookup(sec->sym->getName());
+        return priority(sec);
     return 0;
   };
 
@@ -1042,16 +1054,20 @@ static bool shouldStripSectionSuffix(SectionChunk *sc, StringRef name,
 
 void Writer::sortSections() {
   if (!ctx.config.callGraphProfile.empty()) {
+    // The call graph order is per section: two leaders can have the same name.
     DenseMap<const SectionChunk *, int> order =
         computeCallGraphProfileOrder(ctx);
-    for (auto it : order) {
-      if (DefinedRegular *sym = it.first->sym)
-        ctx.config.order[sym->getName()] = it.second;
-    }
+    for (auto it : partialSections)
+      sortBySectionOrder(it.second->chunks, [&](const SectionChunk *sec) {
+        return order.lookup(sec);
+      });
+    return;
   }
   if (!ctx.config.order.empty())
     for (auto it : partialSections)
-      sortBySectionOrder(it.second->chunks);
+      sortBySectionOrder(it.second->chunks, [&](const SectionChunk *sec) {
+        return ctx.config.order.lookup(sec->sym->getName());
+      });
 }
 
 void Writer::calculateStubDependentSizes() {

@@ -35,11 +35,6 @@ STATISTIC(NumPESpillVSR, "Number of spills to vector in prologue");
 STATISTIC(NumPEReloadVSR, "Number of reloads from vector in epilogue");
 STATISTIC(NumPrologProbed, "Number of prologues probed");
 
-static cl::opt<bool>
-EnablePEVectorSpills("ppc-enable-pe-vector-spills",
-                     cl::desc("Enable spills in prologue to vector registers."),
-                     cl::init(false), cl::Hidden);
-
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
   if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
@@ -1781,9 +1776,16 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       for (unsigned CRField : MustSaveCRs) {
         CRMask |= 0x80 >> (CRField - PPC::CR0);
       }
-      BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
-          .addImm(CRMask)
-          .addReg(SrcReg, getKillRegState(true));
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, InsertPt, dl,
+                  TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
+              .addImm(CRMask)
+              .addReg(SrcReg, getKillRegState(true));
+      // MTCRF does not statically model which CR fields it writes. Add the
+      // restored fields as implicit defs so that the post-RA scheduler treats
+      // them as writes (and doesn't move MTCRF above reads of those fields).
+      for (unsigned CRField : MustSaveCRs)
+        MIB.addDef(CRField, RegState::Implicit);
     }
   };
 
@@ -2373,7 +2375,8 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
 
   // Early exit if cannot spill gprs to volatile vector registers.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!EnablePEVectorSpills || MFI.hasCalls() || !Subtarget.hasP9Vector())
+  if (!Subtarget.getCLOpts().enable_pe_vector_spills || MFI.hasCalls() ||
+      !Subtarget.hasP9Vector())
     return false;
 
   // Build a BitVector of VSRs that can be used for spilling GPRs.
@@ -2581,9 +2584,17 @@ static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
       CRMask |= 0x10;
     if (CR4Spilled)
       CRMask |= 0x08;
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTCRF))
-                       .addImm(CRMask)
-                       .addReg(MoveReg, getKillRegState(true)));
+    MachineInstrBuilder MIB = BuildMI(*MF, DL, TII.get(PPC::MTCRF))
+                                  .addImm(CRMask)
+                                  .addReg(MoveReg, getKillRegState(true));
+    // Add the restored CR fields as implicit defs (see BuildMoveToCR).
+    if (CR2Spilled)
+      MIB.addDef(PPC::CR2, RegState::Implicit);
+    if (CR3Spilled)
+      MIB.addDef(PPC::CR3, RegState::Implicit);
+    if (CR4Spilled)
+      MIB.addDef(PPC::CR4, RegState::Implicit);
+    MBB.insert(MI, MIB);
   }
 }
 

@@ -319,9 +319,9 @@ void coro::doRematerializations(
   for (Instruction &I : instructions(F)) {
     if (!IsMaterializable(I))
       continue;
-    for (User *U : I.users())
+    for (Instruction *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U))
-        Spills[&I].push_back(cast<Instruction>(U));
+        Spills[&I].push_back(U);
   }
 
   // Process each of the identified rematerializable instructions
