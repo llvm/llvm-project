@@ -208,20 +208,20 @@ QualType ParamVarRegion::getValueType() const {
 const ParmVarDecl *ParamVarRegion::getDecl() const {
   const Decl *D = getStackFrame()->getDecl();
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    assert(Index < FD->param_size());
-    return FD->parameters()[Index];
+    assert(DeclParamIdx < FD->param_size());
+    return FD->parameters()[DeclParamIdx];
   }
   if (const auto *BD = dyn_cast<BlockDecl>(D)) {
-    assert(Index < BD->param_size());
-    return BD->parameters()[Index];
+    assert(DeclParamIdx < BD->param_size());
+    return BD->parameters()[DeclParamIdx];
   }
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    assert(Index < MD->param_size());
-    return MD->parameters()[Index];
+    assert(DeclParamIdx < MD->param_size());
+    return MD->parameters()[DeclParamIdx];
   }
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
-    assert(Index < CD->param_size());
-    return CD->parameters()[Index];
+    assert(DeclParamIdx < CD->param_size());
+    return CD->parameters()[DeclParamIdx];
   }
   llvm_unreachable("Unexpected Decl kind!");
 }

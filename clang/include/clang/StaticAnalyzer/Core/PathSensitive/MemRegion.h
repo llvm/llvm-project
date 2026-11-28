@@ -1074,10 +1074,14 @@ class ParamVarRegion final : public VarRegion {
   friend class MemRegionManager;
 
   const Expr *OriginExpr;
-  unsigned Index;
+
+  /// Index of the declared parameter of the callee that this region stands
+  /// for. This is not necessarily the index of the corresponding argument
+  /// in `OriginExpr`. See `CallEvent::getDeclaredParameterIndex()`.
+  unsigned DeclParamIdx;
 
   ParamVarRegion(const Expr *OE, unsigned Idx, const MemRegion *SReg)
-      : VarRegion(SReg, ParamVarRegionKind), OriginExpr(OE), Index(Idx) {
+      : VarRegion(SReg, ParamVarRegionKind), OriginExpr(OE), DeclParamIdx(Idx) {
     assert(!cast<StackSpaceRegion>(SReg)->getStackFrame()->inTopFrame());
     assert(OriginExpr);
   }
@@ -1088,7 +1092,7 @@ class ParamVarRegion final : public VarRegion {
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const Expr *getOriginExpr() const { return OriginExpr; }
-  unsigned getIndex() const { return Index; }
+  unsigned getIndex() const { return DeclParamIdx; }
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;
 
@@ -1096,7 +1100,8 @@ public:
 
   QualType getValueType() const override;
 
-  /// TODO: What does this return?
+  /// \returns the declared parameter of the callee that this region
+  /// stands for (`getStackFrame()->getDecl()->parameters()[getIndex()]`).
   const ParmVarDecl *getDecl() const override;
 
   bool canPrintPrettyAsExpr() const override;
