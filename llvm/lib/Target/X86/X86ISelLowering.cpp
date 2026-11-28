@@ -63930,6 +63930,21 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
+  // Fold (scalar_to_vector C) to a vector constant so constant-pool lowering
+  // can fold the load into the consumer. Skip small constants, they are already
+  // cheaply materialized via MOV32ri/MOV64ri and VPMOVSXBQ/VPMOVZXBQ.
+  if (auto *C = dyn_cast<ConstantSDNode>(Src)) {
+    if (Src.getValueType() != MVT::i64)
+      return SDValue();
+    const APInt &CVal = C->getAPIntValue();
+    if (CVal.isIntN(32) || CVal.isSignedIntN(32))
+      return SDValue();
+    APInt Elt = CVal.zextOrTrunc(VT.getScalarSizeInBits());
+    APInt VecVal = APInt::getZero(VT.getSizeInBits());
+    VecVal.insertBits(Elt, 0);
+    return DAG.getConstant(VecVal, DL, VT);
+  }
+
   return SDValue();
 }
 
