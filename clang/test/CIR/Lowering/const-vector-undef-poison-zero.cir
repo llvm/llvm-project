@@ -1,0 +1,187 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+// A constant vector may hold undef, poison and zero elements. A zero stays in
+// the dense constant. An undef or poison element is inserted into it, and the
+// translation to LLVM IR folds the insertion. A vector that is undef or poison
+// in every element is a single undef or poison value.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @g_mixed = #cir.const_vector<[#cir.int<1> : !s32i, #cir.undef : !s32i, #cir.poison : !s32i, #cir.zero : !s32i]> : !cir.vector<4 x !s32i>
+  // MLIR: llvm.mlir.global external @g_mixed() {{.*}}: vector<4xi32> {
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[1, 0, 0, 0]> : vector<4xi32>) : vector<4xi32>
+  // MLIR:   %[[UNDEF:.*]] = llvm.mlir.undef : i32
+  // MLIR:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // MLIR:   %[[INS:.*]] = llvm.insertelement %[[UNDEF]], %[[VEC]][%[[ONE]] : i64] : vector<4xi32>
+  // MLIR:   %[[POISON:.*]] = llvm.mlir.poison : i32
+  // MLIR:   %[[TWO:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[POISON]], %[[INS]][%[[TWO]] : i64] : vector<4xi32>
+  // MLIR:   llvm.return %[[RES]] : vector<4xi32>
+
+  // LLVM: @g_mixed = global <4 x i32> <i32 1, i32 undef, i32 poison, i32 0>
+
+  cir.global external @g_poison = #cir.const_vector<[#cir.poison : !s32i, #cir.poison : !s32i]> : !cir.vector<2 x !s32i>
+  // MLIR: llvm.mlir.global external @g_poison() {{.*}}: vector<2xi32> {
+  // MLIR-NEXT:   %[[POISON:.*]] = llvm.mlir.poison : vector<2xi32>
+  // MLIR-NEXT:   llvm.return %[[POISON]] : vector<2xi32>
+
+  // LLVM: @g_poison = global <2 x i32> poison
+
+  cir.func @int_undef() -> !cir.vector<4 x !s32i> {
+    %0 = cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    cir.return %0 : !cir.vector<4 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @int_undef
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[0, 2, 3, 4]> : vector<4xi32>) : vector<4xi32>
+  // MLIR:   %[[UNDEF:.*]] = llvm.mlir.undef : i32
+  // MLIR:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[UNDEF]], %[[VEC]][%[[ZERO]] : i64] : vector<4xi32>
+  // MLIR:   llvm.return %[[RES]] : vector<4xi32>
+
+  // LLVM-LABEL: @int_undef
+  // LLVM:   ret <4 x i32> <i32 undef, i32 2, i32 3, i32 4>
+
+  cir.func @int_poison() -> !cir.vector<4 x !s32i> {
+    %0 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.poison : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    cir.return %0 : !cir.vector<4 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @int_poison
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[1, 0, 3, 4]> : vector<4xi32>) : vector<4xi32>
+  // MLIR:   %[[POISON:.*]] = llvm.mlir.poison : i32
+  // MLIR:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[POISON]], %[[VEC]][%[[ONE]] : i64] : vector<4xi32>
+  // MLIR:   llvm.return %[[RES]] : vector<4xi32>
+
+  // LLVM-LABEL: @int_poison
+  // LLVM:   ret <4 x i32> <i32 1, i32 poison, i32 3, i32 4>
+
+  cir.func @int_zero() -> !cir.vector<4 x !s32i> {
+    %0 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    cir.return %0 : !cir.vector<4 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @int_zero
+  // MLIR-NEXT:   %[[VEC:.*]] = llvm.mlir.constant(dense<[1, 2, 0, 4]> : vector<4xi32>) : vector<4xi32>
+  // MLIR-NEXT:   llvm.return %[[VEC]] : vector<4xi32>
+
+  // LLVM-LABEL: @int_zero
+  // LLVM:   ret <4 x i32> <i32 1, i32 2, i32 0, i32 4>
+
+  cir.func @float_undef() -> !cir.vector<2 x !cir.float> {
+    %0 = cir.const #cir.const_vector<[#cir.fp<1.000000e+00> : !cir.float, #cir.undef : !cir.float]> : !cir.vector<2 x !cir.float>
+    cir.return %0 : !cir.vector<2 x !cir.float>
+  }
+  // MLIR-LABEL: llvm.func @float_undef
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[1.000000e+00, 0.000000e+00]> : vector<2xf32>) : vector<2xf32>
+  // MLIR:   %[[UNDEF:.*]] = llvm.mlir.undef : f32
+  // MLIR:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[UNDEF]], %[[VEC]][%[[ONE]] : i64] : vector<2xf32>
+  // MLIR:   llvm.return %[[RES]] : vector<2xf32>
+
+  // LLVM-LABEL: @float_undef
+  // LLVM:   ret <2 x float> <float 1.000000e+00, float undef>
+
+  cir.func @float_poison() -> !cir.vector<2 x !cir.float> {
+    %0 = cir.const #cir.const_vector<[#cir.poison : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.vector<2 x !cir.float>
+    cir.return %0 : !cir.vector<2 x !cir.float>
+  }
+  // MLIR-LABEL: llvm.func @float_poison
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[0.000000e+00, 2.000000e+00]> : vector<2xf32>) : vector<2xf32>
+  // MLIR:   %[[POISON:.*]] = llvm.mlir.poison : f32
+  // MLIR:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[POISON]], %[[VEC]][%[[ZERO]] : i64] : vector<2xf32>
+  // MLIR:   llvm.return %[[RES]] : vector<2xf32>
+
+  // LLVM-LABEL: @float_poison
+  // LLVM:   ret <2 x float> <float poison, float 2.000000e+00>
+
+  cir.func @float_zero() -> !cir.vector<2 x !cir.float> {
+    %0 = cir.const #cir.const_vector<[#cir.fp<1.000000e+00> : !cir.float, #cir.zero : !cir.float]> : !cir.vector<2 x !cir.float>
+    cir.return %0 : !cir.vector<2 x !cir.float>
+  }
+  // MLIR-LABEL: llvm.func @float_zero
+  // MLIR-NEXT:   %[[VEC:.*]] = llvm.mlir.constant(dense<[1.000000e+00, 0.000000e+00]> : vector<2xf32>) : vector<2xf32>
+  // MLIR-NEXT:   llvm.return %[[VEC]] : vector<2xf32>
+
+  // LLVM-LABEL: @float_zero
+  // LLVM:   ret <2 x float> <float 1.000000e+00, float 0.000000e+00>
+
+  cir.func @bool_undef() -> !cir.vector<4 x !cir.bool> {
+    %0 = cir.const #cir.const_vector<[#cir.undef : !cir.bool, #cir.bool<true> : !cir.bool, #cir.bool<false> : !cir.bool, #cir.bool<true> : !cir.bool]> : !cir.vector<4 x !cir.bool>
+    cir.return %0 : !cir.vector<4 x !cir.bool>
+  }
+  // MLIR-LABEL: llvm.func @bool_undef
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[false, true, false, true]> : vector<4xi1>) : vector<4xi1>
+  // MLIR:   %[[UNDEF:.*]] = llvm.mlir.undef : i1
+  // MLIR:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[UNDEF]], %[[VEC]][%[[ZERO]] : i64] : vector<4xi1>
+  // MLIR:   llvm.return %[[RES]] : vector<4xi1>
+
+  // LLVM-LABEL: @bool_undef
+  // LLVM:   ret <4 x i1> <i1 undef, i1 true, i1 false, i1 true>
+
+  cir.func @bool_poison() -> !cir.vector<4 x !cir.bool> {
+    %0 = cir.const #cir.const_vector<[#cir.bool<true> : !cir.bool, #cir.bool<true> : !cir.bool, #cir.bool<false> : !cir.bool, #cir.poison : !cir.bool]> : !cir.vector<4 x !cir.bool>
+    cir.return %0 : !cir.vector<4 x !cir.bool>
+  }
+  // MLIR-LABEL: llvm.func @bool_poison
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<[true, true, false, false]> : vector<4xi1>) : vector<4xi1>
+  // MLIR:   %[[POISON:.*]] = llvm.mlir.poison : i1
+  // MLIR:   %[[THREE:.*]] = llvm.mlir.constant(3 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[POISON]], %[[VEC]][%[[THREE]] : i64] : vector<4xi1>
+  // MLIR:   llvm.return %[[RES]] : vector<4xi1>
+
+  // LLVM-LABEL: @bool_poison
+  // LLVM:   ret <4 x i1> <i1 true, i1 true, i1 false, i1 poison>
+
+  cir.func @bool_zero() -> !cir.vector<4 x !cir.bool> {
+    %0 = cir.const #cir.const_vector<[#cir.bool<true> : !cir.bool, #cir.zero : !cir.bool, #cir.bool<true> : !cir.bool, #cir.bool<true> : !cir.bool]> : !cir.vector<4 x !cir.bool>
+    cir.return %0 : !cir.vector<4 x !cir.bool>
+  }
+  // MLIR-LABEL: llvm.func @bool_zero
+  // MLIR-NEXT:   %[[VEC:.*]] = llvm.mlir.constant(dense<[true, false, true, true]> : vector<4xi1>) : vector<4xi1>
+  // MLIR-NEXT:   llvm.return %[[VEC]] : vector<4xi1>
+
+  // LLVM-LABEL: @bool_zero
+  // LLVM:   ret <4 x i1> <i1 true, i1 false, i1 true, i1 true>
+
+  cir.func @all_undef() -> !cir.vector<2 x !s32i> {
+    %0 = cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.undef : !s32i]> : !cir.vector<2 x !s32i>
+    cir.return %0 : !cir.vector<2 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @all_undef
+  // MLIR-NEXT:   %[[VEC:.*]] = llvm.mlir.undef : vector<2xi32>
+  // MLIR-NEXT:   llvm.return %[[VEC]] : vector<2xi32>
+
+  // LLVM-LABEL: @all_undef
+  // LLVM:   ret <2 x i32> undef
+
+  cir.func @all_poison() -> !cir.vector<2 x !cir.float> {
+    %0 = cir.const #cir.const_vector<[#cir.poison : !cir.float, #cir.poison : !cir.float]> : !cir.vector<2 x !cir.float>
+    cir.return %0 : !cir.vector<2 x !cir.float>
+  }
+  // MLIR-LABEL: llvm.func @all_poison
+  // MLIR-NEXT:   %[[VEC:.*]] = llvm.mlir.poison : vector<2xf32>
+  // MLIR-NEXT:   llvm.return %[[VEC]] : vector<2xf32>
+
+  // LLVM-LABEL: @all_poison
+  // LLVM:   ret <2 x float> poison
+
+  cir.func @undef_and_poison() -> !cir.vector<2 x !s32i> {
+    %0 = cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.poison : !s32i]> : !cir.vector<2 x !s32i>
+    cir.return %0 : !cir.vector<2 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @undef_and_poison
+  // MLIR:   %[[VEC:.*]] = llvm.mlir.constant(dense<0> : vector<2xi32>) : vector<2xi32>
+  // MLIR:   %[[UNDEF:.*]] = llvm.mlir.undef : i32
+  // MLIR:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // MLIR:   %[[INS:.*]] = llvm.insertelement %[[UNDEF]], %[[VEC]][%[[ZERO]] : i64] : vector<2xi32>
+  // MLIR:   %[[POISON:.*]] = llvm.mlir.poison : i32
+  // MLIR:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // MLIR:   %[[RES:.*]] = llvm.insertelement %[[POISON]], %[[INS]][%[[ONE]] : i64] : vector<2xi32>
+  // MLIR:   llvm.return %[[RES]] : vector<2xi32>
+
+  // LLVM-LABEL: @undef_and_poison
+  // LLVM:   ret <2 x i32> <i32 undef, i32 poison>
+}

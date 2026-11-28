@@ -1079,32 +1079,80 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   return result;
 }
 
+/// Returns the LLVM dialect attribute for an element of a constant vector:
+/// a builtin literal, or an `LLVM::UndefAttr` or `LLVM::PoisonAttr`.
+static mlir::Attribute getVectorElementLiteral(mlir::Builder &builder,
+                                               mlir::Attribute attr,
+                                               mlir::Type eltTy) {
+  return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
+      .Case([&](cir::IntAttr intAttr) {
+        return builder.getIntegerAttr(eltTy, intAttr.getValue());
+      })
+      .Case([&](cir::FPAttr fpAttr) {
+        return builder.getFloatAttr(eltTy, fpAttr.getValue());
+      })
+      .Case([&](cir::BoolAttr boolAttr) {
+        return builder.getBoolAttr(boolAttr.getValue());
+      })
+      .Case([&](cir::ZeroAttr) { return builder.getZeroAttr(eltTy); })
+      .Case([&](cir::UndefAttr) {
+        return mlir::LLVM::UndefAttr::get(builder.getContext());
+      })
+      .Case([&](cir::PoisonAttr) {
+        return mlir::LLVM::PoisonAttr::get(builder.getContext());
+      })
+      .DefaultUnreachable("unexpected ConstVectorAttr element");
+}
+
 /// ConstVectorAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
-  const mlir::Type llvmTy = converter->convertType(attr.getType());
+  const auto llvmTy =
+      mlir::cast<mlir::VectorType>(converter->convertType(attr.getType()));
+  const mlir::Type llvmEltTy = llvmTy.getElementType();
+  auto *llvmDialect =
+      rewriter.getContext()->getLoadedDialect<mlir::LLVM::LLVMDialect>();
+  auto materialize = [&](mlir::Attribute value, mlir::Type type) {
+    return llvmDialect->materializeConstant(rewriter, value, type, parentLoc)
+        ->getResult(0);
+  };
+  auto isUndefOrPoison = [](mlir::Attribute literal) {
+    return mlir::isa<mlir::LLVM::UndefAttr, mlir::LLVM::PoisonAttr>(literal);
+  };
 
-  SmallVector<mlir::Attribute> mlirValues;
-  for (const mlir::Attribute elementAttr : attr.getElts()) {
-    mlir::Attribute mlirAttr;
-    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(elementAttr)) {
-      mlirAttr = rewriter.getIntegerAttr(
-          converter->convertType(intAttr.getType()), intAttr.getValue());
-    } else if (auto floatAttr = mlir::dyn_cast<cir::FPAttr>(elementAttr)) {
-      mlirAttr = rewriter.getFloatAttr(
-          converter->convertType(floatAttr.getType()), floatAttr.getValue());
-    } else if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(elementAttr)) {
-      mlirAttr = rewriter.getBoolAttr(boolAttr.getValue());
-    } else {
-      llvm_unreachable("vector constant with an element that is neither an "
-                       "int, a float, or a bool");
-    }
-    mlirValues.push_back(mlirAttr);
+  // The scalar visitors are not used here: they produce the in-memory type,
+  // which for a bool is not the type of a vector element.
+  SmallVector<mlir::Attribute> literals =
+      llvm::map_to_vector(attr.getElts(), [&](mlir::Attribute elt) {
+        return getVectorElementLiteral(rewriter, elt, llvmEltTy);
+      });
+
+  // A vector that is undef or poison in every element is that one value.
+  if (llvm::all_equal(literals) && isUndefOrPoison(literals.front()))
+    return materialize(literals.front(), llvmTy);
+
+  // A dense constant holds only literals, so an undef or poison element takes
+  // a zero there and is inserted over it below. The translation to LLVM IR
+  // folds the insertions back into one constant.
+  SmallVector<mlir::Attribute> dense =
+      llvm::map_to_vector(literals, [&](mlir::Attribute literal) {
+        if (isUndefOrPoison(literal))
+          return mlir::Attribute(rewriter.getZeroAttr(llvmEltTy));
+        return literal;
+      });
+  mlir::Value result = mlir::LLVM::ConstantOp::create(
+      rewriter, parentLoc, llvmTy, mlir::DenseElementsAttr::get(llvmTy, dense));
+
+  for (const auto [lane, literal] : llvm::enumerate(literals)) {
+    if (!isUndefOrPoison(literal))
+      continue;
+    mlir::Value element = materialize(literal, llvmEltTy);
+    mlir::Value index = mlir::LLVM::ConstantOp::create(
+        rewriter, parentLoc, rewriter.getI64Type(), lane);
+    result = mlir::LLVM::InsertElementOp::create(rewriter, parentLoc, result,
+                                                 element, index);
   }
 
-  return mlir::LLVM::ConstantOp::create(
-      rewriter, parentLoc, llvmTy,
-      mlir::DenseElementsAttr::get(mlir::cast<mlir::ShapedType>(llvmTy),
-                                   mlirValues));
+  return result;
 }
 
 // GlobalViewAttr / GlobalOffsetAttr visitors.

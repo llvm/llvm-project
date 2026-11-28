@@ -4698,7 +4698,7 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
   uint64_t vec1Size = vec1Elts.size();
   for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
     if (idxAttr.getSInt() == -1) {
-      elements.push_back(cir::UndefAttr::get(vec1ElemTy));
+      elements.push_back(cir::PoisonAttr::get(vec1ElemTy));
       continue;
     }
 
