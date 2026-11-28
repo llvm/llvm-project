@@ -18,9 +18,9 @@ define i32 @combineTESTM_AND_2(<8 x i64> %a, <8 x i64> %b , i8 %mask) {
 ; CHECK-LABEL: combineTESTM_AND_2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %zmm0, %zmm1, %k0
-; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    andb %dil, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    kmovd %k0, %ecx
+; CHECK-NEXT:    andb %dil, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %and.i = and <8 x i64> %b, %a
@@ -33,9 +33,9 @@ define i32 @combineTESTM_AND_mask_3(<8 x i64> %a, ptr %bptr , i8 %mask) {
 ; CHECK-LABEL: combineTESTM_AND_mask_3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0
-; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    kmovd %k0, %ecx
+; CHECK-NEXT:    andb %sil, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = load <8 x i64>, ptr %bptr
@@ -49,9 +49,9 @@ define i32 @combineTESTM_AND_mask_4(<8 x i64> %a, ptr %bptr , i8 %mask) {
 ; CHECK-LABEL: combineTESTM_AND_mask_4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0
-; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    kmovd %k0, %ecx
+; CHECK-NEXT:    andb %sil, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = load <8 x i64>, ptr %bptr

@@ -1193,6 +1193,33 @@ bool X86RegisterInfo::getRegAllocationHints(
   if (!VRM)
     return BaseImplRetVal;
 
+  // MOV32rr and MOVZX32rr8 between different registers can be eliminated at
+  // register renaming, but not when both are the same register. Move the
+  // register assigned to the other operand of such an instruction to the end
+  // of the allocation order. Callee-saved registers that are not used yet are
+  // not hinted, so the hint does not add a save and restore. 32-bit mode has
+  // too few registers for this to pay off.
+  if (ST.hasMOVElim() && ST.is64Bit() && Matrix &&
+      TRI.isGeneralPurposeRegisterClass(&RC)) {
+    MCRegister OtherPhysReg;
+    for (const MachineOperand &MO : MRI->reg_nodbg_operands(VirtReg)) {
+      const MachineInstr &MI = *MO.getParent();
+      if (MI.getOpcode() != X86::MOV32rr && MI.getOpcode() != X86::MOVZX32rr8)
+        continue;
+      Register Other =
+          MI.getOperand(MI.getOperandNo(&MO) == 0 ? 1 : 0).getReg();
+      OtherPhysReg = Other.isPhysical() ? Other.asMCReg() : VRM->getPhys(Other);
+      // Use the first; more than one allocated other operand is too rare.
+      if (OtherPhysReg)
+        break;
+    }
+    if (OtherPhysReg)
+      for (MCPhysReg Reg : Order)
+        if (!TRI.regsOverlap(Reg, OtherPhysReg) &&
+            (!TRI.isCalleeSavedPhysReg(Reg, MF) || Matrix->isPhysRegUsed(Reg)))
+          Hints.insert(Reg);
+  }
+
   if (ID != X86::TILERegClassID) {
     if (ST.getCLOpts().disable_regalloc_hints_for_ndd || !ST.hasNDD() ||
         !TRI.isGeneralPurposeRegisterClass(&RC))
