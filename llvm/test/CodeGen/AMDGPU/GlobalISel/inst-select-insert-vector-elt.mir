@@ -8,7 +8,6 @@
 name: insert_vector_elt_s_s32_v2s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -44,7 +43,6 @@ body: |
 name: insert_vector_elt_s_s32_v3s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -80,7 +78,6 @@ body: |
 name: insert_vector_elt_s_s32_v4s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -116,7 +113,6 @@ body: |
 name: insert_vector_elt_s_s32_v5s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -152,7 +148,6 @@ body: |
 name: insert_vector_elt_s_s32_v8s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -188,7 +183,6 @@ body: |
 name: insert_vector_elt_s_s32_v9s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -224,7 +218,6 @@ body: |
 name: insert_vector_elt_s_s32_v10s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -260,7 +253,6 @@ body: |
 name: insert_vector_elt_s_s32_v11s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -296,7 +288,6 @@ body: |
 name: insert_vector_elt_s_s32_v12s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -332,7 +323,6 @@ body: |
 name: insert_vector_elt_s_s32_v16s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -368,7 +358,6 @@ body: |
 name: extract_vector_elt_s_s32_v32s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -404,7 +393,6 @@ body: |
 name: insert_vector_elt_s_s64_v2s64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -440,7 +428,6 @@ body: |
 name: insert_vector_elt_s_s64_v4s64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -476,7 +463,6 @@ body: |
 name: insert_vector_elt_s_s64_v8s64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -512,7 +498,6 @@ body: |
 name: extract_vector_elt_s_s64_v16s64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -548,7 +533,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v2s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -583,7 +567,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v3s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -618,14 +601,13 @@ body: |
 name: insert_vector_elt_vvs_s32_v4s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr5
+    liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; MOVREL-LABEL: name: insert_vector_elt_vvs_s32_v4s32
-    ; MOVREL: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; MOVREL: liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
     ; MOVREL-NEXT: {{  $}}
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
@@ -635,7 +617,7 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_vvs_s32_v4s32
-    ; GPRIDX: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; GPRIDX: liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GPRIDX-NEXT: {{  $}}
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
@@ -653,7 +635,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v5s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -688,7 +669,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v8s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -723,7 +703,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v8s32_add_1
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -760,7 +739,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v8s32_add_8
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -801,7 +779,6 @@ body: |
 name: insert_vector_elt_s_s32_v8s32_add_1
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -839,7 +816,6 @@ body: |
 name: insert_vector_elt_s_s32_v8s32_add_8
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -883,7 +859,6 @@ body: |
 name: insert_vector_elt_s_s32_v4s32_const_idx
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -919,7 +894,6 @@ body: |
 name: insert_vector_elt_v_s32_v4s32_const_idx
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -954,7 +928,6 @@ body: |
 name: insert_vector_elt_s_s32_v6s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -990,7 +963,6 @@ body: |
 name: insert_vector_elt_s_s32_v7s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1026,7 +998,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v6s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1061,7 +1032,6 @@ body: |
 name: insert_vector_elt_vvs_s32_v7s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:

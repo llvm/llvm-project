@@ -7,7 +7,6 @@
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -22,7 +21,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -42,7 +40,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_chain
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors:
@@ -62,7 +59,6 @@ body:             |
 # GCN-NEXT:   S_LOAD_DWORD_IMM
 ---
 name:            vmem_smem_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -78,7 +74,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_snop_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -94,7 +89,6 @@ body:             |
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_valu_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -110,7 +104,6 @@ body:             |
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_swait0_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -127,7 +120,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_swait_any_write_sgpr
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -143,7 +135,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B64
 ---
 name:            vmem_write_exec_impread
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -158,7 +149,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B64
 ---
 name:            vmem_write_exec_expread
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -172,7 +162,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            ds_write_m0
-tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -188,7 +177,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_fall_through
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -208,7 +196,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -229,7 +216,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_around
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -258,10 +244,10 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_cbranch_around
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $scc
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
@@ -271,6 +257,7 @@ body:             |
 
   bb.1:
     successors: %bb.2
+    liveins: $vgpr1
     S_WAITCNT 0
     $vgpr2, $vcc_lo = V_ADD_CO_U32_e64 $vgpr1, $vgpr1, 0, implicit $exec
     S_BRANCH %bb.2
@@ -284,7 +271,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_backedge
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -294,6 +280,7 @@ body:             |
     $sgpr0 = S_MOV_B32 0
 
   bb.1:
+    liveins: $sgpr4, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.0
 ...
@@ -303,7 +290,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            ds_write_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -317,7 +303,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_scratch_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -330,7 +315,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_flat_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -344,7 +328,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_global_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -358,7 +341,6 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_global_atomic_exec
-tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF

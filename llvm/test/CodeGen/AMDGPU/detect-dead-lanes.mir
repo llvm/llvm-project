@@ -17,7 +17,6 @@
 # CHECK: S_NOP 0, implicit %4.sub1
 # CHECK: S_NOP 0, implicit undef %5.sub0
 name: test0
-tracksRegLiveness: false
 body: |
   bb.0:
     S_NOP 0, implicit-def %0:sreg_32_xm0
@@ -68,9 +67,9 @@ body: |
 # CHECK: %10:sreg_64 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr42
     %0:sgpr_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
     %1:sgpr_128 = INSERT_SUBREG %0, $sgpr1, %subreg.sub3
     %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, $sgpr42, %subreg.sub0
@@ -135,7 +134,6 @@ body: |
 # CHECK: S_NOP 0, implicit %16.sub1
 
 name: test2
-tracksRegLiveness: false
 body: |
   bb.0:
     S_NOP 0, implicit-def %0:sreg_32_xm0

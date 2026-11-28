@@ -87,11 +87,11 @@ body:             |
 # writelane is not uniform
 ---
 name:            writelane
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
+    liveins: $vcc, $vgpr0, $vgpr1
     ; CHECK-LABEL: MachineUniformityInfo for function:  @writelane
     ; CHECK: DIVERGENT: %4
 
@@ -139,7 +139,6 @@ body:             |
 # mbcnt instructions are not uniform
 ---
 name:            mbcnt_lo
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -151,7 +150,6 @@ body:             |
 ...
 ---
 name:            mbcnt_hi
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

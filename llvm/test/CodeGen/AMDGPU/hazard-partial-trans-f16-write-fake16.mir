@@ -3,11 +3,13 @@
 
 ---
 name:            trans_f16_partial_def_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_f16_partial_def_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
@@ -16,11 +18,13 @@ body:            |
 
 ---
 name:            v_s_trans_f16_partial_def_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0
     ; GCN-LABEL: name: v_s_trans_f16_partial_def_no_hazard
-    ; GCN: $sgpr1 = V_S_SQRT_F16_e64 0, $sgpr0, 0, 0, implicit $mode, implicit $exec
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr1 = V_S_SQRT_F16_e64 0, $sgpr0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_MOV_B32 0, implicit $exec
     $sgpr1 = V_S_SQRT_F16_e64 0, $sgpr0, 0, 0, implicit $mode, implicit $exec
     $sgpr1 = S_MOV_B32 0, implicit $exec
@@ -28,11 +32,13 @@ body:            |
 
 ---
 name:            trans_bf16_partial_def_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_bf16_partial_def_hazard
-    ; GCN: $vgpr1 = V_SQRT_BF16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_BF16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_BF16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
@@ -41,11 +47,13 @@ body:            |
 
 ---
 name:            trans_f16_partial_def_3_valu_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_f16_partial_def_3_valu_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_NOP 0
@@ -64,11 +72,13 @@ body:            |
 
 ---
 name:            trans_f16_partial_def_4_valu_no_hazard_expired
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_f16_partial_def_4_valu_no_hazard_expired
-    ; GCN: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_fake16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_NOP 0
@@ -88,11 +98,13 @@ body:            |
 
 ---
 name:            trans_f16_partial_def_mitigated_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_f16_partial_def_mitigated_no_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
@@ -102,11 +114,13 @@ body:            |
 
 ---
 name:            trans_f16_partial_def_different_regs_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_f16_partial_def_different_regs_no_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_MOV_B16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_F16_e32 $vgpr0, implicit $mode, implicit $exec
     $vgpr2 = V_MOV_B16_e32 0, implicit $exec
@@ -114,11 +128,13 @@ body:            |
 
 ---
 name:            trans_f16_dpp_partial_def_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; GCN-LABEL: name: trans_f16_dpp_partial_def_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_fake16_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_fake16_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
@@ -129,11 +145,13 @@ body:            |
 # FIXME: S_WAITCNT_DEPCTR is not needed for f32 case but we cannot detect it with fake32.
 ---
 name:            trans_f32_dpp_partial_def_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; GCN-LABEL: name: trans_f32_dpp_partial_def_no_hazard
-    ; GCN: $vgpr1 = V_SQRT_F32_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F32_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
@@ -142,11 +160,13 @@ body:            |
 ...
 ---
 name:            trans_f16_dpp_e64_partial_def_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; GCN-LABEL: name: trans_f16_dpp_e64_partial_def_hazard
-    ; GCN: $vgpr1 = V_SQRT_F16_fake16_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F16_fake16_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
@@ -157,11 +177,13 @@ body:            |
 # FIXME: S_WAITCNT_DEPCTR is not needed for f32 case but we cannot detect it with fake32.
 ---
 name:            trans_f32_dpp_e64_partial_def_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; GCN-LABEL: name: trans_f32_dpp_e64_partial_def_no_hazard
-    ; GCN: $vgpr1 = V_SQRT_F32_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
+    ; GCN: liveins: $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_SQRT_F32_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec

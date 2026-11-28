@@ -4,11 +4,13 @@
 
 ---
 name: valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: valu_dep_1
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -17,11 +19,13 @@ body: |
 
 ---
 name: valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: valu_dep_2
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_2
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -32,11 +36,13 @@ body: |
 
 ---
 name: valu_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: valu_dep_3
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_3
@@ -49,11 +55,13 @@ body: |
 
 ---
 name: valu_dep_4
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: name: valu_dep_4
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
     ; CHECK-NEXT: $vgpr3 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
@@ -68,11 +76,13 @@ body: |
 
 ---
 name: trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: trans32_dep_1
-    ; CHECK: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; CHECK-NEXT: S_DELAY_ALU .id0_TRANS32_DEP_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
@@ -81,11 +91,13 @@ body: |
 
 ---
 name: trans32_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: trans32_dep_2
-    ; CHECK: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; CHECK-NEXT: $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     ; CHECK-NEXT: S_DELAY_ALU .id0_TRANS32_DEP_2
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -96,11 +108,13 @@ body: |
 
 ---
 name: trans32_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: trans32_dep_3
-    ; CHECK: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; CHECK-NEXT: $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     ; CHECK-NEXT: $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
     ; CHECK-NEXT: S_DELAY_ALU .id0_TRANS32_DEP_3
@@ -113,11 +127,13 @@ body: |
 
 ---
 name: salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: salu_cycle_1
-    ; CHECK: $sgpr0 = S_MOV_B32 0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 0
     ; CHECK-NEXT: S_DELAY_ALU .id0_SALU_CYCLE_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
     $sgpr0 = S_MOV_B32 0
@@ -126,11 +142,13 @@ body: |
 
 ---
 name: valu_dep_1_same_trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: valu_dep_1_same_trans32_dep_1
-    ; CHECK: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_TRANS32_DEP_1_skip_SAME_id1_VALU_DEP_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -141,11 +159,13 @@ body: |
 
 ---
 name: valu_dep_1_same_salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: valu_dep_1_same_salu_cycle_1
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $sgpr0 = S_MOV_B32 0
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_1_skip_SAME_id1_SALU_CYCLE_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
@@ -156,11 +176,13 @@ body: |
 
 ---
 name: valu_dep_1_next_valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: valu_dep_1_next_valu_dep_1
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_1_skip_NEXT_id1_VALU_DEP_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -171,11 +193,13 @@ body: |
 
 ---
 name: valu_dep_2_next_valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: valu_dep_2_next_valu_dep_2
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_2_skip_NEXT_id1_VALU_DEP_2
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -188,11 +212,13 @@ body: |
 
 ---
 name: valu_dep_2_skip_valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3
     ; CHECK-LABEL: name: valu_dep_2_skip_valu_dep_2
-    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr2 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_2_skip_SKIP_1_id1_VALU_DEP_2
     ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec

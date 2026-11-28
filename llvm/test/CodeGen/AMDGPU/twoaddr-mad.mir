@@ -5,7 +5,6 @@
 # GCN: V_MADMK_F32 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_reg_imm_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -20,7 +19,6 @@ body:             |
 # GCN: V_MADMK_F32 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_imm_reg_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -35,7 +33,6 @@ body:             |
 # GCN: V_MADAK_F32 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_madak_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -49,7 +46,6 @@ body:             |
 # GCN: V_MADMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_reg_imm_f16
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -64,7 +60,6 @@ body:             |
 # GCN: V_MADMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_imm_reg_f16
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -79,7 +74,6 @@ body:             |
 # GCN: V_MADAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_madak_f16
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -97,7 +91,6 @@ body:             |
 
 ---
 name:            test_madak_sgpr_src0_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -115,7 +108,6 @@ body:             |
 
 ---
 name:            test_madak_inlineimm_src0_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -131,7 +123,6 @@ body:             |
 
 ---
 name:            test_madak_otherimm_src0_f32
-tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -146,7 +137,6 @@ body:             |
 # GCN: %2:vgpr_32 = V_MAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_madak_other_constantlike_src0_f32
-tracksRegLiveness: false
 stack:
   - { id: 0, name: "", type: default, offset: 0, size: 128, alignment: 8,
       callee-saved-register: '', local-offset: 0, debug-info-variable: '',
@@ -165,9 +155,9 @@ body:             |
 
 ---
 name:            test_madak_inline_literal_f16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0
     %3:vgpr_32 = COPY killed $vgpr0
 
     %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
@@ -179,7 +169,6 @@ body:             |
 # GCN: %3:vgpr_32 = V_MAD_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
 ---
 name: test_mad_src0mods
-tracksRegLiveness: false
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -193,7 +182,6 @@ body: |
 # GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
 ---
 name: test_mad_src1mods
-tracksRegLiveness: false
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -207,7 +195,6 @@ body: |
 # GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
 ---
 name: test_mad_src2mods
-tracksRegLiveness: false
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF

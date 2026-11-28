@@ -6,7 +6,6 @@
 
 ---
 name:            empty_prolog_block
-tracksRegLiveness: false
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 4,
       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
@@ -17,15 +16,18 @@ body:             |
   ; CHECK-LABEL: name: empty_prolog_block
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr32
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $sgpr32
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $sgpr0
+    liveins: $sgpr0, $sgpr32
   bb.1:
+    liveins: $sgpr32
     renamable $sgpr0 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr32
     S_ENDPGM 0
 

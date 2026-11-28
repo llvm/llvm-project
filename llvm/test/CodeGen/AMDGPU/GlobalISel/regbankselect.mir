@@ -54,7 +54,6 @@
 ---
 name: load_constant
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -71,7 +70,6 @@ body: |
 ---
 name: load_constant_volatile
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -88,7 +86,6 @@ body: |
 ---
 name: load_global_uniform_invariant
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -105,7 +102,6 @@ body: |
 ---
 name: load_global_uniform_noclobber
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -123,7 +119,6 @@ body: |
 ---
 name: load_global_uniform_variant
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -141,7 +136,6 @@ body: |
 ---
 name: load_global_uniform_volatile_invariant
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -159,7 +153,6 @@ body: |
 ---
 name: load_global_uniform_atomic_invariant
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -177,7 +170,6 @@ body: |
 ---
 name: load_global_non_uniform
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -195,12 +187,14 @@ body: |
 ---
 name: load_constant_v4i16_from_8_align8
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_v4i16_from_8_align8
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (load (<4 x s16>) from %ir.ptr0, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<4 x s16>) = G_LOAD %0 :: (load (<4 x s16>) from %ir.ptr0, align 8, addrspace 4)

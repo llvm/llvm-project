@@ -391,18 +391,18 @@
 
 ---
 name: valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
 ---
 name: valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -410,9 +410,9 @@ body: |
 
 ---
 name: valu_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
@@ -421,9 +421,9 @@ body: |
 
 ---
 name: valu_dep_4
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
@@ -435,9 +435,9 @@ body: |
 # completed already.
 ---
 name: valu_dep_5
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
@@ -448,18 +448,18 @@ body: |
 
 ---
 name: trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
 ---
 name: trans32_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -467,9 +467,9 @@ body: |
 
 ---
 name: trans32_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
@@ -480,9 +480,9 @@ body: |
 # completed already.
 ---
 name: trans32_dep_4
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
@@ -492,9 +492,9 @@ body: |
 
 ---
 name: salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $sgpr0 = S_MOV_B32 0
     $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
 ...
@@ -503,9 +503,9 @@ body: |
 # already.
 ---
 name: salu_cycle_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $sgpr0 = S_MOV_B32 0
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
@@ -513,9 +513,9 @@ body: |
 
 ---
 name: valu_dep_1_same_trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -525,9 +525,9 @@ body: |
 # the TRANS.
 ---
 name: trans32_dep_1_only
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -535,9 +535,9 @@ body: |
 
 ---
 name: valu_dep_1_same_salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $sgpr0 = S_MOV_B32 0
     $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
@@ -545,9 +545,9 @@ body: |
 
 ---
 name: valu_dep_1_next_valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -555,9 +555,9 @@ body: |
 
 ---
 name: valu_dep_2_next_valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -569,9 +569,9 @@ body: |
 # completed.
 ---
 name: valu_dep_1_no_next_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_MUL_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
     $vgpr2 = V_MUL_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
@@ -582,9 +582,9 @@ body: |
 # completed.
 ---
 name: valu_dep_1_no_next_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
     $vgpr1 = V_MUL_F32_e32 $vgpr1, $vgpr1, implicit $exec, implicit $mode
     $vgpr1 = V_MUL_F32_e32 $vgpr1, $vgpr1, implicit $exec, implicit $mode
@@ -596,9 +596,9 @@ body: |
 
 ---
 name: implicit_cmp_cndmask
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0, $vgpr1, $vgpr3, $vgpr4
     implicit $vcc = V_CMP_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
     $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $vcc, implicit $exec
 ...
@@ -606,36 +606,36 @@ body: |
 # TODO: There should be no s_delay_alu here.
 ---
 name: explicit_cmp_cndmask
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4
     $sgpr0_sgpr1 = V_CMP_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
     $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $sgpr0_sgpr1, implicit $exec
 ...
 
 ---
 name: implicit_addc_addc
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0, $vgpr1
     $vgpr0 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
     $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
 ...
 
 ---
 name: explicit_addc_addc
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     $vgpr0,$vcc = V_ADD_CO_U32_e64 $vgpr0, $vgpr0, 0, implicit $exec
     $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
 ...
 
 ---
 name: valu_dep_3_bundle
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     BUNDLE {
       $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
@@ -646,54 +646,63 @@ body: |
 
 ---
 name: if
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
   bb.1:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
   bb.2:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
 ---
 name: else
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
   bb.1:
+    liveins: $vgpr0
     S_BRANCH %bb.3
   bb.2:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
   bb.3:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
 ---
 name: if_else
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0, $vgpr1
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
   bb.1:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_BRANCH %bb.3
   bb.2:
+    liveins: $vgpr0, $vgpr1
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
   bb.3:
+    liveins: $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
 # Dependency from outside the loop.
 ---
 name: loop_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
   bb.1:
+    liveins: $vcc, $vgpr0
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
   bb.2:
@@ -702,10 +711,11 @@ body: |
 # Dependency from inside the loop.
 ---
 name: loop_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vcc, $vgpr0
   bb.1:
+    liveins: $vcc, $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
   bb.2:
@@ -715,7 +725,6 @@ body: |
 # to complete.
 ---
 name: sendmsg_rtn
-tracksRegLiveness: false
 body: |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -728,7 +737,6 @@ body: |
 # to complete.
 ---
 name: flat_load
-tracksRegLiveness: false
 body: |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -742,7 +750,6 @@ body: |
 # to complete.
 ---
 name: waitcnt_depctr
-tracksRegLiveness: false
 body: |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -753,9 +760,9 @@ body: |
 # Check that no delays are emitted for writelane instructions.
 ---
 name: writelane1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr0, $vgpr0
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 1, $vgpr0
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 2, $vgpr0
@@ -765,18 +772,18 @@ body: |
 # Check if a VALU delay is added after writelane.
 ---
 name: writelane2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr0, $vgpr0
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 3, $vgpr0
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 # Check if s_delay_alu is added
 ---
 name: delay_alu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr0, $sgpr1, implicit $exec
     $vgpr0 = V_MUL_F32_e64 0, $vgpr0, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     $sgpr0 = S_OR_B32 $sgpr0, $sgpr1, implicit-def $scc
@@ -785,9 +792,9 @@ body: |
 # Check if redundant delay_alu is removed
 ---
 name: redundant_delay_alu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr4, $sgpr5, implicit $exec
     $vgpr0 = V_MUL_F32_e64 0, $vgpr0, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     $sgpr6_sgpr7 = V_CMP_EQ_U32_e64 $sgpr6, $sgpr7, implicit $exec
@@ -797,9 +804,9 @@ body: |
 # Check if redundant delay_alu is removed
 ---
 name: redundant_delay_alu_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0
     $vgpr0 = V_MUL_F32_e64 0, $vgpr0, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr0, $sgpr1, implicit $exec
     $sgpr0 = S_OR_B32 $sgpr0, $sgpr1, implicit-def $scc
@@ -809,9 +816,9 @@ body: |
 # Check that F64 TRANS instructions are treated as VALU.
 ---
 name: trans64
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
     $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
     $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
 ...

@@ -17,11 +17,13 @@
 
 ---
 name:            test-wcg-attributes-noexpert
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $vgpr36
     ; CHECK-LABEL: name: test-wcg-attributes-noexpert
-    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK: liveins: $vgpr0, $vgpr36
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_EXPCNT 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
     ; CHECK-NEXT: S_WAIT_BVHCNT 0
@@ -36,11 +38,13 @@ body:             |
 
 ---
 name:            test-wcg-attributes-expert
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $vgpr36
     ; CHECK-LABEL: name: test-wcg-attributes-expert
-    ; CHECK: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK: liveins: $vgpr0, $vgpr36
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_EXPCNT 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT 0

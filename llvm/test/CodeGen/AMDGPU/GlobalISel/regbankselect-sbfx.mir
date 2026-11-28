@@ -8,7 +8,6 @@
 ---
 name:            test_sbfx_s32_vvv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -32,7 +31,6 @@ body: |
 ---
 name:            test_sbfx_s32_vii
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -58,7 +56,6 @@ body: |
 ---
 name:            test_sbfx_s32_vss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -86,7 +83,6 @@ body: |
 ---
 name:            test_sbfx_s64_vvv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -114,7 +110,6 @@ body: |
 ---
 name:            test_sbfx_s64_vss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -144,7 +139,6 @@ body: |
 ---
 name:            test_sbfx_s64_vii_small
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -176,7 +170,6 @@ body: |
 ---
 name:            test_sbfx_s64_vii_32
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -207,7 +200,6 @@ body: |
 ---
 name:            test_sbfx_s64_vii_big
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -238,7 +230,6 @@ body: |
 ---
 name:            test_sbfx_s64_svv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -269,7 +260,6 @@ body: |
 ---
 name:            test_sbfx_s32_svv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -294,14 +284,13 @@ body: |
 ---
 name:            test_sbfx_s32_sss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
-    liveins: $sgpr0, $sgpr1, $sgpr3
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
 
     ; CHECK-LABEL: name: test_sbfx_s32_sss
-    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr3
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -326,7 +315,6 @@ body: |
 ---
 name:            test_sbfx_s32_sii
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -360,7 +348,6 @@ body: |
 ---
 name:            test_sbfx_s64_sss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -392,7 +379,6 @@ body: |
 ---
 name:            test_sbfx_s64_sii
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0.entry:

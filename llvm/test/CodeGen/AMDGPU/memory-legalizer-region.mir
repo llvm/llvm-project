@@ -6,11 +6,13 @@
 
 
 name:            load_singlethread_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_singlethread_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -35,11 +37,13 @@ body:             |
 
 
 name:            load_singlethread_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_singlethread_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -64,11 +68,13 @@ body:             |
 
 
 name:            load_singlethread_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_singlethread_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -93,11 +99,13 @@ body:             |
 
 
 name:            load_singlethread_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_singlethread_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -122,11 +130,13 @@ body:             |
 
 
 name:            load_wavefront_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_wavefront_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -151,11 +161,13 @@ body:             |
 
 
 name:            load_wavefront_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_wavefront_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -180,11 +192,13 @@ body:             |
 
 
 name:            load_wavefront_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_wavefront_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -209,11 +223,13 @@ body:             |
 
 
 name:            load_wavefront_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_wavefront_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -238,11 +254,13 @@ body:             |
 
 
 name:            load_workgroup_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_workgroup_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -267,11 +285,13 @@ body:             |
 
 
 name:            load_workgroup_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_workgroup_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -296,11 +316,13 @@ body:             |
 
 
 name:            load_workgroup_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_workgroup_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -325,11 +347,13 @@ body:             |
 
 
 name:            load_workgroup_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_workgroup_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -354,11 +378,13 @@ body:             |
 
 
 name:            load_agent_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_agent_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -383,11 +409,13 @@ body:             |
 
 
 name:            load_agent_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_agent_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -412,11 +440,13 @@ body:             |
 
 
 name:            load_agent_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_agent_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -441,11 +471,13 @@ body:             |
 
 
 name:            load_agent_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_agent_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -470,11 +502,13 @@ body:             |
 
 
 name:            load_system_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_system_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -499,11 +533,13 @@ body:             |
 
 
 name:            load_system_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_system_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -528,11 +564,13 @@ body:             |
 
 
 name:            load_system_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_system_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -557,11 +595,13 @@ body:             |
 
 
 name:            load_system_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: load_system_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -586,11 +626,13 @@ body:             |
 
 
 name:            store_singlethread_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_singlethread_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -611,11 +653,13 @@ body:             |
 
 
 name:            store_singlethread_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_singlethread_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -636,11 +680,13 @@ body:             |
 
 
 name:            store_singlethread_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_singlethread_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -661,11 +707,13 @@ body:             |
 
 
 name:            store_singlethread_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_singlethread_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -686,11 +734,13 @@ body:             |
 
 
 name:            store_wavefront_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_wavefront_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -711,11 +761,13 @@ body:             |
 
 
 name:            store_wavefront_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_wavefront_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -736,11 +788,13 @@ body:             |
 
 
 name:            store_wavefront_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_wavefront_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -761,11 +815,13 @@ body:             |
 
 
 name:            store_wavefront_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_wavefront_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -786,11 +842,13 @@ body:             |
 
 
 name:            store_workgroup_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_workgroup_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -811,11 +869,13 @@ body:             |
 
 
 name:            store_workgroup_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_workgroup_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -836,11 +896,13 @@ body:             |
 
 
 name:            store_workgroup_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_workgroup_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -861,11 +923,13 @@ body:             |
 
 
 name:            store_workgroup_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_workgroup_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -886,11 +950,13 @@ body:             |
 
 
 name:            store_agent_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_agent_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -911,11 +977,13 @@ body:             |
 
 
 name:            store_agent_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_agent_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -936,11 +1004,13 @@ body:             |
 
 
 name:            store_agent_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_agent_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -961,11 +1031,13 @@ body:             |
 
 
 name:            store_agent_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_agent_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -986,11 +1058,13 @@ body:             |
 
 
 name:            store_system_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_system_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1011,11 +1085,13 @@ body:             |
 
 
 name:            store_system_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_system_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1036,11 +1112,13 @@ body:             |
 
 
 name:            store_system_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_system_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1061,11 +1139,13 @@ body:             |
 
 
 name:            store_system_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: store_system_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1086,11 +1166,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_unordered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_unordered
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1111,11 +1193,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_monotonic
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_monotonic
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1136,11 +1220,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_acquire
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_acquire
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1161,11 +1247,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_release
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_release
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1186,11 +1274,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_acq_rel
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_acq_rel
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
@@ -1211,11 +1301,13 @@ body:             |
 
 
 name:            atomicrmw_singlethread_seq_cst
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: atomicrmw_singlethread_seq_cst
-    ; GCN: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 40, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, align 8, addrspace 4)
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec

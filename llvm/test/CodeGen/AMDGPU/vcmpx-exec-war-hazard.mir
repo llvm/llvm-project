@@ -7,7 +7,6 @@
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -26,7 +25,6 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -44,7 +42,6 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_vmov_exec_lo
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -61,7 +58,6 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_valu_impuse_exec
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -79,10 +75,10 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_imp
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
+    liveins: $vcc
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     $vgpr0 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
@@ -99,7 +95,6 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -119,7 +114,6 @@ body:            |
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_depctr_fffe
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -140,7 +134,6 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_ffff
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -160,7 +153,6 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_effe
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1
@@ -180,7 +172,6 @@ body:            |
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_debug_use_exec
-tracksRegLiveness: false
 body:            |
   bb.0:
     successors: %bb.1

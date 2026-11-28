@@ -8,14 +8,13 @@
 name: uadde_s32_s1_vsv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $sgpr0, $vgpr0
+    liveins: $sgpr0, $vgpr0, $vgpr2
 
     ; GFX10-LABEL: name: uadde_s32_s1_vsv
-    ; GFX10: liveins: $sgpr0, $vgpr0
+    ; GFX10: liveins: $sgpr0, $vgpr0, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
@@ -43,14 +42,13 @@ body: |
 name: uadde_s32_s1_vvs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $sgpr0, $vgpr0
+    liveins: $sgpr0, $vgpr0, $vgpr2
 
     ; GFX10-LABEL: name: uadde_s32_s1_vvs
-    ; GFX10: liveins: $sgpr0, $vgpr0
+    ; GFX10: liveins: $sgpr0, $vgpr0, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0

@@ -4,7 +4,6 @@
 
 ---
 name:             not_shrink_icmp
-tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: not_shrink_icmp
@@ -14,11 +13,13 @@ body:             |
 
 ---
 name:             shrink_icmp
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0
     ; GCN-LABEL: name: shrink_icmp
-    ; GCN: %op0:sgpr_32 = COPY $sgpr0
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %op0:sgpr_32 = COPY $sgpr0
     ; GCN-NEXT: %cond:sreg_64 = V_CMPX_GE_U32_e64 5, %op0, implicit-def $exec, implicit $exec
     ; GCN-NEXT: S_NOP 0
     %op0:sgpr_32 = COPY $sgpr0

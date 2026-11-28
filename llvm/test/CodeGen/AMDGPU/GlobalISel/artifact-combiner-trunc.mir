@@ -3,7 +3,6 @@
 
 ---
 name: trunc_s16_merge_s64_s32
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -22,7 +21,6 @@ body: |
 
 ---
 name: trunc_s32_merge_s64_s32
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -39,7 +37,6 @@ body: |
 
 ---
 name: trunc_s64_merge_s128_s32
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -59,7 +56,6 @@ body: |
 
 ---
 name: trunc_s32_merge_s128_p0
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -79,7 +75,6 @@ body: |
 
 ---
 name: trunc_s64_merge_s128_p0
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -99,7 +94,6 @@ body: |
 
 ---
 name: trunc_s128_merge_s192_p0
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -119,7 +113,6 @@ body: |
 
 ---
 name: trunc_s68_merge_s128_s32
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -139,13 +132,15 @@ body: |
 
 ---
 name: trunc_trunc
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr0_sgpr1
     ; Test that trunc(trunc) is combined to a single trunc
     ; CHECK-LABEL: name: trunc_trunc
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $sgpr0_sgpr1
@@ -156,7 +151,6 @@ body: |
 
 ---
 name: trunc_sext
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -172,7 +166,6 @@ body: |
 
 ---
 name: trunc_zext
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -188,7 +181,6 @@ body: |
 
 ---
 name: trunc_anyext
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -204,7 +196,6 @@ body: |
 
 ---
 name: trunc_ext
-tracksRegLiveness: false
 
 body: |
   bb.0:

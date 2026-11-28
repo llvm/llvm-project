@@ -9,16 +9,17 @@
 ---
 
 name: need_skip_vperm_pk16
-tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: need_skip_vperm_pk16
   ; GFX1250: bb.0:
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX1250-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX1250-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
   ; GFX1250-NEXT: {{  $}}
@@ -28,9 +29,11 @@ body: |
   ; GFX1310-LABEL: name: need_skip_vperm_pk16
   ; GFX1310: bb.0:
   ; GFX1310-NEXT:   successors: %bb.1(0x40000000)
+  ; GFX1310-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
   ; GFX1310-NEXT: {{  $}}
   ; GFX1310-NEXT: bb.1:
   ; GFX1310-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX1310-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
   ; GFX1310-NEXT: {{  $}}
   ; GFX1310-NEXT:   $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
   ; GFX1310-NEXT: {{  $}}
@@ -38,10 +41,12 @@ body: |
   ; GFX1310-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
   bb.1:
     successors: %bb.2
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
     $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
 
   bb.2:
@@ -51,7 +56,6 @@ body: |
 ---
 
 name: remove_skip_without_vperm_pk16
-tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: remove_skip_without_vperm_pk16
   ; GFX1250: bb.0:

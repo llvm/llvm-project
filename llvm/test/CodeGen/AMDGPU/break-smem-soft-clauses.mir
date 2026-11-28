@@ -6,10 +6,10 @@
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x1
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x1
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: S_ENDPGM 0
@@ -19,10 +19,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x2
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x2
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
@@ -34,10 +34,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x3
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr6_sgpr7, $sgpr12_sgpr13, $sgpr14_sgpr15
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x3
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
     ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
@@ -51,10 +51,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr8_sgpr9, $sgpr12_sgpr13, $sgpr14_sgpr15, $sgpr16_sgpr17
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x4
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
     ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr8_sgpr9, 0, 0
@@ -70,9 +70,9 @@ body: |
 ---
 # Reuse of same input pointer is OK
 name: trivial_smem_clause_load_smrd4_x2_sameptr
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x2_sameptr
     ; GCN: $sgpr12 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
@@ -84,10 +84,10 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: smrd_load4_overwrite_ptr_lo
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11
     ; GCN-LABEL: name: smrd_load4_overwrite_ptr_lo
     ; GCN: $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: S_ENDPGM 0
@@ -97,10 +97,10 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: smrd_load4_overwrite_ptr_hi
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11
     ; GCN-LABEL: name: smrd_load4_overwrite_ptr_hi
     ; GCN: $sgpr11 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: S_ENDPGM 0
@@ -110,10 +110,10 @@ body: |
 ---
 # 64-bit load clobbers its own ptr reg
 name: smrd_load8_overwrite_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11
     ; GCN-LABEL: name: smrd_load8_overwrite_ptr
     ; GCN: $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: S_ENDPGM 0
@@ -125,10 +125,10 @@ body: |
 # breaks the clause.
 
 name: break_smem_clause_at_max_smem_clause_size_smrd_load4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GCN-LABEL: name: break_smem_clause_at_max_smem_clause_size_smrd_load4
     ; GCN: $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr14 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
@@ -176,10 +176,10 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd4_lo_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: break_smem_clause_simple_load_smrd4_lo_ptr
     ; GCN: $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; XNACK-NEXT: S_NOP 0
@@ -192,10 +192,10 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd4_hi_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: break_smem_clause_simple_load_smrd4_hi_ptr
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr3 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
@@ -207,10 +207,10 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd8_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: break_smem_clause_simple_load_smrd8_ptr
     ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
     ; XNACK-NEXT: S_NOP 0
@@ -223,10 +223,10 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd16_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr6_sgpr7, $sgpr10_sgpr11
     ; GCN-LABEL: name: break_smem_clause_simple_load_smrd16_ptr
     ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM $sgpr6_sgpr7, 0, 0
@@ -238,7 +238,6 @@ body: |
 ---
 
 name: break_smem_clause_block_boundary_load_smrd8_ptr
-tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: break_smem_clause_block_boundary_load_smrd8_ptr
@@ -246,13 +245,17 @@ body: |
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
   ; GCN: bb.1:
+  ; GCN-NEXT:   liveins: $sgpr12_sgpr13
+  ; GCN-NEXT: {{  $}}
   ; XNACK-NEXT:   S_NOP 0
   ; GCN-NEXT:   $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
 
   bb.1:
+    liveins: $sgpr12_sgpr13
     $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
     S_ENDPGM 0
 ...
@@ -260,10 +263,10 @@ body: |
 # The load clobbers the pointer of the store, so it needs to break.
 
 name: break_smem_clause_store_load_into_ptr_smrd4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr16, $sgpr10_sgpr11, $sgpr14_sgpr15
     ; GCN-LABEL: name: break_smem_clause_store_load_into_ptr_smrd4
     ; GCN: S_STORE_DWORD_IMM $sgpr16, $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr12 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
@@ -277,10 +280,10 @@ body: |
 # FIXME: Would it be better to s_nop and wait later?
 
 name: break_smem_clause_store_load_into_data_smrd4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr8, $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: break_smem_clause_store_load_into_data_smrd4
     ; GCN: S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr8 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
@@ -292,10 +295,10 @@ body: |
 ---
 # Regular VALU instruction breaks clause, no nop needed
 name: valu_inst_breaks_smem_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: valu_inst_breaks_smem_clause
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 0, implicit $exec
@@ -309,10 +312,10 @@ body: |
 ---
 # Regular SALU instruction breaks clause, no nop needed
 name: salu_inst_breaks_smem_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: salu_inst_breaks_smem_clause
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $sgpr8 = S_MOV_B32 0
@@ -325,10 +328,10 @@ body: |
 ...
 ---
 name: ds_inst_breaks_smem_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: ds_inst_breaks_smem_clause
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $vgpr8 = DS_READ_B32 $vgpr9, 0, 0, implicit $m0, implicit $exec
@@ -342,10 +345,10 @@ body: |
 ---
 
 name: flat_inst_breaks_smem_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13, $vgpr0_vgpr1
     ; GCN-LABEL: name: flat_inst_breaks_smem_clause
     ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -359,10 +362,10 @@ body: |
 ---
 # FIXME: Should this be handled?
 name: implicit_use_breaks_smem_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr6_sgpr7, $sgpr10_sgpr11, $sgpr12_sgpr13
     ; GCN-LABEL: name: implicit_use_breaks_smem_clause
     ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0, implicit $sgpr12_sgpr13
     ; XNACK-NEXT: S_NOP 0

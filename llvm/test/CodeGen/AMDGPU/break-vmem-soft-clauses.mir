@@ -5,10 +5,10 @@
 ---
 # Trivial clause at beginning of program
 name: trivial_clause_load_flat4_x1
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3
     ; GCN-LABEL: name: trivial_clause_load_flat4_x1
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -19,10 +19,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_clause_load_flat4_x2
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: trivial_clause_load_flat4_x2
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
@@ -35,10 +35,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_clause_load_flat4_x3
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr7_vgpr8
     ; GCN-LABEL: name: trivial_clause_load_flat4_x3
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec, implicit $flat_scr
@@ -53,10 +53,10 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_clause_load_flat4_x4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
     ; GCN-LABEL: name: trivial_clause_load_flat4_x4
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
@@ -74,9 +74,9 @@ body: |
 # Reuse of same input pointer is OK
 
 name: trivial_clause_load_flat4_x2_sameptr
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3
     ; GCN-LABEL: name: trivial_clause_load_flat4_x2_sameptr
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
@@ -89,10 +89,10 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: flat_load4_overwrite_ptr_lo
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
     ; GCN-LABEL: name: flat_load4_overwrite_ptr_lo
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -103,10 +103,10 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: flat_load4_overwrite_ptr_hi
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
     ; GCN-LABEL: name: flat_load4_overwrite_ptr_hi
     ; GCN: $vgpr1 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -117,10 +117,10 @@ body: |
 ---
 # 64-bit load clobbers its own ptr reg
 name: flat_load8_overwrite_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3
     ; GCN-LABEL: name: flat_load8_overwrite_ptr
     ; GCN: $vgpr2_vgpr3 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -134,10 +134,10 @@ body: |
 
 
 name: break_clause_at_max_clause_size_flat_load4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr0, $vgpr18, $vgpr0_vgpr1
     ; GCN-LABEL: name: break_clause_at_max_clause_size_flat_load4
     ; GCN: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -187,10 +187,10 @@ body: |
 ---
 
 name: break_clause_simple_load_flat4_lo_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: break_clause_simple_load_flat4_lo_ptr
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -204,10 +204,10 @@ body: |
 ---
 
 name: break_clause_simple_load_flat4_hi_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: break_clause_simple_load_flat4_hi_ptr
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -221,10 +221,10 @@ body: |
 ---
 
 name: break_clause_simple_load_flat8_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: break_clause_simple_load_flat8_ptr
     ; GCN: $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -239,10 +239,10 @@ body: |
 
 
 name: break_clause_simple_load_flat16_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr6_vgpr7
     ; GCN-LABEL: name: break_clause_simple_load_flat16_ptr
     ; GCN: $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -259,7 +259,6 @@ body: |
 
 
 name: break_clause_block_boundary_load_flat8_ptr
-tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: break_clause_block_boundary_load_flat8_ptr
@@ -267,14 +266,18 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN:   $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN: bb.1:
+  ; GCN-NEXT:   liveins: $vgpr4_vgpr5
+  ; GCN-NEXT: {{  $}}
   ; XNACK-NEXT:  S_NOP 0
   ; GCN-NEXT:   $vgpr2_vgpr3 = FLAT_LOAD_DWORDX2 $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
 
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
+    liveins: $vgpr4_vgpr5
     $vgpr2_vgpr3 = FLAT_LOAD_DWORDX2 $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
@@ -282,10 +285,10 @@ body: |
 # The load clobbers the pointer of the store, so it needs to break.
 
 name: break_clause_store_load_into_ptr_flat4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: break_clause_store_load_into_ptr_flat4
     ; GCN: FLAT_STORE_DWORD $vgpr2_vgpr3, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
@@ -300,10 +303,10 @@ body: |
 # FIXME: Would it be better to s_nop and wait later?
 
 name: break_clause_store_load_into_data_flat4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: break_clause_store_load_into_data_flat4
     ; GCN: FLAT_STORE_DWORD $vgpr2_vgpr3, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
@@ -317,10 +320,10 @@ body: |
 # Regular VALU instruction breaks clause, no nop needed
 
 name: valu_inst_breaks_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: valu_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 0, implicit $exec
@@ -336,10 +339,10 @@ body: |
 # Regular SALU instruction breaks clause, no nop needed
 
 name: salu_inst_breaks_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: salu_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $sgpr8 = S_MOV_B32 0
@@ -354,10 +357,10 @@ body: |
 ---
 
 name: ds_inst_breaks_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr9, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: ds_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr8 = DS_READ_B32 $vgpr9, 0, 0, implicit $m0, implicit $exec
@@ -372,10 +375,10 @@ body: |
 ---
 
 name: smrd_inst_breaks_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: smrd_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $sgpr8 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
@@ -390,10 +393,10 @@ body: |
 ---
 # FIXME: Should this be handled?
 name: implicit_use_breaks_clause
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; GCN-LABEL: name: implicit_use_breaks_clause
     ; GCN: $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr4_vgpr5
     ; XNACK-NEXT: S_NOP 0
@@ -406,10 +409,10 @@ body: |
 ...
 ---
 name: trivial_clause_load_mubuf4_x2
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr2, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: trivial_clause_load_mubuf4_x2
     ; GCN: $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
@@ -421,10 +424,10 @@ body: |
 ...
 ---
 name: break_clause_simple_load_mubuf_offen_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr2, $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: break_clause_simple_load_mubuf_offen_ptr
     ; GCN: $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; XNACK-NEXT: S_NOP 0
@@ -439,10 +442,10 @@ body: |
 # BUFFER instructions overwriting their own inputs is supposedly OK.
 
 name: mubuf_load4_overwrite_ptr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: mubuf_load4_overwrite_ptr
     ; GCN: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -457,10 +460,10 @@ body: |
 # Break a clause from interference between mubuf and flat instructions
 
 name: break_clause_flat_load_mubuf_load
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
     ; GCN-LABEL: name: break_clause_flat_load_mubuf_load
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -475,15 +478,17 @@ body: |
 
 # GCN-LABEL: name: break_clause_mubuf_load_flat_load
 # GCN: bb.0:
+# GCN-NEXT:   liveins: $sgpr4, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
 # XNACK-NEXT: S_NOP 0
 # GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr2_vgpr3
 # GCN-NEXT: S_ENDPGM 0
 name: break_clause_mubuf_load_flat_load
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
     $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr1 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
 
@@ -492,10 +497,10 @@ body: |
 ---
 
 name: break_clause_atomic_rtn_into_ptr_flat4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr7, $vgpr4_vgpr5, $vgpr5_vgpr6
     ; GCN-LABEL: name: break_clause_atomic_rtn_into_ptr_flat4
     ; GCN: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
@@ -508,10 +513,10 @@ body: |
 ...
 ---
 name: break_clause_atomic_nortn_ptr_load_flat4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr2, $vgpr0_vgpr1, $vgpr3_vgpr4
     ; GCN-LABEL: name: break_clause_atomic_nortn_ptr_load_flat4
     ; GCN: FLAT_ATOMIC_ADD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec, implicit $flat_scr
@@ -524,10 +529,10 @@ body: |
 ---
 
 name: break_clause_atomic_rtn_into_ptr_mubuf4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr2, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: break_clause_atomic_rtn_into_ptr_mubuf4
     ; GCN: $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; XNACK-NEXT: S_NOP 0
@@ -541,10 +546,10 @@ body: |
 ---
 
 name: break_clause_atomic_nortn_ptr_load_mubuf4
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: break_clause_atomic_nortn_ptr_load_mubuf4
     ; GCN: BUFFER_ATOMIC_ADD_OFFEN $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
@@ -558,10 +563,10 @@ body: |
 # Make sure there is no assert on mubuf instructions which do not have
 # vaddr, and don't add register to track.
 name: no_break_clause_mubuf_load_novaddr
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $sgpr4, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: no_break_clause_mubuf_load_novaddr
     ; GCN: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
@@ -574,9 +579,9 @@ body: |
 # Loads and stores using different addresses theoretically does not
 # need a nop
 name: mix_load_store_clause
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr6, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: mix_load_store_clause
     ; GCN: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr10 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
@@ -594,9 +599,9 @@ body: |
 # Loads and stores using the same address needs a nop.
 
 name: mix_load_store_clause_same_address
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr6, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: mix_load_store_clause_same_address
     ; GCN: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr10 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr

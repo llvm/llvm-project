@@ -2,9 +2,9 @@
 
 ---
 name: valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: {{^}}valu_dep_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -17,9 +17,9 @@ body: |
 
 ---
 name: valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: {{^}}valu_dep_2:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -34,9 +34,9 @@ body: |
 
 ---
 name: valu_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: {{^}}valu_dep_3:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -53,9 +53,9 @@ body: |
 
 ---
 name: valu_dep_4
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: {{^}}valu_dep_4:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -74,9 +74,9 @@ body: |
 
 ---
 name: trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: {{^}}trans32_dep_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_exp_f32_e32 v0, v0
@@ -89,9 +89,9 @@ body: |
 
 ---
 name: trans32_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: {{^}}trans32_dep_2:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_exp_f32_e32 v0, v0
@@ -106,9 +106,9 @@ body: |
 
 ---
 name: trans32_dep_3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: {{^}}trans32_dep_3:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_exp_f32_e32 v0, v0
@@ -125,9 +125,9 @@ body: |
 
 ---
 name: salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: {{^}}salu_cycle_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: s_mov_b32 s0, 0
@@ -140,9 +140,9 @@ body: |
 
 ---
 name: valu_dep_1_same_trans32_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: {{^}}valu_dep_1_same_trans32_dep_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_exp_f32_e32 v0, v0
@@ -157,9 +157,9 @@ body: |
 
 ---
 name: valu_dep_1_same_salu_cycle_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: {{^}}valu_dep_1_same_salu_cycle_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -174,9 +174,9 @@ body: |
 
 ---
 name: valu_dep_1_next_valu_dep_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: {{^}}valu_dep_1_next_valu_dep_1:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -191,9 +191,9 @@ body: |
 
 ---
 name: valu_dep_2_next_valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: {{^}}valu_dep_2_next_valu_dep_2:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
@@ -210,9 +210,9 @@ body: |
 
 ---
 name: valu_dep_2_skip_valu_dep_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3
     ; CHECK-LABEL: {{^}}valu_dep_2_skip_valu_dep_2
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0

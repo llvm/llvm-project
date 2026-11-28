@@ -26,20 +26,24 @@
 # OP32_1 / OP_CMACC (V_MOV_B32) is safe: no mitigation.
 ---
 name: perm_then_mov_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_mov_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_MOV_B32_e32 0, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_mov_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -52,20 +56,24 @@ body: |
 # A packed VOP3P op (OP32_1) is safe: no mitigation.
 ---
 name: perm_then_packed_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_packed_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_PK_ADD_U16 8, $vgpr10, 8, $vgpr11, 0, 0, 0, 0, 0, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_packed_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -78,20 +86,24 @@ body: |
 # A 16-bit op (OP_CMACC/OP16_1, V_ADD_F16) is safe: no mitigation.
 ---
 name: perm_then_op16_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_op16_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_ADD_F16_fake16_e64 0, $vgpr10, 0, $vgpr11, 0, 0, implicit $mode, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_op16_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -104,20 +116,24 @@ body: |
 # A scalar FMA-accumulate op (OP_CMACC, V_FMAC_F32) is safe: no mitigation.
 ---
 name: perm_then_cmacc_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr10, $vgpr11, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_cmacc_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_FMAC_F32_e64 0, $vgpr10, 0, $vgpr11, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_cmacc_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -130,20 +146,24 @@ body: |
 # A lane/control op (OP32_1, V_READFIRSTLANE_B32) is safe: no mitigation.
 ---
 name: perm_then_lane_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_lane_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr10, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_lane_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -156,20 +176,24 @@ body: |
 # A genuine TRANS instruction (OP_32_T, V_RCP_F32) is safe: no mitigation.
 ---
 name: perm_then_trans_safe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_trans_safe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_RCP_F32_e32 $vgpr10, implicit $mode, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_trans_safe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -182,21 +206,25 @@ body: |
 # A multi-pass op (I32_MUL, V_MUL_LO_U32) is NOT safe: insert a V_NOP.
 ---
 name: perm_then_i32mul_nonsafe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_i32mul_nonsafe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: $vgpr4 = V_MUL_LO_U32_e64 $vgpr10, $vgpr11, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_i32mul_nonsafe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr10, $vgpr11, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -210,21 +238,25 @@ body: |
 # safe: insert a V_NOP.
 ---
 name: perm_then_qsad_nonsafe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr12, $vgpr2_vgpr3, $vgpr10_vgpr11, $vgpr14_vgpr15
     ; GFX1250-LABEL: name: perm_then_qsad_nonsafe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr12, $vgpr2_vgpr3, $vgpr10_vgpr11, $vgpr14_vgpr15
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: early-clobber $vgpr4_vgpr5 = V_MQSAD_PK_U16_U8_e64 $vgpr10_vgpr11, $vgpr12, $vgpr14_vgpr15, 0, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_qsad_nonsafe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr12, $vgpr2_vgpr3, $vgpr10_vgpr11, $vgpr14_vgpr15
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -237,21 +269,25 @@ body: |
 # An F64 transcendental is NOT safe: insert a V_NOP.
 ---
 name: perm_then_f64_trans
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr10_vgpr11
     ; GFX1250-LABEL: name: perm_then_f64_trans
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr10_vgpr11
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: $vgpr4_vgpr5 = V_RCP_F64_e32 $vgpr10_vgpr11, implicit $mode, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_f64_trans
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr10_vgpr11
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -265,21 +301,25 @@ body: |
 # a V_NOP.
 ---
 name: perm_then_pseudo_scalar_trans_nonsafe
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $sgpr10, $vgpr0, $vgpr1, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_then_pseudo_scalar_trans_nonsafe
-    ; GFX1250: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1250: liveins: $sgpr10, $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1250-NEXT: S_WAIT_KMCNT 0
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: $sgpr4 = V_S_EXP_F32_e64 0, $sgpr10, 0, 0, implicit $mode, implicit $exec
     ;
     ; GFX1310-LABEL: name: perm_then_pseudo_scalar_trans_nonsafe
-    ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX1310: liveins: $sgpr10, $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
@@ -292,14 +332,17 @@ body: |
 # Entry function: defensive mitigation at the very start plus the per-perm one.
 ---
 name: perm_kernel_entry
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
     ; GFX1250-LABEL: name: perm_kernel_entry
-    ; GFX1250: $sgpr64_sgpr65 = S_MOV_B64 0
+    ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; GFX1250-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
@@ -307,7 +350,9 @@ body: |
     ; GFX1250-NEXT: S_ENDPGM 0
     ;
     ; GFX1310-LABEL: name: perm_kernel_entry
-    ; GFX1310: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
+    ; GFX1310: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; GFX1310-NEXT: {{  $}}
+    ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     S_ENDPGM 0
@@ -317,14 +362,14 @@ body: |
 # is still inserted. Minimal mitigation for the potentially cross-wave hazard.
 ---
 name: no_perm_kernel_entry
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr0'
 body: |
   bb.0:
     ; GFX1250-LABEL: name: no_perm_kernel_entry
-    ; GFX1250: $sgpr64_sgpr65 = S_MOV_B64 0
+    ; GFX1250: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; GFX1250-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GFX1250-NEXT: V_NOP_e32 implicit $exec
     ; GFX1250-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec

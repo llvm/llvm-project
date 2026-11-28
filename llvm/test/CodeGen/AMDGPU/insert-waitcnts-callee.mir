@@ -9,6 +9,8 @@
 ---
 # CHECK-LABEL: name: entry_callee_wait{{$}}
 # CHECK: bb.0:
+# CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0{{$}}
 # CHECK-NEXT: V_ADD_F32
 # CHECK-NEXT: S_SETPC_B64
@@ -17,9 +19,9 @@ liveins:
   - { reg: '$vgpr0' }
 
 name: entry_callee_wait
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
     $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     S_SETPC_B64 killed $sgpr0_sgpr1
 

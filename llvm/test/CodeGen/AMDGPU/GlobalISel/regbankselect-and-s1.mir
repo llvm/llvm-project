@@ -4,7 +4,6 @@
 ---
 name: and_s1_sgpr_sgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -28,7 +27,6 @@ body: |
 ---
 name: and_s1_scc_scc
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -56,7 +54,6 @@ body: |
 ---
 name: and_s1_vgpr_vgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -85,7 +82,6 @@ body: |
 ---
 name: and_s1_vcc_vcc
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -112,7 +108,6 @@ body: |
 ---
 name: and_s1_sgpr_vgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -140,13 +135,12 @@ body: |
 ---
 name: and_s1_vgpr_sgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr0
+    liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: and_s1_vgpr_sgpr
-    ; CHECK: liveins: $vgpr0, $vgpr0
+    ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
@@ -169,7 +163,6 @@ body: |
 ---
 name: and_s1_scc_vcc
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -198,7 +191,6 @@ body: |
 ---
 name: and_s1_vcc_scc
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -285,13 +277,12 @@ body: |
 ---
 name: and_s1_vgpr_sgpr_sgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr1
+    liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-LABEL: name: and_s1_vgpr_sgpr_sgpr
-    ; CHECK: liveins: $sgpr0, $sgpr1
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -318,7 +309,6 @@ body: |
 ---
 name: and_s1_sgpr_sgpr_sgpr
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:

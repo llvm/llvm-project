@@ -3,7 +3,6 @@
 
 ---
 name: mad_cvv_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_cvv_f32
@@ -19,7 +18,6 @@ body: |
 
 ---
 name: mad_vcv_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_vcv_f32
@@ -35,7 +33,6 @@ body: |
 
 ---
 name: mad_vvc_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_vvc_f32
@@ -51,11 +48,13 @@ body: |
 
 ---
 name: mad_vsc_f32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr1
     ; GFX11-LABEL: name: mad_vsc_f32
-    ; GFX11: $vgpr0 = IMPLICIT_DEF
+    ; GFX11: liveins: $vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr1 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr2 = V_MADAK_F32 $vgpr0, $vgpr1, 1092616192, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
@@ -67,7 +66,6 @@ body: |
 
 ---
 name: fma_cvv_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_cvv_f32
@@ -83,7 +81,6 @@ body: |
 
 ---
 name: fma_vcv_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_vcv_f32
@@ -99,7 +96,6 @@ body: |
 
 ---
 name: fma_vvc_f32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_vvc_f32
@@ -115,11 +111,13 @@ body: |
 
 ---
 name: fma_vsc_f32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr1
     ; GFX11-LABEL: name: fma_vsc_f32
-    ; GFX11: $vgpr0 = IMPLICIT_DEF
+    ; GFX11: liveins: $vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr1 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr2 = V_FMAAK_F32 $vgpr0, $vgpr1, 1092616192, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
@@ -131,7 +129,6 @@ body: |
 
 ---
 name: mad_cvv_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_cvv_f16
@@ -147,7 +144,6 @@ body: |
 
 ---
 name: mad_vcv_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_vcv_f16
@@ -163,7 +159,6 @@ body: |
 
 ---
 name: mad_vvc_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: mad_vvc_f16
@@ -179,11 +174,13 @@ body: |
 
 ---
 name: mad_vsc_f16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr1
     ; GFX11-LABEL: name: mad_vsc_f16
-    ; GFX11: $vgpr0 = IMPLICIT_DEF
+    ; GFX11: liveins: $vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr1 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr2 = V_MADAK_F16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
@@ -195,7 +192,6 @@ body: |
 
 ---
 name: fma_cvv_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_cvv_f16
@@ -211,7 +207,6 @@ body: |
 
 ---
 name: fma_vcv_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_vcv_f16
@@ -227,7 +222,6 @@ body: |
 
 ---
 name: fma_vvc_f16
-tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX11-LABEL: name: fma_vvc_f16
@@ -243,11 +237,13 @@ body: |
 
 ---
 name: fma_vsc_f16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr1
     ; GFX11-LABEL: name: fma_vsc_f16
-    ; GFX11: $vgpr0 = IMPLICIT_DEF
+    ; GFX11: liveins: $vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr1 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr2 = V_FMAAK_F16_fake16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2

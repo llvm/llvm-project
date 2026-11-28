@@ -12,9 +12,9 @@
 # GFX9: %{{[0-9]+}}:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[PTR0]], 0, 0
 
 name: diffoporder_add
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr101, $vgpr1, $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -66,9 +66,9 @@ body:             |
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0,
 
 name: LowestInMiddle
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr101, $vgpr1, $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -120,9 +120,9 @@ body:             |
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0
 
 name: NegativeDistance
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr10, $vgpr1, $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -166,9 +166,9 @@ body:             |
 
 # Tests for a successful compilation.
 name: assert_hit
-tracksRegLiveness: false
 body:             |
     bb.0.entry:
+      liveins: $sgpr101, $vgpr1, $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -206,9 +206,9 @@ body:             |
 # GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0,
 
 name: diffoporder_add_store
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $vgpr0_vgpr1
 
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
 

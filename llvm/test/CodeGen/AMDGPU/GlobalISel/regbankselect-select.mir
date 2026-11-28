@@ -4,7 +4,6 @@
 ---
 name: select_s32_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
@@ -30,7 +29,6 @@ body: |
 ---
 name: select_s32_scc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
@@ -59,7 +57,6 @@ body: |
 ---
 name: select_s32_scc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
@@ -87,7 +84,6 @@ body: |
 ---
 name: select_s32_scc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
@@ -114,7 +110,6 @@ body: |
 ---
 name: select_s32_vcc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
@@ -140,7 +135,6 @@ body: |
 ---
 name: select_s32_vcc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
@@ -165,7 +159,6 @@ body: |
 ---
 name: select_s32_vcc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
@@ -190,7 +183,6 @@ body: |
 ---
 name: select_s32_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -214,7 +206,6 @@ body: |
 ---
 name: select_s64_sss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -240,7 +231,6 @@ body: |
 ---
 name: select_s64_ssv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -274,7 +264,6 @@ body: |
 ---
 name: select_s64_svs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -307,7 +296,6 @@ body: |
 ---
 name: select_s64_svv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -339,7 +327,6 @@ body: |
 ---
 name: select_s64_vss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0, $vgpr1
@@ -370,7 +357,6 @@ body: |
 ---
 name: select_s64_vsv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -400,7 +386,6 @@ body: |
 ---
 name: select_s64_vvs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -430,7 +415,6 @@ body: |
 ---
 name: select_s64_vvv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -459,7 +443,6 @@ body: |
 ---
 name: select_s64_vvv_flags
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -488,7 +471,6 @@ body: |
 ---
 name: select_v2s32_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -514,7 +496,6 @@ body: |
 ---
 name: select_v2s32_scc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -548,7 +529,6 @@ body: |
 ---
 name: select_v2s32_scc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -581,7 +561,6 @@ body: |
 ---
 name: select_v2s32_scc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -613,7 +592,6 @@ body: |
 ---
 name: select_v2s32_vcc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0, $vgpr1
@@ -644,7 +622,6 @@ body: |
 ---
 name: select_v2s32_vcc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -674,7 +651,6 @@ body: |
 ---
 name: select_v2s32_vcc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -704,7 +680,6 @@ body: |
 ---
 name: select_v2s32_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -733,7 +708,6 @@ body: |
 ---
 name: select_v4s16_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -759,7 +733,6 @@ body: |
 ---
 name: select_v4s16_scc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -793,7 +766,6 @@ body: |
 ---
 name: select_v4s16_scc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -826,7 +798,6 @@ body: |
 ---
 name: select_v4s16_scc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -858,7 +829,6 @@ body: |
 ---
 name: select_v4s16_vcc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0, $vgpr1
@@ -889,7 +859,6 @@ body: |
 ---
 name: select_v4s16_vcc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -919,7 +888,6 @@ body: |
 ---
 name: select_v4s16_vcc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -949,7 +917,6 @@ body: |
 ---
 name: select_v4s16_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -978,7 +945,6 @@ body: |
 ---
 name: select_p0_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -1004,7 +970,6 @@ body: |
 ---
 name: select_p1_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -1030,7 +995,6 @@ body: |
 ---
 name: select_p999_scc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
@@ -1056,7 +1020,6 @@ body: |
 ---
 name: select_p0_scc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -1090,7 +1053,6 @@ body: |
 ---
 name: select_p1_scc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -1124,7 +1086,6 @@ body: |
 ---
 name: select_p0_scc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -1157,7 +1118,6 @@ body: |
 ---
 name: select_p1_scc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
@@ -1190,7 +1150,6 @@ body: |
 ---
 name: select_p1_scc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1222,7 +1181,6 @@ body: |
 ---
 name: select_p0_vcc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0, $vgpr1
@@ -1253,7 +1211,6 @@ body: |
 ---
 name: select_p1_vcc_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0, $vgpr1
@@ -1284,7 +1241,6 @@ body: |
 ---
 name: select_p0_vcc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -1314,7 +1270,6 @@ body: |
 ---
 name: select_p1_vcc_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -1344,7 +1299,6 @@ body: |
 ---
 name: select_p0_vcc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -1374,7 +1328,6 @@ body: |
 ---
 name: select_p1_vcc_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -1404,7 +1357,6 @@ body: |
 ---
 name: select_p0_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -1433,7 +1385,6 @@ body: |
 ---
 name: select_p1_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -1462,7 +1413,6 @@ body: |
 ---
 name: select_p999_vcc_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -1491,7 +1441,6 @@ body: |
 ---
 name: select_s32_vgpr_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1516,7 +1465,6 @@ body: |
 ---
 name: select_s32_vgpr_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $sgpr0, $sgpr1
@@ -1543,7 +1491,6 @@ body: |
 ---
 name: select_s32_sgpr_vv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1
@@ -1567,7 +1514,6 @@ body: |
 ---
 name: select_s32_sgpr_vs
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $sgpr1
@@ -1592,12 +1538,11 @@ body: |
 ---
 name: select_s32_sgpr_sv
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr0, $vgpr0
+    liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-LABEL: name: select_s32_sgpr_sv
-    ; CHECK: liveins: $sgpr0, $sgpr0, $vgpr0
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -1618,7 +1563,6 @@ body: |
 ---
 name: select_s32_sgpr_ss
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2

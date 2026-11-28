@@ -3,11 +3,11 @@
 
 ---
 name: scc_write_in_other_block
-tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_other_block
   ; GFX12: bb.0:
   ; GFX12-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; GFX12-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; GFX12-NEXT:   S_WAIT_EXPCNT 0
@@ -20,30 +20,36 @@ body: |
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr3_vgpr4, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit killed $scc
+  ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit $scc
   ; GFX12-NEXT:   S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
   ; GFX12-NEXT:   $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_WAIT_KMCNT 0
   ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
   ; GFX12-NEXT:   $vgpr5 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD $vgpr6_vgpr7, $vgpr5, 0, 0, implicit $exec
   ; GFX12-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4, $vgpr6_vgpr7
     S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
     V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr0, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
   bb.1:
-    renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit killed $scc
+    liveins: $scc, $vgpr3_vgpr4, $vgpr6_vgpr7
+    renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit $scc
     S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
     $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
     GLOBAL_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec
 
   bb.2:
+    liveins: $scc, $vgpr6_vgpr7
     renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
     $vgpr5 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
     GLOBAL_STORE_DWORD $vgpr6_vgpr7, $vgpr5, 0, 0, implicit $exec
@@ -52,11 +58,11 @@ body: |
 
 ---
 name: scc_write_in_other_block_with_barrier_wait
-tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_other_block_with_barrier_wait
   ; GFX12: bb.0:
   ; GFX12-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; GFX12-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; GFX12-NEXT:   S_WAIT_EXPCNT 0
@@ -69,30 +75,36 @@ body: |
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr3_vgpr4, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit killed $scc
+  ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit $scc
   ; GFX12-NEXT:   S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
   ; GFX12-NEXT:   $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_BARRIER_WAIT -1
   ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
   ; GFX12-NEXT:   $vgpr5 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD $vgpr6_vgpr7, $vgpr5, 0, 0, implicit $exec
   ; GFX12-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4, $vgpr6_vgpr7
     S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
     V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr0, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
   bb.1:
-    renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit killed $scc
+    liveins: $scc, $vgpr3_vgpr4, $vgpr6_vgpr7
+    renamable $sgpr1 = S_CSELECT_B32 1, 0, implicit $scc
     S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
     $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
     GLOBAL_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec
 
   bb.2:
+    liveins: $scc, $vgpr6_vgpr7
     S_BARRIER_WAIT -1
     renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
     $vgpr5 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
@@ -102,11 +114,11 @@ body: |
 
 ---
 name: scc_write_in_multiple_blocks_with_barrier_wait
-tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_multiple_blocks_with_barrier_wait
   ; GFX12: bb.0:
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
+  ; GFX12-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; GFX12-NEXT:   S_WAIT_EXPCNT 0
@@ -119,28 +131,34 @@ body: |
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr1, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr1, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_BARRIER_SIGNAL_ISFIRST_IMM 0, implicit-def $scc, implicit killed $scc
   ; GFX12-NEXT:   S_BRANCH %bb.5
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_BARRIER_SIGNAL_ISFIRST_IMM 1, implicit-def $scc, implicit killed $scc
   ; GFX12-NEXT:   S_BRANCH %bb.5
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
+  ; GFX12-NEXT:   liveins: $scc, $vgpr6_vgpr7
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   S_BARRIER_WAIT -1
   ; GFX12-NEXT:   S_WAIT_KMCNT 0
   ; GFX12-NEXT:   renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
@@ -148,26 +166,32 @@ body: |
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD $vgpr6_vgpr7, $vgpr5, 0, 0, implicit $exec
   ; GFX12-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr6_vgpr7
     S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
     V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr0, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.4, implicit $exec
 
   bb.1:
+    liveins: $scc, $vgpr1, $vgpr6_vgpr7
     V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr1, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.3, implicit $exec
 
   bb.2:
+   liveins: $scc, $vgpr6_vgpr7
    S_BARRIER_SIGNAL_ISFIRST_IMM 0, implicit-def $scc, implicit killed $scc
    S_BRANCH %bb.5
 
   bb.3:
+   liveins: $scc, $vgpr6_vgpr7
    S_BARRIER_SIGNAL_ISFIRST_IMM 1, implicit-def $scc, implicit killed $scc
    S_BRANCH %bb.5
 
   bb.4:
+   liveins: $scc, $vgpr6_vgpr7
    S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
 
   bb.5:
+    liveins: $scc, $vgpr6_vgpr7
     S_BARRIER_WAIT -1
     renamable $sgpr1 = S_CSELECT_B32 10, 20, implicit killed $scc
     $vgpr5 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec

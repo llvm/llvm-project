@@ -399,6 +399,8 @@ body:             |
 # instructions.
 ---
 name:            no_tracked_liveness
+## FIXME: This test can be dropped once `tracksRegLiveness: false` is no longer
+## supported.
 tracksRegLiveness: false
 body:             |
   bb.0:

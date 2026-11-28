@@ -16,7 +16,6 @@
 
 ---
 name: test_overlap
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -33,7 +32,6 @@ body: |
 
 ---
 name: test_dead_redef
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0
@@ -52,6 +50,9 @@ body: |
 
 ---
 name: test_tied
+## FIXME: This test trips the verifier with `tracksRegLiveness: true`. The
+## BUNDLE re-defines the virtual registers defined inside it, which breaks SSA
+## form.
 tracksRegLiveness: false
 body: |
   bb.0:
@@ -66,6 +67,9 @@ body: |
 
 ---
 name: test_mmo_merge1
+## FIXME: This test trips the verifier with `tracksRegLiveness: true`. The
+## BUNDLE re-defines the virtual registers defined inside it, which breaks SSA
+## form.
 tracksRegLiveness: false
 body: |
   bb.0:
@@ -80,28 +84,26 @@ body: |
 
 ---
 name: test_mmo_merge2
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mmo_merge2
-    ; CHECK: BUNDLE implicit %0:vgpr_32, implicit %1:vgpr_32, implicit $exec :: (store (s32) into @foo, addrspace 3), (store (s32) into @foo + 4, addrspace 3) {
-    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
-    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec :: (store (s32) into @foo + 4, addrspace 3)
+    ; CHECK: BUNDLE implicit undef %0:vgpr_32, implicit undef %1:vgpr_32, implicit $exec :: (store (s32) into @foo, addrspace 3), (store (s32) into @foo + 4, addrspace 3) {
+    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
+    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 4, 0, implicit $exec :: (store (s32) into @foo + 4, addrspace 3)
     ; CHECK-NEXT: }
-    DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
-    DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec :: (store (s32) into @foo + 4, addrspace 3)
+    DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
+    DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 4, 0, implicit $exec :: (store (s32) into @foo + 4, addrspace 3)
 ...
 
 ---
 name: test_mmo_drop
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mmo_drop
-    ; CHECK: BUNDLE implicit %0:vgpr_32, implicit %1:vgpr_32, implicit $exec {
-    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
-    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec
+    ; CHECK: BUNDLE implicit undef %0:vgpr_32, implicit undef %1:vgpr_32, implicit $exec {
+    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
+    ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 4, 0, implicit $exec
     ; CHECK-NEXT: }
-    DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
-    DS_WRITE_B32_gfx9 %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec
+    DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into @foo, addrspace 3)
+    DS_WRITE_B32_gfx9 undef %0:vgpr_32, undef %1:vgpr_32, 4, 0, implicit $exec
 ...

@@ -5,15 +5,17 @@
 name: foo
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false
     fp32-input-denormals: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1
     ; GFX9-LABEL: name: foo
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9: liveins: $sgpr0, $sgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
     ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc

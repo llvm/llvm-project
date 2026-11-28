@@ -6,7 +6,6 @@
 ---
 name: mad_u64_u32_sss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -72,7 +71,6 @@ body: |
 ---
 name: mad_u64_u32_ssv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -137,7 +135,6 @@ body: |
 ---
 name: mad_u64_u32_svs
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -164,7 +161,6 @@ body: |
 ---
 name: mad_u64_u32_svv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -190,7 +186,6 @@ body: |
 ---
 name: mad_u64_u32_vss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -217,13 +212,12 @@ body: |
 ---
 name: mad_u64_u32_vsv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0, $vgpr1, $vgpr2
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: mad_u64_u32_vsv
-    ; CHECK: liveins: $vgpr0, $sgpr0, $vgpr1, $vgpr2
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -243,13 +237,12 @@ body: |
 ---
 name: mad_u64_u32_vvs
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0, $sgpr1
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
     ; CHECK-LABEL: name: mad_u64_u32_vvs
-    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr0, $sgpr1
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
@@ -269,7 +262,6 @@ body: |
 ---
 name: mad_u64_u32_vvv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -294,7 +286,6 @@ body: |
 ---
 name: mad_i64_i32_sss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -375,7 +366,6 @@ body: |
 ---
 name: mad_i64_i32_ssv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -451,7 +441,6 @@ body: |
 ---
 name: mad_u64_u32_ss0
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -503,7 +492,6 @@ body: |
 ---
 name: mad_u64_u32_vv0
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -525,7 +513,6 @@ body: |
 ---
 name: mad_i64_i32_ss0
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -580,7 +567,6 @@ body: |
 ---
 name: mad_i64_i32_vv0
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:

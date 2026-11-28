@@ -57,12 +57,12 @@
 # s_waitcnt vmcnt(0)
 
 name: flat_zero_waitcnt
-tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: flat_zero_waitcnt
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4, addrspace 1)
@@ -73,6 +73,7 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT:   liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
@@ -81,6 +82,8 @@ body: |
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
@@ -89,6 +92,7 @@ body: |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
+    liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4)
     $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
     $agpr0 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec
@@ -96,12 +100,14 @@ body: |
 
   bb.1:
     successors: %bb.2
+    liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
     $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
+    liveins: $agpr1, $vgpr2_vgpr3, $vgpr8_vgpr9
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
     $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.flat16)
     $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
@@ -113,26 +119,30 @@ body: |
 
 
 name: single_fallthrough_successor_no_end_block_wait
-tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: single_fallthrough_successor_no_end_block_wait
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr2_vgpr3, $vgpr8_vgpr9
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   liveins: $agpr0, $vgpr8_vgpr9
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
+    liveins: $vgpr2_vgpr3, $vgpr8_vgpr9
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
+    liveins: $agpr0, $vgpr8_vgpr9
     $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
     FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
@@ -145,36 +155,43 @@ body: |
 
 
 name: single_branch_successor_not_next_block
-tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: single_branch_successor_not_next_block
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr2_vgpr3, $vgpr8_vgpr9
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   liveins: $agpr10, $vgpr8_vgpr9
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr8_vgpr9, $agpr10, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   liveins: $agpr0, $vgpr8_vgpr9
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.2
+    liveins: $vgpr2_vgpr3, $vgpr8_vgpr9
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
    S_BRANCH %bb.2
 
   bb.1:
+    liveins: $agpr10, $vgpr8_vgpr9
     FLAT_STORE_DWORD $vgpr8_vgpr9, $agpr10, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
   bb.2:
+    liveins: $agpr0, $vgpr8_vgpr9
     $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
     FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
@@ -334,12 +351,14 @@ body: |
 # agpr should be disjoint and tracked separately from vgpr
 
 name: high_register_collision
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $agpr1, $vgpr6_vgpr7, $vgpr8_vgpr9
     ; GCN-LABEL: name: high_register_collision
-    ; GCN: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+    ; GCN: liveins: $agpr1, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $agpr0 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec
     ; GCN-NEXT: $vgpr226 = FLAT_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec

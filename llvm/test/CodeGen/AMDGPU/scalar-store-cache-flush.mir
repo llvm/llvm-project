@@ -52,7 +52,6 @@
 # CHECK-NEXT: S_ENDPGM 0
 
 name: basic_insert_dcache_wb
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -70,7 +69,6 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 
 name: explicit_flush_after
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -90,7 +88,6 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 
 name: explicit_flush_before
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -105,7 +102,6 @@ body: |
 # CHECK: bb.0
 # CHECK-NEXT: S_ENDPGM 0
 name: no_scalar_store
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -126,7 +122,6 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 
 name: multi_block_store
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -155,7 +150,6 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 
 name: one_block_store
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -176,7 +170,6 @@ body: |
 # CHECK-NEXT: SI_RETURN
 
 name: si_return
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 

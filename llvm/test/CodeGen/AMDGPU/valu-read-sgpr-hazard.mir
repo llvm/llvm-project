@@ -49,11 +49,13 @@
 
 ---
 name:            hazard_getpc1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_getpc1
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -66,11 +68,13 @@ body:            |
 
 ---
 name:            hazard_getpc2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr1, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_getpc2
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr1, implicit $exec
+    ; GCN: liveins: $sgpr1, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr1, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -83,11 +87,13 @@ body:            |
 
 ---
 name:            hazard_getpc3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $sgpr1, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_getpc3
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $sgpr1, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $sgpr0_sgpr1 {
     ; GCN-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
@@ -106,11 +112,13 @@ body:            |
 
 ---
 name:            hazard_getpc4
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $sgpr1, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_getpc4
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $sgpr1, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $sgpr0_sgpr1 {
     ; GCN-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
@@ -132,11 +140,13 @@ body:            |
 
 ---
 name:            hazard_vcc1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr2, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_vcc1
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2, implicit $exec
+    ; GCN: liveins: $scc, $sgpr2, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2, implicit $exec
     ; GCN-NEXT: $sgpr3 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr4 = S_ADD_U32 $sgpr3, 0, implicit-def $scc
@@ -149,11 +159,13 @@ body:            |
 
 ---
 name:            hazard_vcc2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $vcc_hi, $vcc_lo, $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_vcc2
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
+    ; GCN: liveins: $scc, $vcc_hi, $vcc_lo, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr4 = S_ADD_U32 $vcc_lo, 0, implicit-def $scc
@@ -166,11 +178,13 @@ body:            |
 
 ---
 name:            hazard_vcc3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $vcc_hi, $vcc_lo, $vgpr1, $vgpr2, $vgpr4, $vgpr5
     ; GCN-LABEL: name: hazard_vcc3
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
+    ; GCN: liveins: $scc, $vcc_hi, $vcc_lo, $vgpr1, $vgpr2, $vgpr4, $vgpr5
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc_lo, implicit $exec
@@ -183,11 +197,11 @@ body:            |
 
 ---
 name:            hazard_merge_vcc
-tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_merge_vcc
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT:   liveins: $scc, $vcc_hi, $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
@@ -195,42 +209,52 @@ body:            |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT:   liveins: $scc, $vcc_hi, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT:   liveins: $vcc_hi, $vgpr0, $vgpr1, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vcc_lo = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
+  ; GCN-NEXT:   liveins: $vcc_hi, $vcc_lo, $vgpr4, $vgpr5
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_WAITCNT_DEPCTR .VaVcc_0_SaSdst_0
   ; GCN-NEXT:   $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc_lo, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $scc, $vcc_hi, $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
     $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     S_CBRANCH_SCC0 %bb.1, implicit $scc
     S_BRANCH %bb.2
   bb.1:
+    liveins: $scc, $vcc_hi, $vgpr4, $vgpr5
     $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
     S_BRANCH %bb.3
   bb.2:
+    liveins: $vcc_hi, $vgpr0, $vgpr1, $vgpr4, $vgpr5
     $vcc_lo = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_BRANCH %bb.3
   bb.3:
+    liveins: $vcc_hi, $vcc_lo, $vgpr4, $vgpr5
     $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc, implicit $exec
     S_ENDPGM 0
 ...
 
 ---
 name:            hazard_addc1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_addc1
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -243,11 +267,13 @@ body:            |
 
 ---
 name:            hazard_addc2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr1, $vgpr1
     ; GCN-LABEL: name: hazard_addc2
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr1, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr1, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr1, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -260,11 +286,13 @@ body:            |
 
 ---
 name:            hazard_addc3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_addc3
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
@@ -277,11 +305,13 @@ body:            |
 
 ---
 name:            hazard_addc4
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr3, $vgpr1
     ; GCN-LABEL: name: hazard_addc4
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr3, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr3, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr3, 0, implicit $exec
     ; GCN-NEXT: $sgpr3 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr3, 0, implicit-def $scc
@@ -294,11 +324,13 @@ body:            |
 
 ---
 name:            hazard_addc5
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_addc5
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr16 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
@@ -315,11 +347,13 @@ body:            |
 
 ---
 name:            hazard_addc6
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_addc6
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr16 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr48 = S_MOV_B32 0
@@ -342,11 +376,13 @@ body:            |
 
 ---
 name:            hazard_vaddc1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_vaddc1
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $vgpr2, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr1, 0, implicit $exec
@@ -359,11 +395,13 @@ body:            |
 
 ---
 name:            hazard_gap1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_gap1
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: S_NOP 0
@@ -392,11 +430,13 @@ body:            |
 
 ---
 name:            hazard_gap2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_gap2
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: S_NOP 0
@@ -425,11 +465,13 @@ body:            |
 
 ---
 name:            hazard_gap3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $sgpr3, $sgpr5, $sgpr7, $sgpr9, $sgpr11, $sgpr13, $sgpr15, $vgpr1
     ; GCN-LABEL: name: hazard_gap3
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $sgpr3, $sgpr5, $sgpr7, $sgpr9, $sgpr11, $sgpr13, $sgpr15, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: $sgpr4 = S_ADD_U32 $sgpr3, 0, implicit-def $scc
     ; GCN-NEXT: $sgpr6 = S_ADD_U32 $sgpr5, 0, implicit-def $scc
@@ -456,11 +498,13 @@ body:            |
 
 ---
 name:            hazard_gap4_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $sgpr3, $sgpr5, $sgpr7, $sgpr9, $sgpr11, $sgpr13, $sgpr15, $sgpr17, $sgpr19, $sgpr21, $vgpr1
     ; GCN-LABEL: name: hazard_gap4_no_hazard
-    ; GCN: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $scc, $sgpr0, $sgpr3, $sgpr5, $sgpr7, $sgpr9, $sgpr11, $sgpr13, $sgpr15, $sgpr17, $sgpr19, $sgpr21, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $vcc_lo = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: $sgpr4 = S_ADD_U32 $sgpr3, 0, implicit-def $scc
     ; GCN-NEXT: $sgpr6 = S_ADD_U32 $sgpr5, 0, implicit-def $scc
@@ -493,11 +537,13 @@ body:            |
 
 ---
 name:            hazard_valu_write1_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $vgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_valu_write1_no_hazard
-    ; GCN: $sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
+    ; GCN: liveins: $scc, $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
@@ -509,11 +555,13 @@ body:            |
 
 ---
 name:            hazard_post_order1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr1, $vgpr2
     ; GCN-LABEL: name: hazard_post_order1
-    ; GCN: $sgpr0_sgpr1 = S_GETPC_B64
+    ; GCN: liveins: $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
@@ -525,41 +573,46 @@ body:            |
 
 ---
 name:            hazard_post_order2
-tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_post_order2
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr1, $vgpr2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
   ; GCN-NEXT:   $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   liveins: $sgpr0, $vgpr1, $vgpr2
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr1, $vgpr2
     $sgpr0_sgpr1 = S_GETPC_B64
     $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     S_BRANCH %bb.1
 
   bb.1:
+    liveins: $sgpr0, $vgpr1, $vgpr2
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     S_ENDPGM 0
 ...
 
 ---
 name:            hazard_post_order_cycle
-tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_post_order_cycle
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr1, $vgpr2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr1, $vgpr2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
   ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
@@ -567,6 +620,7 @@ body:            |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; GCN-NEXT:   liveins: $scc, $sgpr0, $vgpr1, $vgpr2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
@@ -574,13 +628,16 @@ body:            |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr1, $vgpr2
     S_NOP 0
 
   bb.1:
+    liveins: $vgpr1, $vgpr2
     $sgpr0_sgpr1 = S_GETPC_B64
     $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
 
   bb.2:
+    liveins: $scc, $sgpr0, $vgpr1, $vgpr2
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     S_CBRANCH_SCC0 %bb.1, implicit $scc
 
@@ -590,13 +647,13 @@ body:            |
 
 ---
 name:            hazard_calls
-tracksRegLiveness: false
 frameInfo:
   hasCalls: true
 body:            |
   ; NOBC-LABEL: name: hazard_calls
   ; NOBC: bb.0:
   ; NOBC-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; NOBC-NEXT:   liveins: $scc, $sgpr4, $sgpr8, $sgpr16, $sgpr18, $sgpr20, $sgpr22, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   $vgpr0 = V_WRITELANE_B32 0, $sgpr4, $vgpr0
   ; NOBC-NEXT:   $vgpr0 = V_WRITELANE_B32 1, $sgpr8, $vgpr0
@@ -609,22 +666,28 @@ body:            |
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT: bb.1:
   ; NOBC-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; NOBC-NEXT:   liveins: $scc, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit $scc
   ; NOBC-NEXT:   S_BRANCH %bb.4
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT: bb.2:
+  ; NOBC-NEXT:   liveins: $sgpr0_sgpr1
+  ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   $sgpr16 = S_MOV_B32 0
   ; NOBC-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; NOBC-NEXT:   S_SETPC_B64 $sgpr0_sgpr1
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT: bb.3:
+  ; NOBC-NEXT:   liveins: $sgpr0_sgpr1
+  ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   $sgpr18 = S_MOV_B32 0
   ; NOBC-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; NOBC-NEXT:   S_SETPC_B64_return $sgpr0_sgpr1
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT: bb.4:
   ; NOBC-NEXT:   successors: %bb.5(0x80000000)
+  ; NOBC-NEXT:   liveins: $sgpr2_sgpr3
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   $vcc_lo = S_MOV_B32 0
   ; NOBC-NEXT:   $sgpr20 = S_MOV_B32 0
@@ -640,6 +703,8 @@ body:            |
   ; NOBC-NEXT:   $sgpr8_sgpr9 = S_CALL_B64 0
   ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT: bb.6:
+  ; NOBC-NEXT:   liveins: $sgpr8
+  ; NOBC-NEXT: {{  $}}
   ; NOBC-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; NOBC-NEXT:   $sgpr22 = S_MOV_B32 $sgpr8
   ; NOBC-NEXT:   S_ENDPGM 0
@@ -647,6 +712,7 @@ body:            |
   ; BC-LABEL: name: hazard_calls
   ; BC: bb.0:
   ; BC-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; BC-NEXT:   liveins: $scc, $sgpr4, $sgpr8, $sgpr16, $sgpr18, $sgpr20, $sgpr22, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; BC-NEXT: {{  $}}
   ; BC-NEXT:   $vgpr0 = V_WRITELANE_B32 0, $sgpr4, $vgpr0
   ; BC-NEXT:   $vgpr0 = V_WRITELANE_B32 1, $sgpr8, $vgpr0
@@ -659,11 +725,14 @@ body:            |
   ; BC-NEXT: {{  $}}
   ; BC-NEXT: bb.1:
   ; BC-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; BC-NEXT:   liveins: $scc, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; BC-NEXT: {{  $}}
   ; BC-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit $scc
   ; BC-NEXT:   S_BRANCH %bb.4
   ; BC-NEXT: {{  $}}
   ; BC-NEXT: bb.2:
+  ; BC-NEXT:   liveins: $sgpr0_sgpr1
+  ; BC-NEXT: {{  $}}
   ; BC-NEXT:   $sgpr16 = S_MOV_B32 0
   ; BC-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; BC-NEXT:   DS_NOP implicit $m0, implicit $exec
@@ -673,6 +742,8 @@ body:            |
   ; BC-NEXT:   S_SETPC_B64 $sgpr0_sgpr1
   ; BC-NEXT: {{  $}}
   ; BC-NEXT: bb.3:
+  ; BC-NEXT:   liveins: $sgpr0_sgpr1
+  ; BC-NEXT: {{  $}}
   ; BC-NEXT:   $sgpr18 = S_MOV_B32 0
   ; BC-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; BC-NEXT:   DS_NOP implicit $m0, implicit $exec
@@ -683,6 +754,7 @@ body:            |
   ; BC-NEXT: {{  $}}
   ; BC-NEXT: bb.4:
   ; BC-NEXT:   successors: %bb.5(0x80000000)
+  ; BC-NEXT:   liveins: $sgpr2_sgpr3
   ; BC-NEXT: {{  $}}
   ; BC-NEXT:   $vcc_lo = S_MOV_B32 0
   ; BC-NEXT:   $sgpr20 = S_MOV_B32 0
@@ -700,9 +772,12 @@ body:            |
   ; BC-NEXT:   $sgpr8_sgpr9 = S_CALL_B64 0
   ; BC-NEXT: {{  $}}
   ; BC-NEXT: bb.6:
+  ; BC-NEXT:   liveins: $sgpr8
+  ; BC-NEXT: {{  $}}
   ; BC-NEXT:   $sgpr22 = S_MOV_B32 $sgpr8
   ; BC-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $scc, $sgpr4, $sgpr8, $sgpr16, $sgpr18, $sgpr20, $sgpr22, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3
     $vgpr0 = V_WRITELANE_B32 0, $sgpr4, $vgpr0
     $vgpr0 = V_WRITELANE_B32 1, $sgpr8, $vgpr0
     $vgpr0 = V_WRITELANE_B32 2, $sgpr16, $vgpr0
@@ -713,18 +788,22 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
+    liveins: $scc, $sgpr0_sgpr1, $sgpr2_sgpr3
     S_CBRANCH_SCC0 %bb.3, implicit $scc
     S_BRANCH %bb.4
 
   bb.2:
+    liveins: $sgpr0_sgpr1
     $sgpr16 = S_MOV_B32 0
     S_SETPC_B64 $sgpr0_sgpr1
 
   bb.3:
+    liveins: $sgpr0_sgpr1
     $sgpr18 = S_MOV_B32 0
     S_SETPC_B64_return $sgpr0_sgpr1
 
   bb.4:
+    liveins: $sgpr2_sgpr3
     $vcc_lo = S_MOV_B32 0
     $sgpr20 = S_MOV_B32 0
     $sgpr4_sgpr5 = S_SWAPPC_B64 $sgpr2_sgpr3
@@ -734,24 +813,29 @@ body:            |
     $sgpr8_sgpr9 = S_CALL_B64 0
 
   bb.6:
+    liveins: $sgpr8
     $sgpr22 = S_MOV_B32 $sgpr8
     S_ENDPGM 0
 ...
 
 ---
 name:            hazard_callee1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr30_sgpr31
     ; NOBC-LABEL: name: hazard_callee1
-    ; NOBC: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; NOBC: liveins: $scc, $sgpr30_sgpr31
+    ; NOBC-NEXT: {{  $}}
+    ; NOBC-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; NOBC-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; NOBC-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
     ; NOBC-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; NOBC-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     ;
     ; BC-LABEL: name: hazard_callee1
-    ; BC: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
+    ; BC: liveins: $scc, $sgpr30_sgpr31
+    ; BC-NEXT: {{  $}}
+    ; BC-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; BC-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
     ; BC-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
@@ -761,11 +845,13 @@ body:            |
 
 ---
 name:            hazard_callee2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $scc, $sgpr0, $vgpr1, $sgpr30_sgpr31
     ; NOBC-LABEL: name: hazard_callee2
-    ; NOBC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; NOBC: liveins: $scc, $sgpr0, $vgpr1, $sgpr30_sgpr31
+    ; NOBC-NEXT: {{  $}}
+    ; NOBC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; NOBC-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; NOBC-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; NOBC-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
@@ -773,7 +859,9 @@ body:            |
     ; NOBC-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     ;
     ; BC-LABEL: name: hazard_callee2
-    ; BC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; BC: liveins: $scc, $sgpr0, $vgpr1, $sgpr30_sgpr31
+    ; BC-NEXT: {{  $}}
+    ; BC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; BC-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
     ; BC-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; BC-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
@@ -790,11 +878,13 @@ body:            |
 
 ---
 name:            hazard_carry_vcc
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-LABEL: name: hazard_carry_vcc
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $vcc_lo, 0, implicit $exec
+    ; GCN: liveins: $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $vcc_lo, 0, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_ADD_CO_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc_lo, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVcc_0
     ; GCN-NEXT: $vgpr1 = V_ADDC_U32_e32 $vgpr2, $vgpr3, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
@@ -807,11 +897,13 @@ body:            |
 
 ---
 name:            hazard_carry_vcc_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-LABEL: name: hazard_carry_vcc_no_hazard
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $vcc_lo, 0, implicit $exec
+    ; GCN: liveins: $vcc_lo, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $vcc_lo, 0, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_ADD_CO_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc_lo, implicit $exec
     ; GCN-NEXT: $sgpr8 = S_MOV_B32 $vcc_lo
     ; GCN-NEXT: $vgpr1 = V_ADDC_U32_e32 $vgpr2, $vgpr3, implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
@@ -825,11 +917,13 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-LABEL: name: hazard_carry_sgpr
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0, $sgpr0 = V_ADD_CO_U32_e64 $vgpr0, $vgpr1, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0
     ; GCN-NEXT: $vgpr1, $sgpr1 = V_ADDC_U32_e64 $vgpr2, $vgpr3, $sgpr0, 0, implicit $exec
@@ -842,11 +936,13 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard1
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0, $sgpr0 = V_ADD_CO_U32_e64 $vgpr0, $vgpr1, 0, implicit $exec
     ; GCN-NEXT: $sgpr8 = S_MOV_B32 $sgpr0
     ; GCN-NEXT: $vgpr1, $sgpr1 = V_ADDC_U32_e64 $vgpr2, $vgpr3, $sgpr0, 0, implicit $exec
@@ -860,11 +956,13 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr8, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard2
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $sgpr8, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0, $sgpr0 = V_ADD_CO_U32_e64 $vgpr0, $vgpr1, 0, implicit $exec
     ; GCN-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, 0, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr1, $sgpr1 = V_ADDC_U32_e64 $vgpr2, $vgpr3, $sgpr0, 0, implicit $exec
@@ -878,11 +976,13 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr6_sgpr7
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard3
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr6_sgpr7
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0, $sgpr0 = V_ADD_CO_U32_e64 $vgpr0, $vgpr1, 0, implicit $exec
     ; GCN-NEXT: $sgpr8 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
     ; GCN-NEXT: $vgpr1, $sgpr1 = V_ADDC_U32_e64 $vgpr2, $vgpr3, $sgpr0, 0, implicit $exec
@@ -896,11 +996,13 @@ body:            |
 
 ---
 name:            hazard_cull_vmem
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr8, $vgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
     ; NOMEMC-LABEL: name: hazard_cull_vmem
-    ; NOMEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; NOMEMC: liveins: $sgpr0, $sgpr8, $vgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+    ; NOMEMC-NEXT: {{  $}}
+    ; NOMEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; NOMEMC-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, 0, 0, 0, implicit $exec
     ; NOMEMC-NEXT: S_WAIT_LOADCNT 0
     ; NOMEMC-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -909,7 +1011,9 @@ body:            |
     ; NOMEMC-NEXT: S_ENDPGM 0
     ;
     ; MEMC-LABEL: name: hazard_cull_vmem
-    ; MEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; MEMC: liveins: $sgpr0, $sgpr8, $vgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+    ; MEMC-NEXT: {{  $}}
+    ; MEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; MEMC-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, 0, 0, 0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -929,11 +1033,13 @@ body:            |
 
 ---
 name:            hazard_cull_sample
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr1, $vgpr3, $vgpr4, $sgpr8_sgpr9_sgpr10_sgpr11
     ; NOMEMC-LABEL: name: hazard_cull_sample
-    ; NOMEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; NOMEMC: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr1, $vgpr3, $vgpr4, $sgpr8_sgpr9_sgpr10_sgpr11
+    ; NOMEMC-NEXT: {{  $}}
+    ; NOMEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; NOMEMC-NEXT: $vgpr10 = IMAGE_SAMPLE_LZ_V1_V2_gfx12 $vgpr3, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     ; NOMEMC-NEXT: S_WAIT_SAMPLECNT 0
     ; NOMEMC-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -942,7 +1048,9 @@ body:            |
     ; NOMEMC-NEXT: S_ENDPGM 0
     ;
     ; MEMC-LABEL: name: hazard_cull_sample
-    ; MEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; MEMC: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr1, $vgpr3, $vgpr4, $sgpr8_sgpr9_sgpr10_sgpr11
+    ; MEMC-NEXT: {{  $}}
+    ; MEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; MEMC-NEXT: $vgpr10 = IMAGE_SAMPLE_LZ_V1_V2_gfx12 $vgpr3, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -962,11 +1070,13 @@ body:            |
 
 ---
 name:            hazard_cull_bvh
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr1, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14
     ; NOMEMC-LABEL: name: hazard_cull_bvh
-    ; NOMEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; NOMEMC: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr1, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14
+    ; NOMEMC-NEXT: {{  $}}
+    ; NOMEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; NOMEMC-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; NOMEMC-NEXT: S_WAIT_BVHCNT 0
     ; NOMEMC-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -975,7 +1085,9 @@ body:            |
     ; NOMEMC-NEXT: S_ENDPGM 0
     ;
     ; MEMC-LABEL: name: hazard_cull_bvh
-    ; MEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; MEMC: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr1, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14
+    ; MEMC-NEXT: {{  $}}
+    ; MEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; MEMC-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -995,11 +1107,13 @@ body:            |
 
 ---
 name:            hazard_nocull_scratch
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_nocull_scratch
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -1016,11 +1130,13 @@ body:            |
 
 ---
 name:            hazard_cull_global
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1
     ; NOMEMC-LABEL: name: hazard_cull_global
-    ; NOMEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; NOMEMC: liveins: $sgpr0, $vgpr0, $vgpr1
+    ; NOMEMC-NEXT: {{  $}}
+    ; NOMEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; NOMEMC-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     ; NOMEMC-NEXT: S_WAIT_LOADCNT 0
     ; NOMEMC-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -1029,7 +1145,9 @@ body:            |
     ; NOMEMC-NEXT: S_ENDPGM 0
     ;
     ; MEMC-LABEL: name: hazard_cull_global
-    ; MEMC: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; MEMC: liveins: $sgpr0, $vgpr0, $vgpr1
+    ; MEMC-NEXT: {{  $}}
+    ; MEMC-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; MEMC-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
     ; MEMC-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -1049,11 +1167,13 @@ body:            |
 
 ---
 name:            hazard_nocull_flat
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_nocull_flat
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
@@ -1070,11 +1190,13 @@ body:            |
 
 ---
 name:            hazard_existing_cull
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $vgpr1
     ; GCN-LABEL: name: hazard_existing_cull
-    ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
+    ; GCN: liveins: $sgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec

@@ -4,7 +4,6 @@
 
 ---
 name: merge_consecutive_wait_alus
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -21,7 +20,6 @@ body:             |
 ...
 ---
 name: merge_consecutive_wait_alus_two_bb
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: merge_consecutive_wait_alus_two_bb
   ; CHECK: bb.0:
@@ -32,7 +30,7 @@ body:             |
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0
   ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
@@ -43,18 +41,20 @@ body:             |
     S_WAITCNT_DEPCTR 65530
 
   bb.1:
-    liveins: $sgpr0
+    liveins: $sgpr0, $vgpr0
 
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
 ...
 ---
 name: meta_instructions
-tracksRegLiveness: false
 machineFunctionInfo:
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: meta_instructions
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: SCHED_BARRIER 0
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0
@@ -66,12 +66,14 @@ body: |
 ...
 ---
 name: debug_instruction
-tracksRegLiveness: false
 machineFunctionInfo:
 body: |
   bb.0:
+    liveins: $vgpr0
     ; CHECK-LABEL: name: debug_instruction
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: DBG_VALUE $sgpr0
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo

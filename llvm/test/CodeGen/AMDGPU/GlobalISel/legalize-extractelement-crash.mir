@@ -3,11 +3,13 @@
 
 ---
 name: f
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: f
-    ; CHECK: SI_RETURN
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SI_RETURN
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
 
     %2:_(s32) = G_CONSTANT i32 -1

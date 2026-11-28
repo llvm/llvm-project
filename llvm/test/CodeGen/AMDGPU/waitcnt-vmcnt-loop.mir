@@ -30,20 +30,21 @@
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -76,19 +77,20 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_noterm
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -108,20 +110,21 @@ body:             |
 # GFX9-NOT: S_WAITCNT .Vmcnt_0{{$}}
 # GFX9-LABEL: bb.2:
 name:            waitcnt_vm_loop_noterm_wait
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_WAITCNT 3952
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -156,21 +159,22 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_load
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr5, $vgpr6, $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr5, $vgpr6, $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3
 
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr7 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr7, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -205,19 +209,20 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_no_store
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr2
 
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -255,24 +260,26 @@ body:             |
 # GFX12-NOT: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_no_use
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
   bb.2:
+    liveins: $vgpr0
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_ENDPGM 0
 
@@ -307,20 +314,21 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -355,21 +363,22 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_store
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFEN_exact $vgpr5, $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -403,21 +412,22 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_use_in_loop
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
     $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr4 = V_ADD_U32_e32 $vgpr5, $vgpr1, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -458,10 +468,10 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.3:
 name:            waitcnt_vm_loop2_nowait
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
@@ -469,6 +479,7 @@ body:             |
 
   bb.1:
     successors: %bb.2
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr3 = V_ADD_U32_e32 $vgpr4, $vgpr5, implicit $exec
     $vgpr3 = V_ADD_U32_e32 $vgpr4, $vgpr5, implicit $exec
@@ -478,10 +489,11 @@ body:             |
 
   bb.2:
     successors: %bb.2, %bb.3
+    liveins: $sgpr4, $vgpr0, $vgpr2, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
-    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
     S_BRANCH %bb.3
 
@@ -515,10 +527,10 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_reginterval
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $vgpr10_vgpr11, $vgpr20_vgpr21
 
     $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr10_vgpr11, 0, 0, implicit $exec
 
@@ -526,11 +538,12 @@ body:             |
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $vgpr20_vgpr21
 
     $vgpr10 = COPY $vgpr0
 
     $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -563,10 +576,10 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_reginterval2
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $vgpr10_vgpr11, $vgpr20_vgpr21
 
     $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr10_vgpr11, 0, 0, implicit $exec
 
@@ -574,12 +587,13 @@ body:             |
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $vgpr20_vgpr21
 
     $vgpr10 = COPY $vgpr0
 
     $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
     $vgpr11 = COPY $vgpr7
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -619,10 +633,10 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_zero
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $vgpr0, $vgpr1, $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     $vgpr0 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $vgpr1 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
@@ -630,10 +644,11 @@ body:             |
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $vgpr0, $vgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr3, implicit $exec
-    $vgpr2 = BUFFER_LOAD_FORMAT_X_IDXEN killed $vgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    $vgpr2 = BUFFER_LOAD_FORMAT_X_IDXEN $vgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
@@ -671,19 +686,20 @@ body:             |
 # GFX9-NOT: S_WAITCNT
 
 name:            waitcnt_vm_necessary
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
+    liveins: $scc, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0_vgpr1
 
     $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 killed $vgpr0_vgpr1, 0, 0, implicit $exec
     $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 
   bb.1:
     successors: %bb.1(0x40000000)
+    liveins: $scc, $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
 
     $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
-    S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
     S_ENDPGM 0
 
 ...
@@ -713,19 +729,20 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_loop_global_mem
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr3, $sgpr4, $vgpr6, $vgpr1_vgpr2, $vgpr4_vgpr5
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr6, $vgpr4_vgpr5
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
 
   bb.2:
@@ -762,19 +779,20 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_loop_scratch_mem
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr3, $sgpr4, $vgpr1, $vgpr4, $vgpr6
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr4, $vgpr6
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     SCRATCH_STORE_DWORD $vgpr4, $vgpr6, 0, 0, implicit $exec, implicit $flat_scr
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
 
   bb.2:
@@ -811,19 +829,20 @@ body:             |
 # GFX12: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_flat_mem
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr3, $sgpr4, $vgpr6, $vgpr1_vgpr2, $vgpr4_vgpr5
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr6, $vgpr4_vgpr5
 
     $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     FLAT_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec, implicit $flat_scr
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
 
   bb.2:
@@ -861,21 +880,22 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_flat_load
-tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
+    liveins: $sgpr3, $sgpr4, $vgpr6, $vgpr1_vgpr2, $vgpr4_vgpr5
 
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.1, %bb.2
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr6, $vgpr1_vgpr2, $vgpr4_vgpr5
 
     GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr6, 0, 0, implicit $exec
     $vgpr7 = GLOBAL_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr7, implicit $exec
-    S_CMP_LG_U32 killed $sgpr3, $sgpr4, implicit-def $scc
+    S_CMP_LG_U32 $sgpr3, $sgpr4, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 

@@ -92,7 +92,6 @@
 # SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 name: kernel0
-tracksRegLiveness: false
 machineFunctionInfo:
   explicitKernArgSize: 128
   maxKernArgAlign: 64
@@ -195,7 +194,6 @@ body:             |
 # SIMPLE-NEXT: body:
 
 name: no_mfi
-tracksRegLiveness: false
 body:             |
   bb.0:
     S_ENDPGM 0
@@ -280,7 +278,6 @@ body:             |
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
-tracksRegLiveness: false
 machineFunctionInfo:
 body:             |
   bb.0:
@@ -367,7 +364,6 @@ body:             |
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -386,7 +382,6 @@ body:             |
 # SIMPLE-NOT: scratchRSrcReg
 # SIMPLE-NOT:: stackPtrOffsetReg
 name: default_regs_mfi
-tracksRegLiveness: false
 machineFunctionInfo:
   scratchRSrcReg:  '$private_rsrc_reg'
 
@@ -419,7 +414,6 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr0', mask: 65280 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 name: fake_stack_arginfo
-tracksRegLiveness: false
 machineFunctionInfo:
   argumentInfo:
     flatScratchInit: { offset: 4 }
@@ -442,7 +436,6 @@ body:             |
 # ALL-NEXT: fp64-fp16-output-denormals: false
 
 name: parse_mode
-tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     ieee: false
@@ -466,7 +459,6 @@ body:             |
 # ALL-NEXT: hasSpilledVGPRs: true
 
 name: parse_spilled_regs
-tracksRegLiveness: false
 machineFunctionInfo:
   hasSpilledSGPRs: true
   hasSpilledVGPRs: true
@@ -486,7 +478,6 @@ body:             |
 
 # SIMPLE: dynLDSAlign: 8
 name: dyn_lds_with_alignment
-tracksRegLiveness: false
 machineFunctionInfo:
   dynLDSAlign: 8
 
@@ -500,7 +491,6 @@ body:             |
 # ALL-LABEL: name: occupancy_10
 # ALL: occupancy: 10
 name: occupancy_10
-tracksRegLiveness: false
 machineFunctionInfo:
   occupancy: 10
 
@@ -514,7 +504,6 @@ body:             |
 # ALL-LABEL: name: occupancy_3
 # ALL: occupancy: 3
 name: occupancy_3
-tracksRegLiveness: false
 machineFunctionInfo:
   occupancy: 3
 
@@ -528,7 +517,6 @@ body:             |
 # ALL-LABEL: name: scavenge_fi
 # ALL: scavengeFI: '%stack.0'
 name: scavenge_fi
-tracksRegLiveness: false
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -544,7 +532,6 @@ body:             |
 # ALL-LABEL: name: bytes_in_stack_arg_area
 # ALL: bytesInStackArgArea: 444
 name: bytes_in_stack_arg_area
-tracksRegLiveness: false
 machineFunctionInfo:
   bytesInStackArgArea: 444
 body:             |
@@ -558,7 +545,6 @@ body:             |
 # FULL: returnsVoid: true
 # SIMPLE-NOT: returnsVoid
 name: returns_void_true
-tracksRegLiveness: false
 machineFunctionInfo:
   returnsVoid: true
 body:             |
@@ -570,7 +556,6 @@ body:             |
 # ALL-LABEL: name: returns_void_false
 # ALL: returnsVoid: false
 name: returns_void_false
-tracksRegLiveness: false
 machineFunctionInfo:
   returnsVoid: false
 body:             |
@@ -583,7 +568,6 @@ body:             |
 # ALL-LABEL: name: vgpr_for_agpr_copy
 # ALL: vgprForAGPRCopy: '$vgpr2'
 name: vgpr_for_agpr_copy
-tracksRegLiveness: false
 machineFunctionInfo:
   vgprForAGPRCopy: '$vgpr2'
 body:             |
@@ -597,7 +581,6 @@ body:             |
 # FULL: vgprForAGPRCopy: ''
 # SIMPLE-NOT: vgprForAGPRCopy
 name: vgpr_for_agpr_copy_noreg
-tracksRegLiveness: false
 machineFunctionInfo:
   vgprForAGPRCopy: '$noreg'
 body:             |
@@ -610,7 +593,6 @@ body:             |
 # ALL-LABEL: name: sgpr_for_exec_copy
 # ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
 name: sgpr_for_exec_copy
-tracksRegLiveness: false
 machineFunctionInfo:
   sgprForEXECCopy: '$sgpr2_sgpr3'
 body:             |
@@ -624,7 +606,6 @@ body:             |
 # FULL: sgprForEXECCopy: ''
 # SIMPLE-NOT: sgprForEXECCopy
 name: sgpr_for_exec_copy_noreg
-tracksRegLiveness: false
 machineFunctionInfo:
   sgprForEXECCopy: '$noreg'
 body:             |
@@ -634,7 +615,6 @@ body:             |
 ...
 ---
 name: vregs
-tracksRegLiveness: false
 # FULL: registers:
 # FULL-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '$vgpr1', flags: [ WWM_REG ] }
 # FULL-NEXT:   - { id: 1, class: sgpr_64, preferred-register: '$sgpr0_sgpr1', flags: [  ] }
@@ -652,7 +632,6 @@ body: |
 # ALL-LABEL: name: max_memory_cluster_dwords
 # ALL: maxMemoryClusterDWords: 16
 name: max_memory_cluster_dwords
-tracksRegLiveness: false
 machineFunctionInfo:
   maxMemoryClusterDWords: 16
 body:             |
@@ -667,7 +646,6 @@ body:             |
 # FULL: minNumAGPRs:     8
 # SIMPLE: minNumAGPRs:     8
 name: min_num_agprs
-tracksRegLiveness: false
 machineFunctionInfo:
   minNumAGPRs:     8
 body:             |

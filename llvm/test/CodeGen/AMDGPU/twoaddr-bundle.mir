@@ -7,12 +7,14 @@
 # and resolve the tie with a COPY that is expected to be coalesced.
 ---
 name:            test_fmac_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $vgpr1
 
     ; GCN-LABEL: name: test_fmac_bundle
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN: liveins: $vgpr0, $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -37,12 +39,14 @@ body:             |
 # This test is an example where conversion to three-address form is beneficial.
 ---
 name:            test_fmac_reuse_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0
 
     ; GCN-LABEL: name: test_fmac_reuse_bundle
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: BUNDLE implicit-def %3, implicit [[DEF]], implicit [[DEF1]], implicit [[COPY]], implicit $mode, implicit $exec {

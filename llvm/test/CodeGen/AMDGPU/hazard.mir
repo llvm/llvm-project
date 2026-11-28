@@ -66,9 +66,9 @@ body:             |
 # GCN: S_SENDMSG 3, implicit $exec, implicit $m0
 ---
 name: hazard-lookahead-implicit-def
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr12
     $m0 = S_MOV_B32 killed $sgpr12
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
@@ -88,9 +88,9 @@ body: |
 # GCN: S_SENDMSG 3, implicit $exec, implicit $m0
 ---
 name: hazard-lookahead-dbg-value
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr12
     $m0 = S_MOV_B32 killed $sgpr12
     DBG_VALUE 0
     DBG_VALUE 1
@@ -110,9 +110,9 @@ body: |
 # GCN: S_SENDMSG 3, implicit $exec, implicit $m0
 ---
 name: hazard-lookahead-dbg-label
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr12
     $m0 = S_MOV_B32 killed $sgpr12
     DBG_LABEL 0
     DBG_LABEL 1
@@ -130,7 +130,6 @@ body: |
 # GCN-NEXT: V_ADD_F16_dpp
 ---
 name: hazard-lookahead-wave-barrier
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr3
@@ -146,7 +145,6 @@ body: |
 # GCN-NEXT: S_SENDMSG
 ---
 name: hazard-lookahead-masked-unreachable
-tracksRegLiveness: false
 body: |
   bb.0:
     $m0 = S_MOV_B32 -1
@@ -163,7 +161,6 @@ body: |
 # GCN-NEXT: S_SENDMSG
 ---
 name: fallthrough-hazard-lookahead-masked-unreachable
-tracksRegLiveness: false
 body: |
   bb.0:
     $m0 = S_MOV_B32 -1
@@ -180,9 +177,9 @@ body: |
 # GCN-NEXT:  BUFFER_STORE_LDS_DWORD
 ---
 name: buffer_store_lds_dword
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     $m0 = S_MOV_B32 0
     BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec, implicit $m0
 ...
@@ -193,7 +190,6 @@ body:             |
 # GCN-NEXT:  V_MOV_B32
 ---
 name: lds_direct_read_m0
-tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0

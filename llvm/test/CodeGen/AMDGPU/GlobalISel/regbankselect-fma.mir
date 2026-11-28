@@ -4,7 +4,6 @@
 ---
 name: fma_sss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -24,7 +23,6 @@ body: |
 ---
 name: fma_vss
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -46,7 +44,6 @@ body: |
 ---
 name: fma_svs
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -68,7 +65,6 @@ body: |
 ---
 name: fma_ssv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -90,7 +86,6 @@ body: |
 ---
 name: fma_vvs
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -111,13 +106,12 @@ body: |
 ---
 name: fma_vsv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0, $vgpr1
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; CHECK-LABEL: name: fma_vsv
-    ; CHECK: liveins: $vgpr0, $sgpr0, $vgpr1
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -132,7 +126,6 @@ body: |
 ---
 name: fma_svv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -153,7 +146,6 @@ body: |
 ---
 name: fma_vvv
 legalized: true
-tracksRegLiveness: false
 
 body: |
   bb.0:

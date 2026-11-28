@@ -4,7 +4,6 @@
 
 ---
 name:            partial_forwarding_1_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_1_hazard
@@ -30,7 +29,6 @@ body:            |
 
 ---
 name:            partial_forwarding_2_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_2_hazard
@@ -89,7 +87,6 @@ body:            |
 
 ---
 name:            partial_forwarding_3_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_3_hazard
@@ -133,7 +130,6 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_1
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_1
@@ -165,7 +161,6 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_2
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_2
@@ -197,7 +192,6 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_3
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_3
@@ -229,7 +223,6 @@ body:            |
 
 ---
 name:            partial_forwarding_4_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_4_hazard
@@ -273,7 +266,6 @@ body:            |
 
 ---
 name:            partial_forwarding_4_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_4_no_hazard
@@ -305,7 +297,6 @@ body:            |
 
 ---
 name:            partial_forwarding_5_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_5_hazard
@@ -349,7 +340,6 @@ body:            |
 
 ---
 name:            partial_forwarding_5_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_5_no_hazard
@@ -381,7 +371,6 @@ body:            |
 
 ---
 name:            partial_forwarding_branching_1a
-tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: partial_forwarding_branching_1a
   ; GFX11: bb.0:
@@ -400,6 +389,8 @@ body:            |
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
+  ; GFX11-NEXT:   liveins: $vgpr0
+  ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -428,6 +419,8 @@ body:            |
   ; GFX12-NEXT:   S_BRANCH %bb.2
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $vgpr0
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -447,6 +440,7 @@ body:            |
     $vgpr31 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.2
   bb.2:
+    liveins: $vgpr0
     $vgpr10 = V_MOV_B32_e32 0, implicit $exec
     $vgpr11 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -460,7 +454,6 @@ body:            |
 
 ---
 name:            partial_forwarding_branching_1b
-tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: partial_forwarding_branching_1b
   ; GFX11: bb.0:
@@ -479,6 +472,8 @@ body:            |
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
+  ; GFX11-NEXT:   liveins: $vgpr0
+  ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -507,6 +502,8 @@ body:            |
   ; GFX12-NEXT:   S_BRANCH %bb.2
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $vgpr0
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -526,6 +523,7 @@ body:            |
     $exec = S_MOV_B64 -1
     S_BRANCH %bb.2
   bb.2:
+    liveins: $vgpr0
     $vgpr10 = V_MOV_B32_e32 0, implicit $exec
     $vgpr11 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec

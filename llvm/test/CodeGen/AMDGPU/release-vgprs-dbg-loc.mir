@@ -25,13 +25,15 @@
 
 ---
 name:            test
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
+    liveins: $vgpr97
     ; CHECK-LABEL: name: test
-    ; CHECK: GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr97, 0, 4, implicit $exec
+    ; CHECK: liveins: $vgpr97
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr97, 0, 4, implicit $exec
     ; CHECK-NEXT: S_NOP 0, debug-location !8
     ; CHECK-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0, debug-location !8
     ; CHECK-NEXT: S_ENDPGM 0, debug-location !8

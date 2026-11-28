@@ -87,11 +87,11 @@
 # GFX89: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 
 name: flat_zero_waitcnt
-tracksRegLiveness: false
 
 body: |
   bb.0:
     successors: %bb.1
+    liveins: $vgpr1_vgpr2, $vgpr7_vgpr8
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4)
     $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -99,6 +99,7 @@ body: |
 
   bb.1:
     successors: %bb.2
+    liveins: $vgpr1_vgpr2, $vgpr7_vgpr8
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -106,6 +107,7 @@ body: |
 
   bb.2:
     successors: %bb.3
+    liveins: $vgpr1_vgpr2, $vgpr7_vgpr8
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
     $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.flat16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -113,12 +115,14 @@ body: |
 
   bb.3:
     successors: %bb.4
+    liveins: $vgpr1_vgpr2
     $vgpr3 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
     $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4)
     $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
+    liveins: $vgpr1_vgpr2
     $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
     $vgpr0 = V_MOV_B32_e32 $vgpr5, implicit $exec
     S_ENDPGM 0
@@ -132,18 +136,21 @@ body: |
 # CHECK-NOT: S_WAITCNT
 
 # CHECK: bb.1:
+# CHECK-NEXT:   liveins: $vgpr0, $vgpr7_vgpr8
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_fallthrough_successor_no_end_block_wait
-tracksRegLiveness: false
 
 body: |
   bb.0:
     successors: %bb.1
+    liveins: $vgpr1_vgpr2, $vgpr7_vgpr8
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
+    liveins: $vgpr0, $vgpr7_vgpr8
     $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
@@ -156,27 +163,33 @@ body: |
 # CHECK-LABEL: name: single_branch_successor_not_next_block
 
 # CHECK: bb.1
+# CHECK-NEXT:   liveins: $vgpr10, $vgpr8_vgpr9
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: FLAT_STORE_DWORD
 # CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.2:
+# CHECK-NEXT:   liveins: $vgpr0, $vgpr7_vgpr8
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_branch_successor_not_next_block
-tracksRegLiveness: false
 
 body: |
   bb.0:
     successors: %bb.2
+    liveins: $vgpr1_vgpr2, $vgpr7_vgpr8
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
    S_BRANCH %bb.2
 
   bb.1:
+    liveins: $vgpr10, $vgpr8_vgpr9
     FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
   bb.2:
+     liveins: $vgpr0, $vgpr7_vgpr8
      $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
@@ -324,7 +337,6 @@ body: |
 # CHECK-NEXT: V_NOP_e32
 
 name: subregs16bit
-tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -346,22 +358,25 @@ body: |
 
 
 name: waitcnt_backedge
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $scc, $vgpr5, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr14_sgpr15
     renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `ptr addrspace(4) poison`, addrspace 4)
 
   bb.4:
-    renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit killed $scc
-    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
-    S_CBRANCH_SCC0 %bb.9, implicit killed $scc
+    liveins: $scc, $vgpr5, $sgpr0_sgpr1, $sgpr14_sgpr15, $sgpr4_sgpr5_sgpr6_sgpr7
+    renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit $scc
+    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
+    S_CBRANCH_SCC0 %bb.9, implicit $scc
 
   bb.9:
-    renamable $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr14_sgpr15, implicit $exec
-    S_CBRANCH_SCC0 %bb.14, implicit killed $scc
+    liveins: $scc, $vgpr5, $sgpr0_sgpr1, $sgpr14_sgpr15, $sgpr4_sgpr5_sgpr6_sgpr7
+    renamable $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr14_sgpr15, implicit $exec
+    S_CBRANCH_SCC0 %bb.14, implicit $scc
 
   bb.10:
+    liveins: $scc, $vgpr5, $sgpr0_sgpr1, $sgpr14_sgpr15, $sgpr4_sgpr5_sgpr6_sgpr7
     S_BRANCH %bb.4
 
   bb.14:

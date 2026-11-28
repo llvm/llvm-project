@@ -3,12 +3,14 @@
 
 ---
 name: test_struct
-tracksRegLiveness: false
 body: |
   bb.1.entry:
+    liveins: $vgpr7
 
     ; CHECK-LABEL: name: test_struct
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: liveins: $vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)

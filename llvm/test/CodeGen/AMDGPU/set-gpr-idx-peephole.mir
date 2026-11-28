@@ -5,12 +5,14 @@
 
 ---
 name:            simple
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: simple
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: $vgpr15 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -24,12 +26,14 @@ body:             |
 
 ---
 name:            salu_in_between
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: salu_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 $sgpr2
     ; GCN-NEXT: $vgpr15 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -45,11 +49,13 @@ body:             |
 
 ---
 name:            meta_in_between
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr0, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-LABEL: name: meta_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr0, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: KILL $sgpr0
     ; GCN-NEXT: $sgpr0 = IMPLICIT_DEF
@@ -67,12 +73,14 @@ body:             |
 
 ---
 name:            valu_write_in_between
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: valu_write_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr20 = V_MOV_B32_indirect_read 1, implicit $exec, implicit $m0
@@ -90,12 +98,14 @@ body:             |
 
 ---
 name:            valu_read_in_between
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: valu_read_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: V_NOP_e32 implicit $exec, implicit $vgpr0
@@ -113,12 +123,14 @@ body:             |
 
 ---
 name:            changed_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: changed_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 1
@@ -136,12 +148,14 @@ body:             |
 
 ---
 name:            implicitly_changed_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: implicitly_changed_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_NOP 0, implicit-def $sgpr2
@@ -159,12 +173,14 @@ body:             |
 
 ---
 name:            changed_m0
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: changed_m0
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: $m0 = S_MOV_B32 1
@@ -182,12 +198,14 @@ body:             |
 
 ---
 name:            implicitly_changed_m0
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: implicitly_changed_m0
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_NOP 0, implicit-def $m0
@@ -205,12 +223,14 @@ body:             |
 
 ---
 name:            same_imm_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: same_imm_index
-    ; GCN: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: $vgpr15 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -224,12 +244,14 @@ body:             |
 
 ---
 name:            different_imm_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: different_imm_index
-    ; GCN: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_SET_GPR_IDX_ON 2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
@@ -245,12 +267,14 @@ body:             |
 
 ---
 name:            different_gpr_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: different_gpr_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
@@ -266,12 +290,14 @@ body:             |
 
 ---
 name:            different_gpr_index_then_same_index
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: different_gpr_index_then_same_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
@@ -293,12 +319,14 @@ body:             |
 
 ---
 name:            use_m0_with_idx_off
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: use_m0_with_idx_off
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
@@ -314,21 +342,23 @@ body:             |
 
 ---
 name:            three_in_a_row
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: three_in_a_row
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GCN-NEXT: $vgpr17 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: $vgpr17 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: $vgpr18 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
-  $vgpr17 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+  $vgpr17 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr18 = V_MOV_B32_indirect_read undef $vgpr0, implicit $exec, implicit $m0, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -337,12 +367,14 @@ body:             |
 
 ---
 name:            different_gpr_index_then_two_same_indexes
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: different_gpr_index_then_two_same_indexes
-    ; GCN: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
@@ -362,12 +394,14 @@ body:             |
 
 ---
 name:            two_same_indexes_then_different
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: two_same_indexes_then_different
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr1, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -387,12 +421,14 @@ body:             |
 
 ---
 name:            indirect_mov
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; GCN-LABEL: name: indirect_mov
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN-NEXT: $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: V_MOV_B32_indirect_write undef $vgpr0, undef $vgpr3, implicit $exec, implicit $m0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 4)
     ; GCN-NEXT: V_MOV_B32_indirect_write undef $vgpr0, undef $vgpr3, implicit $exec, implicit $m0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 4)
@@ -408,11 +444,13 @@ body:             |
 
 ---
 name:            simple_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-LABEL: name: simple_bundle
-    ; GCN: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
     ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: }
@@ -434,11 +472,13 @@ body:             |
 
 ---
 name:            salu_in_between_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-LABEL: name: salu_in_between_bundle
-    ; GCN: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
     ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT: }
@@ -462,11 +502,13 @@ body:             |
 
 ---
 name:            valu_in_between_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-LABEL: name: valu_in_between_bundle
-    ; GCN: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
     ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -492,11 +534,13 @@ body:             |
 
 ---
 name:            changed_index_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-LABEL: name: changed_index_bundle
-    ; GCN: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
+    ; GCN: liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $m0, implicit-def $m0_lo16, implicit-def $mode, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit $sgpr2, implicit $m0, implicit $mode, implicit undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 {
     ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; GCN-NEXT:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -522,11 +566,11 @@ body:             |
 
 ---
 name:            simple_cbranch_vccz
-tracksRegLiveness: false
 body:             |
   ; GCN-LABEL: name: simple_cbranch_vccz
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vcc, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -536,6 +580,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    liveins: $vcc, $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
@@ -548,11 +593,11 @@ body:             |
 
 ---
 name:            simple_cbranch_execz
-tracksRegLiveness: false
 body:             |
   ; GCN-LABEL: name: simple_cbranch_execz
   ; GCN: bb.0:
   ; GCN-NEXT:   successors:
+  ; GCN-NEXT:   liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN-NEXT:   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -561,6 +606,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    liveins: $sgpr2, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
