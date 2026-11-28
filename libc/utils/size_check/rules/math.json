@@ -69,6 +69,91 @@
         "log2f": {"symbols": ["@soft_double_helpers"], "note": "a float-only implementation is pending"},
         "log10f": {"symbols": ["@soft_double_helpers"], "note": "a float-only implementation is pending"}
       }
+    },
+    {
+      "id": "small-tables-log-float",
+      "comment": "With LIBC_MATH_SMALL_TABLES, logf, log2f and log10f must not use the 128-entry log tables.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["logf", "log2f", "log10f"],
+      "forbid_defined": ["common_constants_internal::(R|RD|CD|LOG_R|LOG2_R)", "log10f_internal::LOG10_R"],
+      "known_exceptions": {
+        "logf": {"symbols": ["common_constants_internal::(R|RD|LOG_R)"], "note": "a small-table implementation is pending"},
+        "log2f": {"symbols": ["common_constants_internal::(R|RD|LOG2_R)"], "note": "a small-table implementation is pending"},
+        "log10f": {"symbols": ["common_constants_internal::R", "log10f_internal::LOG10_R"], "note": "a small-table implementation is pending"}
+      }
+    },
+    {
+      "id": "small-tables-powf",
+      "comment": "With LIBC_MATH_SMALL_TABLES, powf must use the 16-entry log2 tables instead of the 32- and 128-entry ones.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["powf"],
+      "forbid_defined": ["powf_internal::(LOG2_R_TD|R_32_D|LOG2_R_32)", "common_constants_internal::(R|RD|CD|LOG2_R)", "ExpBase::EXP_2_MID", "EXP2_MID1|EXP2_MID2"],
+      "require_defined": ["LOG2_R_FF_16"]
+    },
+    {
+      "id": "small-tables-pow",
+      "comment": "With LIBC_MATH_SMALL_TABLES, pow must not use the 256-entry tables of its accurate pass or the 128-entry double-double tables.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["pow"],
+      "forbid_defined": ["pow_internal::(LOG2_RD_FRAC256|EXP2_MID_FRAC256|LOG2_POLY_256|EXP2_POLY_256|LOG2_R_DD)", "double_eval::(EXP2_MID_FRAC128|EXP2_POLY_128)", "EXP2_MID1|EXP2_MID2"],
+      "known_exceptions": {
+        "pow": {"symbols": ["pow_internal::LOG2_R_DD", "EXP2_MID1"], "note": "smaller tables are pending"}
+      }
+    },
+    {
+      "id": "small-tables-log",
+      "comment": "With LIBC_MATH_SMALL_TABLES, log, log2 and log10 must not use the tables of their accurate pass.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["log", "log2", "log10"],
+      "forbid_defined": ["(log|log2|log10)_internal::(LOG|LOG2|LOG10)_TABLE", "common_constants_internal::(S2|S3|S4)", "log2_internal::LOG_R1"],
+      "known_exceptions": {
+        "log2": {"symbols": ["log2_internal::LOG_R1"], "note": "smaller tables are pending"}
+      }
+    },
+    {
+      "id": "small-tables-exp",
+      "comment": "With LIBC_MATH_SMALL_TABLES, exp, exp2 and exp10 must not use the 64+64-entry EXP2_MID1/EXP2_MID2 tables or the 128-entry tables of the accurate pass.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["exp", "exp2", "exp10"],
+      "forbid_defined": ["EXP2_MID1|EXP2_MID2", "double_eval::(EXP2_MID_FRAC128|EXP2_POLY_128)"],
+      "known_exceptions": {
+        "exp": {"symbols": ["EXP2_MID1|EXP2_MID2"], "note": "smaller tables are pending"},
+        "exp10": {"symbols": ["EXP2_MID1|EXP2_MID2"], "note": "smaller tables are pending"}
+      }
+    },
+    {
+      "id": "small-tables-exp-float",
+      "comment": "With LIBC_MATH_SMALL_TABLES, expf, exp2f and exp10f must not use the EXP_M1/EXP_M2 or ExpBase tables.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["expf", "exp2f", "exp10f"],
+      "forbid_defined": ["EXP_M1|EXP_M2", "ExpBase::EXP_2_MID"]
+    },
+    {
+      "id": "small-tables-atan",
+      "comment": "With LIBC_MATH_SMALL_TABLES, atan and atan2 must not use the 65-entry ATAN_I table.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["atan", "atan2"],
+      "forbid_defined": ["atan_internal::ATAN_I"],
+      "known_exceptions": {
+        "atan": {"symbols": ["atan_internal::ATAN_I"], "note": "a smaller table is pending"},
+        "atan2": {"symbols": ["atan_internal::ATAN_I"], "note": "a smaller table is pending"}
+      }
+    },
+    {
+      "id": "small-tables-atan-float",
+      "comment": "With LIBC_MATH_SMALL_TABLES, atanf and atan2f must not use the polynomial table of the accurate implementation.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "functions": ["atanf", "atan2f"],
+      "forbid_defined": ["atan_internal::ATAN_COEFFS"]
+    },
+    {
+      "id": "small-tables-float-trig",
+      "comment": "With LIBC_MATH_SKIP_ACCURATE_PASS and LIBC_MATH_SMALL_TABLES on targets with single precision FMA, sinf and cosf use the float evaluation with its 16-entry table instead of the 64-entry SIN_K_PI_OVER_32 table (see LIBC_TARGET_CPU_HAS_FMA_FLOAT).",
+      "when_flags": ["LIBC_MATH_SKIP_ACCURATE_PASS", "LIBC_MATH_SMALL_TABLES"],
+      "when_macros": ["__ARM_FEATURE_FMA || __FMA__ || __riscv_flen", "__ARM_FEATURE_FMA || __AVX2__ || __riscv_flen"],
+      "functions": ["sinf", "cosf"],
+      "forbid_defined": ["sincosf_utils_internal::SIN_K_PI_OVER_32"],
+      "require_defined": ["sincosf_float_eval::SIN_K_PI_OVER_8"]
     }
   ]
 }
