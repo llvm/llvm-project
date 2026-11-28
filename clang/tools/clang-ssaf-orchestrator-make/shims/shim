@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+import os
+import sys
+from importlib import import_module
+
+
+def _add_package_to_path():
+    here = os.path.dirname(os.path.realpath(__file__))
+    while True:
+        candidate = os.path.join(here, "lib")
+        if os.path.isdir(os.path.join(candidate, "clang_ssaf_orchestrator_make")):
+            sys.path.insert(0, candidate)
+            return
+        parent = os.path.dirname(here)
+        if parent == here:
+            raise ImportError(
+                "cannot find clang_ssaf_orchestrator_make beside %s" % __file__
+            )
+        here = parent
+
+
+_add_package_to_path()
+
+from clang_ssaf_orchestrator_make import config  # noqa: E402
+from clang_ssaf_orchestrator_make import logging_diagnostics  # noqa: E402
+
+
+def main(argv):
+    invoked_as = os.path.basename(argv[0])
+    name = config.SHIM_FOR_LINK_NAME.get(invoked_as)
+    if name is None:
+        logging_diagnostics.report_error(
+            "no shim stands in for %s" % invoked_as,
+            ["this is reached through the links an orchestrator run creates"],
+        )
+        return 1
+    return import_module("clang_ssaf_orchestrator_make.shims." + name).main(argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
