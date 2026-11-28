@@ -21,12 +21,14 @@ class SystemZRegWithSubregs<string n, list<Register> subregs>
 
 let Namespace = "SystemZ" in {
 def subreg_h16   : SubRegIndex<16, 16>;
-def subreg_l32   : SubRegIndex<32, 0>;  // Also acts as subreg_hl32.
-def subreg_h32   : SubRegIndex<32, 32>; // Also acts as subreg_hh32.
+def subreg_l32   : SubRegIndex<32, 0>;
+def subreg_h32   : SubRegIndex<32, 32>;
 def subreg_l64   : SubRegIndex<64, 0>;
 def subreg_h64   : SubRegIndex<64, 64>;
-def subreg_lh32  : ComposedSubRegIndex<subreg_l64, subreg_h32>;
-def subreg_ll32  : ComposedSubRegIndex<subreg_l64, subreg_l32>;
+def subreg_hh16  : ComposedSubRegIndex<subreg_h32, subreg_h16>;
+def subreg_hl32  : ComposedSubRegIndex<subreg_h64, subreg_l32>;
+def subreg_hh32  : ComposedSubRegIndex<subreg_h64, subreg_h32>;
+def subreg_hhh16 : ComposedSubRegIndex<subreg_h64, subreg_hh16>;
 }
 
 // Define a register class that contains values of types TYPES and an

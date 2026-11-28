@@ -32,7 +32,7 @@ body:             |
     %8:gr128bit = REG_SEQUENCE %16, %subreg.subreg_h64, %6, %subreg.subreg_l64
     %10:addr64bit = IMPLICIT_DEF
     %9:gr128bit = DL %8, %10, 0, $noreg :: (load (s32) from `ptr undef` + 4)
-    %11:gr32bit = COPY %9.subreg_l32
+    %11:gr32bit = COPY %9.subreg_hl32
     %12:gr64bit = LGHI 2
     %13:gr64bit = LGHI 8
     %14:gr64bit = Select64 %13, %12, 14, 8, implicit $cc

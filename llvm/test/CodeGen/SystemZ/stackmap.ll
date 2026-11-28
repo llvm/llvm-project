@@ -560,7 +560,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  4
 ; CHECK-NEXT:   .short  {{.*}}
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   16
+; CHECK-NEXT:   .long   48
 ; Loc 0: constant float stored to FP register
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
@@ -581,7 +581,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  4
 ; CHECK-NEXT:   .short  {{.*}}
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   16
+; CHECK-NEXT:   .long   48
 ; Loc 1: float value in FP register
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0

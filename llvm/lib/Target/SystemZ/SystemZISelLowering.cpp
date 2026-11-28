@@ -6877,7 +6877,7 @@ static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
                              DAG.getConstant(48, DL, MVT::i64));
   SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Shft);
   SDValue F16Val =
-      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+      DAG.getTargetExtractSubreg(SystemZ::subreg_hh16, DL, MVT::f16, BCast);
   return F16Val;
 }
 
@@ -6886,7 +6886,7 @@ static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
   assert(Op.getSimpleValueType() == MVT::f16 &&
          "Expected to convert f16 to i64.");
   SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f64);
-  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f64,
+  SDValue In64 = DAG.getTargetInsertSubreg(SystemZ::subreg_hh16, DL, MVT::f64,
                                            SDValue(U32, 0), Op);
   SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i64, In64);
   SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i64, BCast,

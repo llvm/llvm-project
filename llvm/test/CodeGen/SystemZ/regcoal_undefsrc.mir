@@ -24,7 +24,7 @@ body:             |
   ; CHECK-NEXT:   [[LMux:%[0-9]+]]:gr32bit = LMux [[COPY1]], 0, $noreg :: (load (s32))
   ; CHECK-NEXT:   undef [[LLILL:%[0-9]+]].subreg_h64:gr128bit = LLILL 0
   ; CHECK-NEXT:   [[LLILL:%[0-9]+]]:gr128bit = DLR [[LLILL]], [[LMux]]
-  ; CHECK-NEXT:   [[LHIMux:%[0-9]+]]:grx32bit = COPY [[LLILL]].subreg_ll32
+  ; CHECK-NEXT:   [[LHIMux:%[0-9]+]]:grx32bit = COPY [[LLILL]].subreg_l32
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   STMux [[LHIMux]], [[COPY]], 0, $noreg :: (store (s32))
@@ -46,7 +46,7 @@ body:             |
     %14:gr128bit = INSERT_SUBREG undef %13:gr128bit, %15, %subreg.subreg_h64
     %11:gr128bit = INSERT_SUBREG %14, undef %9:gr64bit, %subreg.subreg_l64
     %12:gr128bit = DLR %11, %1
-    %2:grx32bit = COPY %12.subreg_ll32
+    %2:grx32bit = COPY %12.subreg_l32
 
   bb.2:
     %3:grx32bit = PHI %6, %bb.0, %2, %bb.1
