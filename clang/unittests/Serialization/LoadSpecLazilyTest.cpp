@@ -120,14 +120,20 @@ export using u = decltype(gn<int>());
   // FoldingSet key changes once deserialization completes.
   SmallVector<const FunctionProtoType *, 4> Types;
   bool SawNoexceptTrue = false, SawNoexceptFalse = false;
-  for (const auto *T : Ctx.getTypes()) {
-    const auto *F = dyn_cast<FunctionProtoType>(T);
-    if (F && (F->getExceptionSpecType() == EST_NoexceptTrue ||
-              F->getExceptionSpecType() == EST_NoexceptFalse)) {
-      SawNoexceptTrue |= F->getExceptionSpecType() == EST_NoexceptTrue;
-      SawNoexceptFalse |= F->getExceptionSpecType() == EST_NoexceptFalse;
-      Types.push_back(F);
-    }
+  for (StringRef Name : {"t", "u"}) {
+    auto Result = Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get(Name));
+    ASSERT_TRUE(Result.isSingleResult());
+    QualType Underlying =
+        cast<TypedefNameDecl>(Result.front())->getUnderlyingType();
+    const auto *DT = Underlying->getAs<DecltypeType>();
+    ASSERT_TRUE(DT);
+    QualType FnTy =
+        cast<CallExpr>(DT->getUnderlyingExpr())->getDirectCallee()->getType();
+    const auto *F = FnTy->getAs<FunctionProtoType>();
+    ASSERT_TRUE(F);
+    SawNoexceptTrue |= F->getExceptionSpecType() == EST_NoexceptTrue;
+    SawNoexceptFalse |= F->getExceptionSpecType() == EST_NoexceptFalse;
+    Types.push_back(F);
   }
   EXPECT_TRUE(SawNoexceptTrue);
   EXPECT_TRUE(SawNoexceptFalse);

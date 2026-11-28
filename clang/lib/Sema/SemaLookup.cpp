@@ -4854,7 +4854,7 @@ void TypoCorrectionConsumer::addNamespaces(
   // Do not transform this into an iterator-based loop. The loop body can
   // trigger the creation of further types (through lazy deserialization) and
   // invalid iterators into this list.
-  auto &Types = SemaRef.getASTContext().getTypes();
+  auto &Types = SemaRef.getASTContext().getRecordTypes();
   for (unsigned I = 0; I != Types.size(); ++I) {
     const auto *TI = Types[I];
     if (CXXRecordDecl *CD = TI->getAsCXXRecordDecl()) {
