@@ -2321,9 +2321,23 @@ uint64_t getDwarfOpForIcmpPred(CmpInst::Predicate Pred) {
   }
 }
 
-Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
+Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, const DataLayout &DL,
+                              uint64_t CurrentLocOps,
                               SmallVectorImpl<uint64_t> &Opcodes,
                               SmallVectorImpl<Value *> &AdditionalValues) {
+  // DWARF relational operators compare the address-sized generic type as
+  // signed. Unsigned operands of that width need their sign bits flipped.
+  uint64_t SignFlip = 0;
+  if (Icmp->isUnsigned()) {
+    uint64_t BitWidth =
+        DL.getTypeSizeInBits(Icmp->getOperand(0)->getType()->getScalarType());
+    unsigned AddrBits = DL.getPointerSizeInBits();
+    if (BitWidth > AddrBits)
+      return nullptr;
+    if (BitWidth == AddrBits)
+      SignFlip = 1ULL << (AddrBits - 1);
+  }
+
   // Handle icmp operations with constant integer operands as a special case.
   auto *ConstInt = dyn_cast<ConstantInt>(Icmp->getOperand(1));
   // Values wider than 64 bits cannot be represented within a DIExpression.
@@ -2331,14 +2345,22 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
     return nullptr;
   // Push any Constant Int operand onto the expression stack.
   if (ConstInt) {
-    if (Icmp->isSigned())
+    if (SignFlip)
+      Opcodes.append({dwarf::DW_OP_constu, SignFlip, dwarf::DW_OP_xor});
+    if (Icmp->isSigned()) {
       Opcodes.push_back(dwarf::DW_OP_consts);
-    else
+      Opcodes.push_back(ConstInt->getSExtValue());
+    } else {
       Opcodes.push_back(dwarf::DW_OP_constu);
-    uint64_t Val = ConstInt->getSExtValue();
-    Opcodes.push_back(Val);
+      Opcodes.push_back(Icmp->isUnsigned() ? ConstInt->getZExtValue() ^ SignFlip
+                                           : ConstInt->getSExtValue());
+    }
   } else {
     handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, Icmp);
+    if (SignFlip)
+      Opcodes.append({dwarf::DW_OP_constu, SignFlip, dwarf::DW_OP_xor,
+                      dwarf::DW_OP_swap, dwarf::DW_OP_constu, SignFlip,
+                      dwarf::DW_OP_xor, dwarf::DW_OP_swap});
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
@@ -2390,7 +2412,7 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
   if (auto *BI = dyn_cast<BinaryOperator>(&I))
     return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
   if (auto *IC = dyn_cast<ICmpInst>(&I))
-    return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
+    return getSalvageOpsForIcmpOp(IC, DL, CurrentLocOps, Ops, AdditionalValues);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
