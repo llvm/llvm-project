@@ -201,11 +201,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   UseAddrSpaceMapMangling = true;
   HasAMDGPUTypes = true;
 
-  if (Triple.isAMDGCN()) {
-    // __bf16 is always available as a load/store only type on AMDGCN.
-    BFloat16Width = BFloat16Align = 16;
-    BFloat16Format = &llvm::APFloat::BFloat();
-  }
+  // __bf16 is always available as a load/store only type on AMDGCN.
+  HasBFloat16 = true;
+  BFloat16Width = BFloat16Align = 16;
+  BFloat16Format = &llvm::APFloat::BFloat();
 
   // TODO: This is not really true for targets without half support, but also
   // should just be assumed true for the dummy target.
@@ -218,14 +217,12 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
-  if (getMaxPointerWidth() == 64) {
-    LongWidth = LongAlign = 64;
-    SizeType = UnsignedLong;
-    PtrDiffType = SignedLong;
-    IntPtrType = SignedLong;
-    Int64Type = SignedLong;
-    IntMaxType = SignedLong;
-  }
+  LongWidth = LongAlign = 64;
+  SizeType = UnsignedLong;
+  PtrDiffType = SignedLong;
+  IntPtrType = SignedLong;
+  Int64Type = SignedLong;
+  IntMaxType = SignedLong;
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !llvm::AMDGPU::getFeatureBitset(GPUKind).test(
@@ -269,16 +266,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
   // removed in the near future.
-  if (hasFMAF())
-    Builder.defineMacro("__HAS_FMAF__");
+  Builder.defineMacro("__HAS_FMAF__");
   if (hasFastFMAF())
     Builder.defineMacro("FP_FAST_FMAF");
-  if (hasLDEXPF())
-    Builder.defineMacro("__HAS_LDEXPF__");
-  if (hasFP64())
-    Builder.defineMacro("__HAS_FP64__");
-  if (hasFastFMA())
-    Builder.defineMacro("FP_FAST_FMA");
+  Builder.defineMacro("__HAS_LDEXPF__");
+  Builder.defineMacro("__HAS_FP64__");
+  Builder.defineMacro("FP_FAST_FMA");
   if (HasFastHalfType)
     Builder.defineMacro("FP_FAST_FMA_HALF");
 
@@ -297,7 +290,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-  if (getTriple().isAMDGCN() && !IsHIPHost) {
+  if (!IsHIPHost) {
     assert(StringRef(CanonName).starts_with("gfx") &&
            "Invalid amdgcn canonical name");
     StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
