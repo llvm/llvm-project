@@ -399,6 +399,158 @@ class ReportTest(unittest.TestCase):
         self.assertIn("| logf |", md)
 
 
+ARM_LIBM = "/b/libc/lib/libm.a"
+ARM_LIBC = "/b/libc/lib/libc.a"
+BUILTINS = "/tc/lib/armv7em-unknown-none-eabi/libclang_rt.builtins.a"
+
+# lld -Map output of a probe calling logf (ARM, 32-bit addresses).
+MAP_LOGF_ARM = """\
+     VMA      LMA     Size Align Out     In      Symbol
+   100f4    100f4       10     4 .ARM.exidx
+   100f4    100f4       10     4         <internal>:(.ARM.exidx)
+   10108    10108      400     8 .rodata
+   10108    10108      400     8         %(libm)s(logf.cpp.obj):(.rodata._ZN22__llvm_libc_24_0_0_git25common_constants_internal5LOG_RE)
+   10108    10108      400     1                 __llvm_libc_24_0_0_git::common_constants_internal::LOG_R
+   20908    20908      5f8     4 .text
+   20908    20908       1c     2         p.o:(.text.__libc_size_probe_entry)
+   20909    20909       1c     1                 __libc_size_probe_entry
+   20924    20924      1f4     2         %(libm)s(logf.cpp.obj):(.text.logf)
+   20925    20925      1f4     1                 logf
+   20b18    20b18      3e8     4         %(builtins)s(adddf3.S.obj):(.text)
+   20b19    20b19      3e8     1                 __aeabi_dadd
+   31720    31720        8     4 .bss
+   31720    31720        8     4         p.o:(.bss.__libc_size_probe_float)
+       0        0       ea     1 .comment
+       0        0       ea     1         <internal>:(.comment)
+""" % {
+    "libm": ARM_LIBM,
+    "builtins": BUILTINS,
+}
+
+READELF_LOGF_ARM = """\
+There are 7 section headers, starting at offset 0x2110:
+
+Section Headers:
+  [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .ARM.exidx        ARM_EXIDX       000100f4 0000f4 000010 00  AL  3   0  4
+  [ 2] .rodata           PROGBITS        00010108 000108 000400 00   A  0   0  8
+  [ 3] .text             PROGBITS        00020908 000908 0005f8 00  AX  0   0  4
+  [ 4] .bss              NOBITS          00031720 001720 000008 00  WA  0   0  4
+  [ 5] .comment          PROGBITS        00000000 001720 0000ea 01  MS  0   0  1
+  [ 6] .ARM.attributes   ARM_ATTRIBUTES  00000000 00180a 000041 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+"""
+
+
+class ProbeTest(unittest.TestCase):
+    def test_parse_probe_list(self):
+        protos, probes = lsc.parse_probe_list(
+            "# comment\nfloat logf(float);\ndouble pow(double, double); # x\n"
+            "int ilogbf(float);\nlogf+pow\n"
+        )
+        self.assertEqual(sorted(protos), ["ilogbf", "logf", "pow"])
+        self.assertEqual(protos["pow"].args, ["double", "double"])
+        self.assertEqual(
+            probes,
+            [
+                ("logf", ["logf"]),
+                ("pow", ["pow"]),
+                ("ilogbf", ["ilogbf"]),
+                ("logf+pow", ["logf", "pow"]),
+            ],
+        )
+        with self.assertRaises(ValueError):
+            lsc.parse_probe_list("float logf(float);\nlogf+expf\n")
+        with self.assertRaises(ValueError):
+            lsc.parse_probe_list("void sincosf(float, float *, float *);\n")
+
+    def test_generate_probe_source(self):
+        protos, _ = lsc.parse_probe_list(
+            "float logf(float);\ndouble pow(double, double);\n"
+        )
+        src = lsc.generate_probe_source(["logf", "pow"], protos)
+        self.assertIn("float logf(float);", src)
+        self.assertIn("double pow(double, double);", src)
+        self.assertIn(
+            "__attribute__((used, retain)) volatile long double "
+            "__libc_size_probe_long_double;",
+            src,
+        )
+        self.assertIn("__libc_size_probe_float = logf(__libc_size_probe_float);", src)
+        self.assertIn(
+            "__libc_size_probe_double = pow(__libc_size_probe_double, "
+            "__libc_size_probe_double);",
+            src,
+        )
+        self.assertIn("__attribute__((weak)) int *__llvm_libc_errno(void)", src)
+        self.assertIn("__attribute__((used, retain)) __attribute__((weak))", src)
+        baseline = lsc.generate_probe_source([], protos)
+        self.assertNotIn("logf", baseline)
+        self.assertIn("void __libc_size_probe_entry(void) {\n}", baseline)
+
+    def test_parse_readelf_sections(self):
+        sections = lsc.parse_readelf_sections(READELF_LOGF_ARM)
+        by_name = {s.name: s for s in sections}
+        self.assertEqual(len(sections), 6)
+        self.assertEqual(by_name[".text"].size, 0x5F8)
+        self.assertTrue(by_name[".text"].is_flash())
+        self.assertFalse(by_name[".bss"].is_flash())
+        self.assertTrue(by_name[".bss"].is_ram())
+        self.assertFalse(by_name[".comment"].is_flash())
+        self.assertEqual(by_name[".ARM.attributes"].flags, "")
+
+    def test_parse_lld_map(self):
+        entries = lsc.parse_lld_map(MAP_LOGF_ARM)
+        self.assertEqual(entries[0], (".ARM.exidx", "<internal>:(.ARM.exidx)", 0x10))
+        self.assertEqual(len(entries), 7)
+        self.assertEqual(entries[2][0], ".text")
+        self.assertEqual(entries[2][2], 0x1C)
+
+    def test_parse_lld_map_64bit(self):
+        text = (
+            "             VMA              LMA     Size Align Out     In      Symbol\n"
+            "          200158           200158      1d4     4 .text\n"
+            "          200158           200158       2c     4         "
+            "/b/libm.a(logf.cpp.o):(.text.logf)\n"
+            "          200158           200158        0     1                 logf\n"
+        )
+        self.assertEqual(
+            lsc.parse_lld_map(text),
+            [(".text", "/b/libm.a(logf.cpp.o):(.text.logf)", 0x2C)],
+        )
+
+    def test_probe_metrics(self):
+        sections = lsc.parse_readelf_sections(READELF_LOGF_ARM)
+        entries = lsc.parse_lld_map(MAP_LOGF_ARM)
+        data = [lsc.Symbol("common_constants_internal::LOG_R", "x", "V", 1024)]
+        metrics = lsc.probe_metrics(sections, entries, data, [ARM_LIBM, ARM_LIBC])
+        self.assertEqual(metrics["flash"], 0x10 + 0x400 + 0x5F8)
+        self.assertEqual(metrics["ram"], 8)
+        self.assertEqual(metrics["libc_flash"], 0x400 + 0x1F4)
+        self.assertEqual(metrics["named_data"], 1024)
+        self.assertEqual(metrics["members"], ["libm.a(logf.cpp.obj)"])
+
+        baseline = {
+            "flash": 0x10 + 0x1C,
+            "ram": 8,
+            "libc_flash": 0,
+            "named_data": 0,
+            "members": [],
+        }
+        delta = lsc.probe_delta(metrics, baseline)
+        self.assertEqual(delta["flash"], 0x400 + 0x5F8 - 0x1C)
+        self.assertEqual(delta["libc_flash"], 0x400 + 0x1F4)
+        self.assertEqual(delta["other_flash"], 0x3E8)  # __aeabi_dadd
+        self.assertEqual(delta["ram"], 0)
+        text = lsc.format_probe_text([("logf", delta), ("powf", {"skipped": "x"})])
+        self.assertIn("logf.cpp.obj", text)
+        self.assertIn("powf", text)
+        md = lsc.format_probe_markdown([("logf", delta)], "t")
+        self.assertIn("| logf | %d | %d |" % (delta["flash"], delta["libc_flash"]), md)
+
+
 class RulesFileTest(unittest.TestCase):
     """Sanity checks of the rules files in this directory."""
 
