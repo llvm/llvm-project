@@ -494,8 +494,6 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   if (PLoc.isInvalid())
     return;
 
-  unsigned FilenameID = SourceMgr.getLineTableFilenameID(PLoc.getFilename());
-
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks)
     Callbacks->FileChanged(SysHeaderTok.getLocation(),
@@ -505,7 +503,7 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   // forward to realize they are in a system header.
   // Create a line note with this information.
   SourceMgr.AddLineNote(SysHeaderTok.getLocation(), PLoc.getLine() + 1,
-                        FilenameID, /*IsEntry=*/false, /*IsExit=*/false,
+                        /*FilenameID=*/-1, /*IsEntry=*/false, /*IsExit=*/false,
                         SrcMgr::C_System);
 }
 
