@@ -4803,7 +4803,27 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         break;
       return std::min(Tmp, Tmp2) - 1;
 
-    case Instruction::Sub:
+    case Instruction::Sub: {
+      Value *X = U->getOperand(0);
+      // For non-undef X, ashr (X, C) does not increase X's magnitude.
+      // Therefore, X - ashr(X, C) stays between X and zero and has at least as
+      // many sign bits as X. With undef, the two uses of X can represent
+      // different values making it possible to break the signed bit bound of X.
+      //
+      // For nonnegative X, in range [0, M], lshr(X, C) stays in the same range.
+      // This holds even if undef makes the two uses of X have different values.
+      // Therefore, the subtraction result range is [-M, M]. That preserves the
+      // signed bit bound of X.
+      if ((match(U->getOperand(1), m_AShr(m_Specific(X), m_Value())) &&
+           isGuaranteedNotToBeUndef(X, Q.AC, Q.CtxI, Q.DT, Depth + 1)) ||
+          (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value())) &&
+           computeKnownBits(X, DemandedElts, Q, Depth + 1).isNonNegative())) {
+        Tmp = ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
+        if (Tmp == 1)
+          break;
+        return Tmp;
+      }
+
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
       if (Tmp2 == 1)
         break;
@@ -4833,7 +4853,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (Tmp == 1)
         break;
       return std::min(Tmp, Tmp2) - 1;
-
+    }
     case Instruction::Mul: {
       // The output of the Mul can be at most twice the valid bits in the
       // inputs.
