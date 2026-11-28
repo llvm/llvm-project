@@ -6,13 +6,13 @@
 # RUN:   -simplify-mir %s \
 # RUN:   -o - | FileCheck %s
 ---
-name:            vadd_vv_nxv1i8
+name:            vmul_vv_nxv1i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv1i8
+    ; CHECK-LABEL: name: vmul_vv_nxv1i8
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -28,13 +28,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv2i8
+name:            vmul_vv_nxv2i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv2i8
+    ; CHECK-LABEL: name: vmul_vv_nxv2i8
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -50,13 +50,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv4i8
+name:            vmul_vv_nxv4i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv4i8
+    ; CHECK-LABEL: name: vmul_vv_nxv4i8
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -72,13 +72,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv8i8
+name:            vmul_vv_nxv8i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv8i8
+    ; CHECK-LABEL: name: vmul_vv_nxv8i8
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -94,13 +94,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv16i8
+name:            vmul_vv_nxv16i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m2, $v10m2
 
-    ; CHECK-LABEL: name: vadd_vv_nxv16i8
+    ; CHECK-LABEL: name: vmul_vv_nxv16i8
     ; CHECK: liveins: $v8m2, $v10m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -116,13 +116,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv32i8
+name:            vmul_vv_nxv32i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m4, $v12m4
 
-    ; CHECK-LABEL: name: vadd_vv_nxv32i8
+    ; CHECK-LABEL: name: vmul_vv_nxv32i8
     ; CHECK: liveins: $v8m4, $v12m4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 32 x s8>) = COPY $v8m4
@@ -138,13 +138,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv64i8
+name:            vmul_vv_nxv64i8
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m8, $v16m8
 
-    ; CHECK-LABEL: name: vadd_vv_nxv64i8
+    ; CHECK-LABEL: name: vmul_vv_nxv64i8
     ; CHECK: liveins: $v8m8, $v16m8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 64 x s8>) = COPY $v8m8
@@ -160,13 +160,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv1i16
+name:            vmul_vv_nxv1i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv1i16
+    ; CHECK-LABEL: name: vmul_vv_nxv1i16
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 1 x s16>) = COPY $v8
@@ -182,13 +182,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv2i16
+name:            vmul_vv_nxv2i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv2i16
+    ; CHECK-LABEL: name: vmul_vv_nxv2i16
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 2 x s16>) = COPY $v8
@@ -204,13 +204,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv4i16
+name:            vmul_vv_nxv4i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv4i16
+    ; CHECK-LABEL: name: vmul_vv_nxv4i16
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -226,13 +226,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv8i16
+name:            vmul_vv_nxv8i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m2, $v10m2
 
-    ; CHECK-LABEL: name: vadd_vv_nxv8i16
+    ; CHECK-LABEL: name: vmul_vv_nxv8i16
     ; CHECK: liveins: $v8m2, $v10m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 8 x s16>) = COPY $v8m2
@@ -248,13 +248,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv16i16
+name:            vmul_vv_nxv16i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m4, $v12m4
 
-    ; CHECK-LABEL: name: vadd_vv_nxv16i16
+    ; CHECK-LABEL: name: vmul_vv_nxv16i16
     ; CHECK: liveins: $v8m4, $v12m4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 16 x s16>) = COPY $v8m4
@@ -270,13 +270,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv32i16
+name:            vmul_vv_nxv32i16
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m8, $v16m8
 
-    ; CHECK-LABEL: name: vadd_vv_nxv32i16
+    ; CHECK-LABEL: name: vmul_vv_nxv32i16
     ; CHECK: liveins: $v8m8, $v16m8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 32 x s16>) = COPY $v8m8
@@ -292,13 +292,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv1i32
+name:            vmul_vv_nxv1i32
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv1i32
+    ; CHECK-LABEL: name: vmul_vv_nxv1i32
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 1 x s32>) = COPY $v8
@@ -314,13 +314,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv2i32
+name:            vmul_vv_nxv2i32
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv2i32
+    ; CHECK-LABEL: name: vmul_vv_nxv2i32
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -336,13 +336,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv4i32
+name:            vmul_vv_nxv4i32
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m2, $v10m2
 
-    ; CHECK-LABEL: name: vadd_vv_nxv4i32
+    ; CHECK-LABEL: name: vmul_vv_nxv4i32
     ; CHECK: liveins: $v8m2, $v10m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 4 x s32>) = COPY $v8m2
@@ -358,13 +358,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv8i32
+name:            vmul_vv_nxv8i32
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m4, $v12m4
 
-    ; CHECK-LABEL: name: vadd_vv_nxv8i32
+    ; CHECK-LABEL: name: vmul_vv_nxv8i32
     ; CHECK: liveins: $v8m4, $v12m4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 8 x s32>) = COPY $v8m4
@@ -380,13 +380,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv16i32
+name:            vmul_vv_nxv16i32
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m8, $v16m8
 
-    ; CHECK-LABEL: name: vadd_vv_nxv16i32
+    ; CHECK-LABEL: name: vmul_vv_nxv16i32
     ; CHECK: liveins: $v8m8, $v16m8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 16 x s32>) = COPY $v8m8
@@ -402,13 +402,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv1i64
+name:            vmul_vv_nxv1i64
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8, $v9
 
-    ; CHECK-LABEL: name: vadd_vv_nxv1i64
+    ; CHECK-LABEL: name: vmul_vv_nxv1i64
     ; CHECK: liveins: $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 1 x s64>) = COPY $v8
@@ -424,13 +424,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv2i64
+name:            vmul_vv_nxv2i64
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m2, $v10m2
 
-    ; CHECK-LABEL: name: vadd_vv_nxv2i64
+    ; CHECK-LABEL: name: vmul_vv_nxv2i64
     ; CHECK: liveins: $v8m2, $v10m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -446,13 +446,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv4i64
+name:            vmul_vv_nxv4i64
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m4, $v12m4
 
-    ; CHECK-LABEL: name: vadd_vv_nxv4i64
+    ; CHECK-LABEL: name: vmul_vv_nxv4i64
     ; CHECK: liveins: $v8m4, $v12m4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 4 x s64>) = COPY $v8m4
@@ -468,13 +468,13 @@ body:             |
 
 ...
 ---
-name:            vadd_vv_nxv8i64
+name:            vmul_vv_nxv8i64
 legalized:       true
 body:             |
   bb.0.entry:
     liveins: $v8m8, $v16m8
 
-    ; CHECK-LABEL: name: vadd_vv_nxv8i64
+    ; CHECK-LABEL: name: vmul_vv_nxv8i64
     ; CHECK: liveins: $v8m8, $v16m8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vrb(<vscale x 8 x s64>) = COPY $v8m8
