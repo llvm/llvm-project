@@ -1072,8 +1072,23 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
   for (VPRecipeBase &R : Header->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
+    if (!PhiR || !PhiR->isInLoop())
       continue;
+    if (MinVF.isScalar() && !PhiR->isOrdered()) {
+      // The reduction is kept as plain scalar operations, without a
+      // VPReductionRecipe to apply the header mask. If the tail is folded,
+      // select the phi for iterations past the end, as is done for reductions
+      // that are not in-loop.
+      if (VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask()) {
+        VPValue *BackedgeV = PhiR->getBackedgeValue();
+        VPRecipeBase *BackedgeR = BackedgeV->getDefiningRecipe();
+        VPBuilder Builder = VPBuilder::getToInsertAfter(BackedgeR);
+        VPInstruction *Sel =
+            Builder.createSelect(HeaderMask, BackedgeV, PhiR, {}, "", *PhiR);
+        BackedgeV->replaceUsesWithIf(Sel, not_equal_to(Sel));
+      }
+      continue;
+    }
 
     RecurKind Kind = PhiR->getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
