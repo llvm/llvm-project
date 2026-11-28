@@ -1757,6 +1757,15 @@ LogicalResult MapOp::verify() {
     }
   }
 
+  // The init block argument is only present for destination-passing style.
+  // Unlike linalg.generic, the payload must not read the destination value;
+  // payloadUsesValueFromOperand already assumes this. Enforce it in verify.
+  BlockArgument initArg = blockArgs.back();
+  if (!initArg.use_empty())
+    return emitOpError()
+           << "expects the mapper region to not use the init/destination "
+              "block argument (use linalg.generic to read from outs)";
+
   return success();
 }
 
