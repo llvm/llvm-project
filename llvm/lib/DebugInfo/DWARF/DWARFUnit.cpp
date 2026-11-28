@@ -683,7 +683,9 @@ DWARFUnit::findRnglistFromOffset(uint64_t Offset) {
     DWARFDebugRangeList RangeList;
     if (Error E = extractRangeList(Offset, RangeList))
       return std::move(E);
-    return RangeList.getAbsoluteRanges(getBaseAddress());
+    const object::ObjectFile *Obj = Context.getDWARFObj().getFile();
+    bool IsXCOFFTombstone = Obj && Obj->isXCOFF();
+    return RangeList.getAbsoluteRanges(getBaseAddress(), IsXCOFFTombstone);
   }
   DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
                                 IsLittleEndian, Header.getAddressByteSize());
