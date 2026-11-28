@@ -32,7 +32,7 @@ add_mlir_unittest(MLIRIRTests
   DEPENDS
   MLIRTestInterfaceIncGen
 )
-mlir_target_link_libraries(MLIRIRTests PRIVATE MLIRIR)
+mlir_target_link_libraries(MLIRIRTests PRIVATE MLIRIR MLIRTensorDialect)
 target_link_libraries(MLIRIRTests PRIVATE MLIRBytecodeWriter)
 target_link_libraries(MLIRIRTests PRIVATE MLIRTestDialect)
 target_link_libraries(MLIRIRTests PRIVATE MLIRRemarkStreamer)

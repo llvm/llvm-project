@@ -8,7 +8,9 @@
 
 #include "mlir/IR/OperationSupport.h"
 #include "TestOpsPatterns.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Repeated.h"
@@ -28,6 +30,47 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
 }
 
 namespace {
+TEST(OpBuilderTest, CreateOrFoldNotifiesRootInsertion) {
+  struct RecordingListener : OpBuilder::Listener {
+    SmallVector<Operation *> inserted;
+    void notifyOperationInserted(Operation *op,
+                                 OpBuilder::InsertPoint) override {
+      inserted.push_back(op);
+    }
+  } listener;
+  MLIRContext context;
+  Block block;
+  OpBuilder builder(&context, &listener);
+  builder.setInsertionPointToEnd(&block);
+  Location loc = builder.getUnknownLoc();
+  auto module = builder.createOrFold<ModuleOp>(loc);
+  EXPECT_TRUE(module.getBody()->empty());
+  SmallVector<Value> results;
+  builder.createOrFold<ModuleOp>(results, loc);
+  ASSERT_EQ(listener.inserted.size(), 2u);
+  EXPECT_EQ(listener.inserted[0], module.getOperation());
+  EXPECT_EQ(listener.inserted[1], &block.back());
+}
+
+TEST(OpBuilderDeathTest, CreateOrFoldRejectsPadBlockInsertion) {
+  MLIRContext context;
+  context.getOrLoadDialect<tensor::TensorDialect>();
+  Block block;
+  OpBuilder builder(&context);
+  builder.setInsertionPointToEnd(&block);
+  Location loc = builder.getUnknownLoc();
+  auto type = RankedTensorType::get({4}, builder.getF32Type());
+  Value source = block.addArgument(type, loc);
+  Value value = block.addArgument(builder.getF32Type(), loc);
+  SmallVector<OpFoldResult> padding{builder.getIndexAttr(0)};
+  auto pad = tensor::PadOp::create(builder, loc, type, source, padding, padding,
+                                   value);
+  EXPECT_TRUE(isa<tensor::YieldOp>(pad.getBody()->getTerminator()));
+  EXPECT_DEATH_IF_SUPPORTED(builder.createOrFold<tensor::PadOp>(
+                                loc, type, source, padding, padding, value),
+                            "block inserted during createOrFold build");
+}
+
 TEST(OperandStorageTest, NonResizable) {
   MLIRContext context;
   Builder builder(&context);

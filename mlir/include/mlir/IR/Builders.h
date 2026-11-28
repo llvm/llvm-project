@@ -11,6 +11,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 namespace mlir {
@@ -486,6 +487,24 @@ public:
                     MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
 private:
+  struct CreateOrFoldListener : Listener {
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+    void notifyBlockInserted(Block *block, Region *previous,
+                             Region::iterator previousIt) override;
+  };
+
+  template <typename OpTy, typename... Args>
+  OpTy buildForFold(Location location, Args &&...args) {
+    OperationState state(location,
+                         getCheckRegisteredInfo<OpTy>(location.getContext()));
+    {
+      CreateOrFoldListener buildListener;
+      llvm::SaveAndRestore<Listener *> guard(listener, &buildListener);
+      OpTy::build(*this, state, std::forward<Args>(args)...);
+    }
+    return cast<OpTy>(Operation::create(state));
+  }
+
   /// Helper for sanity checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
@@ -516,8 +535,9 @@ public:
   }
 
   /// Create an operation of specific op type at the current insertion point,
-  /// and immediately try to fold it. This functions populates 'results' with
-  /// the results of the operation.
+  /// and immediately try to fold it. This function populates 'results' with
+  /// the results of the operation. The operation builder must not create any
+  /// additional operations or any blocks.
   ///
   /// Note: This performs opportunistic eager folding during IR construction.
   /// The folders are designed to operate efficiently on canonical IR, which
@@ -529,10 +549,7 @@ public:
                     Args &&...args) {
     // Create the operation without using 'create' as we want to control when
     // the listener is notified.
-    OperationState state(location,
-                         getCheckRegisteredInfo<OpTy>(location.getContext()));
-    OpTy::build(*this, state, std::forward<Args>(args)...);
-    Operation *op = Operation::create(state);
+    Operation *op = buildForFold<OpTy>(location, std::forward<Args>(args)...);
     if (block)
       block->getOperations().insert(insertPoint, op);
 
@@ -563,7 +580,8 @@ public:
   template <typename OpTy, typename... Args>
   std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
-    auto op = OpTy::create(*this, location, std::forward<Args>(args)...);
+    auto op = buildForFold<OpTy>(location, std::forward<Args>(args)...);
+    insert(op);
     SmallVector<Value, 0> unused;
     (void)tryFold(op.getOperation(), unused);
 

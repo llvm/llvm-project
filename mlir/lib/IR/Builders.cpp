@@ -426,6 +426,16 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
 // OpBuilder
 //===----------------------------------------------------------------------===//
 
+void OpBuilder::CreateOrFoldListener::notifyOperationInserted(Operation *,
+                                                              InsertPoint) {
+  llvm::report_fatal_error("operation inserted during createOrFold build");
+}
+
+void OpBuilder::CreateOrFoldListener::notifyBlockInserted(Block *, Region *,
+                                                          Region::iterator) {
+  llvm::report_fatal_error("block inserted during createOrFold build");
+}
+
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {
   if (block) {
