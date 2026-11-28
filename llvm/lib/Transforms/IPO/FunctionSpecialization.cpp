@@ -951,8 +951,8 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
             static_cast<uint64_t>(Opts.funcspec_min_latency_savings) * FuncSize)
           return false;
         // Maximum codesize growth.
-        if ((FunctionGrowth[F] + SpecSize) / FuncSize >
-            Opts.funcspec_max_codesize_growth)
+        if (static_cast<uint64_t>(FunctionGrowth[F] + SpecSize) >
+            static_cast<uint64_t>(Opts.funcspec_max_codesize_growth * FuncSize))
           return false;
 
         Score += std::max(CodeSizeSavings, LatencySavings);
