@@ -1,4 +1,5 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: in function ds_append_gds_unsupported void (ptr addrspace(2), ptr addrspace(1)): GDS is not supported on this subtarget
 ; CHECK-NOT: error:
