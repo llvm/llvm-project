@@ -1,8 +1,12 @@
 // clang-format off
-// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %s -o %t
-// RUN: %t | %fcheck-generic
-// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %s -o %t -fopenmp
-// RUN: %t | %fcheck-generic
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native -x cuda -DOFFLOAD_TEST_LANGUAGE=cuda %s -o %t.cuda
+// RUN: %t.cuda | %fcheck-generic
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native -x cuda -DOFFLOAD_TEST_LANGUAGE=cuda %s -o %t.cuda.omp -fopenmp
+// RUN: %t.cuda.omp | %fcheck-generic
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native -x hip -DOFFLOAD_TEST_LANGUAGE=hip %s -o %t.hip
+// RUN: %t.hip | %fcheck-generic
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native -x hip -DOFFLOAD_TEST_LANGUAGE=hip %s -o %t.hip.omp -fopenmp
+// RUN: %t.hip.omp | %fcheck-generic
 // clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
@@ -12,13 +16,16 @@
 // UNSUPPORTED: amdgpu-amd-amdhsa-LTO
 // UNSUPPORTED: intelgpu
 
+// clang-format off
 #include <stdio.h>
+#include "Inputs/DefineTestLanguageNames.inc"
+// clang-format on
 
 int main(int argc, char **argv) {
-  hipDeviceProp_t Prop = {};
-  hipError_t Err = hipGetDeviceProperties(&Prop, 0);
-  if (Err != hipSuccess) {
-    printf("hipGetDeviceProperties failed: %u\n", Err);
+  DeviceProp_t Prop = {};
+  Error_t Err = GetDeviceProperties(&Prop, 0);
+  if (Err != Success) {
+    printf("GetDeviceProperties failed: %u\n", Err);
     return 1;
   }
 
