@@ -238,6 +238,7 @@ private:
   bool parseDirectiveSEHAllocZ(SMLoc L);
   bool parseDirectiveSEHSaveZReg(SMLoc L);
   bool parseDirectiveSEHSavePReg(SMLoc L);
+  bool parseDirectiveSEHSaveVGSM(SMLoc L);
   bool parseDirectiveAeabiSubSectionHeader(SMLoc L);
   bool parseDirectiveAeabiAArch64Attr(SMLoc L);
 
@@ -7224,6 +7225,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveZReg(Loc);
     else if (IDVal == ".seh_save_preg")
       parseDirectiveSEHSavePReg(Loc);
+    else if (IDVal == ".seh_save_vg_sm")
+      parseDirectiveSEHSaveVGSM(Loc);
     else
       return true;
   } else if (IsELF) {
@@ -8064,6 +8067,24 @@ bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
   if (parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().emitARM64WinCFISavePReg(RegNum - AArch64::P0, Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSaveVGSM
+/// ::= .seh_save_vg_sm offset
+bool AArch64AsmParser::parseDirectiveSEHSaveVGSM(SMLoc L) {
+  if (getStreamer().isInEpilogCFI())
+    return Error(L, ".seh_save_vg_sm cannot be used in an epilogue");
+
+  int64_t Offset;
+  if (parseImmExpr(Offset))
+    return true;
+  if (check(Offset < 0 || Offset > 2040, L,
+            "offset must be between 0 and 2040 bytes"))
+    return true;
+  if (check(Offset % 8 != 0, L, "offset must be a multiple of 8"))
+    return true;
+  getTargetStreamer().emitARM64WinCFISaveVGSM(Offset);
   return false;
 }
 

@@ -12,6 +12,7 @@
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
@@ -37,7 +38,12 @@ bool AArch64PrologueEpilogueCommon::requiresGetVGCall() const {
 bool AArch64PrologueEpilogueCommon::isVGInstruction(
     MachineBasicBlock::iterator MBBI, const TargetLowering &TLI) const {
   unsigned Opc = MBBI->getOpcode();
-  if (Opc == AArch64::CNTD_XPiI)
+  if (Opc == AArch64::SEH_Nop || Opc == AArch64::CNTD_XPiI ||
+      Opc == AArch64::BFMXri)
+    return true;
+
+  if (Opc == AArch64::MRS &&
+      MBBI->getOperand(1).getImm() == AArch64SysReg::SVCR)
     return true;
 
   if (!requiresGetVGCall())
@@ -174,13 +180,22 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   //
   // On Windows, some register pairs involving LR can't be folded because
   // there isn't a corresponding unwind opcode.
+  auto InvalidForWinCFI = [&]() {
+    if (!NeedsWinCFI)
+      return false;
+    if (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre)
+      return RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+             RegInfo.getEncodingValue(MBBI->getOperand(1).getReg());
+    if (NewOpc == AArch64::STRXpre) {
+      return std::next(MBBI) != MBBI->getParent()->instr_end() &&
+             std::next(MBBI)->getOpcode() == AArch64::SEH_SaveVGSM;
+    }
+    return false;
+  };
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
-      (NeedsWinCFI &&
-       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
-       RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
-           RegInfo.getEncodingValue(MBBI->getOperand(1).getReg()))) {
+      InvalidForWinCFI()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
@@ -200,8 +215,10 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   // Get rid of the SEH code associated with the old instruction.
   if (NeedsWinCFI) {
     auto SEH = std::next(MBBI);
-    if (AArch64InstrInfo::isSEHInstruction(*SEH))
+    if (AArch64InstrInfo::isSEHInstruction(*SEH)) {
+      assert(SEH->getOpcode() != AArch64::SEH_SaveVGSM);
       SEH->eraseFromParent();
+    }
   }
 
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
@@ -256,6 +273,7 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveAnyRegQX:
   case AArch64::SEH_SaveAnyRegQP:
   case AArch64::SEH_SaveAnyRegQPX:
+  case AArch64::SEH_SaveVGSM:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
     break;
   }
@@ -1027,6 +1045,15 @@ void AArch64PrologueEmitter::emitEmptyStackFramePrologue(
 
   if (NeedsWinCFI) {
     HasWinCFI = true;
+    if (AFL.requiresSaveVG(MF)) {
+      const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+      while (isVGInstruction(MBBI, *TLI))
+        ++MBBI;
+      assert(MBBI->getOpcode() == AArch64::STRXui);
+      ++MBBI;
+      assert(MBBI->getOpcode() == AArch64::SEH_SaveVGSM);
+      ++MBBI;
+    }
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -1455,7 +1482,8 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     // If the offset is 0 and the AfterCSR pop is not actually trying to
     // allocate more stack for arguments (in space that an untimely interrupt
     // may clobber), convert it to a post-index ldp.
-    if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0) {
+    if (Pop->getFlag(MachineInstr::FrameDestroy) && OffsetOp.getImm() == 0 &&
+        AfterCSRPopSize >= 0) {
       convertCalleeSaveRestoreToSPPrePostIncDec(
           Pop, DL, ProloguePopSize, EmitCFI, MachineInstr::FrameDestroy,
           ProloguePopSize);

@@ -1331,6 +1331,7 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_SaveAnyRegQPX:
     case Win64EH::UOP_SaveZReg:
     case Win64EH::UOP_SavePReg:
+    case Win64EH::UOP_SaveVGSM:
       Count += 3;
       break;
     }
@@ -1569,6 +1570,16 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     b = ((inst.Offset & 0xC0) >> 1) | 0x10 | reg;
     streamer.emitInt8(b);
     b = 0xC0 | (inst.Offset & 0x3F);
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_SaveVGSM: {
+    assert(inst.Offset >= 0 && inst.Offset <= 2040 && inst.Offset % 8 == 0);
+    unsigned Offset = inst.Offset >> 3;
+    streamer.emitInt8(0xE7);
+    b = ((Offset & 0xC0) >> 1) | 0x10;
+    streamer.emitInt8(b);
+    b = 0xC0 | (Offset & 0x3F);
     streamer.emitInt8(b);
     break;
   }
@@ -1967,7 +1978,8 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_AllocZ:
     case Win64EH::UOP_SaveZReg:
     case Win64EH::UOP_SavePReg:
-      // Canonical prologues don't support spilling SVE registers.
+    case Win64EH::UOP_SaveVGSM:
+      // Canonical prologues don't support SVE or SME operations.
       return false;
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_Context:
