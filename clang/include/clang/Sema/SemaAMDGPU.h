@@ -79,6 +79,7 @@ public:
   void handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUInstPrefPadLinesAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
 

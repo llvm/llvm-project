@@ -395,6 +395,11 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
 
+  if (const auto *Attr = FD->getAttr<AMDGPUInstPrefPadLinesAttr>()) {
+    // Emit 0 as well: an explicit zero overrides -amdgpu-inst-pref-pad-lines.
+    F->addFnAttr("amdgpu-inst-pref-pad-lines", llvm::utostr(Attr->getLines()));
+  }
+
   if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
     uint32_t X = Attr->getMaxNumWorkGroupsX()
                      ->EvaluateKnownConstInt(M.getContext())
