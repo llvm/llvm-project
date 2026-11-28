@@ -24,11 +24,11 @@
 
 ; RUN: llc -mtriple=mips-linux-gnu -relocation-model=pic -mips-tail-calls=1 \
 ; RUN:     -O2 -mattr=+micromips -mcpu=mips32r2 < %s | \
-; RUN:     FileCheck %s -check-prefixes=ALL,JALR-ALL,JALR-MM,TAILCALL-MM
+; RUN:     FileCheck %s -check-prefixes=ALL,JALR-ALL,JALR-MM,TAILCALL-MMR2
 
 ; RUN: llc -mtriple=mips-linux-gnu -relocation-model=pic -mips-tail-calls=1 \
 ; RUN:     -O2 -mattr=+micromips -mcpu=mips32r6 < %s | \
-; RUN:     FileCheck %s -check-prefixes=ALL,JALR-ALL,JALR-MM,TAILCALL-MM
+; RUN:     FileCheck %s -check-prefixes=ALL,JALR-ALL,JALR-MM,TAILCALL-MMR6
 
 ; RUN: llc -mtriple=mips-linux-gnu -relocation-model=pic \
 ; RUN:     -O0 < %s | FileCheck %s -check-prefixes=ALL,JALR-ALL,JALR-32,JALR-32R2,PIC-NOTAILCALL-R2
@@ -128,7 +128,8 @@ entry:
 ; NORELOC-NOT:   .reloc
 ; TAILCALL-32R2-NEXT: 	jr	$25
 ; TAILCALL-64R2-NEXT: 	jr	$25
-; TAILCALL-MM-NEXT: 	jrc	$25
+; TAILCALL-MMR2-NEXT: 	jr	$25
+; TAILCALL-MMR6-NEXT: 	jrc	$25
 ; TAILCALL-32R6-NEXT: 	jrc	$25
 ; TAILCALL-64R6-NEXT: 	jrc	$25
 ; PIC-NOTAILCALL-R2-NEXT: 	jalr	$25
