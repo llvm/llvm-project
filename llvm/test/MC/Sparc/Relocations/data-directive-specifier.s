@@ -28,8 +28,7 @@ l:
 # ERR0: [[#@LINE+1]]:17: error: expected '('
 .word %r_disp32 g
 
-# ERR0: [[#@LINE+2]]:8: error: invalid relocation specifier
-# ERR0: [[#@LINE+1]]:8: error: unexpected token
+# ERR0: [[#@LINE+1]]:8: error: invalid relocation specifier
 sethi %r_disp32(g), %g1
 .endif
 

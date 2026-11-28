@@ -3,7 +3,7 @@
 
 ! V8: error: expected absolute expression
 ! V8-NEXT: lduba [%i0] asi, %o2
-! V9: error: unexpected token
+! V9: error: expected absolute expression
 ! V9-NEXT: lduba [%i0] asi, %o2
 lduba [%i0] asi, %o2
 

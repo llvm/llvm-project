@@ -118,6 +118,7 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   // Check if mnemonic is valid.
   MatchResultTy mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
+  bool mnemonicTakesBranchModifiers(StringRef Mnemonic);
 
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
@@ -554,6 +555,17 @@ SparcAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {
   return Match_MissingFeature;
 }
 
+// Return true if some form of the instruction takes branch modifiers
+// (",a", ",pn" or ",pt") right after the mnemonic.
+bool SparcAsmParser::mnemonicTakesBranchModifiers(StringRef Mnemonic) {
+  auto MnemonicRange = std::equal_range(
+      std::begin(MatchTable0), std::end(MatchTable0), Mnemonic, LessOpcode());
+  return llvm::any_of(make_range(MnemonicRange), [](const MatchEntry &E) {
+    return E.Classes[0] == MCK_a || E.Classes[0] == MCK_pn ||
+           E.Classes[0] == MCK_pt;
+  });
+}
+
 bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
                                SmallVectorImpl<MCInst> &Instructions) {
   MCOperand MCRegOp = Inst.getOperand(0);
@@ -881,18 +893,24 @@ bool SparcAsmParser::parseInstruction(ParseInstructionInfo &Info,
   // apply mnemonic aliases, if any, so that we can parse operands correctly.
   applyMnemonicAliases(Name, getAvailableFeatures(), 0);
 
+  // An operand parser that fails has already reported an error. If nothing
+  // matched, report a generic one.
+  auto OperandFailed = [&](ParseStatus Res) {
+    if (Res.isFailure())
+      return true;
+    return Error(getLexer().getLoc(), "unexpected token");
+  };
+
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     // Read the first operand.
-    if (getLexer().is(AsmToken::Comma)) {
-      if (!parseBranchModifiers(Operands).isSuccess()) {
-        SMLoc Loc = getLexer().getLoc();
-        return Error(Loc, "unexpected token");
-      }
+    if (getLexer().is(AsmToken::Comma) && mnemonicTakesBranchModifiers(Name)) {
+      ParseStatus Res = parseBranchModifiers(Operands);
+      if (!Res.isSuccess())
+        return OperandFailed(Res);
     }
-    if (!parseOperand(Operands, Name).isSuccess()) {
-      SMLoc Loc = getLexer().getLoc();
-      return Error(Loc, "unexpected token");
-    }
+    ParseStatus Res = parseOperand(Operands, Name);
+    if (!Res.isSuccess())
+      return OperandFailed(Res);
 
     while (getLexer().is(AsmToken::Comma) || getLexer().is(AsmToken::Plus)) {
       if (getLexer().is(AsmToken::Plus)) {
@@ -901,10 +919,9 @@ bool SparcAsmParser::parseInstruction(ParseInstructionInfo &Info,
       }
       Parser.Lex(); // Eat the comma or plus.
       // Parse and remember the operand.
-      if (!parseOperand(Operands, Name).isSuccess()) {
-        SMLoc Loc = getLexer().getLoc();
-        return Error(Loc, "unexpected token");
-      }
+      Res = parseOperand(Operands, Name);
+      if (!Res.isSuccess())
+        return OperandFailed(Res);
     }
   }
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
@@ -959,8 +976,9 @@ ParseStatus SparcAsmParser::parseMEMOperand(OperandVector &Operands) {
   SMLoc S, E;
 
   std::unique_ptr<SparcOperand> LHS;
-  if (!parseSparcAsmOperand(LHS).isSuccess())
-    return ParseStatus::NoMatch;
+  ParseStatus Res = parseSparcAsmOperand(LHS);
+  if (!Res.isSuccess())
+    return Res;
 
   // Single immediate operand
   if (LHS->isImm()) {
@@ -978,8 +996,11 @@ ParseStatus SparcAsmParser::parseMEMOperand(OperandVector &Operands) {
     (void)Parser.parseOptionalToken(AsmToken::Plus);
 
     std::unique_ptr<SparcOperand> RHS;
-    if (!parseSparcAsmOperand(RHS).isSuccess())
-      return ParseStatus::NoMatch;
+    Res = parseSparcAsmOperand(RHS);
+    if (Res.isNoMatch())
+      return Error(getLoc(), "expected register or immediate");
+    if (Res.isFailure())
+      return Res;
 
     if (RHS->isReg() && !RHS->isIntReg())
       return Error(RHS->getStartLoc(),
@@ -1108,7 +1129,10 @@ ParseStatus SparcAsmParser::parseMembarTag(OperandVector &Operands) {
   int64_t ImmVal = 0;
 
   std::unique_ptr<SparcOperand> Mask;
-  if (parseSparcAsmOperand(Mask).isSuccess()) {
+  ParseStatus Res = parseSparcAsmOperand(Mask);
+  if (Res.isFailure())
+    return Res;
+  if (Res.isSuccess()) {
     if (!Mask->isImm() || !Mask->getImm()->evaluateAsAbsolute(ImmVal) ||
         ImmVal < 0 || ImmVal > 127)
       return Error(S, "invalid membar mask number");
@@ -1233,7 +1257,7 @@ ParseStatus SparcAsmParser::parseCallTarget(OperandVector &Operands) {
 
   const MCExpr *DestValue;
   if (getParser().parseExpression(DestValue))
-    return ParseStatus::NoMatch;
+    return ParseStatus::Failure;
 
   Operands.push_back(SparcOperand::CreateImm(DestValue, S, E));
   return ParseStatus::Success;
@@ -1260,13 +1284,13 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
         Mnemonic == "casx" || Mnemonic == "casxl" || Mnemonic == "casxa") {
       SMLoc S = Parser.getTok().getLoc();
       if (getLexer().getKind() != AsmToken::Percent)
-        return ParseStatus::NoMatch;
+        return Error(getLoc(), "expected register name");
       Parser.Lex(); // eat %
 
       unsigned RegKind;
       MCRegister Reg = matchRegisterName(Parser.getTok(), RegKind);
       if (!Reg)
-        return ParseStatus::NoMatch;
+        return Error(getLoc(), "expected register name");
 
       Parser.Lex(); // Eat the identifier token.
       SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer()-1);
@@ -1274,13 +1298,15 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
       Res = ParseStatus::Success;
     } else {
       Res = parseMEMOperand(Operands);
+      if (Res.isNoMatch())
+        return Error(getLoc(), "expected register or immediate");
     }
 
     if (!Res.isSuccess())
       return Res;
 
     if (!getLexer().is(AsmToken::RBrac))
-      return ParseStatus::Failure;
+      return Error(getLoc(), "expected ']'");
 
     Operands.push_back(SparcOperand::CreateToken("]",
                                                  Parser.getTok().getLoc()));
@@ -1289,11 +1315,14 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
     // Parse an optional address-space identifier after the address.
     // This will be either an immediate constant expression, or, on 64-bit
     // processors, the %asi register.
+    StringRef MalformedASITag =
+        is64Bit() ? "malformed ASI tag, must be %asi, a constant integer "
+                    "expression, or a named tag"
+                  : "malformed ASI tag, must be a constant integer expression";
     if (getLexer().is(AsmToken::Percent)) {
       SMLoc S = Parser.getTok().getLoc();
       if (!is64Bit())
-        return Error(
-            S, "malformed ASI tag, must be a constant integer expression");
+        return Error(S, MalformedASITag);
 
       Parser.Lex(); // Eat the %.
       const AsmToken Tok = Parser.getTok();
@@ -1323,23 +1352,26 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
         return ParseStatus::Success;
       }
 
-      return Error(S, "malformed ASI tag, must be %asi, a constant integer "
-                      "expression, or a named tag");
+      return Error(S, MalformedASITag);
     }
 
     // If we're not at the end of statement and the next token is not a comma,
     // then it is an immediate ASI value.
     if (getLexer().isNot(AsmToken::EndOfStatement) &&
-        getLexer().isNot(AsmToken::Comma))
-      return parseASITag(Operands);
+        getLexer().isNot(AsmToken::Comma)) {
+      Res = parseASITag(Operands);
+      if (Res.isNoMatch())
+        return Error(getLoc(), MalformedASITag);
+      return Res;
+    }
     return ParseStatus::Success;
   }
 
   std::unique_ptr<SparcOperand> Op;
 
   Res = parseSparcAsmOperand(Op);
-  if (!Res.isSuccess() || !Op)
-    return ParseStatus::Failure;
+  if (!Res.isSuccess())
+    return Res;
 
   // Push the parsed operand into the list of operands
   Operands.push_back(std::move(Op));
@@ -1355,7 +1387,8 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
 
   Op = nullptr;
   switch (getLexer().getKind()) {
-  default:  break;
+  default:
+    return ParseStatus::NoMatch;
 
   case AsmToken::Percent: {
     Parser.Lex(); // Eat the '%'.
@@ -1372,17 +1405,17 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
         Op = SparcOperand::CreateToken("%xcc", S);
       else
         Op = SparcOperand::CreateReg(Reg, RegKind, S, E);
-      break;
+      return ParseStatus::Success;
     }
     ParseStatus Res = matchSparcAsmModifiers(EVal, E);
-    if (Res.isSuccess()) {
-      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-      Op = SparcOperand::CreateImm(EVal, S, E);
-    } else if (Res.isNoMatch()) {
-      // Neither a register name nor a relocation specifier.
-      Error(getLoc(), "invalid register name");
-    }
-    break;
+    // Neither a register name nor a relocation specifier.
+    if (Res.isNoMatch())
+      return Error(getLoc(), "invalid register name");
+    if (Res.isFailure())
+      return Res;
+    E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+    Op = SparcOperand::CreateImm(EVal, S, E);
+    return ParseStatus::Success;
   }
 
   case AsmToken::Plus:
@@ -1393,12 +1426,11 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
   case AsmToken::Dot:
   case AsmToken::Identifier:
     if (getParser().parseExpression(EVal, E))
-      break;
+      return ParseStatus::Failure;
 
     Op = SparcOperand::CreateImm(EVal, S, E);
-    break;
+    return ParseStatus::Success;
   }
-  return Op ? ParseStatus::Success : ParseStatus::Failure;
 }
 
 ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
@@ -1408,7 +1440,7 @@ ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
     Parser.Lex(); // Eat the comma
 
     if (!getLexer().is(AsmToken::Identifier))
-      return ParseStatus::Failure;
+      return Error(getLoc(), "expected branch modifier");
     StringRef modName = Parser.getTok().getString();
     if (modName == "a" || modName == "pn" || modName == "pt") {
       Operands.push_back(SparcOperand::CreateToken(modName,
