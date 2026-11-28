@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OffloadArchOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -60,27 +60,6 @@ typedef hipError_t (*hipGetDevicePropertiesR0000_t)(hipDeviceProp_tR0000 *,
 typedef hipError_t (*hipGetDeviceProperties_t)(hipDeviceProp_tR0000 *, int);
 typedef hipError_t (*hipRuntimeGetVersion_t)(int *);
 typedef const char *(*hipGetErrorString_t)(hipError_t);
-
-extern cl::opt<bool> Verbose;
-
-cl::OptionCategory AMDGPUArchByHIPCategory("amdgpu-arch (HIP) options");
-
-enum class HipApiVersion {
-  Auto,       // Automatic fallback (R0600 -> R0000 -> unversioned)
-  R0600,      // Force R0600 API (HIP 6.x+)
-  R0000,      // Force R0000 API (legacy HIP)
-  Unversioned // Force unversioned API (very old HIP)
-};
-
-static cl::opt<HipApiVersion> HipApi(
-    "hip-api-version", cl::desc("Select HIP API version for device properties"),
-    cl::values(clEnumValN(HipApiVersion::Auto, "auto",
-                          "Auto-detect (R0600 -> R0000 -> unversioned)"),
-               clEnumValN(HipApiVersion::R0600, "r0600", "Force R0600 API"),
-               clEnumValN(HipApiVersion::R0000, "r0000", "Force R0000 API"),
-               clEnumValN(HipApiVersion::Unversioned, "unversioned",
-                          "Force unversioned API")),
-    cl::init(HipApiVersion::Auto), cl::cat(AMDGPUArchByHIPCategory));
 
 #ifdef _WIN32
 // Return candidate bin/ directories by walking parent dirs of ExeDir.
