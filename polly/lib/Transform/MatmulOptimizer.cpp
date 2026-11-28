@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "isl/ctx.h"
@@ -865,8 +866,8 @@ static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
   isl::set Domain = Stmt->getDomain();
   isl::id DomainId = Domain.get_tuple_id();
 
-  // Create the packed array.
-  unsigned FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  // Include the last, partial micro-tile when Mc is not a multiple of Mr.
+  unsigned FirstDimSize = divideCeil(MacroParams.Mc, MicroParams.Mr);
   unsigned SecondDimSize = MacroParams.Kc;
   unsigned ThirdDimSize = MicroParams.Mr;
   ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
