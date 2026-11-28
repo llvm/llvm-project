@@ -76,26 +76,38 @@ define void @test_pr58158(i1 %c.1) {
 ; CHECK-LABEL: @test_pr58158(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i16 @bar()
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i16 0, [[CALL]]
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
+; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
+; CHECK:       entry.split.us.split.us:
 ; CHECK-NEXT:    br label [[OUTER_US:%.*]]
+; CHECK:       outer.us.us:
+; CHECK-NEXT:    br label [[INNER_PREHEADER_US_US:%.*]]
+; CHECK:       inner.preheader.us.us:
+; CHECK-NEXT:    br label [[OUTER_LOOPEXIT_US_US:%.*]]
+; CHECK:       outer.loopexit.us.us:
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE_US_US:%.*]]
+; CHECK:       outer.backedge.us.us:
+; CHECK-NEXT:    br label [[OUTER_US]]
+; CHECK:       entry.split.us.split:
+; CHECK-NEXT:    br label [[OUTER_US1:%.*]]
 ; CHECK:       outer.us:
 ; CHECK-NEXT:    br label [[INNER_PREHEADER_US:%.*]]
-; CHECK:       inner.us:
-; CHECK-NEXT:    [[C_2_US:%.*]] = icmp eq i16 0, [[CALL]]
-; CHECK-NEXT:    br i1 [[C_2_US]], label [[OUTER_LOOPEXIT_US:%.*]], label [[INNER_US:%.*]]
 ; CHECK:       inner.preheader.us:
-; CHECK-NEXT:    br label [[INNER_US]]
-; CHECK:       outer.loopexit.us:
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE_US:%.*]]
-; CHECK:       outer.backedge.us:
-; CHECK-NEXT:    br label [[OUTER_US]]
+; CHECK:       inner.preheader.split.split.us:
+; CHECK-NEXT:    br label [[INNER_PREHEADER_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE:%.*]]
 ; CHECK:       outer.backedge:
 ; CHECK-NEXT:    br label [[OUTER]]
+; CHECK:       inner.preheader.split:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br label [[INNER]]
 ;
 entry:
   %call = tail call i16 @bar()
@@ -112,6 +124,30 @@ inner:
 declare i16 @bar()
 
 define void @pr58751(i16 %a, ptr %dst) {
+; CHECK-LABEL: @pr58751(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[ENTRY_SPLIT:%.*]], label [[OUTER_HEADER_SPLIT:%.*]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    br label [[OUTER_LATCH:%.*]]
+; CHECK:       outer.header.split:
+; CHECK-NEXT:    [[OUTER_IV_LCSSA:%.*]] = phi i16 [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
+; CHECK:       inner.header:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i16 [ [[OUTER_IV_LCSSA]], [[OUTER_HEADER_SPLIT]] ], [ [[INNER_IV_NEXT:%.*]], [[INNER_LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[INNER_LATCH]]
+; CHECK:       inner.latch:
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nsw i16 [[INNER_IV]], 1
+; CHECK-NEXT:    store i16 [[INNER_IV_NEXT]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[INNER_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[INNER_HEADER]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    br label [[OUTER_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
 entry:
   %c.1 = icmp eq i16 %a, 0
   br label %outer.header

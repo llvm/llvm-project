@@ -77,9 +77,9 @@ define i32 @scev_invalidation_after_deleting(ptr %src) {
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 0, [[OUTER_IV]]
 ; CHECK-NEXT:    br label [[INNER_1:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 0, [[OUTER_IV]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[INNER_2_PREHEADER:%.*]], label [[INNER_1]]
 ; CHECK:       inner.2.preheader:
 ; CHECK-NEXT:    br label [[INNER_3_PH:%.*]]

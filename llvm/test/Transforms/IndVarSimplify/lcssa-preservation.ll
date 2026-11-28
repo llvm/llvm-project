@@ -91,15 +91,16 @@ exit:
 define void @pr57000(i64 %a) {
 ; CHECK-LABEL: @pr57000(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[A:%.*]], 2546175499358690212
 ; CHECK-NEXT:    br label [[LOOP_1_OUTER:%.*]]
 ; CHECK:       loop.1.loopexit:
 ; CHECK-NEXT:    br label [[LOOP_1_OUTER]]
 ; CHECK:       loop.1.outer:
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       loop.1:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[A:%.*]], 2546175499358690212
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[A]], 2546175499358690212
 ; CHECK-NEXT:    [[CMP_EXT:%.*]] = zext i1 [[CMP]] to i8
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_1]], label [[LOOP_2_HEADER_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_1]], label [[LOOP_2_HEADER_PREHEADER:%.*]]
 ; CHECK:       loop.2.header.preheader:
 ; CHECK-NEXT:    [[CMP_LCSSA2:%.*]] = phi i1 [ [[CMP]], [[LOOP_1]] ]
 ; CHECK-NEXT:    [[CMP_EXT_LCSSA:%.*]] = phi i8 [ [[CMP_EXT]], [[LOOP_1]] ]
