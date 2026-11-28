@@ -1271,6 +1271,9 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   return res;
 }
 
+#endif
+
+#if SANITIZER_GLIBC && __GLIBC_PREREQ(2, 31)
 TSAN_INTERCEPTOR(int, pthread_clockjoin_np, void* th, void** ret,
                  __sanitizer_clockid_t clock, const struct timespec* abstime) {
   SCOPED_INTERCEPTOR_RAW(pthread_clockjoin_np, th, ret, clock, abstime);
