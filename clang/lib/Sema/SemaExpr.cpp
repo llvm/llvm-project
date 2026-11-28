@@ -17237,11 +17237,14 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
     if (IndirectMemberDecl) {
       for (auto *FI : IndirectMemberDecl->chain()) {
         assert(isa<FieldDecl>(FI));
-        Comps.push_back(
-            OffsetOfNode(D.getBeginLoc(), cast<FieldDecl>(FI), D.getEndLoc()));
+        auto *FD = cast<FieldDecl>(FI);
+        UnusedPrivateFields.remove(FD);
+        Comps.push_back(OffsetOfNode(D.getBeginLoc(), FD, D.getEndLoc()));
       }
-    } else
+    } else {
+      UnusedPrivateFields.remove(MemberDecl);
       Comps.push_back(OffsetOfNode(D.getBeginLoc(), MemberDecl, D.getEndLoc()));
+    }
 
     CurrentType = MemberDecl->getType().getNonReferenceType();
   }
