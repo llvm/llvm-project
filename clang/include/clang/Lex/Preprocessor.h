@@ -607,7 +607,7 @@ private:
     }
 
     void handleColon() {
-      if (isModuleCandidate())
+      if (!Name.empty() && isModuleCandidate())
         Name += ":";
       else if (!isNamedModule())
         reset();
