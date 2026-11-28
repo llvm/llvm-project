@@ -1072,6 +1072,9 @@ public:
     setAllowReciprocalOverride(!Value);
     setAllowApproxFuncOverride(!Value);
     setMathErrnoOverride(Value);
+    /* -ffast-math implies -fcomplex-arithmetic=basic, precise mode full */
+    setComplexRangeOverride(Value ? LangOptions::CX_Full
+                                  : LangOptions::CX_Basic);
     if (Value)
       /* Precise mode implies fp_contract=on and disables ffast-math */
       setAllowFPContractWithinStatement();

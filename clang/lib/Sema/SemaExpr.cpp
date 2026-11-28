@@ -11410,7 +11410,7 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, QualType DivisorTy,
     return;
 
   QualType ElementType = CT->getElementType().getCanonicalType();
-  bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
+  bool IsComplexRangePromoted = S.CurFPFeatures.getComplexRange() ==
                                 LangOptions::ComplexRangeKind::CX_Promoted;
   if (!ElementType->isFloatingType() || !IsComplexRangePromoted)
     return;
