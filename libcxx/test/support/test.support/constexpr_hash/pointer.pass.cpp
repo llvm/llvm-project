@@ -18,21 +18,13 @@
 
 #include "test_macros.h"
 
-constexpr void test_nullptr() {
-  typedef std::nullptr_t T;
-  using H = support::constexpr_hash<T>;
-
-  ASSERT_NOEXCEPT(H()(T()));
-}
-
-constexpr bool test_with_hash() {
-  test_nullptr();
+constexpr bool test() {
+  using H = support::constexpr_hash<std::nullptr_t>;
+  ASSERT_NOEXCEPT(H()(nullptr));
   return true;
 }
-
 int main(int, char**) {
-  test_with_hash();
-  static_assert(test_with_hash());
-
+  test();
+  static_assert(test());
   return 0;
 }
