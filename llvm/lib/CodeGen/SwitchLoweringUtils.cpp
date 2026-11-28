@@ -15,6 +15,8 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -41,6 +43,22 @@ SwitchCG::getJumpTableNumCases(const SmallVectorImpl<unsigned> &TotalCases,
   uint64_t NumCases =
       TotalCases[Last] - (First == 0 ? 0 : TotalCases[First - 1]);
   return NumCases;
+}
+
+bool SwitchCG::keepJumpTableRangeCheck(const Function &F) {
+  // Under branch target enforcement (e.g. Arm BTI, or the cf-protection-branch
+  // module flag used by RISC-V Zicfilp and X86 IBT), a table branch _without_
+  // a range check can be a tempting JOP gadget - out-of-bounds inputs that are
+  // impossible in correct execution become possible again if an attacker can
+  // influence the control flow. So if an attacker doesn't already have a
+  // branch target enforcement bypass available, we don't want them to be able
+  // to get one out of this table branch.
+  if (F.hasFnAttribute("branch-target-enforcement"))
+    return true;
+  if (auto *CFBranch = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("cf-protection-branch")))
+    return !CFBranch->isZero();
+  return false;
 }
 
 void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
