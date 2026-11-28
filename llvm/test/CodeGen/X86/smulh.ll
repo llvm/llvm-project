@@ -4,6 +4,19 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
 
+define i8 @smulh_i8(i8 %x, i8 %y) nounwind {
+; CHECK-LABEL: smulh_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsbl %sil, %ecx
+; CHECK-NEXT:    movsbl %dil, %eax
+; CHECK-NEXT:    imull %ecx, %eax
+; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %r = call i8 @llvm.smulh(i8 %x, i8 %y)
+  ret i8 %r
+}
+
 define i16 @smulh_i16(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: smulh_i16:
 ; CHECK:       # %bb.0:
@@ -20,11 +33,9 @@ define i16 @smulh_i16(i16 %x, i16 %y) nounwind {
 define i32 @smulh_i32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: smulh_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %esi, %rcx
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %esi
+; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    retq
   %r = call i32 @llvm.smulh(i32 %x, i32 %y)
   ret i32 %r

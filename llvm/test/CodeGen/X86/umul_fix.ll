@@ -10,13 +10,9 @@ declare  <4 x i32> @llvm.umul.fix.v4i32(<4 x i32>, <4 x i32>, i32)
 define i32 @func(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: func:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    imulq %rcx, %rax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    shldl $30, %ecx, %eax
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    mull %esi
+; X64-NEXT:    shrdl $2, %edx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func:
@@ -76,11 +72,11 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $15, %al
-; X64-NEXT:    andb $15, %sil
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    mulb %sil
+; X64-NEXT:    andl $15, %esi
+; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    imull %esi, %eax
 ; X64-NEXT:    shrb $2, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
@@ -89,8 +85,11 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    andb $15, %al
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
-; X86-NEXT:    mulb %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    shrb $2, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
   %tmp = call i4 @llvm.umul.fix.i4(i4 %x, i4 %y, i32 2)
   ret i4 %tmp

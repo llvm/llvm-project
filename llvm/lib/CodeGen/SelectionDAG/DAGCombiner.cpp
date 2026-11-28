@@ -5693,6 +5693,15 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   return SDValue();
 }
 
+// True if we should try widening instead of keeping LOHI (unavailable, or
+// constant operand).
+static bool shouldWidenMulLoHi(const TargetLowering &TLI, EVT VT,
+                               unsigned LoHiOpc, SDValue N0, SDValue N1) {
+  return (!TLI.isOperationLegalOrCustom(LoHiOpc, VT) ||
+          isa<ConstantSDNode>(N0) || isa<ConstantSDNode>(N1)) &&
+         VT.isSimple() && !VT.isVector();
+}
+
 SDValue DAGCombiner::visitMULHS(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5732,10 +5741,10 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
 
-  // If the type twice as wide is legal, transform the mulhs to a wider multiply
-  // plus a shift.
-  if (!TLI.isOperationLegalOrCustom(ISD::MULHS, VT) && VT.isSimple() &&
-      !VT.isVector()) {
+  // If the type twice as wide is legal, transform the mulhs to a wider
+  // multiply plus a shift.
+  if (!TLI.isOperationLegalOrCustom(ISD::MULHS, VT) &&
+      shouldWidenMulLoHi(TLI, VT, ISD::SMUL_LOHI, N0, N1)) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);
@@ -5803,10 +5812,10 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
     }
   }
 
-  // If the type twice as wide is legal, transform the mulhu to a wider multiply
-  // plus a shift.
-  if (!TLI.isOperationLegalOrCustom(ISD::MULHU, VT) && VT.isSimple() &&
-      !VT.isVector()) {
+  // If the type twice as wide is legal, transform the mulhu to a wider
+  // multiply plus a shift.
+  if (!TLI.isOperationLegalOrCustom(ISD::MULHU, VT) &&
+      shouldWidenMulLoHi(TLI, VT, ISD::UMUL_LOHI, N0, N1)) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);
@@ -6131,9 +6140,9 @@ SDValue DAGCombiner::visitSMUL_LOHI(SDNode *N) {
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::SMUL_LOHI, DL, N->getVTList(), N1, N0);
 
-  // If the type is twice as wide is legal, transform the mulhu to a wider
-  // multiply plus a shift.
-  if (VT.isSimple() && !VT.isVector()) {
+  // If the type twice as wide is legal, transform to a wider multiply plus a
+  // shift.
+  if (shouldWidenMulLoHi(TLI, VT, ISD::SMUL_LOHI, N0, N1)) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);
@@ -6185,9 +6194,9 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
     return CombineTo(N, N0, Zero);
   }
 
-  // If the type is twice as wide is legal, transform the mulhu to a wider
-  // multiply plus a shift.
-  if (VT.isSimple() && !VT.isVector()) {
+  // If the type twice as wide is legal, transform to a wider multiply plus a
+  // shift.
+  if (shouldWidenMulLoHi(TLI, VT, ISD::UMUL_LOHI, N0, N1)) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);

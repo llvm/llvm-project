@@ -72,10 +72,9 @@ define void @leaf_tail_call(ptr %p, ptr %q, i32 %c) nounwind {
 ; V9-LABEL: leaf_tail_call:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    ld [%o0], %o0
-; V9-NEXT:    ldsw [%o1], %o1
+; V9-NEXT:    ld [%o1], %o1
 ; V9-NEXT:    mov %o7, %g1
-; V9-NEXT:    sra %o0, 0, %o3
-; V9-NEXT:    mulx %o3, %o1, %o1
+; V9-NEXT:    smul %o0, %o1, %o1
 ; V9-NEXT:    call ext
 ; V9-NEXT:    mov %g1, %o7
   %x = load i32, ptr %p
