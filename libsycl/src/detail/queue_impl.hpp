@@ -98,8 +98,10 @@ public:
   /// submissions of the same kernel.
   /// \param ArgData a pointer to kernel argument.
   /// \param ArgSize a size of kernel argument in bytes.
+  /// \param LocalMemSize a size in bytes of the work-group local memory block
+  /// shared by the local accessors of the kernel.
   void submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
-                        size_t ArgSize);
+                        size_t ArgSize, size_t LocalMemSize);
 
   /// \return an event impl object that corresponds to the last kernel
   /// submission in the calling thread.

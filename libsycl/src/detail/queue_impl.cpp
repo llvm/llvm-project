@@ -156,7 +156,7 @@ void QueueImpl::setKernelLaunchParams(
 }
 
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
-                                 size_t ArgSize) {
+                                 size_t ArgSize, size_t LocalMemSize) {
   assert(MContext && "Context impl ptr can't be nullptr");
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
@@ -167,6 +167,8 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
 
   assert(ArgData && "At least one argument must exist");
   assert(ArgSize && "Arguments size must be greater than 0");
+
+  MCurrentSubmitInfo.Range.DynSharedMemory = LocalMemSize;
 
   void *ArgPtrs[] = {ArgData};
   size_t ArgSizes[] = {ArgSize};

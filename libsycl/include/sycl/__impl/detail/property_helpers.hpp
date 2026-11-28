@@ -42,6 +42,7 @@ namespace detail {
 enum class ObjectKind : std::uint32_t {
   Queue = 1u << 0,
   Context = 1u << 1,
+  LocalAccessor = 1u << 2,
 };
 
 inline constexpr std::uint32_t toMask(ObjectKind Kind) {

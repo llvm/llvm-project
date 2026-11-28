@@ -14,6 +14,8 @@
 #ifndef _LIBSYCL_SYCL_HPP
 #define _LIBSYCL_SYCL_HPP
 
+#include <sycl/__impl/access_enums.hpp>
+#include <sycl/__impl/accessor.hpp>
 #include <sycl/__impl/aspect.hpp>
 #include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/backend.hpp>
@@ -26,6 +28,7 @@
 #include <sycl/__impl/group_barrier.hpp>
 #include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
+#include <sycl/__impl/local_accessor.hpp>
 #include <sycl/__impl/memory_enums.hpp>
 #include <sycl/__impl/nd_item.hpp>
 #include <sycl/__impl/nd_range.hpp>
