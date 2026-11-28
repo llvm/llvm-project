@@ -12,6 +12,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -202,8 +203,19 @@ findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
 } // namespace
 
 SPIRVNonSemanticDebugHandler::SPIRVNonSemanticDebugHandler(AsmPrinter &AP)
-    : DebugHandlerBase(&AP),
-      CLOpts(static_cast<const SPIRVTargetMachine &>(AP.TM).getCLOpts()) {}
+    : DebugHandlerBase(&AP) {
+  initOptions(static_cast<const SPIRVTargetMachine &>(AP.TM));
+}
+
+void SPIRVNonSemanticDebugHandler::initOptions(const SPIRVTargetMachine &TM) {
+  const SPIRVOptions &CLOpts = TM.getCLOpts();
+  bool AMDDefault = TM.getTargetTriple().getVendor() == Triple::AMD;
+  UseLexicalBlockDiscriminatorScope =
+      valueOr(CLOpts.debug_lexical_block_discriminator_scope, AMDDefault);
+  UseDebugScopeForwardRefs = CLOpts.debug_scope_forward_refs;
+  AllowDebugDeclareUntypedVariable =
+      valueOr(CLOpts.debug_declare_untyped_variable, AMDDefault);
+}
 
 // Map DWARF source language codes to NonSemantic.Shader.DebugInfo.100 source
 // language codes. Values are from the SourceLanguage enum in the
@@ -480,7 +492,7 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
   CanUseForwardRefs =
-      CLOpts.debug_scope_forward_refs &&
+      UseDebugScopeForwardRefs &&
       ST.canUseExtension(
           SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
 
@@ -1123,7 +1135,7 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 auto SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
                                                 const DICompileUnit *FallbackCU)
     -> EmitResult<MCRegister> {
-  if (!CLOpts.debug_lexical_block_discriminator_scope)
+  if (!UseLexicalBlockDiscriminatorScope)
     while (const auto *LBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
       Scope = LBF->getScope();
 
@@ -2220,8 +2232,8 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
   // A #dbg_declare reaches Machine IR as an indirect DBG_VALUE. Its storage is
   // an OpVariable (or OpUntypedVariableKHR) in the entry block, so it is in the
   // output by the time any record naming it is reached.
-  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(
-          MI, CLOpts.debug_declare_untyped_variable)) {
+  if (std::optional<Register> LocReg =
+          getDebugDeclareStorageReg(MI, AllowDebugDeclareUntypedVariable)) {
     MCRegister StorageReg = MAI.getRegisterAlias(&MF, *LocReg);
     if (StorageReg.isValid())
       placeRecord(SPIRV::NonSemanticExtInst::DebugDeclare, MI, StorageReg,
