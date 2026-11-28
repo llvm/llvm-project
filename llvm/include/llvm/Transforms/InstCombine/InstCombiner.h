@@ -112,6 +112,9 @@ protected:
   /// Source for annotation metadata, used by the IRBuilder inserter.
   Instruction *AnnotationMetadataSource = nullptr;
 
+  /// Number of single-use users revisited when a value's use count drops.
+  unsigned SingleUseWalkLimit = 1;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
                AssumptionCache &AC, TargetLibraryInfo &TLI,
@@ -445,7 +448,7 @@ public:
   Instruction *replaceOperand(Instruction &I, unsigned OpNum, Value *V) {
     Value *OldOp = I.getOperand(OpNum);
     I.setOperand(OpNum, V);
-    Worklist.handleUseCountDecrement(OldOp);
+    Worklist.handleUseCountDecrement(OldOp, SingleUseWalkLimit);
     return &I;
   }
 
@@ -453,7 +456,7 @@ public:
   void replaceUse(Use &U, Value *NewValue) {
     Value *OldOp = U;
     U = NewValue;
-    Worklist.handleUseCountDecrement(OldOp);
+    Worklist.handleUseCountDecrement(OldOp, SingleUseWalkLimit);
   }
 
   /// Combiner aware instruction erasure.
