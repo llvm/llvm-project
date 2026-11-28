@@ -265,8 +265,7 @@ entry:
 define <16 x i8> @eval23(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval23:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v0, %v28, %v26, %v24, 6
-; CHECK-NEXT:    veval %v24, %v0, %v26, %v24, 31
+; CHECK-NEXT:    veval %v24, %v26, %v24, %v28, 23
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = xor <16 x i8> %src2, %src1
@@ -3894,3 +3893,148 @@ entry:
   ret <16 x i8> splat(i8 -1)
 }
 
+; Test canonical SHA-256 Choose: (x & y) ^ (~x & z)
+define <16 x i8> @test_sha256_choose(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_sha256_choose:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsel %v24, %v26, %v28, %v24
+; CHECK-NEXT:    br %r14
+entry:
+  %and1 = and <16 x i8> %x, %y
+  %notx = xor <16 x i8> %x, splat(i8 -1)
+  %and2 = and <16 x i8> %notx, %z
+  %res = xor <16 x i8> %and1, %and2
+  ret <16 x i8> %res
+}
+
+; Test canonical SHA-256 Majority: (x & y) ^ (x & z) ^ (y & z)
+define <16 x i8> @test_sha256_majority(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_sha256_majority:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v24, %v26, %v28, 23
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = and <16 x i8> %x, %y
+  %xz = and <16 x i8> %x, %z
+  %yz = and <16 x i8> %y, %z
+  %t = xor <16 x i8> %xy, %xz
+  %res = xor <16 x i8> %t, %yz
+  ret <16 x i8> %res
+}
+
+; Test 3-way OR-based Majority / Carry: (x & y) | (x & z) | (y & z)
+define <16 x i8> @test_majority_or(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_majority_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v26, %v28, %v24, 23
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = and <16 x i8> %x, %y
+  %xz = and <16 x i8> %x, %z
+  %yz = and <16 x i8> %y, %z
+  %t = or <16 x i8> %xy, %xz
+  %res = or <16 x i8> %t, %yz
+  ret <16 x i8> %res
+}
+
+; Test InstCombine canonicalized Choose: z ^ (x & (y ^ z))
+define <16 x i8> @test_choose_canonical(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_choose_canonical:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsel %v24, %v26, %v28, %v24
+; CHECK-NEXT:    br %r14
+entry:
+  %xor_yz = xor <16 x i8> %y, %z
+  %and_x = and <16 x i8> %x, %xor_yz
+  %res = xor <16 x i8> %z, %and_x
+  ret <16 x i8> %res
+}
+
+; Test i128 ternary logic: (x & y) ^ (~x & z)
+define i128 @test_i128_choose(i128 %x, i128 %y, i128 %z) {
+; CHECK-LABEL: test_i128_choose:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r5), 3
+; CHECK-NEXT:    vl %v2, 0(%r4), 3
+; CHECK-NEXT:    vsel %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+entry:
+  %and1 = and i128 %x, %y
+  %notx = xor i128 %x, -1
+  %and2 = and i128 %notx, %z
+  %res = xor i128 %and1, %and2
+  ret i128 %res
+}
+
+; Test Full Adder Carry with XOR: (x & y) ^ (z & (x ^ y))
+define <16 x i8> @test_carry_xor(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_carry_xor:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v24, %v26, %v28, 23
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = and <16 x i8> %x, %y
+  %xy_xor = xor <16 x i8> %x, %y
+  %z_xy = and <16 x i8> %z, %xy_xor
+  %res = xor <16 x i8> %xy, %z_xy
+  ret <16 x i8> %res
+}
+
+; Test VEVAL 61: (x ^ y) | (x & z)
+define <16 x i8> @test_eval61(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_eval61:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v24, %v26, %v28, 61
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = xor <16 x i8> %x, %y
+  %xz = and <16 x i8> %x, %z
+  %res = or <16 x i8> %xy, %xz
+  ret <16 x i8> %res
+}
+
+; Test VEVAL 96: (x | y) ^ (x | z)
+define <16 x i8> @test_eval96(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_eval96:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v24, %v26, %v28, 96
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = or <16 x i8> %x, %y
+  %xz = or <16 x i8> %x, %z
+  %res = xor <16 x i8> %xy, %xz
+  ret <16 x i8> %res
+}
+
+; Test VEVAL 232: ~((x & y) | (z & (x ^ y)))
+define <16 x i8> @test_eval232_carry(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_eval232_carry:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v24, %v26, %v28, 232
+; CHECK-NEXT:    br %r14
+entry:
+  %xy = and <16 x i8> %x, %y
+  %xy_xor = xor <16 x i8> %x, %y
+  %z_xy = and <16 x i8> %z, %xy_xor
+  %maj = or <16 x i8> %xy, %z_xy
+  %res = xor <16 x i8> %maj, splat(i8 -1)
+  ret <16 x i8> %res
+}
+
+
+; Test VEVAL 172: ~(z ? x : y)
+define <16 x i8> @test_inverted_choose(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; CHECK-LABEL: test_inverted_choose:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    veval %v24, %v28, %v24, %v26, 172
+; CHECK-NEXT:    br %r14
+entry:
+  %notz = xor <16 x i8> %z, splat(i8 -1)
+  %and1 = and <16 x i8> %x, %z
+  %and2 = and <16 x i8> %y, %notz
+  %or = or <16 x i8> %and1, %and2
+  %res = xor <16 x i8> %or, splat(i8 -1)
+  ret <16 x i8> %res
+}
