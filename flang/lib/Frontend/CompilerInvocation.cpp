@@ -605,6 +605,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
           << arg->getAsString(args) << arg->getValue();
     }
   }
+
+  if (args.hasArg(clang::options::OPT_fcompensated_sum))
+    opts.CompensatedSum = 1;
 }
 
 /// Parses all target input arguments and populates the target

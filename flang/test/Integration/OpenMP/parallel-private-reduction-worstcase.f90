@@ -162,17 +162,26 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.par.region60
 
 ! CHECK:       omp.par.region60:                                 ; preds = %omp.par.region59
-!                [call SUM runtime function]
+!                [begin loop implementing SUM]
+! CHECK:         br label %omp.par.region61
+
+! CHECK:       omp.par.region61:                                 ; preds = %omp.par.region62, %omp.par.region60
+! CHECK-NEXT:    %{{.*}} = phi i64
+! CHECK-NEXT:    %{{.*}} = phi float
+! CHECK-NEXT:    %{{.*}} = phi i64
+! CHECK:         br i1 %{{.*}}, label %omp.par.region62, label %omp.par.region63
+
+! CHECK:       omp.par.region63:                                 ; preds = %omp.par.region61
 !                [if (sum(a) == 1)]
-! CHECK:         br i1 %{{.*}}, label %omp.par.region61, label %omp.par.region62
+! CHECK:         br i1 %{{.*}}, label %omp.par.region64, label %omp.par.region65
 
-! CHECK:       omp.par.region62:                                 ; preds = %omp.par.region60
-! CHECK-NEXT:    br label %omp.par.region63
+! CHECK:       omp.par.region65:                                 ; preds = %omp.par.region63
+! CHECK-NEXT:    br label %omp.par.region66
 
-! CHECK:       omp.par.region63:                                 ; preds = %omp.par.region62
+! CHECK:       omp.par.region66:                                 ; preds = %omp.par.region65
 ! CHECK-NEXT:    br label %omp.region.cont58
 
-! CHECK:       omp.region.cont58:                                ; preds = %omp.par.region63
+! CHECK:       omp.region.cont58:                                ; preds = %omp.par.region66
 !                [omp parallel region done, call into the runtime to complete reduction]
 ! CHECK:         %[[VAL_233:.*]] = call i32 @__kmpc_reduce(
 ! CHECK:         switch i32 %[[VAL_233]], label %reduce.finalize [
@@ -189,7 +198,7 @@ end subroutine
 
 !              [various blocks implementing the reduction]
 
-! CHECK:       omp.region.cont68:                                ; preds =
+! CHECK:       omp.region.cont71:                                ; preds =
 ! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    call void @__kmpc_end_reduce(
 ! CHECK-NEXT:    br label %reduce.finalize
@@ -206,22 +215,28 @@ end subroutine
 
 ! CHECK:       omp.reduction.cleanup:                            ; preds = %.fini
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup74, label %omp.reduction.cleanup75
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup77, label %omp.reduction.cleanup78
 
-! CHECK:       omp.reduction.cleanup75:                          ; preds = %omp.reduction.cleanup74, %omp.reduction.cleanup
-! CHECK-NEXT:    br label %omp.region.cont73
+! CHECK:       omp.reduction.cleanup78:                          ; preds = %omp.reduction.cleanup77, %omp.reduction.cleanup
+! CHECK-NEXT:    br label %omp.region.cont76
 
-! CHECK:       omp.region.cont73:                                ; preds = %omp.reduction.cleanup75
+! CHECK:       omp.region.cont76:                                ; preds = %omp.reduction.cleanup78
 ! CHECK-NEXT:    %{{.*}} = load ptr, ptr
-! CHECK-NEXT:    br label %omp.reduction.cleanup77
+! CHECK-NEXT:    br label %omp.reduction.cleanup80
 
-! CHECK:       omp.reduction.cleanup77:                          ; preds = %omp.region.cont73
+! CHECK:       omp.reduction.cleanup80:                          ; preds = %omp.region.cont76
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup78, label %omp.reduction.cleanup79
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup81, label %omp.reduction.cleanup82
 
-! CHECK:       omp.par.region61:                                 ; preds = %omp.par.region60
+! CHECK:       omp.par.region64:                                 ; preds = %omp.par.region63
 ! CHECK-NEXT:    call void @_FortranAStopStatement
 ! CHECK-NEXT:    unreachable
+
+! CHECK:       omp.par.region62:                                 ; preds = %omp.par.region61
+!                [add an array element to the SUM accumulator]
+! CHECK:         %{{.*}} = load float, ptr %{{.*}}, align 4
+! CHECK-NEXT:    %{{.*}} = fadd contract float %{{.*}}, %{{.*}}
+! CHECK:         br label %omp.par.region61
 
 ! CHECK:       omp.reduction.neutral55:                          ; preds = %omp.reduction.neutral54
 ! CHECK:         store float 0.000000e+00, ptr %{{.*}}, align 4
@@ -273,5 +288,5 @@ end subroutine
 !                [var extent was non-zero: malloc a private array]
 ! CHECK:         br label %omp.private.init5
 
-! CHECK:       omp.par.exit.exitStub:                           ; preds = %omp.region.cont83
+! CHECK:       omp.par.exit.exitStub:                           ; preds = %omp.region.cont86
 ! CHECK-NEXT:    ret void

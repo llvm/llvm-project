@@ -209,7 +209,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel != llvm::OptimizationLevel::O0) {
     // These passes may increase code size.
-    pm.addPass(fir::createSimplifyIntrinsics());
+    pm.addPass(fir::createSimplifyIntrinsics(
+        {/*enableExperimental=*/false, pc.CompensatedSum}));
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
     if (enableConstantArgumentGlobalisation)
       pm.addPass(fir::createConstantArgumentGlobalisationOpt());
@@ -326,9 +327,17 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     addCanonicalizerPassWithoutRegionSimplification(pm);
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior});
+          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior,
+           /*onlySum=*/false, config.CompensatedSum});
+    });
+  } else {
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior,
+           /*onlySum=*/true, config.CompensatedSum});
     });
   }
+
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -340,7 +349,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     // and allow introducing operations with new side effects.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior});
+          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior,
+           /*onlySum=*/false, config.CompensatedSum});
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createPropagateFortranVariableAttributes);

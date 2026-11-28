@@ -650,6 +650,7 @@ void CodeGenAction::lowerHLFIRToFIR() {
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
   MLIRToLLVMPassPipelineConfig config(level);
+  config.CompensatedSum = opts.CompensatedSum;
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   // Give plugins a chance to register passes at the extension points.

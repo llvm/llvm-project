@@ -75,7 +75,14 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
                           "extremum", "arith.max/minimumf"),
                clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
-                          "extremenum", "arith.max/minnumf"))}]>];
+                          "extremenum", "arith.max/minnumf"))}]>,
+                 Option<"onlySum", "only-sum", "bool",
+                        /*default=*/"false",
+                        "Simplify only hlfir.sum operations">,
+                 Option<"compensatedSum", "compensated-sum", "bool",
+                        /*default=*/"false",
+                        "Preserve runtime calls for real and complex SUM "
+                        "that use compensated summation">];
 }
 
 def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
