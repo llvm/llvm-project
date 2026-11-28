@@ -213,6 +213,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
         setOperationAction(Op, MVT::f64, Expand);
       }
     }
+
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Legal);
+    if (!Subtarget.isSingleFloat()) {
+      setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
+      if (Subtarget.isGP64bit() && Subtarget.isFP64bit())
+        setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i64, Legal);
+    }
   }
 
   // Targets with 64bits integer registers, but no 64bit floating point register
