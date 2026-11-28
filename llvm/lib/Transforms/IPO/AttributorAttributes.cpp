@@ -3653,37 +3653,16 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
-    SmallPtrSet<const BasicBlock *, 16> Visited;
-    SmallVector<const BasicBlock *, 16> Worklist;
-    Worklist.push_back(FromBB);
-
-    DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
-    while (!Worklist.empty()) {
-      const BasicBlock *BB = Worklist.pop_back_val();
-      if (!Visited.insert(BB).second)
-        continue;
-      for (const BasicBlock *SuccBB : successors(BB)) {
-        if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
-          LocalDeadEdges.insert({BB, SuccBB});
-          continue;
-        }
-        // We checked before if we just need to reach the ToBB block.
-        if (SuccBB == ToBB)
-          return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
-                                IsTemporaryRQI);
-        if (DT && ExclusionBlocks.empty() && DT->dominates(BB, ToBB))
-          return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
-                                IsTemporaryRQI);
-
-        if (ExclusionBlocks.count(SuccBB)) {
-          UsedExclusionSet = true;
-          continue;
-        }
-        Worklist.push_back(SuccBB);
-      }
-    }
-
-    DeadEdges.insert_range(LocalDeadEdges);
+    // The exploration from FromBB is shared by all queries with the same
+    // exclusion set until the liveness of an edge changes.
+    const Exploration &E = getExploration(A, FromBB, RQI.ExclusionSet,
+                                          ExclusionBlocks, LivenessAA);
+    UsedExclusionSet |= E.UsedExclusionSet;
+    if (E.Successors.contains(ToBB) ||
+        (DT && ExclusionBlocks.empty() && isDominatedByAny(E, ToBB)))
+      return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
+                            IsTemporaryRQI);
+    DeadEdges.insert_range(E.DeadEdges);
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -3691,6 +3670,90 @@ struct AAIntraFnReachabilityFunction final
   void trackStatistics() const override {}
 
 private:
+  /// The blocks reached from a block through assumed live edges and without
+  /// entering an excluded block.
+  struct Exploration {
+    /// The successors of the explored blocks through assumed live edges.
+    SmallPtrSet<const BasicBlock *, 16> Successors;
+    /// The explored blocks with an assumed live successor edge.
+    SmallPtrSet<const BasicBlock *, 16> WithLiveSuccessors;
+    /// The assumed dead edges out of the explored blocks.
+    SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
+    /// Whether an excluded block was a successor of an explored block.
+    bool UsedExclusionSet = false;
+  };
+
+  /// Return the exploration from \p FromBB that does not enter a block of
+  /// \p ExclusionBlocks, and compute it if needed.
+  const Exploration &
+  getExploration(Attributor &A, const BasicBlock *FromBB,
+                 const AA::InstExclusionSetTy *ExclusionSet,
+                 const SmallPtrSetImpl<const BasicBlock *> &ExclusionBlocks,
+                 const AAIsDead *LivenessAA) {
+    // Without liveness, all edges are live, as for an invalid AAIsDead.
+    uint64_t LivenessVersion =
+        LivenessAA ? LivenessAA->getEdgeLivenessVersion() : UINT64_MAX;
+    if (LivenessVersion != ExplorationsLivenessVersion) {
+      Explorations.clear();
+      ExplorationsLivenessVersion = LivenessVersion;
+    }
+    // The exclusion set only matters through the blocks in this function.
+    if (ExclusionBlocks.empty())
+      ExclusionSet = nullptr;
+    else
+      ExclusionSet =
+          A.getInfoCache().getOrCreateUniqueBlockExecutionSet(ExclusionSet);
+    auto [It, Inserted] = Explorations.try_emplace({FromBB, ExclusionSet});
+    Exploration &E = It->second;
+    if (!Inserted)
+      return E;
+    SmallPtrSet<const BasicBlock *, 16> Visited;
+    SmallVector<const BasicBlock *, 16> Worklist;
+    Worklist.push_back(FromBB);
+    while (!Worklist.empty()) {
+      const BasicBlock *BB = Worklist.pop_back_val();
+      if (!Visited.insert(BB).second)
+        continue;
+      bool HasLiveSuccessor = false;
+      for (const BasicBlock *SuccBB : successors(BB)) {
+        if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
+          E.DeadEdges.push_back({BB, SuccBB});
+          continue;
+        }
+        E.Successors.insert(SuccBB);
+        HasLiveSuccessor = true;
+        if (ExclusionBlocks.contains(SuccBB)) {
+          E.UsedExclusionSet = true;
+          continue;
+        }
+        Worklist.push_back(SuccBB);
+      }
+      if (HasLiveSuccessor)
+        E.WithLiveSuccessors.insert(BB);
+    }
+    return E;
+  }
+
+  /// Return true if a block of \p E with a live successor edge dominates
+  /// \p ToBB. isReachableImpl treats \p ToBB as reachable then.
+  bool isDominatedByAny(const Exploration &E, const BasicBlock *ToBB) const {
+    // An unreachable block is dominated by every block.
+    if (!DT->isReachableFromEntry(ToBB))
+      return !E.WithLiveSuccessors.empty();
+    for (const DomTreeNode *N = DT->getNode(ToBB); N; N = N->getIDom()) {
+      if (E.WithLiveSuccessors.contains(N->getBlock()))
+        return true;
+    }
+    return false;
+  }
+
+  /// The explorations shared by the queries, and the liveness version they
+  /// were computed for.
+  DenseMap<std::pair<const BasicBlock *, const AA::InstExclusionSetTy *>,
+           Exploration>
+      Explorations;
+  uint64_t ExplorationsLivenessVersion = 0;
+
   // Set of assumed dead blocks we used in the last query. If any changes we
   // update the state.
   DenseSet<const BasicBlock *> DeadBlocks;
@@ -4492,6 +4555,12 @@ struct AAIsDeadFunction : public AAIsDead {
            To->getParent() == getAnchorScope() &&
            "Used AAIsDead of the wrong function");
     return isValidState() && !AssumedLiveEdges.count(std::make_pair(From, To));
+  }
+
+  uint64_t getEdgeLivenessVersion() const override {
+    // Assumed live edges are only ever added, and all edges are live once the
+    // state is invalid.
+    return isValidState() ? AssumedLiveEdges.size() : UINT64_MAX;
   }
 
   void trackStatistics() const override {}

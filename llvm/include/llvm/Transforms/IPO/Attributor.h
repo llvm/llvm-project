@@ -4083,6 +4083,10 @@ public:
     return false;
   }
 
+  /// Return a number that changes whenever the result of isEdgeDead might
+  /// change, so users can cache information derived from it.
+  virtual uint64_t getEdgeLivenessVersion() const { return 0; }
+
   StringRef getName() const override { return "AAIsDead"; }
 
   const char *getIdAddr() const override { return &ID; }
