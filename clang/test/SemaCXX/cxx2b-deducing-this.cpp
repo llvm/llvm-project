@@ -1404,6 +1404,65 @@ void f() {
 
 }
 
+// Capture is not set as instantiation dependent correctly
+namespace GH163582 {
+
+// Builtin __is_same(T, U) does not triger the bug
+template <class T, class U> constexpr bool is_same_v = false;
+template <class T> constexpr bool is_same_v<T, T> = true;
+
+struct S {
+  int x = 1;
+
+  void f() {
+    [n = 42](this auto&&) {
+      static_assert(is_same_v<decltype(n), int>);
+      static_assert(is_same_v<decltype((n)), int&>);
+      static_assert(is_same_v<decltype(n), short>); // expected-error {{static assertion failed}}
+    }(); // expected-note {{in instantiation of function template specialization}}
+
+    [n = 42](this const auto&) {
+      static_assert(is_same_v<decltype(n), int>);
+      static_assert(is_same_v<decltype((n)), const int&>);
+      static_assert(is_same_v<decltype(n), long>); // expected-error {{static assertion failed}}
+    }(); // expected-note {{in instantiation of function template specialization}}
+
+    [*this](this auto&&) {
+      static_assert(is_same_v<decltype(this), S*>);
+      static_assert(is_same_v<decltype(this), int>); // expected-error {{static assertion failed}}
+    }(); // expected-note {{in instantiation of function template specialization}}
+
+    [*this](this const auto&) {
+      static_assert(is_same_v<decltype(this), const S*>);
+      static_assert(is_same_v<decltype(this), void>); // expected-error {{static assertion failed}}
+    }(); // expected-note {{in instantiation of function template specialization}}
+
+    [&r = x](this const auto&) {
+      static_assert(is_same_v<decltype(r), int&>);
+    }();
+
+    const int y = 0;
+    [=, this](this auto&&) {
+      static_assert(is_same_v<decltype(this), S*>);
+      static_assert(is_same_v<decltype(x), int>);
+      static_assert(is_same_v<decltype((x)), int&>);
+      static_assert(is_same_v<decltype(y), const int>);
+      static_assert(is_same_v<decltype((y)), const int&>);
+      [&, *this](this const auto&) {
+        [=, this](this auto&&) {
+          static_assert(is_same_v<decltype(this), const S*>);
+          static_assert(is_same_v<decltype(x), int>);
+          static_assert(is_same_v<decltype((x)), const int&>);
+          static_assert(is_same_v<decltype(y), const int>);
+          static_assert(is_same_v<decltype((y)), const int&>);
+        }();
+      }();
+    }();
+  }
+};
+
+} // namespace GH163582
+
 namespace GH173943 {
 
 a void Bar(this int) { // expected-note {{candidate function}}
