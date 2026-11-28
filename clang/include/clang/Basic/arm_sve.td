@@ -2564,3 +2564,14 @@ let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
   def SVDOT_LANE_X2_SH : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "s",  MergeNone, "aarch64_sve_sdot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
   def SVDOT_LANE_X2_UH : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Us", MergeNone, "aarch64_sve_udot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
 }
+
+let SVETargetGuard = "(sve2p3|sme2p3),fpv2", SMETargetGuard = "(sve2p3|sme2p3),fpv2" in {
+  defm SVMAXMG : SInstZPZZ<"svmaxmg", "hfd", "aarch64_sve_fmaxmg", "aarch64_sve_fmaxmg_u">;
+  defm SVMINMG : SInstZPZZ<"svminmg", "hfd", "aarch64_sve_fminmg", "aarch64_sve_fminmg_u">;
+
+  defm SVMAXINM : SInstZPZZ<"svmaxinm", "hfd", "aarch64_sve_fmaxinm", "aarch64_sve_fmaxinm_u">;
+  defm SVMININM : SInstZPZZ<"svmininm", "hfd", "aarch64_sve_fmininm", "aarch64_sve_fmininm_u">;
+
+  defm SVMAXMGINM : SInstZPZZ<"svmaxmginm", "hfd", "aarch64_sve_fmaxmginm", "aarch64_sve_fmaxmginm_u">;
+  defm SVMINMGINM : SInstZPZZ<"svminmginm", "hfd", "aarch64_sve_fminmginm", "aarch64_sve_fminmginm_u">;
+}
