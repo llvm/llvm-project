@@ -105,3 +105,20 @@ subroutine ref_ptr_ptee_attach_never()
         x = 1
     !$omp end target
 end
+
+subroutine ref_ptr_ptee_allocatable()
+  integer, allocatable :: x(:)
+
+  allocate(x(10))
+!CHECK: func.func @{{.*}}ref_ptr_ptee_allocatable{{.*}}
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}} fortran_attrs<allocatable>{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!CHECK: %[[BOUNDS:.*]] = omp.map.bounds {{.*}}
+!CHECK: %[[BASE_ADDR:.*]] = fir.box_offset %[[DECLARE]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+!CHECK: %[[MAP_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[BOUNDS]]) name("x") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+!CHECK: %[[MAP_DESCRIPTOR:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) members(%[[MAP_BASE_ADDR]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("x") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[MAP_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[BOUNDS]]) name("x") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_DESCRIPTOR]] -> %{{.*}}, %[[MAP_ATTACH]] -> %{{.*}}, %[[MAP_BASE_ADDR]] -> %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
+  !$omp target map(ref_ptr_ptee, to: x)
+    x(1) = 1
+  !$omp end target
+end
