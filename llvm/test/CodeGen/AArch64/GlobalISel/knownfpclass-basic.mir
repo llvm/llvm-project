@@ -72,3 +72,93 @@ body:             |
     %1:_(f32) = G_FSQRT %0
     $s0 = COPY %1(f32)
 ...
+---
+name:            BitcastKnownNormal
+body:             |
+  bb.0:
+    liveins: $w0
+  ; CHECK-LABEL: name: @BitcastKnownNormal
+  ; CHECK-NEXT: %input:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa_mask:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %one_bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(pnorm) SignBitKnown:0
+    %input:_(s32) = COPY $w0
+    %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
+    %one_bits:_(s32) = G_CONSTANT i32 1065353216 ; 0x3f800000
+    %mantissa:_(s32) = G_AND %input, %mantissa_mask
+    %bits:_(s32) = G_OR %mantissa, %one_bits
+    %result:_(f32) = G_BITCAST %bits
+    $s0 = COPY %result(f32)
+...
+---
+name:            BitcastKnownSubnormal
+body:             |
+  bb.0:
+    liveins: $w0
+  ; CHECK-LABEL: name: @BitcastKnownSubnormal
+  ; CHECK-NEXT: %input:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa_mask:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %one:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(psub) SignBitKnown:0
+    %input:_(s32) = COPY $w0
+    %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
+    %one:_(s32) = G_CONSTANT i32 1
+    %mantissa:_(s32) = G_AND %input, %mantissa_mask
+    %bits:_(s32) = G_OR %mantissa, %one
+    %result:_(f32) = G_BITCAST %bits
+    $s0 = COPY %result(f32)
+...
+---
+name:            BitcastUnknown
+body:             |
+  bb.0:
+    liveins: $w0
+  ; CHECK-LABEL: name: @BitcastUnknown
+  ; CHECK-NEXT: %input:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(all) SignBitKnown:?
+    %input:_(s32) = COPY $w0
+    %result:_(f32) = G_BITCAST %input
+    $s0 = COPY %result(f32)
+...
+---
+name:            BitcastKnownNormalVector
+body:             |
+  bb.0:
+    liveins: $w0
+  ; CHECK-LABEL: name: @BitcastKnownNormalVector
+  ; CHECK-NEXT: %input:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa_mask:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %one_bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %vector:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(pnorm) SignBitKnown:0
+    %input:_(s32) = COPY $w0
+    %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
+    %one_bits:_(s32) = G_CONSTANT i32 1065353216 ; 0x3f800000
+    %mantissa:_(s32) = G_AND %input, %mantissa_mask
+    %bits:_(s32) = G_OR %mantissa, %one_bits
+    %vector:_(<2 x s32>) = G_BUILD_VECTOR %bits, %bits
+    %result:_(<2 x f32>) = G_BITCAST %vector
+    $d0 = COPY %result(<2 x f32>)
+...
+---
+name:            BitcastExplicitSemantics
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @BitcastExplicitSemantics
+  ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %half:_ FPClasses:(psub) SignBitKnown:0
+  ; CHECK-NEXT: %bfloat:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %untyped:_ FPClasses:(all) SignBitKnown:?
+    %bits:_(s16) = G_CONSTANT i16 128 ; 0x0080
+    %half:_(f16) = G_BITCAST %bits
+    %bfloat:_(bf16) = G_BITCAST %bits
+    %untyped:_(s16) = G_BITCAST %half
+    $h0 = COPY %bfloat(bf16)
+    $h1 = COPY %untyped(s16)
+...

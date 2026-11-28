@@ -1410,6 +1410,20 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     TL.computeKnownFPClassForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                          Depth);
     break;
+  case TargetOpcode::G_BITCAST: {
+    Register Src = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+    LLT DstScalarTy = DstTy.getScalarType();
+
+    // Require specific FP semantics and preserve element widths.
+    if (!DstScalarTy.isFloat() ||
+        SrcTy.getScalarSizeInBits() != DstScalarTy.getSizeInBits())
+      break;
+
+    KnownBits Bits = getKnownBits(Src, DemandedElts, Depth + 1);
+    Known = KnownFPClass::bitcast(getFltSemanticForLLT(DstScalarTy), Bits);
+    break;
+  }
   case TargetOpcode::G_FNEG: {
     Register Val = MI.getOperand(1).getReg();
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, Known, Depth + 1);
