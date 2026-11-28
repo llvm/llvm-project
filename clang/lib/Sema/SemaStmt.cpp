@@ -4233,7 +4233,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   // FIXME: Add a flag to the ScopeInfo to indicate whether we're performing
   // deduction.
-  if (getLangOpts().CPlusPlus14) {
+  if (getLangOpts().hasDeducedReturnTypes()) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep

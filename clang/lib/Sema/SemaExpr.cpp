@@ -91,7 +91,8 @@ bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
 
     // If the function has a deduced return type, and we can't deduce it,
     // then we can't use it either.
-    if (getLangOpts().CPlusPlus14 && FD->getReturnType()->isUndeducedType() &&
+    if (getLangOpts().hasDeducedReturnTypes() &&
+        FD->getReturnType()->isUndeducedType() &&
         DeduceReturnType(FD, SourceLocation(), /*Diagnose*/ false))
       return false;
 
@@ -315,8 +316,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
     // If the function has a deduced return type, and we can't deduce it,
     // then we can't use it either.
-    if (getLangOpts().CPlusPlus14 && FD->getReturnType()->isUndeducedType() &&
-        DeduceReturnType(FD, Loc))
+    if (getLangOpts().hasDeducedReturnTypes() &&
+        FD->getReturnType()->isUndeducedType() && DeduceReturnType(FD, Loc))
       return true;
 
     if (getLangOpts().CUDA && !CUDA().CheckCall(Loc, FD))
