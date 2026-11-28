@@ -1,5 +1,6 @@
 ; Before MIPS32, single-precision arithmetic can't use the odd FPRs when the
-; FPRs are 32 bits wide.
+; FPRs are 32 bits wide, unless -nooddspreg is given explicitly, as with GCC's
+; -modd-spreg.
 
 ; RUN: llc -mtriple=mipsel -mcpu=mips1 < %s | FileCheck %s --check-prefix=EVEN
 ; RUN: llc -mtriple=mipsel -mcpu=mips2 < %s | FileCheck %s --check-prefix=EVEN
@@ -7,10 +8,16 @@
 ; RUN:   | FileCheck %s --check-prefix=EVEN
 ; RUN: llc -mtriple=mipsel -mcpu=mips4 -mattr=-fp64 < %s \
 ; RUN:   | FileCheck %s --check-prefix=EVEN
+; RUN: llc -mtriple=mipsel -mcpu=mips1 -mattr=+single-float < %s \
+; RUN:   | FileCheck %s --check-prefix=EVEN
+; RUN: llc -mtriple=mipsel -mcpu=mips1 -mattr=+soft-float < %s \
+; RUN:   | FileCheck %s --check-prefix=SOFT
 
 ; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck %s --check-prefix=ODD
 ; RUN: llc -mtriple=mipsel -mcpu=mips3 < %s | FileCheck %s --check-prefix=ODD
-; RUN: llc -mtriple=mipsel -mcpu=mips1 -mattr=+single-float < %s \
+; RUN: llc -mtriple=mipsel -mcpu=mips1 -mattr=-nooddspreg < %s \
+; RUN:   | FileCheck %s --check-prefix=ODD
+; RUN: llc -mtriple=mipsel -mcpu=mips2 -mattr=-fp64,-nooddspreg < %s \
 ; RUN:   | FileCheck %s --check-prefix=ODD
 ; RUN: llc -mtriple=mipsel -mcpu=r5900 < %s | FileCheck %s --check-prefix=R5900
 
@@ -20,6 +27,7 @@
 ; RUN:   | llvm-readobj -A - | FileCheck %s --check-prefix=FLAGS-ODD
 
 ; EVEN:     .module nooddspreg
+; SOFT:     .module nooddspreg
 ; ODD-NOT:  .module nooddspreg
 ; R5900-NOT: .module nooddspreg
 

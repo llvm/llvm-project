@@ -316,6 +316,7 @@ public:
     bool OddSpregGiven = false;
     bool StrictAlign = false;
     bool FpGiven = false;
+    bool IsR5900 = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -361,6 +362,8 @@ public:
         IsNoABICalls = true;
       else if (Feature == "+use-indirect-jump-hazard")
         UseIndirectJumpHazard = true;
+      else if (Feature == "+r5900")
+        IsR5900 = true;
       else if (Feature == "+nooddspreg") {
         NoOddSpreg = true;
         OddSpregGiven = false;
@@ -379,6 +382,16 @@ public:
     if (HasMSA && !FpGiven) {
       FPMode = FP64;
       Features.push_back("+fp64");
+    }
+
+    // Before MIPS32, single-precision arithmetic can't use the odd FPRs when
+    // the FPRs are 32 bits wide. The R5900 has 32 single-precision FPRs. Like
+    // GCC, -modd-spreg still allows them. Pass nooddspreg on so that the
+    // backend agrees.
+    if (ABI == "o32" && ISALevel < 32 && FPMode != FP64 && !IsR5900 &&
+        !OddSpregGiven && !NoOddSpreg) {
+      NoOddSpreg = true;
+      Features.push_back("+nooddspreg");
     }
 
     resetDataLayout();

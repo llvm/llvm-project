@@ -1935,6 +1935,38 @@
 // MIPS-XXR6:#define __mips_fpr 64
 // MIPS-XXR6:#define __mips_nan2008 1
 
+// Before MIPS32, the odd FPRs can't be used for single-precision arithmetic
+// when the FPRs are 32 bits wide, unless -modd-spreg is given. The R5900 has
+// 32 single-precision FPRs.
+//
+// RUN: %clang_cc1 -target-cpu mips1 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-16 %s
+// RUN: %clang_cc1 -target-cpu mips1 -target-feature +single-float \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-16 %s
+// RUN: %clang_cc1 -target-cpu mips1 -target-feature +soft-float \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-16 %s
+// RUN: %clang_cc1 -target-cpu mips2 -target-feature -fp64 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-16 %s
+// RUN: %clang_cc1 -target-cpu mips4 -target-feature -fp64 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-16 %s
+// SPFPSET-16:#define _MIPS_SPFPSET 16
+//
+// RUN: %clang_cc1 -target-cpu mips3 \
+// RUN:   -E -dM -triple=mips64-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-32 %s
+// RUN: %clang_cc1 -target-cpu mips1 -target-feature -nooddspreg \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-32 %s
+// RUN: %clang_cc1 -target-cpu r5900 -target-feature -fp64 \
+// RUN:   -E -dM -triple=mipsel-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix SPFPSET-32 %s
+// SPFPSET-32:#define _MIPS_SPFPSET 32
+
 // RUN: %clang_cc1 -target-cpu mips32 \
 // RUN:   -E -dM -triple=mips-unknown-netbsd -mrelocation-model pic < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-NETBSD %s
