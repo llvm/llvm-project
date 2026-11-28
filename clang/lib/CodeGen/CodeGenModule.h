@@ -1341,6 +1341,11 @@ public:
   llvm::Constant *getBuiltinLibFunction(const FunctionDecl *FD,
                                         unsigned BuiltinID);
 
+  /// If the C library function \p Name has been declared with an asm label
+  /// (or \#pragma redefine_extname), return its mangled name so that calls
+  /// the compiler emits itself use the same symbol as direct calls.
+  std::optional<StringRef> getAsmLabelForLibFunction(StringRef Name);
+
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
   void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
