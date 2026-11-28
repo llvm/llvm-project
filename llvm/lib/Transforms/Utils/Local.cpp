@@ -2031,7 +2031,8 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
                                        DILocalVariable *DIVar,
                                        DIExpression *DIExpr, Value *NewAddress,
                                        DbgVariableRecord *DVR,
-                                       DIBuilder &Builder, int Offset) {
+                                       DIBuilder &Builder, int Offset,
+                                       uint8_t DIExprFlags) {
   assert(DIVar && "Missing variable");
 
   // This is an alloca-based dbg.value/DbgVariableRecord. The first thing it
@@ -2041,16 +2042,18 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
       DIExpr->getElement(0) != dwarf::DW_OP_deref)
     return;
 
-  // Insert the offset before the first deref.
-  if (Offset)
-    DIExpr = DIExpression::prepend(DIExpr, 0, Offset);
+  // Insert the offset before the first deref, and a deref of the new address
+  // before that if asked.
+  if (Offset || DIExprFlags)
+    DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
 
   DVR->setExpression(DIExpr);
   DVR->replaceVariableLocationOp(0u, NewAddress);
 }
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                    DIBuilder &Builder, int Offset) {
+                                    DIBuilder &Builder, int Offset,
+                                    uint8_t DIExprFlags) {
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgValues(AI, DPUsers);
 
@@ -2058,7 +2061,7 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
   for (DbgVariableRecord *DVR : DPUsers)
     updateOneDbgValueForAlloca(DVR->getDebugLoc(), DVR->getVariable(),
                                DVR->getExpression(), NewAllocaAddress, DVR,
-                               Builder, Offset);
+                               Builder, Offset, DIExprFlags);
 }
 
 void llvm::salvageDebugInfo(Instruction &I) {

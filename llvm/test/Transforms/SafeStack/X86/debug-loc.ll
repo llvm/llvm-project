@@ -14,16 +14,20 @@ define void @f(ptr byval(%struct.S) align 8 %zzz) #0 !dbg !12 {
 
 entry:
 ; CHECK: %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
+; CHECK: %[[BASE:.*]] = alloca ptr
+; CHECK: store ptr %[[USP]], ptr %[[BASE]]
 
   %xxx = alloca %struct.S, align 1
   call void @llvm.dbg.declare(metadata ptr %zzz, metadata !18, metadata !19), !dbg !20
   call void @llvm.dbg.declare(metadata ptr %xxx, metadata !21, metadata !19), !dbg !22
 
-; dbg.declare for %zzz and %xxx are gone; replaced with dbg.declare based off the unsafe stack pointer
+; dbg.declare for %zzz and %xxx are gone; replaced with dbg.declare based off
+; the slot holding the unsafe stack pointer, so each stays a frame-index
+; location rather than a DBG_VALUE of the pointer's register.
 ; CHECK-NOT: #dbg_declare
-; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_constu, 104, DW_OP_minus),
+; CHECK: #dbg_declare(ptr %[[BASE]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_deref, DW_OP_constu, 104, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
-; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 204, DW_OP_minus),
+; CHECK: #dbg_declare(ptr %[[BASE]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_deref, DW_OP_constu, 204, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
 
   call void @Capture(ptr %zzz), !dbg !23

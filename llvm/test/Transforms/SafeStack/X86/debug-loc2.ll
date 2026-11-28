@@ -2,8 +2,8 @@
 ; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Test llvm.dbg.value for the local variables moved onto the unsafe stack.
-; SafeStack rewrites them relative to the unsafe stack pointer (base address of
-; the unsafe stack frame).
+; SafeStack rewrites them relative to the slot holding the unsafe stack pointer
+; (base address of the unsafe stack frame), dereferenced.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -12,6 +12,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @f() #0 !dbg !6 {
 entry:
 ; CHECK:   %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
+; CHECK:   %[[BASE:.*]] = alloca ptr
+; CHECK:   store ptr %[[USP]], ptr %[[BASE]]
   %x1 = alloca i32, align 4
   %x2 = alloca i32, align 4
 
@@ -23,12 +25,12 @@ entry:
 ; CHECK: #dbg_value(ptr poison, !{{.*}}, !{{.*}})
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !24), !dbg !16
 
-; Supported dbg.value: rewritted based on the [[USP]] value.
-; CHECK: #dbg_value(ptr %[[USP]], ![[X1:.*]], !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 0, 4),
+; Supported dbg.value: rewritten based on the [[BASE]] slot.
+; CHECK: #dbg_value(ptr %[[BASE]], ![[X1:.*]], !DIExpression(DW_OP_deref, DW_OP_constu, 4, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 0, 4),
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !25), !dbg !16
 
-; Supported dbg.value: rewritted based on the [[USP]] value.
-; CHECK: #dbg_value(ptr %[[USP]], ![[X1:.*]], !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref),
+; Supported dbg.value: rewritten based on the [[BASE]] slot.
+; CHECK: #dbg_value(ptr %[[BASE]], ![[X1:.*]], !DIExpression(DW_OP_deref, DW_OP_constu, 4, DW_OP_minus, DW_OP_deref),
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !15), !dbg !16
   call void @capture(ptr nonnull %x1), !dbg !17
 
@@ -36,7 +38,7 @@ entry:
 ; CHECK: call void @llvm.random.metadata.use(metadata ptr poison
   call void @llvm.random.metadata.use(metadata ptr %x2)
 
-; CHECK: #dbg_value(ptr %[[USP]], ![[X2:.*]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref),
+; CHECK: #dbg_value(ptr %[[BASE]], ![[X2:.*]], !DIExpression(DW_OP_deref, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref),
   call void @llvm.dbg.value(metadata ptr %x2, metadata !12, metadata !15), !dbg !18
   call void @capture(ptr nonnull %x2), !dbg !19
   ret void, !dbg !20
