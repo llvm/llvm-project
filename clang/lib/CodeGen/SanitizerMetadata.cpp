@@ -96,8 +96,17 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
 
 void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
                                      bool IsDynInit) {
+  if (D.hasAttr<MemTagAttr>()) {
+    llvm::GlobalVariable::SanitizerMetadata Meta;
+    if (GV->hasSanitizerMetadata())
+      Meta = GV->getSanitizerMetadata();
+    Meta.Memtag = true;
+    GV->setSanitizerMetadata(Meta);
+  }
+
   if (!isAsanHwasanMemTagOrTysan(CGM.getLangOpts().Sanitize))
     return;
+
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
   D.printQualifiedName(OS);
