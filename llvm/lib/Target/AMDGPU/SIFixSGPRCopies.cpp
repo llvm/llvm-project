@@ -96,6 +96,9 @@ public:
   bool NeedToBeConvertedToVALU = false;
   // Marks entries lowered to VALU for bulk removal from V2SCopies.
   bool Erased = false;
+  // The value reaches an inline asm operand constrained to an SGPR class, so
+  // the copy must not be moved to VALU.
+  bool HasSGPRInlineAsmUse = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
   unsigned ID;
 
@@ -229,6 +232,23 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
                              const SIRegisterInfo &TRI) {
   return DstRC != &AMDGPU::VReg_1RegClass && TRI.isSGPRClass(SrcRC) &&
          TRI.hasVectorRegisters(DstRC);
+}
+
+// Returns true if inline asm \p MI uses \p Reg in an operand whose constraint
+// is an SGPR register class.
+static bool isSGPRConstrainedInlineAsmUse(const MachineInstr &MI, Register Reg,
+                                          const SIRegisterInfo *TRI,
+                                          const SIInstrInfo *TII) {
+  assert(MI.isInlineAsm() && "Expected an inline asm instruction");
+  for (const MachineOperand &MO : MI.uses()) {
+    if (!MO.isReg() || MO.getReg() != Reg)
+      continue;
+    const TargetRegisterClass *RC =
+        MI.getRegClassConstraint(MO.getOperandNo(), TII, TRI);
+    if (RC && TRI->isSGPRClass(RC))
+      return true;
+  }
+  return false;
 }
 
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
@@ -1025,8 +1045,12 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       Register Reg = Inst->getOperand(0).getReg();
       if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) &&
           !TII->isVALU(*Inst, /*AllowLDSDMA=*/false)) {
-        for (auto &U : MRI->use_instructions(Reg))
+        for (auto &U : MRI->use_instructions(Reg)) {
+          if (U.isInlineAsm() &&
+              isSGPRConstrainedInlineAsmUse(U, Reg, TRI, TII))
+            Info.HasSGPRInlineAsmUse = true;
           Users.push_back(&U);
+        }
       }
     }
     for (auto *U : Users) {
@@ -1041,6 +1065,10 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
+  // Correctness constraint, not a cost: the copy must be lowered to
+  // v_readfirstlane_b32 so the inline asm operand stays an SGPR.
+  if (Info->HasSGPRInlineAsmUse)
+    return false;
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;
@@ -1126,9 +1154,13 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
     MachineBasicBlock *MBB = MI->getParent();
     // We decide to turn V2S copy to v_readfirstlane_b32
     // remove it from the V2SCopies and remove it from all its siblings
-    LLVM_DEBUG(dbgs() << "V2S copy " << *MI
-                      << " is being turned to v_readfirstlane_b32"
-                      << " Score: " << C.second.Score << "\n");
+    LLVM_DEBUG({
+      dbgs() << "V2S copy " << *MI << " is being turned to v_readfirstlane_b32";
+      if (C.second.HasSGPRInlineAsmUse)
+        dbgs() << " (constrained to SGPR by a downstream inline asm user)\n";
+      else
+        dbgs() << " Score: " << C.second.Score << "\n";
+    });
     Register DstReg = MI->getOperand(0).getReg();
     MRI->constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
 

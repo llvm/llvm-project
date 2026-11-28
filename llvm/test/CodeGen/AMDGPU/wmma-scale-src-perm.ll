@@ -41,8 +41,10 @@ define amdgpu_ps void @uniform_pack_not_wmma_scale(i32 inreg %scale0, i32 inreg 
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    v_perm_b32 v0, s0, s1, 4
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_endpgm
   %byte0 = and i32 %scale0, 255
@@ -67,10 +69,10 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    v_perm_b32 v40, s0, s1, 4
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v40
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v40
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop

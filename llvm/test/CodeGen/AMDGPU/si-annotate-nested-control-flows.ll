@@ -97,6 +97,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:  .LBB1_1: ; %BB1
 ; ISA-NEXT:    ; =>This Loop Header: Depth=1
 ; ISA-NEXT:    ; Child Loop BB1_4 Depth 2
+; ISA-NEXT:    v_readfirstlane_b32 s4, v0
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
 ; ISA-NEXT:  .LBB1_2: ; %BB3
@@ -117,6 +118,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:    ; Label of block must be emitted
 ; ISA-NEXT:  ; %bb.5: ; %TransitionBlock
 ; ISA-NEXT:    ; in Loop: Header=BB1_4 Depth=2
+; ISA-NEXT:    v_readfirstlane_b32 s4, v1
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
 ; ISA-NEXT:  ; %bb.6: ; %TransitionBlock.target.BB3
