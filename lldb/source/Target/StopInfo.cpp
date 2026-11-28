@@ -1564,8 +1564,8 @@ public:
   bool ShouldStop(Event *event_ptr) override {
     // During expression evaluation, return true so that the fork event
     // reaches RunThreadPlan as a real stop (not auto-restarted by
-    // DoOnRemoval). RunThreadPlan decides whether to stop or continue
-    // based on the stop-on-fork option.
+    // DoOnRemoval) or target.process.stop-on-fork is true. RunThreadPlan
+    // decides whether to stop or continue based on the stop-on-fork option.
     //
     // We check per-thread (not just process-wide IsRunningExpression)
     // because other threads may fork concurrently after the
@@ -1573,8 +1573,9 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
-          thread_sp->IsRunningCallFunctionPlan())
+      if (process_sp && ((process_sp->GetModIDRef().IsRunningExpression() &&
+                          thread_sp->IsRunningCallFunctionPlan()) ||
+                         process_sp->GetStopOnFork()))
         return true;
     }
     return false;
@@ -1629,8 +1630,9 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
-          thread_sp->IsRunningCallFunctionPlan())
+      if (process_sp && ((process_sp->GetModIDRef().IsRunningExpression() &&
+                          thread_sp->IsRunningCallFunctionPlan()) ||
+                         process_sp->GetStopOnVFork()))
         return true;
     }
     return false;
