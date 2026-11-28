@@ -2,6 +2,13 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   -cuid=123 | FileCheck -check-prefix=DEV %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa \
+// RUN:   -fcuda-is-device -x hip %s -std=c++17 -O3 \
+// RUN:   -mllvm -amdgpu-internalize-symbols -emit-llvm -o - -cuid=123 \
+// RUN:   | FileCheck -check-prefix=DEV %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa \
+// RUN:   -fcuda-is-device -x hip %s -std=c++17 -emit-cir -o - -cuid=123 \
+// RUN:   | FileCheck -check-prefix=CIR %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
 // RUN:   -std=c++17 -O3 -emit-llvm -o - -cuid=123 | FileCheck -check-prefix=HOST %s
 
@@ -10,6 +17,10 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   | FileCheck -check-prefix=DEV-NEG %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa \
+// RUN:   -fcuda-is-device -x hip %s -std=c++17 -O3 \
+// RUN:   -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
+// RUN:   | FileCheck -check-prefix=DEV-NEG %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
 // RUN:   -std=c++17 -O3 -emit-llvm -o - | FileCheck -check-prefix=HOST-NEG %s
 
@@ -82,8 +93,7 @@ inline __constant__ constexpr int constexpr_var2b = 2;
 void use(func_t<int> p);
 __host__ __device__ void use(const int *p);
 
-// Check static device variable in host function.
-// DEV-DAG:  @_ZZ4fun1vE11static_var1 = addrspace(1) externally_initialized global i32 3
+// DEV-NEG-NOT: @_ZZ4fun1vE11static_var1
 void fun1() {
   static __device__ int static_var1 = 3;
   use(&u1);
@@ -101,7 +111,7 @@ void fun1() {
 
 // Check static variable in host device function.
 // DEV-DAG:  @_ZZ4fun2vE11static_var2 = internal addrspace(1) global i32 4
-// DEV-DAG:  @_ZZ4fun2vE11static_var3 = addrspace(1) global i32 4
+// DEV-DAG:  @_ZZ4fun2vE11static_var3 = internal addrspace(1) global i32 4
 __host__ __device__ void fun2() {
   static int static_var2 = 4;
   static __device__ int static_var3 = 4;
@@ -121,7 +131,7 @@ __global__ void kern1(int **x) {
 // as host variables on host side, therefore should not be forced
 // to be emitted on device.
 
-// DEV-DAG: @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var2 = addrspace(1) externally_initialized global i32 5
+// DEV-NEG-NOT: @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var2
 // DEV-NEG-NOT: @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var1
 namespace TestStaticVarInLambda {
 class A {
@@ -181,12 +191,36 @@ public:
 };
 }
 
+// Unannotated lambdas are implicitly __host__ __device__, so referencing a
+// static local from an enclosing kernel or device function looks like a
+// host-side ODR-use. Verify that it is excluded from
+// CUDADeviceVarODRUsedByHost and emitted only once.
+namespace TestDeviceStaticVarIsNotDuplicated {
+struct S { int x; };
+
+template <int N>
+static __global__ void kern1(const S **out) {
+  static constexpr S s{N};
+  *out = [&] { return &s; }();
+}
+
+void fun() {
+  (void)kern1<1>;
+  (void)kern1<2>;
+}
+}
+
+// DEV-DAG: @_ZZN34TestDeviceStaticVarIsNotDuplicatedL5kern1ILi1EEEvPPKNS_1SEE1s = internal addrspace(4) constant %"struct.TestDeviceStaticVarIsNotDuplicated::S" { i32 1 }
+// DEV-DAG: @_ZZN34TestDeviceStaticVarIsNotDuplicatedL5kern1ILi2EEEvPPKNS_1SEE1s = internal addrspace(4) constant %"struct.TestDeviceStaticVarIsNotDuplicated::S" { i32 2 }
+// DEV-NEG-NOT: @_ZZN34TestDeviceStaticVarIsNotDuplicatedL5kern1ILi{{[12]}}EEEvPPKNS_1SEE1s.
+
+// CIR-DAG: cir.global "private" constant internal dso_local target_address_space(4) @_ZZN34TestDeviceStaticVarIsNotDuplicatedL5kern1ILi1EEEvPPKNS_1SEE1s = #cir.const_record<{#cir.int<1> : !s32i}>
+// CIR-DAG: cir.global "private" constant internal dso_local target_address_space(4) @_ZZN34TestDeviceStaticVarIsNotDuplicatedL5kern1ILi2EEEvPPKNS_1SEE1s = #cir.const_record<{#cir.int<2> : !s32i}>
+
 // Check the exact list of variables to ensure @_ZL2u4 is not among them.
 // DEV: @llvm.compiler.used = {{[^@]*}} @_Z10p_add_funcIiE
 // DEV-SAME: {{^[^@]*}} @_ZL15constexpr_var2a
 // DEV-SAME: {{^[^@]*}} @_ZL2u3
-// DEV-SAME: {{^[^@]*}} @_ZZ4fun1vE11static_var1
-// DEV-SAME: {{^[^@]*}} @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var2
 // DEV-SAME: {{^[^@]*}} @__hip_cuid_{{[0-9a-f]+}}
 // DEV-SAME: {{^[^@]*}} @constexpr_var2b
 // DEV-SAME: {{^[^@]*}} @inline_var
