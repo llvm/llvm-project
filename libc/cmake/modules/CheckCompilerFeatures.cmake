@@ -65,7 +65,7 @@ set(AVAILABLE_COMPILER_FEATURES "")
 # Try compile a C file to check if flag is supported.
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${LIBC_COMPILE_OPTIONS_NATIVE})
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
