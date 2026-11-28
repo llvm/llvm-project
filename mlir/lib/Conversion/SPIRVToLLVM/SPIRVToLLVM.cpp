@@ -704,17 +704,34 @@ public:
     Value count = processCountOrOffset(loc, op.getCount(), srcType, dstType,
                                        *getTypeConverter(), rewriter);
 
-    // Create a mask with bits set at [0, Count - 1].
+    // Low mask [0, Count - 1]; `Size - Count` is in range for Count >= 1.
+    auto elementType = cast<IntegerType>(getElementTypeOrSelf(srcType));
     Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
-    Value maskShiftedByCount =
-        LLVM::ShlOp::create(rewriter, loc, dstType, minusOne, count);
-    Value mask = LLVM::XOrOp::create(rewriter, loc, dstType, maskShiftedByCount,
-                                     minusOne);
+    Value size = createIntegerConstant(
+        loc, srcType, dstType, rewriter,
+        rewriter.getIntegerAttr(elementType, getBitWidth(srcType)));
+    Value sizeMinusCount =
+        LLVM::SubOp::create(rewriter, loc, dstType, size, count);
+    Value mask =
+        LLVM::LShrOp::create(rewriter, loc, dstType, minusOne, sizeMinusCount);
 
     // Shift `Base` by `Offset` and apply the mask on it.
     Value shiftedBase =
         LLVM::LShrOp::create(rewriter, loc, dstType, op.getBase(), offset);
-    rewriter.replaceOpWithNewOp<LLVM::AndOp>(op, dstType, shiftedBase, mask);
+    Value result =
+        LLVM::AndOp::create(rewriter, loc, dstType, shiftedBase, mask);
+
+    // Count 0 shifts by Size (poison in LLVM); the spec requires 0 then.
+    Value zero = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                       rewriter.getIntegerAttr(elementType, 0));
+    Type i1Type = rewriter.getI1Type();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+    Value countIsZero = LLVM::ICmpOp::create(
+        rewriter, loc, cmpType, LLVM::ICmpPredicate::eq, count, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, countIsZero, zero,
+                                                result);
     return success();
   }
 };
