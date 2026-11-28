@@ -113,13 +113,14 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
 
   // Allowed AddRec as induction variable.
   Cond.AddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
-  if (!Cond.AddRecSCEV)
+  if (!Cond.AddRecSCEV || Cond.AddRecSCEV->getLoop() != &L)
     return false;
 
-  // If the induction variable is a PHI node, the value from the backedge is
-  // used instead.
+  // If the induction variable is a header PHI node, the value from the
+  // backedge is used instead.
   Cond.NonPHIAddRecValue = Cond.AddRecValue;
-  if (auto *PN = dyn_cast<PHINode>(Cond.AddRecValue))
+  if (auto *PN = dyn_cast<PHINode>(Cond.AddRecValue);
+      PN && PN->getParent() == L.getHeader())
     Cond.NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
 
   // The BoundSCEV should be evaluated at loop entry.
@@ -147,6 +148,15 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
     return false;
 
   return true;
+}
+
+/// Check whether the exit condition \p ExitingCond tests the header PHI \p PN,
+/// or the value \p PN takes from the backedge.
+static bool isExitingCondPhi(const Loop &L, ScalarEvolution &SE, PHINode &PN,
+                             const ConditionInfo &ExitingCond) {
+  return SE.isSCEVable(PN.getType()) && isa<SCEVAddRecExpr>(SE.getSCEV(&PN)) &&
+         PN.getIncomingValueForBlock(L.getLoopLatch()) ==
+             ExitingCond.NonPHIAddRecValue;
 }
 
 static bool isProcessableCondBI(const ScalarEvolution &SE,
@@ -206,6 +216,12 @@ static bool canSplitLoopBound(const Loop &L, const DominatorTree &DT,
   // Check the condition is processable.
   ICmpInst *ICmp = cast<ICmpInst>(ExitingBI->getCondition());
   if (!hasProcessableCondition(L, SE, ICmp, Cond, /*IsExitCond*/ true))
+    return false;
+
+  // The post-loop is skipped based on the exit value of the PHI that the exit
+  // condition tests, so there has to be one.
+  if (none_of(L.getHeader()->phis(),
+              [&](PHINode &PN) { return isExitingCondPhi(L, SE, PN, Cond); }))
     return false;
 
   Cond.BI = ExitingBI;
@@ -381,19 +397,13 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
     PHINode *PostLoopPN = cast<PHINode>(VMap[&PN]);
     PostLoopPN->setIncomingValueForBlock(PostLoopPreHeader, LCSSAPhi);
 
-    // Find PHI with exiting condition from pre-loop. The PHI should be
-    // SCEVAddRecExpr and have same incoming value from backedge with
-    // ExitingCond.
+    // Find PHI with exiting condition from pre-loop.
     //
     // TODO: Separate SCEV queries from PHI node updates.
-    if (!SE.isSCEVable(PN.getType()))
-      continue;
-
-    const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
-    if (PhiSCEV && ExitingCond.NonPHIAddRecValue ==
-                       PN.getIncomingValueForBlock(L.getLoopLatch()))
+    if (isExitingCondPhi(L, SE, PN, ExitingCond))
       ExitingCondLCSSAPhi = LCSSAPhi;
   }
+  assert(ExitingCondLCSSAPhi && "Checked by canSplitLoopBound()");
 
   // Add conditional branch to check we can skip post-loop in its preheader,
   // and update DT.
