@@ -898,6 +898,9 @@ def CIR_LoadOp : CIR_Op<"load", [
     A unit attribute `invariant` can be used to indicate that the loaded memory
     never changes, mapping to LLVM IR's `!invariant.load` metadata.
 
+    The optional `tbaa` attribute holds the type-based alias analysis access
+    tag of the load.
+
     Example:
 
     ```
@@ -927,7 +930,8 @@ def CIR_LoadOp : CIR_Op<"load", [
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
                        OptionalAttr<CIR_MemOrderAttr>:$mem_order,
-                       UnitAttr:$invariant);
+                       UnitAttr:$invariant,
+                       OptionalAttr<CIR_TBAATagAttr>:$tbaa);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -938,7 +942,8 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` enum($sync_scope)^ `)`)?
     (`atomic` `(` enum($mem_order)^ `)`)?
-    $addr `:` qualified(type($addr)) `,` type($result) attr-dict
+    $addr `:` qualified(type($addr)) `,` type($result)
+    (`tbaa` `(` $tbaa^ `)`)? attr-dict
   }];
 
   let builders = [
@@ -946,13 +951,13 @@ def CIR_LoadOp : CIR_Op<"load", [
       build($_builder, $_state, addr, /*isDeref=*/false,
             /*is_volatile=*/false, /*is_nontemporal=*/false,
             /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
-            cir::MemOrderAttr{}, /*invariant=*/false);
+            cir::MemOrderAttr{}, /*invariant=*/false, /*tbaa=*/{});
     }]>,
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
       build($_builder, $_state, result, addr, /*isDeref=*/false,
             /*is_volatile=*/false, /*is_nontemporal=*/false,
             /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
-            cir::MemOrderAttr{}, /*invariant=*/false);
+            cir::MemOrderAttr{}, /*invariant=*/false, /*tbaa=*/{});
     }]>
   ];
 
@@ -1022,6 +1027,9 @@ def CIR_StoreOp : CIR_Op<"store", [
     a volatile store. Store's can be marked atomic by using
     `atomic(<mem_order>)`.
 
+    The optional `tbaa` attribute holds the type-based alias analysis access
+    tag of the store.
+
     `alignment` can be used to specify an alignment that's different from the
     default, which is computed from `result`'s type ABI data layout.
 
@@ -1046,7 +1054,8 @@ def CIR_StoreOp : CIR_Op<"store", [
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
-                       OptionalAttr<CIR_MemOrderAttr>:$mem_order);
+                       OptionalAttr<CIR_MemOrderAttr>:$mem_order,
+                       OptionalAttr<CIR_TBAATagAttr>:$tbaa);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
@@ -1055,6 +1064,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     (`syncscope` `(` enum($sync_scope)^ `)`)?
     (`atomic` `(` enum($mem_order)^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
 
   let builders = [
@@ -1064,7 +1074,7 @@ def CIR_StoreOp : CIR_Op<"store", [
             /*is_nontemporal=*/mlir::UnitAttr(),
             /*alignment=*/mlir::IntegerAttr(),
             /*sync_scope=*/cir::SyncScopeKindAttr(),
-            /*mem_order=*/cir::MemOrderAttr());
+            /*mem_order=*/cir::MemOrderAttr(), /*tbaa=*/cir::TBAATagAttr());
     }]>
   ];
 

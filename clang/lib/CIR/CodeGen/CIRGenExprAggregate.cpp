@@ -1430,7 +1430,7 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
   // cir.copy will operate on any CIR pointer that points to a sized type.
   builder.createCopy(destPtr, srcPtr, isVolatile, skipTailPadding);
 
-  assert(!cir::MissingFeatures::opTBAA());
+  assert(!cir::MissingFeatures::tbaaStruct());
 }
 
 // TODO(cir): This could be shared with classic codegen.

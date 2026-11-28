@@ -480,7 +480,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
     Address addr = sourceLVal.getAddress().withElementType(
         builder, cgf.convertTypeForMem(destTy));
     LValue destLV = cgf.makeAddrLValue(addr, destTy);
-    assert(!cir::MissingFeatures::opTBAA());
+    destLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return emitLoadOfLValue(destLV, op->getExprLoc());
   }
 

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
 // RUN:     -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,OLD-PATH
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s -fclangir -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,OLD-PATH %}
 // RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
 // RUN:     -emit-llvm -new-struct-path-tbaa -o - | FileCheck %s -check-prefixes=CHECK,NEW-PATH
 //

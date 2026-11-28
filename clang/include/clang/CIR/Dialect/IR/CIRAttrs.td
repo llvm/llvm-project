@@ -2910,6 +2910,7 @@ def CIR_AnnotationArrayAttr
 
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
+include "clang/CIR/Dialect/IR/CIRTBAAAttrs.td"
 
 //===----------------------------------------------------------------------===//
 // CXXModuleInitAttr

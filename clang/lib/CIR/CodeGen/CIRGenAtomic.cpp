@@ -135,8 +135,8 @@ public:
                                               /*index=*/0,
                                               cgf.cgm.getDataLayout());
 
-    assert(!cir::MissingFeatures::opTBAA());
-    return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
+    return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo(),
+                            lvalue.getTBAAInfo());
   }
 
   /// Emits atomic load.

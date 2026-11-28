@@ -1,0 +1,42 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+#char = #cir.tbaa_omnipotent_char
+#int = #cir.tbaa_scalar<id = "int", size = 4>
+#long = #cir.tbaa_scalar<id = "long", size = 8>
+#any_ptr = #cir.tbaa_scalar<id = "any pointer", size = 8>
+#p1_int = #cir.tbaa_scalar<id = "p1 int", size = 8, parent = #any_ptr>
+#S = #cir.tbaa_struct<"_ZTS1S", [<#int, 0>, <#long, 8>]>
+#int_tag = #cir.tbaa_tag<base = #int, access = #int, offset = 0>
+
+// CHECK-DAG: #[[ROOT:.*]] = #llvm.tbaa_root<id = "Simple C++ TBAA">
+// CHECK-DAG: #[[CHAR:.*]] = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#[[ROOT]], 0>}>
+// CHECK-DAG: #[[INT:.*]] = #llvm.tbaa_type_desc<id = "int", members = {<#[[CHAR]], 0>}>
+// CHECK-DAG: #[[LONG:.*]] = #llvm.tbaa_type_desc<id = "long", members = {<#[[CHAR]], 0>}>
+// CHECK-DAG: #[[ANY_PTR:.*]] = #llvm.tbaa_type_desc<id = "any pointer", members = {<#[[CHAR]], 0>}>
+// CHECK-DAG: #[[P1_INT:.*]] = #llvm.tbaa_type_desc<id = "p1 int", members = {<#[[ANY_PTR]], 0>}>
+// CHECK-DAG: #[[S:.*]] = #llvm.tbaa_type_desc<id = "_ZTS1S", members = {<#[[INT]], 0>, <#[[LONG]], 8>}>
+// CHECK-DAG: #[[INT_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[INT]], access_type = #[[INT]], offset = 0>
+// CHECK-DAG: #[[CHAR_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[CHAR]], access_type = #[[CHAR]], offset = 0>
+// CHECK-DAG: #[[P1_INT_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[P1_INT]], access_type = #[[P1_INT]], offset = 0>
+// CHECK-DAG: #[[S_B_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[S]], access_type = #[[LONG]], offset = 8>
+
+module attributes {cir.lang = #cir.lang<cxx>} {
+  // CHECK-LABEL: llvm.func @tags
+  cir.func @tags(%p: !cir.ptr<!cir.ptr<!s32i>>, %s: !cir.ptr<!s64i>, %c: !cir.ptr<!s16i>) {
+    // CHECK: llvm.load %{{.*}} {{.*}}tbaa = [#[[P1_INT_TAG]]]
+    %0 = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i> tbaa(#cir.tbaa_tag<base = #p1_int, access = #p1_int, offset = 0>)
+    // CHECK: llvm.store %{{.*}}, %{{.*}} {{.*}}tbaa = [#[[INT_TAG]]]
+    %1 = cir.const #cir.int<1> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i> tbaa(#int_tag)
+    // CHECK: llvm.store %{{.*}}, %{{.*}} {{.*}}tbaa = [#[[S_B_TAG]]]
+    %2 = cir.const #cir.int<1> : !s64i
+    cir.store %2, %s : !s64i, !cir.ptr<!s64i> tbaa(#cir.tbaa_tag<base = #S, access = #long, offset = 8>)
+    // CHECK: llvm.load %{{.*}} {{.*}}tbaa = [#[[CHAR_TAG]]]
+    %3 = cir.load %c : !cir.ptr<!s16i>, !s16i tbaa(#cir.tbaa_tag<base = #char, access = #char, offset = 0>)
+    cir.return
+  }
+}

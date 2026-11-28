@@ -253,7 +253,10 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
                               diag::err_store_value_to_reg);
         return;
       }
-      dest = cgf.makeAddrLValue(addr, ty);
+      // The store writes all of the destination's members at once, so it must
+      // be allowed to alias an access to any of them.
+      dest = cgf.makeAddrLValue(addr, ty, dest.getBaseInfo(),
+                                TBAAAccessInfo::getMayAliasInfo());
     }
 
     cgf.emitStoreThroughLValue(RValue::get(tmp), dest);

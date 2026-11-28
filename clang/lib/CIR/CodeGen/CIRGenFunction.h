@@ -1111,9 +1111,13 @@ public:
   Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
                                        CharUnits alignment,
                                        bool forPointeeType = false,
-                                       LValueBaseInfo *baseInfo = nullptr) {
-    if (alignment.isZero())
+                                       LValueBaseInfo *baseInfo = nullptr,
+                                       TBAAAccessInfo *tbaaInfo = nullptr) {
+    if (alignment.isZero()) {
+      if (tbaaInfo)
+        *tbaaInfo = cgm.getTBAAAccessInfo(t);
       alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
+    }
     return Address(ptr, convertTypeForMem(t), alignment);
   }
 
@@ -1140,7 +1144,12 @@ public:
   }
 
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
-    return LValue::makeAddr(addr, ty, baseInfo);
+    return makeAddrLValue(addr, ty, baseInfo, cgm.getTBAAAccessInfo(ty));
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo,
+                        TBAAAccessInfo tbaaInfo) {
+    return LValue::makeAddr(addr, ty, baseInfo, tbaaInfo);
   }
 
   void initializeVTablePointers(mlir::Location loc,
@@ -1936,7 +1945,8 @@ public:
   LValue emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *e,
-                                  LValueBaseInfo *baseInfo = nullptr);
+                                  LValueBaseInfo *baseInfo = nullptr,
+                                  TBAAAccessInfo *tbaaInfo = nullptr);
 
   std::pair<mlir::Value, mlir::Type>
   emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
@@ -2487,7 +2497,8 @@ public:
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
   Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
-                              LValueBaseInfo *pointeeBaseInfo);
+                              LValueBaseInfo *pointeeBaseInfo,
+                              TBAAAccessInfo *pointeeTBAAInfo = nullptr);
   LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
                                    QualType refTy, AlignmentSource source);
 
@@ -2498,6 +2509,7 @@ public:
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
                                SourceLocation loc, LValueBaseInfo baseInfo,
+                               TBAAAccessInfo tbaaInfo,
                                bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
@@ -2568,7 +2580,8 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
-                                   LValueBaseInfo *baseInfo = nullptr);
+                                   LValueBaseInfo *baseInfo = nullptr,
+                                   TBAAAccessInfo *tbaaInfo = nullptr);
 
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);
@@ -2602,7 +2615,8 @@ public:
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, LValueBaseInfo baseInfo,
-                         bool isInit = false, bool isNontemporal = false);
+                         TBAAAccessInfo tbaaInfo, bool isInit = false,
+                         bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);

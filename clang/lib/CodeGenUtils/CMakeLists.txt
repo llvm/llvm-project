@@ -17,6 +17,7 @@ add_clang_library(clangCodeGenUtils
   ModuleUtils.cpp
   RecordLayoutUtils.cpp
   StmtUtils.cpp
+  TBAAUtils.cpp
   TargetUtils.cpp
 
   LINK_LIBS

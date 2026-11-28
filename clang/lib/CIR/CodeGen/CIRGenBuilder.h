@@ -555,7 +555,7 @@ public:
                                /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{},
-                               /*invariant=*/false);
+                               /*invariant=*/false, /*tbaa=*/{});
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -569,7 +569,7 @@ public:
                                alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{},
-                               /*invariant=*/false);
+                               /*invariant=*/false, /*tbaa=*/{});
   }
 
   cir::LoadOp

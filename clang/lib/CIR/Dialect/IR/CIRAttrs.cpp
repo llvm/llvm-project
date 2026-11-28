@@ -1234,3 +1234,69 @@ RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
   assert(attr && "record layout entry missing for named record");
   return attr;
 }
+
+//===----------------------------------------------------------------------===//
+// TBAA attributes
+//===----------------------------------------------------------------------===//
+
+bool cir::isTBAATypeDescriptor(mlir::Attribute attr) {
+  return mlir::isa<TBAAOmnipotentCharAttr, TBAAScalarAttr, TBAAStructAttr>(
+      attr);
+}
+
+LogicalResult
+TBAAMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       mlir::Attribute typeDesc, uint64_t offset) {
+  if (!isTBAATypeDescriptor(typeDesc))
+    return emitError() << "expected a TBAA type descriptor";
+  return success();
+}
+
+void TBAAStructAttr::print(AsmPrinter &printer) const {
+  printer << "<\"";
+  llvm::printEscapedString(getId(), printer.getStream());
+  printer << "\", [";
+  llvm::interleaveComma(getMembers(), printer, [&](TBAAMemberAttr member) {
+    printer.printStrippedAttrOrType(member);
+  });
+  printer << "]>";
+}
+
+Attribute TBAAStructAttr::parse(AsmParser &parser, Type odsType) {
+  std::string id;
+  if (parser.parseLess() || parser.parseString(&id) || parser.parseComma() ||
+      parser.parseLSquare())
+    return {};
+
+  llvm::SmallVector<TBAAMemberAttr> members;
+  if (failed(parser.parseOptionalRSquare())) {
+    if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+          auto member = mlir::dyn_cast_if_present<TBAAMemberAttr>(
+              TBAAMemberAttr::parse(parser, Type()));
+          if (!member)
+            return failure();
+          members.push_back(member);
+          return success();
+        }) ||
+        parser.parseRSquare())
+      return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+  return TBAAStructAttr::get(parser.getContext(), id, members);
+}
+
+LogicalResult TBAATagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  mlir::Attribute base, mlir::Attribute access,
+                                  uint64_t offset) {
+  if (!isTBAATypeDescriptor(base))
+    return emitError() << "expected the base to be a TBAA type descriptor";
+  if (!mlir::isa<TBAAOmnipotentCharAttr, TBAAScalarAttr>(access))
+    return emitError() << "expected the access type to be a scalar TBAA type "
+                          "descriptor";
+  if (!mlir::isa<TBAAStructAttr>(base) && (base != access || offset != 0))
+    return emitError() << "expected a non-struct base to match the access "
+                          "type at offset zero";
+  return success();
+}

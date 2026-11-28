@@ -1291,7 +1291,8 @@ public:
                                /*isVolatile=*/false,
                                /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
-                               cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+                               cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                               /*tbaa=*/{});
         }
 
         // Reload the value from the temporary alloca in the destination block.
@@ -1301,7 +1302,7 @@ public:
                                 /*isVolatile=*/false, /*isNontemporal=*/false,
                                 /*alignment=*/mlir::IntegerAttr(),
                                 cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
-                                /*invariant=*/false);
+                                /*invariant=*/false, /*tbaa=*/{});
         returnValues.push_back(loaded);
       }
     }
@@ -1650,7 +1651,7 @@ public:
                                 /*isVolatile=*/false, /*isNontemporal=*/false,
                                 /*alignment=*/mlir::IntegerAttr(),
                                 cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
-                                /*invariant=*/false);
+                                /*invariant=*/false, /*tbaa=*/{});
 
         // Create destination blocks for each exit and collect switch case info.
         llvm::SmallVector<mlir::APInt, 8> caseValues;
@@ -1681,7 +1682,8 @@ public:
                                /*isVolatile=*/false,
                                /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
-                               cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+                               cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                               /*tbaa=*/{});
           rewriter.replaceOpWithNewOp<cir::BrOp>(exit.exitOp, cleanupEntry);
 
           // If the exit terminator creation failed, we're going to end up with

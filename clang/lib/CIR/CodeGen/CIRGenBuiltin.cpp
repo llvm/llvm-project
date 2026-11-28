@@ -3618,9 +3618,10 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
         assert(declIter != localDeclMap.end());
         Address addr = declIter->second;
 
-        return emitLoadOfScalar(addr, /*volatile=*/false,
-                                getContext().getSizeType(), e->getBeginLoc(),
-                                LValueBaseInfo(AlignmentSource::Decl));
+        return emitLoadOfScalar(
+            addr, /*volatile=*/false, getContext().getSizeType(),
+            e->getBeginLoc(), LValueBaseInfo(AlignmentSource::Decl),
+            cgm.getTBAAAccessInfo(getContext().getSizeType()));
       }
     }
   }

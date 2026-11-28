@@ -54,6 +54,7 @@ add_clang_library(clangCIR
   CIRGenStmtOpenACCLoop.cpp
   CIRGenStmtOpenMP.cpp
   CIRGenSYCL.cpp
+  CIRGenTBAA.cpp
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp

@@ -46,4 +46,9 @@ class VectorType;
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.h.inc"
 
+namespace cir {
+/// Returns true if \p attr is a TBAA type descriptor attribute.
+bool isTBAATypeDescriptor(mlir::Attribute attr);
+} // namespace cir
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_H

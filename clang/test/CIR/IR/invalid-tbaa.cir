@@ -1,0 +1,34 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+#int = #cir.tbaa_scalar<id = "int", size = 4>
+#S = #cir.tbaa_struct<"_ZTS1S", [<#int, 0>]>
+
+module {
+  cir.func @tbaa_struct_access(%p: !cir.ptr<!s32i>) {
+    // expected-error@+1 {{expected the access type to be a scalar TBAA type descriptor}}
+    %0 = cir.load %p : !cir.ptr<!s32i>, !s32i tbaa(#cir.tbaa_tag<base = #S, access = #S, offset = 0>)
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+#int = #cir.tbaa_scalar<id = "int", size = 4>
+#long = #cir.tbaa_scalar<id = "long", size = 8>
+
+module {
+  cir.func @tbaa_scalar_base(%p: !cir.ptr<!s32i>) {
+    // expected-error@+1 {{expected a non-struct base to match the access type at offset zero}}
+    %0 = cir.load %p : !cir.ptr<!s32i>, !s32i tbaa(#cir.tbaa_tag<base = #long, access = #int, offset = 0>)
+    cir.return
+  }
+}
+
+// -----
+
+// The module attribute only gets the malformed descriptor parsed.
+// expected-error@+1 {{expected a TBAA type descriptor}}
+#bad = #cir.tbaa_struct<"_ZTS1S", [<#cir.int<0> : !cir.int<s, 32>, 0>]>
+module attributes {cir.bad = #bad} {}

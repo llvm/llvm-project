@@ -382,7 +382,7 @@ public:
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
                                isNontemporal, alignmentAttr,
                                cir::SyncScopeKindAttr{}, cir::MemOrderAttr{},
-                               /*invariant=*/false);
+                               /*invariant=*/false, /*tbaa=*/{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -560,12 +560,13 @@ public:
                            bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
-                           cir::MemOrderAttr order = {}) {
+                           cir::MemOrderAttr order = {},
+                           cir::TBAATagAttr tbaa = {}) {
     if (mlir::cast<cir::PointerType>(dst.getType()).getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
     return cir::StoreOp::create(*this, loc, val, dst, isVolatile, isNontemporal,
-                                align, scope, order);
+                                align, scope, order, tbaa);
   }
 
   /// Emit a load from an boolean flag variable.
@@ -606,7 +607,7 @@ public:
                                /*isVolatile=*/false, /*nontemporal=*/false,
                                alignmentAttr,
                                /*sync_scope=*/{}, /*mem_order=*/{},
-                               /*invariant=*/false);
+                               /*invariant=*/false, /*tbaa=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,

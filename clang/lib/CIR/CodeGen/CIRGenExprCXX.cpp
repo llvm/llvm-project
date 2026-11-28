@@ -193,9 +193,9 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   LValue thisPtr;
   if (isArrow) {
     LValueBaseInfo baseInfo;
-    assert(!cir::MissingFeatures::opTBAA());
-    Address thisValue = emitPointerWithAlignment(base, &baseInfo);
-    thisPtr = makeAddrLValue(thisValue, base->getType(), baseInfo);
+    TBAAAccessInfo tbaaInfo;
+    Address thisValue = emitPointerWithAlignment(base, &baseInfo, &tbaaInfo);
+    thisPtr = makeAddrLValue(thisValue, base->getType(), baseInfo, tbaaInfo);
   } else {
     thisPtr = emitLValue(base);
   }

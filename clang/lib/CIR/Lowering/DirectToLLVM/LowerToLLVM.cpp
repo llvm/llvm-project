@@ -2781,6 +2781,63 @@ mlir::LogicalResult CIRToLLVMAMDGPUFeaturePredicateOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Lowers a CIR TBAA type descriptor to the LLVM dialect.
+static mlir::LLVM::TBAATypeDescriptorAttr
+lowerTBAATypeDescriptor(mlir::Attribute typeDesc,
+                        mlir::LLVM::TBAARootAttr root) {
+  mlir::MLIRContext *ctx = typeDesc.getContext();
+  auto createScalarTypeNode = [&](llvm::StringRef name,
+                                  mlir::LLVM::TBAANodeAttr parent) {
+    return mlir::LLVM::TBAATypeDescriptorAttr::get(
+        ctx, name, mlir::LLVM::TBAAMemberAttr::get(parent, /*offset=*/0));
+  };
+  mlir::LLVM::TBAATypeDescriptorAttr omnipotentChar =
+      createScalarTypeNode("omnipotent char", root);
+
+  if (mlir::isa<cir::TBAAOmnipotentCharAttr>(typeDesc))
+    return omnipotentChar;
+
+  if (auto scalar = mlir::dyn_cast<cir::TBAAScalarAttr>(typeDesc)) {
+    mlir::LLVM::TBAATypeDescriptorAttr parent =
+        scalar.getParent() ? lowerTBAATypeDescriptor(scalar.getParent(), root)
+                           : omnipotentChar;
+    return createScalarTypeNode(scalar.getId(), parent);
+  }
+
+  auto record = mlir::cast<cir::TBAAStructAttr>(typeDesc);
+  llvm::SmallVector<mlir::LLVM::TBAAMemberAttr> members;
+  for (cir::TBAAMemberAttr member : record.getMembers())
+    members.push_back(mlir::LLVM::TBAAMemberAttr::get(
+        lowerTBAATypeDescriptor(member.getTypeDesc(), root),
+        member.getOffset()));
+  return mlir::LLVM::TBAATypeDescriptorAttr::get(ctx, record.getId(), members);
+}
+
+/// Lowers the TBAA access tag of a load or store. Returns null if the
+/// operation has no tag.
+static mlir::ArrayAttr lowerTBAATag(mlir::Operation *op, cir::TBAATagAttr tag) {
+  if (!tag)
+    return {};
+
+  mlir::MLIRContext *ctx = op->getContext();
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  auto lang = mod->getAttrOfType<cir::SourceLanguageAttr>(
+      cir::CIRDialect::getSourceLanguageAttrName());
+  bool isCXX = lang && (lang.isCXX() || lang.isOpenCLCXX());
+  auto root = mlir::LLVM::TBAARootAttr::get(
+      ctx, mlir::StringAttr::get(ctx, isCXX ? "Simple C++ TBAA"
+                                            : "Simple C/C++ TBAA"));
+
+  mlir::LLVM::TBAATypeDescriptorAttr access =
+      lowerTBAATypeDescriptor(tag.getAccess(), root);
+  mlir::LLVM::TBAATypeDescriptorAttr base =
+      tag.getBase() == tag.getAccess()
+          ? access
+          : lowerTBAATypeDescriptor(tag.getBase(), root);
+  return mlir::ArrayAttr::get(
+      ctx, mlir::LLVM::TBAATagAttr::get(base, access, tag.getOffset()));
+}
+
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2805,12 +2862,13 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       /*isNoundef=*/false, ordering, llvmSyncScope.value_or(std::string()));
   if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
     newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
+  if (mlir::ArrayAttr tbaa = lowerTBAATag(op, op.getTbaaAttr()))
+    newLoad.setTBAATags(tbaa);
 
   // Convert adapted result to its original type if needed.
   mlir::Value result = emitFromMemory(rewriter, *getTypeConverter(), dataLayout,
                                       op, newLoad.getResult());
   rewriter.replaceOp(op, result);
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
 }
 
@@ -2856,7 +2914,6 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
 
   std::optional<llvm::StringRef> llvmSyncScope = getLLVMSyncScope(
       op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
@@ -2868,8 +2925,9 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
       memorder, llvmSyncScope.value_or(std::string()));
   if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
     storeOp->setAttr("cir.riscv_nontemporal_domain", domain);
+  if (mlir::ArrayAttr tbaa = lowerTBAATag(op, op.getTbaaAttr()))
+    storeOp.setTBAATags(tbaa);
   rewriter.replaceOp(op, storeOp);
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
 }
 

@@ -2703,7 +2703,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::Type destElemTy = cgf.convertTypeForMem(destTy);
     Address destAddr = sourceAddr.withElementType(cgf.getBuilder(), destElemTy);
     LValue destLVal = cgf.makeAddrLValue(destAddr, destTy);
-    assert(!cir::MissingFeatures::opTBAA());
+    if (kind == CK_LValueToRValueBitCast)
+      destLVal.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return emitLoadOfLValue(destLVal, ce->getExprLoc());
   }
 
