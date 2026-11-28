@@ -337,6 +337,7 @@ public:
 class LLVM_ABI TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {
   std::string DefaultRootSDName;
   std::string DefaultADAPRName;
+  std::string DefaultPPA2PRName;
 
 public:
   TargetLoweringObjectFileGOFF();

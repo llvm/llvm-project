@@ -607,10 +607,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       RootSDSection);
   PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(
-      SectionKind::getData(), ".&ppa2",
+      SectionKind::getData(), "@@PPA2",
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
                    GOFF::ESD_LT_OS, GOFF::ESD_BSC_Section, 0},
       PPA2ListEDSection);
+  static_cast<MCSectionGOFF *>(PPA2ListSection)->setExternalName(".&ppa2");
 
   IDRLSection = Ctx->getGOFFSection(
       SectionKind::getData(), "B_IDRL",

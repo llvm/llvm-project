@@ -2900,18 +2900,21 @@ void TargetLoweringObjectFileGOFF::initialize(MCContext &Ctx,
                                               const Module &M) {
   TargetLoweringObjectFile::initialize(Ctx, TM, M);
 
-  // Construct the default names for the root SD and the ADA PR symbol.
+  // Construct the default names for the root SD, the ADA PR, and the PPA2 PR.
   StringRef FileName = sys::path::stem(M.getSourceFileName());
   if (FileName.size() > 1 && FileName.starts_with('<') &&
       FileName.ends_with('>'))
     FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
+  DefaultPPA2PRName = Twine(FileName).concat("@@PPA2").str();
   MCSectionGOFF *RootSD =
       static_cast<MCSectionGOFF *>(TextSection)->getParent();
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
+  MCSectionGOFF *PPA2PR = static_cast<MCSectionGOFF *>(PPA2ListSection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
+  PPA2PR->setName(DefaultPPA2PRName);
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
