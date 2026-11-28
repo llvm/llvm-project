@@ -23,9 +23,15 @@ class SourceMgr;
 /// SourceMgr. On success, populates the provided RecordKeeper with the parsed
 /// records and returns false. On failure, returns true.
 ///
+/// If \p TrackReferenceLocs is true, also record the locations of references
+/// to records, fields and template arguments, which can be queried with
+/// Record::getReferenceLocs and Record::getValueReferenceLocs. This uses more
+/// memory.
+///
 /// NOTE: TableGen currently relies on global state within a given parser
 ///       invocation, so this function is not thread-safe.
-LLVM_ABI bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
+LLVM_ABI bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records,
+                                bool TrackReferenceLocs);
 
 } // end namespace llvm
 
