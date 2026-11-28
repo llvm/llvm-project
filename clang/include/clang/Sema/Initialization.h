@@ -195,6 +195,15 @@ private:
     FieldInitKind FieldKind;
   };
 
+  enum ParameterFlags : unsigned {
+    /// The parameter is "consumed".
+    PF_Consumed = 1,
+
+    /// The parameter belongs to a function that is being called as the
+    /// user-defined conversion of an implicit conversion sequence.
+    PF_UserConversion = 2,
+  };
+
   struct C {
     /// The name of the variable being captured by an EK_LambdaCapture.
     IdentifierInfo *VarID;
@@ -213,8 +222,8 @@ private:
     ObjCMethodDecl *MethodDecl;
 
     /// When Kind == EK_Parameter, the ParmVarDecl, with the
-    /// integer indicating whether the parameter is "consumed".
-    llvm::PointerIntPair<ParmVarDecl *, 1> Parameter;
+    /// integer holding the ParameterFlags.
+    llvm::PointerIntPair<ParmVarDecl *, 2> Parameter;
 
     /// When Kind == EK_Temporary or EK_CompoundLiteralInit, the type
     /// source information for the temporary.
@@ -519,7 +528,13 @@ public:
   /// parameter.
   bool isParameterConsumed() const {
     assert(isParameterKind() && "Not a parameter");
-    return Parameter.getInt();
+    return Parameter.getInt() & PF_Consumed;
+  }
+
+  /// Determine whether this is a parameter of a function that is being called
+  /// as the user-defined conversion of an implicit conversion sequence.
+  bool isParameterOfUserConversion() const {
+    return isParameterKind() && (Parameter.getInt() & PF_UserConversion);
   }
 
   /// Retrieve the base specifier.
@@ -599,6 +614,11 @@ public:
 
   void setParameterCFAudited() {
     Kind = EK_Parameter_CF_Audited;
+  }
+
+  void setParameterOfUserConversion() {
+    assert(isParameterKind() && "Not a parameter");
+    Parameter.setInt(Parameter.getInt() | PF_UserConversion);
   }
 
   unsigned allocateManglingNumber() const { return ++ManglingNumber; }
