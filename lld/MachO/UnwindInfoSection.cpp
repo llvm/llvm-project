@@ -183,6 +183,12 @@ UnwindInfoSection::UnwindInfoSection()
 // function symbols for each unique address regardless of whether they have
 // associated unwind info.
 void UnwindInfoSection::addSymbol(const Defined *d) {
+  // Empty input sections cover no address range and may have the same output
+  // address as the next function. Do not let their symbols create a conflicting
+  // no-unwind entry for that function.
+  if (d->isec()->getSize() == 0)
+    return;
+
   if (d->unwindEntry())
     allEntriesAreOmitted = false;
   // We don't yet know the final output address of this symbol, but we know that
