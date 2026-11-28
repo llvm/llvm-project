@@ -242,6 +242,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_constexpr_queue`                            | *unimplemented* |
 | `__cpp_lib_constexpr_set`                              | `202502L`       |
 | `__cpp_lib_constexpr_stack`                            | *unimplemented* |
+| `__cpp_lib_constexpr_string`                           | `202511L`       |
 | `__cpp_lib_constexpr_unordered_map`                    | *unimplemented* |
 | `__cpp_lib_constexpr_unordered_set`                    | *unimplemented* |
 | `__cpp_lib_constrained_equality`                       | `202411L`       |
