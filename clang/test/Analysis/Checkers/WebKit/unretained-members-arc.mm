@@ -127,3 +127,16 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 @synthesize prop_string4;
 @synthesize prop_string5;
 @end
+
+@protocol IdMembersARCProtocol
+@end
+
+@interface IdMembersARC : NSObject {
+  id<IdMembersARCProtocol> _strong;
+}
+@property (nonatomic, assign) id<IdMembersARCProtocol> assignIdP;
+// expected-warning@-1{{Property 'assignIdP' (of 'IdMembersARC') is a RetainPtr-capable type 'id<IdMembersARCProtocol>'}}
+@end
+
+@implementation IdMembersARC
+@end

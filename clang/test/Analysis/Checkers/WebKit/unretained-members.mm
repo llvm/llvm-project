@@ -196,3 +196,53 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
   return nil;
 }
 @end
+
+@protocol IdMembersProtocol
+@end
+
+namespace id_members {
+  struct Foo {
+    id<IdMembersProtocol> a;
+    // expected-warning@-1{{Member variable 'a' (of 'id_members::Foo') is a RetainPtr-capable type 'id<IdMembersProtocol>'}}
+    Class cls;
+  };
+} // namespace id_members
+
+typedef Class ClassAlias;
+
+@interface IdMembers : NSObject {
+  ClassAlias _classAlias;
+  id _idInInterface;
+  // expected-warning@-1{{Instance variable '_idInInterface' (of 'IdMembers') is a RetainPtr-capable type 'id'}}
+  id<IdMembersProtocol> _idPInInterface;
+  // expected-warning@-1{{Instance variable '_idPInInterface' (of 'IdMembers') is a RetainPtr-capable type 'id<IdMembersProtocol>'}}
+  Class _classInInterface;
+  Class<IdMembersProtocol> _classPInInterface;
+  id<IdMembersProtocol> _delegate;
+  // expected-warning@-1{{Instance variable '_delegate' (of 'IdMembers') is a RetainPtr-capable type 'id<IdMembersProtocol>'}}
+}
+@property (nonatomic, assign) id<IdMembersProtocol> assignIdP;
+// expected-warning@-1{{Property 'assignIdP' (of 'IdMembers') is a RetainPtr-capable type 'id<IdMembersProtocol>'}}
+@property (nonatomic, assign) id<IdMembersProtocol> delegate;
+@end
+
+@implementation IdMembers {
+  id _idInImplementation;
+  // expected-warning@-1{{Instance variable '_idInImplementation' (of 'IdMembers') is a RetainPtr-capable type 'id'}}
+  id<IdMembersProtocol> _idPInImplementation;
+  // expected-warning@-1{{Instance variable '_idPInImplementation' (of 'IdMembers') is a RetainPtr-capable type 'id<IdMembersProtocol>'}}
+  Class _classInImplementation;
+  Class<IdMembersProtocol> _classPInImplementation;
+}
+@synthesize delegate = _delegate;
+@end
+
+namespace WTF {
+template <typename T> class WeakObjCPtr {
+  id m_weakReference;
+};
+} // namespace WTF
+
+struct HoldsWeakObjCPtr {
+  WTF::WeakObjCPtr<SomeObj> weak;
+};

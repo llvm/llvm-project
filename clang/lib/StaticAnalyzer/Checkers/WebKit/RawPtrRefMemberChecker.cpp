@@ -43,6 +43,11 @@ public:
         Model(std::move(Model)) {}
 
   std::optional<bool> isUnsafePtr(QualType QT, bool IgnoreARC = false) const {
+    // Retain and release don't affect a class object's lifetime, even one
+    // created at runtime, so a RetainPtr can't make a Class member safer.
+    if (!QT.isNull() &&
+        (QT->isObjCClassType() || QT->isObjCQualifiedClassType()))
+      return false;
     return isUnsafePtrForStorage(*Model, QT, IgnoreARC);
   }
 
@@ -110,10 +115,7 @@ public:
     if (!MemberType)
       return;
 
-    if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
-      reportBug(Member, MemberType, MemberCXXRD, RD);
-    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(MemberType))
-      reportBug(Member, MemberType, ObjCDecl, RD);
+    reportBug(Member, MemberType, RD);
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -157,10 +159,7 @@ public:
 
     IvarDeclsToIgnore.insert(Ivar);
 
-    if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
-      reportBug(Ivar, IvarType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(IvarType))
-      reportBug(Ivar, IvarType, ObjCDecl, CD);
+    reportBug(Ivar, IvarType, CD);
   }
 
   void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
@@ -179,10 +178,7 @@ public:
     if (!IsUnsafe)
       return;
 
-    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
-      reportBug(PD, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
-      reportBug(PD, PropType, ObjCDecl, CD);
+    reportBug(PD, PropType, CD);
   }
 
   void visitPropImpl(const ObjCContainerDecl *CD,
@@ -203,10 +199,7 @@ public:
     if (!IsUnsafe)
       return;
 
-    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
-      reportBug(PropDecl, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
-      reportBug(PropDecl, PropType, ObjCDecl, CD);
+    reportBug(PropDecl, PropType, CD);
   }
 
   std::pair<bool, const Type *>
@@ -259,17 +252,25 @@ public:
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
     if (CXXRD && isSmartPtr(CXXRD))
       return true;
+    if (auto *Tmpl = CXXRD ? CXXRD->getDescribedClassTemplate() : nullptr) {
+      if (isSmartPtrClass(safeGetName(Tmpl)))
+        return true;
+    }
 
     return false;
   }
 
-  template <typename DeclType, typename PointeeType, typename ParentDeclType>
+  static const NamedDecl *getPointeeDecl(const Type *T) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
+      return CXXRD;
+    return getObjCDeclFromObjCPtr(T);
+  }
+
+  template <typename DeclType, typename ParentDeclType>
   void reportBug(const DeclType *Member, const Type *MemberType,
-                 const PointeeType *Pointee,
                  const ParentDeclType *ClassCXXRD) const {
     assert(Member);
     assert(MemberType);
-    assert(Pointee);
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -290,11 +291,16 @@ public:
     else
       Os << " contains a ";
     if (printPointer(Os, MemberType) == PrintDeclKind::Pointer) {
-      auto Typedef = MemberType->getAs<TypedefType>();
-      assert(Typedef);
-      printQuotedQualifiedName(Os, Typedef->getDecl());
+      if (auto *Typedef = MemberType->getAs<TypedefType>())
+        printQuotedQualifiedName(Os, Typedef->getDecl());
+      else {
+        Os << "'";
+        QualType(MemberType, 0)
+            .print(Os, Member->getASTContext().getPrintingPolicy());
+        Os << "'";
+      }
     } else
-      printQuotedQualifiedName(Os, Pointee);
+      printQuotedQualifiedName(Os, getPointeeDecl(MemberType));
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
                                  BR->getSourceManager());
@@ -308,10 +314,12 @@ public:
   enum class PrintDeclKind { Pointee, Pointer };
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const {
-    // Retain/OS types are frequently spelled through a typedef (e.g. CFXXXRef);
-    // print the typedef name rather than desugaring to the pointee.
-    if (Model->retainTypeChecker() && !isa<ObjCObjectPointerType>(T) &&
-        T->getAs<TypedefType>()) {
+    // Retain/OS types are frequently spelled through a typedef (e.g. CFXXXRef),
+    // and id<P> has no pointee decl; name the pointer type itself for both.
+    bool IsRetainTypedef = Model->retainTypeChecker() &&
+                           !isa<ObjCObjectPointerType>(T) &&
+                           T->getAs<TypedefType>();
+    if (IsRetainTypedef || !getPointeeDecl(T)) {
       Os << Model->typeName() << " ";
       return PrintDeclKind::Pointer;
     }

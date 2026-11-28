@@ -273,7 +273,7 @@ bool isSmartPtrClass(const std::string &Name) {
          Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
          Name == "WeakPtrImplBaseSingleThread" ||
          Name == "ThreadSafeWeakOrStrongPtr" ||
-         Name == "ThreadSafeWeakPtrControlBlock" ||
+         Name == "ThreadSafeWeakPtrControlBlock" || Name == "WeakObjCPtr" ||
          Name == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr";
 }
 
