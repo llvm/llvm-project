@@ -45,6 +45,16 @@
 # OFFSET:      PHDR 0x000100 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
 # OFFSET-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000131 0x000131 R   0x8
 
+## An explicit Offset does not have to be aligned.
+# RUN: yaml2obj %s --docnum=1 -DOFFSET=0x101 -o %t.unaligned
+# RUN: llvm-readelf --file-headers --program-headers --sections %t.unaligned | \
+# RUN:   FileCheck %s --check-prefix=UNALIGNED
+
+# UNALIGNED:      Start of program headers: 257 (bytes into file)
+# UNALIGNED:      [ 2] .bar PROGBITS {{.*}} 000171 000001
+# UNALIGNED:      PHDR 0x000101 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
+# UNALIGNED-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000132 0x000132 R   0x8
+
 ## EPhOff overrides e_phoff, but does not move the table.
 # RUN: yaml2obj %s --docnum=1 -DPHOFF=0x1234 -o %t.phoff
 # RUN: llvm-readelf --file-headers --sections %t.phoff | \
@@ -61,16 +71,6 @@
 # RUN:   FileCheck %s --check-prefix=BACKWARD
 
 # BACKWARD: error: the 'Offset' value (0x10) goes backward
-
-## An explicit Offset does not have to be aligned.
-# RUN: yaml2obj %s --docnum=1 -DOFFSET=0x101 -o %t.unaligned
-# RUN: llvm-readelf --file-headers --program-headers --sections %t.unaligned | \
-# RUN:   FileCheck %s --check-prefix=UNALIGNED
-
-# UNALIGNED:      Start of program headers: 257 (bytes into file)
-# UNALIGNED:      [ 2] .bar PROGBITS {{.*}} 000171 000001
-# UNALIGNED:      PHDR 0x000101 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
-# UNALIGNED-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000132 0x000132 R   0x8
 
 ## A section that follows the table cannot be placed before the table's end.
 # RUN: not yaml2obj %s --docnum=1 -DBAROFF=0xb0 -o /dev/null 2>&1 | \
