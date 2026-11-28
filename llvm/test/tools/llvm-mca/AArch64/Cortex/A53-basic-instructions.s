@@ -515,273 +515,273 @@
 # CHECK-NEXT:  1      3     0.50                        ror	x19, x23, #24
 # CHECK-NEXT:  1      3     0.50                        ror	x29, xzr, #63
 # CHECK-NEXT:  1      3     0.50                        ror	w9, w13, #31
-# CHECK-NEXT:  1      6     1.00                        fcmp	h5, h21
-# CHECK-NEXT:  1      6     1.00                        fcmp	h5, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	h22, h21
-# CHECK-NEXT:  1      6     1.00                        fcmpe	h13, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmp	s3, s5
-# CHECK-NEXT:  1      6     1.00                        fcmp	s31, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	s29, s30
-# CHECK-NEXT:  1      6     1.00                        fcmpe	s15, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmp	d4, d12
-# CHECK-NEXT:  1      6     1.00                        fcmp	d23, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	d26, d22
-# CHECK-NEXT:  1      6     1.00                        fcmpe	d29, #0.0
-# CHECK-NEXT:  1      6     1.00                        fccmp	s1, s31, #0, eq
-# CHECK-NEXT:  1      6     1.00                        fccmp	s3, s0, #15, hs
-# CHECK-NEXT:  1      6     1.00                        fccmp	s31, s15, #13, hs
-# CHECK-NEXT:  1      6     1.00                        fccmp	d9, d31, #0, le
-# CHECK-NEXT:  1      6     1.00                        fccmp	d3, d0, #15, gt
-# CHECK-NEXT:  1      6     1.00                        fccmp	d31, d5, #7, ne
-# CHECK-NEXT:  1      6     1.00                        fccmp	h31, h3, #11, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	h6, h1, #12, ne
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s1, s31, #0, eq
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s3, s0, #15, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s31, s15, #13, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d9, d31, #0, le
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d3, d0, #15, gt
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d31, d5, #7, ne
-# CHECK-NEXT:  1      6     0.50                        fcsel	s3, s20, s9, pl
-# CHECK-NEXT:  1      6     0.50                        fcsel	d9, d10, d11, mi
-# CHECK-NEXT:  1      6     0.50                        fcsel	h26, h2, h11, hs
-# CHECK-NEXT:  1      6     0.50                        fmov	h18, h28
-# CHECK-NEXT:  1      6     0.50                        fmov	s0, s1
-# CHECK-NEXT:  1      6     0.50                        fabs	s2, s3
-# CHECK-NEXT:  1      6     0.50                        fneg	h2, h9
-# CHECK-NEXT:  1      6     0.50                        fneg	s4, s5
-# CHECK-NEXT:  1      33    29.00                       fsqrt	s6, s7
-# CHECK-NEXT:  1      6     0.50                        fcvt	d8, s9
-# CHECK-NEXT:  1      6     0.50                        fcvt	h10, s11
-# CHECK-NEXT:  1      6     0.50                        frintn	h12, h3
-# CHECK-NEXT:  1      6     0.50                        frintn	s12, s13
-# CHECK-NEXT:  1      6     0.50                        frintp	h17, h31
-# CHECK-NEXT:  1      6     0.50                        frintp	s14, s15
-# CHECK-NEXT:  1      6     0.50                        frintm	h0, h21
-# CHECK-NEXT:  1      6     0.50                        frintm	s16, s17
-# CHECK-NEXT:  1      6     0.50                        frintz	h10, h29
-# CHECK-NEXT:  1      6     0.50                        frintz	s18, s19
-# CHECK-NEXT:  1      6     0.50                        frinta	h22, h10
-# CHECK-NEXT:  1      6     0.50                        frinta	s20, s21
-# CHECK-NEXT:  1      6     0.50                        frintx	h4, h5
-# CHECK-NEXT:  1      6     0.50                        frintx	s22, s23
-# CHECK-NEXT:  1      6     0.50                        frinti	s24, s25
-# CHECK-NEXT:  1      6     0.50                        frinti	h31, h14
-# CHECK-NEXT:  1      6     0.50                        fmov	d0, d1
-# CHECK-NEXT:  1      6     0.50                        fabs	d2, d3
-# CHECK-NEXT:  1      6     0.50                        fneg	d4, d5
+# CHECK-NEXT:  1      1     1.00                        fcmp	h5, h21
+# CHECK-NEXT:  1      1     1.00                        fcmp	h5, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	h22, h21
+# CHECK-NEXT:  1      1     1.00                        fcmpe	h13, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmp	s3, s5
+# CHECK-NEXT:  1      1     1.00                        fcmp	s31, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	s29, s30
+# CHECK-NEXT:  1      1     1.00                        fcmpe	s15, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmp	d4, d12
+# CHECK-NEXT:  1      1     1.00                        fcmp	d23, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	d26, d22
+# CHECK-NEXT:  1      1     1.00                        fcmpe	d29, #0.0
+# CHECK-NEXT:  1      1     1.00                        fccmp	s1, s31, #0, eq
+# CHECK-NEXT:  1      1     1.00                        fccmp	s3, s0, #15, hs
+# CHECK-NEXT:  1      1     1.00                        fccmp	s31, s15, #13, hs
+# CHECK-NEXT:  1      1     1.00                        fccmp	d9, d31, #0, le
+# CHECK-NEXT:  1      1     1.00                        fccmp	d3, d0, #15, gt
+# CHECK-NEXT:  1      1     1.00                        fccmp	d31, d5, #7, ne
+# CHECK-NEXT:  1      1     1.00                        fccmp	h31, h3, #11, hs
+# CHECK-NEXT:  1      1     1.00                        fccmpe	h6, h1, #12, ne
+# CHECK-NEXT:  1      1     1.00                        fccmpe	s1, s31, #0, eq
+# CHECK-NEXT:  1      1     1.00                        fccmpe	s3, s0, #15, hs
+# CHECK-NEXT:  1      1     1.00                        fccmpe	s31, s15, #13, hs
+# CHECK-NEXT:  1      1     1.00                        fccmpe	d9, d31, #0, le
+# CHECK-NEXT:  1      1     1.00                        fccmpe	d3, d0, #15, gt
+# CHECK-NEXT:  1      1     1.00                        fccmpe	d31, d5, #7, ne
+# CHECK-NEXT:  1      4     0.50                        fcsel	s3, s20, s9, pl
+# CHECK-NEXT:  1      4     0.50                        fcsel	d9, d10, d11, mi
+# CHECK-NEXT:  1      4     0.50                        fcsel	h26, h2, h11, hs
+# CHECK-NEXT:  1      4     0.50                        fmov	h18, h28
+# CHECK-NEXT:  1      4     0.50                        fmov	s0, s1
+# CHECK-NEXT:  1      4     0.50                        fabs	s2, s3
+# CHECK-NEXT:  1      4     0.50                        fneg	h2, h9
+# CHECK-NEXT:  1      4     0.50                        fneg	s4, s5
+# CHECK-NEXT:  1      12    9.00                        fsqrt	s6, s7
+# CHECK-NEXT:  1      4     0.50                        fcvt	d8, s9
+# CHECK-NEXT:  1      4     0.50                        fcvt	h10, s11
+# CHECK-NEXT:  1      4     0.50                        frintn	h12, h3
+# CHECK-NEXT:  1      4     0.50                        frintn	s12, s13
+# CHECK-NEXT:  1      4     0.50                        frintp	h17, h31
+# CHECK-NEXT:  1      4     0.50                        frintp	s14, s15
+# CHECK-NEXT:  1      4     0.50                        frintm	h0, h21
+# CHECK-NEXT:  1      4     0.50                        frintm	s16, s17
+# CHECK-NEXT:  1      4     0.50                        frintz	h10, h29
+# CHECK-NEXT:  1      4     0.50                        frintz	s18, s19
+# CHECK-NEXT:  1      4     0.50                        frinta	h22, h10
+# CHECK-NEXT:  1      4     0.50                        frinta	s20, s21
+# CHECK-NEXT:  1      4     0.50                        frintx	h4, h5
+# CHECK-NEXT:  1      4     0.50                        frintx	s22, s23
+# CHECK-NEXT:  1      4     0.50                        frinti	s24, s25
+# CHECK-NEXT:  1      4     0.50                        frinti	h31, h14
+# CHECK-NEXT:  1      4     0.50                        fmov	d0, d1
+# CHECK-NEXT:  1      4     0.50                        fabs	d2, d3
+# CHECK-NEXT:  1      4     0.50                        fneg	d4, d5
 # CHECK-NEXT:  1      33    29.00                       fsqrt	h13, h24
-# CHECK-NEXT:  1      33    29.00                       fsqrt	d6, d7
-# CHECK-NEXT:  1      6     0.50                        fcvt	s8, d9
-# CHECK-NEXT:  1      6     0.50                        fcvt	h10, d11
-# CHECK-NEXT:  1      6     0.50                        frintn	d12, d13
-# CHECK-NEXT:  1      6     0.50                        frintp	d14, d15
-# CHECK-NEXT:  1      6     0.50                        frintm	d16, d17
-# CHECK-NEXT:  1      6     0.50                        frintz	d18, d19
-# CHECK-NEXT:  1      6     0.50                        frinta	d20, d21
-# CHECK-NEXT:  1      6     0.50                        frintx	d22, d23
-# CHECK-NEXT:  1      6     0.50                        frinti	d24, d25
-# CHECK-NEXT:  1      6     0.50                        fcvt	s26, h27
-# CHECK-NEXT:  1      6     0.50                        fcvt	d28, h29
-# CHECK-NEXT:  1      6     0.50                        fmul	s20, s19, s17
+# CHECK-NEXT:  1      22    19.00                       fsqrt	d6, d7
+# CHECK-NEXT:  1      4     0.50                        fcvt	s8, d9
+# CHECK-NEXT:  1      4     0.50                        fcvt	h10, d11
+# CHECK-NEXT:  1      4     0.50                        frintn	d12, d13
+# CHECK-NEXT:  1      4     0.50                        frintp	d14, d15
+# CHECK-NEXT:  1      4     0.50                        frintm	d16, d17
+# CHECK-NEXT:  1      4     0.50                        frintz	d18, d19
+# CHECK-NEXT:  1      4     0.50                        frinta	d20, d21
+# CHECK-NEXT:  1      4     0.50                        frintx	d22, d23
+# CHECK-NEXT:  1      4     0.50                        frinti	d24, d25
+# CHECK-NEXT:  1      4     0.50                        fcvt	s26, h27
+# CHECK-NEXT:  1      4     0.50                        fcvt	d28, h29
+# CHECK-NEXT:  1      4     0.50                        fmul	s20, s19, s17
 # CHECK-NEXT:  1      33    29.00                       fdiv	h1, h26, h23
-# CHECK-NEXT:  1      18    14.00                       fdiv	s1, s2, s3
-# CHECK-NEXT:  1      6     0.50                        fadd	h23, h27, h22
-# CHECK-NEXT:  1      6     0.50                        fadd	s4, s5, s6
-# CHECK-NEXT:  1      6     0.50                        fsub	h20, h11, h18
-# CHECK-NEXT:  1      6     0.50                        fsub	s7, s8, s9
-# CHECK-NEXT:  1      6     0.50                        fmax	s10, s11, s12
-# CHECK-NEXT:  1      6     0.50                        fmax	h8, h7, h11
-# CHECK-NEXT:  1      6     0.50                        fmin	s13, s14, s15
-# CHECK-NEXT:  1      6     0.50                        fmaxnm	h29, h13, h14
-# CHECK-NEXT:  1      6     0.50                        fmaxnm	s16, s17, s18
-# CHECK-NEXT:  1      6     0.50                        fminnm	s19, s20, s21
-# CHECK-NEXT:  1      6     0.50                        fnmul	h3, h15, h7
-# CHECK-NEXT:  1      6     0.50                        fnmul	s22, s23, s2
-# CHECK-NEXT:  1      6     0.50                        fmul	d20, d19, d17
-# CHECK-NEXT:  1      33    29.00                       fdiv	d1, d2, d3
-# CHECK-NEXT:  1      6     0.50                        fadd	d4, d5, d6
-# CHECK-NEXT:  1      6     0.50                        fsub	d7, d8, d9
-# CHECK-NEXT:  1      6     0.50                        fmax	d10, d11, d12
-# CHECK-NEXT:  1      6     0.50                        fmin	d13, d14, d15
-# CHECK-NEXT:  1      6     0.50                        fmin	h4, h13, h17
-# CHECK-NEXT:  1      6     0.50                        fmaxnm	d16, d17, d18
-# CHECK-NEXT:  1      6     0.50                        fminnm	d19, d20, d21
-# CHECK-NEXT:  1      6     0.50                        fminnm	h29, h23, h17
-# CHECK-NEXT:  1      6     0.50                        fnmul	d22, d23, d24
-# CHECK-NEXT:  1      10    0.50                        fmadd	h27, h0, h6, h28
-# CHECK-NEXT:  1      10    0.50                        fmadd	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fmadd	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fmsub	h25, h28, h12, h24
-# CHECK-NEXT:  1      10    0.50                        fmsub	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fmsub	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmadd	h3, h18, h31, h24
-# CHECK-NEXT:  1      10    0.50                        fnmadd	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fnmadd	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmsub	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fnmsub	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmsub	h3, h29, h24, h17
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w3, h5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	wzr, h20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w19, h0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x3, h5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, h30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x19, h0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w3, s5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	wzr, s20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w19, s0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x3, s5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, s30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x19, s0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w3, d5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	wzr, d20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w19, d0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x3, d5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, d30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x19, d0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w3, h5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	wzr, h20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w19, h0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x3, h5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x12, h30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x19, h0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w3, s5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	wzr, s20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w19, s0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x3, s5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x12, s30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x19, s0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w3, d5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	wzr, d20, #13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w19, d0, #32
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x3, d5, #1
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x12, d30, #45
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x19, d0, #64
-# CHECK-NEXT:  1      6     0.50                        scvtf	h23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	h31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	h14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        scvtf	h23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	h31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	h14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        scvtf	s23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	s31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	s14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        scvtf	s23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	s31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	s14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        scvtf	d23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	d31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	d14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        scvtf	d23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        scvtf	d31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        scvtf	d14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d23, w19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d31, wzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d14, w0, #32
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d23, x19, #1
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d31, xzr, #20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d14, x0, #64
-# CHECK-NEXT:  1      6     0.50                        fcvtns	w3, h31
-# CHECK-NEXT:  1      6     0.50                        fcvtns	xzr, h12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	wzr, h12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	x0, h0
-# CHECK-NEXT:  1      6     0.50                        fcvtps	wzr, h9
-# CHECK-NEXT:  1      6     0.50                        fcvtps	x12, h20
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	w30, h23
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	x29, h3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	w2, h3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	x4, h5
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	w6, h7
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	x8, h9
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w10, h11
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, h13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w14, h15
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x15, h16
-# CHECK-NEXT:  1      6     0.50                        scvtf	h17, w18
-# CHECK-NEXT:  1      6     0.50                        scvtf	h19, x20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h21, w22
-# CHECK-NEXT:  1      6     0.50                        scvtf	h23, x24
-# CHECK-NEXT:  1      6     0.50                        fcvtas	w25, h26
-# CHECK-NEXT:  1      6     0.50                        fcvtas	x27, h28
-# CHECK-NEXT:  1      6     0.50                        fcvtau	w29, h30
-# CHECK-NEXT:  1      6     0.50                        fcvtau	xzr, h0
-# CHECK-NEXT:  1      6     0.50                        fcvtns	w3, s31
-# CHECK-NEXT:  1      6     0.50                        fcvtns	xzr, s12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	wzr, s12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	x0, s0
-# CHECK-NEXT:  1      6     0.50                        fcvtps	wzr, s9
-# CHECK-NEXT:  1      6     0.50                        fcvtps	x12, s20
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	w30, s23
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	x29, s3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	w2, s3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	x4, s5
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	w6, s7
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	x8, s9
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w10, s11
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, s13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w14, s15
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x15, s16
-# CHECK-NEXT:  1      6     0.50                        scvtf	s17, w18
-# CHECK-NEXT:  1      6     0.50                        scvtf	s19, x20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s21, w22
-# CHECK-NEXT:  1      6     0.50                        scvtf	s23, x24
-# CHECK-NEXT:  1      6     0.50                        fcvtas	w25, s26
-# CHECK-NEXT:  1      6     0.50                        fcvtas	x27, s28
-# CHECK-NEXT:  1      6     0.50                        fcvtau	w29, s30
-# CHECK-NEXT:  1      6     0.50                        fcvtau	xzr, s0
-# CHECK-NEXT:  1      6     0.50                        fcvtns	w3, d31
-# CHECK-NEXT:  1      6     0.50                        fcvtns	xzr, d12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	wzr, d12
-# CHECK-NEXT:  1      6     0.50                        fcvtnu	x0, d0
-# CHECK-NEXT:  1      6     0.50                        fcvtps	wzr, d9
-# CHECK-NEXT:  1      6     0.50                        fcvtps	x12, d20
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	w30, d23
-# CHECK-NEXT:  1      6     0.50                        fcvtpu	x29, d3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	w2, d3
-# CHECK-NEXT:  1      6     0.50                        fcvtms	x4, d5
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	w6, d7
-# CHECK-NEXT:  1      6     0.50                        fcvtmu	x8, d9
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w10, d11
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	x12, d13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	w14, d15
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	x15, d16
-# CHECK-NEXT:  1      6     0.50                        scvtf	d17, w18
-# CHECK-NEXT:  1      6     0.50                        scvtf	d19, x20
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d21, w22
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d23, x24
-# CHECK-NEXT:  1      6     0.50                        fcvtas	w25, d26
-# CHECK-NEXT:  1      6     0.50                        fcvtas	x27, d28
-# CHECK-NEXT:  1      6     0.50                        fcvtau	w29, d30
-# CHECK-NEXT:  1      6     0.50                        fcvtau	xzr, d0
-# CHECK-NEXT:  1      6     0.50                        fmov	h6, w5
-# CHECK-NEXT:  1      6     0.50                        fmov	h16, x27
-# CHECK-NEXT:  1      6     0.50                        fmov	w15, h31
-# CHECK-NEXT:  1      6     0.50                        fmov	w3, s9
-# CHECK-NEXT:  1      6     0.50                        fmov	s9, w3
-# CHECK-NEXT:  1      6     0.50                        fmov	x21, h14
-# CHECK-NEXT:  1      6     0.50                        fmov	x20, d31
-# CHECK-NEXT:  1      6     0.50                        fmov	d1, x15
-# CHECK-NEXT:  1      6     0.50                        fmov	x3, v12.d[1]
-# CHECK-NEXT:  1      6     0.50                        fmov	v1.d[1], x19
-# CHECK-NEXT:  1      6     0.50                        fmov	h29, #0.50000000
-# CHECK-NEXT:  1      6     0.50                        fmov	s2, #0.12500000
-# CHECK-NEXT:  1      6     0.50                        fmov	s3, #1.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	d30, #16.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	s4, #1.06250000
-# CHECK-NEXT:  1      6     0.50                        fmov	d10, #1.93750000
-# CHECK-NEXT:  1      6     0.50                        fmov	s12, #-1.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	d16, #8.50000000
+# CHECK-NEXT:  1      13    10.00                       fdiv	s1, s2, s3
+# CHECK-NEXT:  1      4     0.50                        fadd	h23, h27, h22
+# CHECK-NEXT:  1      4     0.50                        fadd	s4, s5, s6
+# CHECK-NEXT:  1      4     0.50                        fsub	h20, h11, h18
+# CHECK-NEXT:  1      4     0.50                        fsub	s7, s8, s9
+# CHECK-NEXT:  1      4     0.50                        fmax	s10, s11, s12
+# CHECK-NEXT:  1      4     0.50                        fmax	h8, h7, h11
+# CHECK-NEXT:  1      4     0.50                        fmin	s13, s14, s15
+# CHECK-NEXT:  1      4     0.50                        fmaxnm	h29, h13, h14
+# CHECK-NEXT:  1      4     0.50                        fmaxnm	s16, s17, s18
+# CHECK-NEXT:  1      4     0.50                        fminnm	s19, s20, s21
+# CHECK-NEXT:  1      4     0.50                        fnmul	h3, h15, h7
+# CHECK-NEXT:  1      4     0.50                        fnmul	s22, s23, s2
+# CHECK-NEXT:  1      4     0.50                        fmul	d20, d19, d17
+# CHECK-NEXT:  1      22    19.00                       fdiv	d1, d2, d3
+# CHECK-NEXT:  1      4     0.50                        fadd	d4, d5, d6
+# CHECK-NEXT:  1      4     0.50                        fsub	d7, d8, d9
+# CHECK-NEXT:  1      4     0.50                        fmax	d10, d11, d12
+# CHECK-NEXT:  1      4     0.50                        fmin	d13, d14, d15
+# CHECK-NEXT:  1      4     0.50                        fmin	h4, h13, h17
+# CHECK-NEXT:  1      4     0.50                        fmaxnm	d16, d17, d18
+# CHECK-NEXT:  1      4     0.50                        fminnm	d19, d20, d21
+# CHECK-NEXT:  1      4     0.50                        fminnm	h29, h23, h17
+# CHECK-NEXT:  1      4     0.50                        fnmul	d22, d23, d24
+# CHECK-NEXT:  1      8     0.50                        fmadd	h27, h0, h6, h28
+# CHECK-NEXT:  1      8     0.50                        fmadd	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fmadd	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fmsub	h25, h28, h12, h24
+# CHECK-NEXT:  1      8     0.50                        fmsub	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fmsub	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmadd	h3, h18, h31, h24
+# CHECK-NEXT:  1      8     0.50                        fnmadd	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fnmadd	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmsub	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fnmsub	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmsub	h3, h29, h24, h17
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w3, h5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	wzr, h20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w19, h0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x3, h5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, h30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x19, h0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w3, s5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	wzr, s20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w19, s0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x3, s5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, s30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x19, s0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w3, d5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	wzr, d20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w19, d0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x3, d5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, d30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x19, d0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w3, h5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	wzr, h20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w19, h0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x3, h5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x12, h30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x19, h0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w3, s5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	wzr, s20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w19, s0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x3, s5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x12, s30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x19, s0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w3, d5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	wzr, d20, #13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w19, d0, #32
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x3, d5, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x12, d30, #45
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x19, d0, #64
+# CHECK-NEXT:  1      4     0.50                        scvtf	h23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	h31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	h14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        scvtf	h23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	h31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	h14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        scvtf	s23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	s31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	s14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        scvtf	s23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	s31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	s14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        scvtf	d23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	d31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	d14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        scvtf	d23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        scvtf	d31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        scvtf	d14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d23, w19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d31, wzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d14, w0, #32
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d23, x19, #1
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d31, xzr, #20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d14, x0, #64
+# CHECK-NEXT:  1      4     0.50                        fcvtns	w3, h31
+# CHECK-NEXT:  1      4     0.50                        fcvtns	xzr, h12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	wzr, h12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	x0, h0
+# CHECK-NEXT:  1      4     0.50                        fcvtps	wzr, h9
+# CHECK-NEXT:  1      4     0.50                        fcvtps	x12, h20
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	w30, h23
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	x29, h3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	w2, h3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	x4, h5
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	w6, h7
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	x8, h9
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w10, h11
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, h13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w14, h15
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x15, h16
+# CHECK-NEXT:  1      4     0.50                        scvtf	h17, w18
+# CHECK-NEXT:  1      4     0.50                        scvtf	h19, x20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h21, w22
+# CHECK-NEXT:  1      4     0.50                        scvtf	h23, x24
+# CHECK-NEXT:  1      4     0.50                        fcvtas	w25, h26
+# CHECK-NEXT:  1      4     0.50                        fcvtas	x27, h28
+# CHECK-NEXT:  1      4     0.50                        fcvtau	w29, h30
+# CHECK-NEXT:  1      4     0.50                        fcvtau	xzr, h0
+# CHECK-NEXT:  1      4     0.50                        fcvtns	w3, s31
+# CHECK-NEXT:  1      4     0.50                        fcvtns	xzr, s12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	wzr, s12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	x0, s0
+# CHECK-NEXT:  1      4     0.50                        fcvtps	wzr, s9
+# CHECK-NEXT:  1      4     0.50                        fcvtps	x12, s20
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	w30, s23
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	x29, s3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	w2, s3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	x4, s5
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	w6, s7
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	x8, s9
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w10, s11
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, s13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w14, s15
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x15, s16
+# CHECK-NEXT:  1      4     0.50                        scvtf	s17, w18
+# CHECK-NEXT:  1      4     0.50                        scvtf	s19, x20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s21, w22
+# CHECK-NEXT:  1      4     0.50                        scvtf	s23, x24
+# CHECK-NEXT:  1      4     0.50                        fcvtas	w25, s26
+# CHECK-NEXT:  1      4     0.50                        fcvtas	x27, s28
+# CHECK-NEXT:  1      4     0.50                        fcvtau	w29, s30
+# CHECK-NEXT:  1      4     0.50                        fcvtau	xzr, s0
+# CHECK-NEXT:  1      4     0.50                        fcvtns	w3, d31
+# CHECK-NEXT:  1      4     0.50                        fcvtns	xzr, d12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	wzr, d12
+# CHECK-NEXT:  1      4     0.50                        fcvtnu	x0, d0
+# CHECK-NEXT:  1      4     0.50                        fcvtps	wzr, d9
+# CHECK-NEXT:  1      4     0.50                        fcvtps	x12, d20
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	w30, d23
+# CHECK-NEXT:  1      4     0.50                        fcvtpu	x29, d3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	w2, d3
+# CHECK-NEXT:  1      4     0.50                        fcvtms	x4, d5
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	w6, d7
+# CHECK-NEXT:  1      4     0.50                        fcvtmu	x8, d9
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w10, d11
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	x12, d13
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	w14, d15
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	x15, d16
+# CHECK-NEXT:  1      4     0.50                        scvtf	d17, w18
+# CHECK-NEXT:  1      4     0.50                        scvtf	d19, x20
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d21, w22
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d23, x24
+# CHECK-NEXT:  1      4     0.50                        fcvtas	w25, d26
+# CHECK-NEXT:  1      4     0.50                        fcvtas	x27, d28
+# CHECK-NEXT:  1      4     0.50                        fcvtau	w29, d30
+# CHECK-NEXT:  1      4     0.50                        fcvtau	xzr, d0
+# CHECK-NEXT:  1      2     0.50                        fmov	h6, w5
+# CHECK-NEXT:  1      2     0.50                        fmov	h16, x27
+# CHECK-NEXT:  1      4     0.50                        fmov	w15, h31
+# CHECK-NEXT:  1      4     0.50                        fmov	w3, s9
+# CHECK-NEXT:  1      2     0.50                        fmov	s9, w3
+# CHECK-NEXT:  1      4     0.50                        fmov	x21, h14
+# CHECK-NEXT:  1      4     0.50                        fmov	x20, d31
+# CHECK-NEXT:  1      2     0.50                        fmov	d1, x15
+# CHECK-NEXT:  1      4     0.50                        fmov	x3, v12.d[1]
+# CHECK-NEXT:  1      2     0.50                        fmov	v1.d[1], x19
+# CHECK-NEXT:  1      2     0.50                        fmov	h29, #0.50000000
+# CHECK-NEXT:  1      2     0.50                        fmov	s2, #0.12500000
+# CHECK-NEXT:  1      2     0.50                        fmov	s3, #1.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	d30, #16.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	s4, #1.06250000
+# CHECK-NEXT:  1      2     0.50                        fmov	d10, #1.93750000
+# CHECK-NEXT:  1      2     0.50                        fmov	s12, #-1.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	d16, #8.50000000
 # CHECK-NEXT:  1      4     1.00    *                   ldr	w3, #0
 # CHECK-NEXT:  1      4     1.00    *                   ldr	x29, #4
 # CHECK-NEXT:  1      4     1.00    *                   ldrsw	xzr, #-4
@@ -1278,7 +1278,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 249.50 249.50 27.00  4.00   143.50 143.50 159.00 159.00 471.00 50.00
+# CHECK-NEXT: 249.50 249.50 27.00  4.00   143.50 143.50 115.00 115.00 471.00 50.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1821,7 +1821,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fabs	s2, s3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	h2, h9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	s4, s5
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -      -      -     9.00   9.00    -      -     fsqrt	s6, s7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	d8, s9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	h10, s11
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frintn	h12, h3
@@ -1842,7 +1842,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	d4, d5
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	h13, h24
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fsqrt	d6, d7
+# CHECK-NEXT:  -      -      -      -      -      -     19.00  19.00   -      -     fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	s8, d9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	h10, d11
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frintn	d12, d13
@@ -1856,7 +1856,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	d28, h29
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	s20, s19, s17
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	h1, h26, h23
-# CHECK-NEXT:  -      -      -      -      -      -     14.00  14.00   -      -     fdiv	s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -     10.00  10.00   -      -     fdiv	s1, s2, s3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	h23, h27, h22
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	s4, s5, s6
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsub	h20, h11, h18
@@ -1870,7 +1870,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	h3, h15, h7
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	s22, s23, s2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	d20, d19, d17
-# CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	d1, d2, d3
+# CHECK-NEXT:  -      -      -      -      -      -     19.00  19.00   -      -     fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsub	d7, d8, d9
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmax	d10, d11, d12
