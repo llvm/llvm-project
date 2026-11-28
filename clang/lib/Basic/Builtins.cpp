@@ -12,11 +12,14 @@
 
 #include "clang/Basic/Builtins.h"
 #include "BuiltinTargetFeatures.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/xxhash.h"
+#include <memory>
 using namespace clang;
 
 const char *HeaderDesc::getName() const {
@@ -44,32 +47,16 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 };
 static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
+/// The shard of the target-independent builtins, which every context has.
+static const Builtin::InfosShard TargetIndependentShards[] = {
+    {&BuiltinStrings, BuiltinInfos}};
+
 std::pair<const Builtin::InfosShard &, const Builtin::Info &>
 Builtin::Context::getShardAndInfo(unsigned ID) const {
-  assert((ID < (Builtin::FirstTSBuiltin + NumTargetBuiltins +
-                NumAuxTargetBuiltins)) &&
-         "Invalid builtin ID!");
-
-  ArrayRef<InfosShard> Shards = BuiltinShards;
-  if (isAuxBuiltinID(ID)) {
-    Shards = AuxTargetShards;
-    ID = getAuxBuiltinID(ID) - Builtin::FirstTSBuiltin;
-  } else if (ID >= Builtin::FirstTSBuiltin) {
-    Shards = TargetShards;
-    ID -= Builtin::FirstTSBuiltin;
-  }
-
-  // Loop over the shards to find the one matching this ID. We don't expect to
-  // have many shards and so its better to search linearly than with a binary
-  // search.
-  for (const auto &Shard : Shards) {
-    if (ID < Shard.Infos.size()) {
-      return {Shard, Shard.Infos[ID]};
-    }
-
-    ID -= Shard.Infos.size();
-  }
-  llvm_unreachable("Invalid target builtin shard structure!");
+  if (Builtins)
+    return Builtins->getShardAndInfo(ID);
+  assert(ID < Builtin::FirstTSBuiltin && "Invalid builtin ID!");
+  return {TargetIndependentShards[0], BuiltinInfos[ID]};
 }
 
 /// Return a non-owning StringRef of the builtin's name, reconstructed into Buf.
@@ -120,25 +107,18 @@ const char *Builtin::Context::getRequiredFeatures(unsigned ID) const {
   return (*Shard.Strings)[I.Offsets.Features].data();
 }
 
-Builtin::Context::Context() : BuiltinShards{{&BuiltinStrings, BuiltinInfos}} {}
+Builtin::Context::Context() = default;
 
-void Builtin::Context::InitializeTarget(const TargetInfo &Target,
-                                        const TargetInfo *AuxTarget) {
-  assert(TargetShards.empty() && "Already initialized target?");
-  assert(NumTargetBuiltins == 0 && "Already initialized target?");
-  TargetShards = Target.getTargetBuiltins();
-  for (const auto &Shard : TargetShards)
-    NumTargetBuiltins += Shard.Infos.size();
-  if (AuxTarget) {
-    AuxTargetShards = AuxTarget->getTargetBuiltins();
-    for (const auto &Shard : AuxTargetShards)
-      NumAuxTargetBuiltins += Shard.Infos.size();
-  }
-}
+Builtin::Context::Context(const TargetInfo &Target, const TargetInfo *AuxTarget)
+    : Context(std::make_shared<const TargetBuiltins>(Target, AuxTarget)) {}
+
+Builtin::Context::Context(std::shared_ptr<const TargetBuiltins> Builtins)
+    : Builtins(std::move(Builtins)),
+      NumTargetBuiltins(this->Builtins->getNumTargetBuiltins()) {}
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
-  for (const auto &Shard : {InfosShard{&BuiltinStrings, BuiltinInfos}})
+  for (const auto &Shard : TargetIndependentShards)
     if (llvm::StringRef FuncNameSuffix = FuncName;
         FuncNameSuffix.consume_front(Shard.NamePrefix))
       for (const auto &I : Shard.Infos)
@@ -309,52 +289,135 @@ bool Builtin::Context::shouldGenerateFPMathIntrinsic(
   return GenerateIntrinsics;
 }
 
-/// initializeBuiltins - Mark the identifiers for all the builtins with their
-/// appropriate builtin ID # and mark any non-portable builtin identifiers as
-/// such.
-void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
-                                          const LangOptions &LangOpts) {
-  {
-    unsigned ID = 0;
-    llvm::SmallString<256> NameBuf;
-    // Step #1: mark all target-independent builtins with their ID's.
-    for (const auto &Shard : BuiltinShards)
-      for (const auto &I : Shard.Infos) {
-        // If this is a real builtin (ID != 0) and is supported, add it.
-        if (ID != 0 && builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
-        ++ID;
-      }
-    assert(ID == FirstTSBuiltin && "Should have added all non-target IDs!");
+static uint32_t hashBuiltinName(StringRef Name) {
+  return static_cast<uint32_t>(llvm::xxh3_64bits(Name));
+}
 
-    // Step #2: Register target-specific builtins.
-    for (const auto &Shard : TargetShards)
-      for (const auto &I : Shard.Infos) {
-        if (builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
-        ++ID;
-      }
+Builtin::TargetBuiltins::TargetBuiltins(const TargetInfo &Target,
+                                        const TargetInfo *AuxTarget) {
+  llvm::append_range(Shards, TargetIndependentShards);
+  llvm::append_range(Shards, Target.getTargetBuiltins());
+  NumTargetShards = Shards.size() - 1;
+  if (AuxTarget)
+    llvm::append_range(Shards, AuxTarget->getTargetBuiltins());
+  for (const InfosShard &Shard : getTargetShards())
+    NumTargetBuiltins += Shard.Infos.size();
+  for (const InfosShard &Shard : getAuxTargetShards())
+    NumAuxTargetBuiltins += Shard.Infos.size();
 
-    // Step #3: Register target-specific builtins for AuxTarget.
-    for (const auto &Shard : AuxTargetShards)
-      for (const auto &I : Shard.Infos) {
-        Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
-        ++ID;
+  size_t NumNames = 0;
+  for (const InfosShard &Shard : Shards)
+    NumNames += Shard.Infos.size();
+  // Keep the load factor at or below 1/2.
+  size_t NumSlots = llvm::PowerOf2Ceil(NumNames * 2);
+  Slots = std::make_unique<uint64_t[]>(NumSlots);
+  Mask = NumSlots - 1;
+  unsigned ID = 0;
+  SmallString<256> NameBuf;
+  for (const InfosShard &Shard : Shards) {
+    for (const Info &I : Shard.Infos) {
+      // Skip the "not a builtin" entry.
+      if (ID != NotBuiltin) {
+        uint32_t Hash = hashBuiltinName(getBuiltinNameInto(Shard, I, NameBuf));
+        size_t Slot = Hash & Mask;
+        while (Slots[Slot])
+          Slot = (Slot + 1) & Mask;
+        Slots[Slot] = (uint64_t(Hash) << 32) | ID;
       }
-  }
-
-  // Step #4: Unregister any builtins specified by -fno-builtin-foo.
-  for (llvm::StringRef Name : LangOpts.NoBuiltinFuncs) {
-    bool InStdNamespace = Name.consume_front("std-");
-    auto NameIt = Table.find(Name);
-    if (NameIt != Table.end()) {
-      unsigned ID = NameIt->second->getBuiltinID();
-      if (ID != Builtin::NotBuiltin && isPredefinedLibFunction(ID) &&
-          isInStdNamespace(ID) == InStdNamespace) {
-        NameIt->second->clearBuiltinID();
-      }
+      ++ID;
     }
   }
+}
+
+std::pair<const Builtin::InfosShard &, const Builtin::Info &>
+Builtin::TargetBuiltins::getShardAndInfo(unsigned ID) const {
+  assert(ID < FirstTSBuiltin + NumTargetBuiltins + NumAuxTargetBuiltins &&
+         "Invalid builtin ID!");
+  // Find the group of shards from the ID, then loop over the shards of the
+  // group to find the one matching this ID. We don't expect to have many
+  // shards and so its better to search linearly than with a binary search.
+  ArrayRef<InfosShard> Group = ArrayRef(Shards).take_front(1);
+  if (ID >= FirstTSBuiltin + NumTargetBuiltins) {
+    Group = getAuxTargetShards();
+    ID -= FirstTSBuiltin + NumTargetBuiltins;
+  } else if (ID >= FirstTSBuiltin) {
+    Group = getTargetShards();
+    ID -= FirstTSBuiltin;
+  }
+  for (const InfosShard &Shard : Group) {
+    if (ID < Shard.Infos.size())
+      return {Shard, Shard.Infos[ID]};
+    ID -= Shard.Infos.size();
+  }
+  llvm_unreachable("Invalid target builtin shard structure!");
+}
+
+bool Builtin::TargetBuiltins::hasName(unsigned ID, StringRef Name) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return Name.consume_front(Shard.NamePrefix) &&
+         Name == (*Shard.Strings)[I.Offsets.Name];
+}
+
+SmallVector<unsigned, 2> Builtin::TargetBuiltins::lookup(StringRef Name) const {
+  SmallVector<unsigned, 2> IDs;
+  uint32_t Hash = hashBuiltinName(Name);
+  for (size_t Slot = Hash & Mask; uint64_t Entry = Slots[Slot];
+       Slot = (Slot + 1) & Mask) {
+    unsigned ID = static_cast<uint32_t>(Entry);
+    if (Entry >> 32 == Hash && hasName(ID, Name))
+      IDs.push_back(ID);
+  }
+  return IDs;
+}
+
+unsigned Builtin::Context::lookupBuiltinID(StringRef Name,
+                                           const LangOptions &LangOpts) const {
+  // This needs to behave as if the builtins were registered in the order of
+  // their IDs, with later registrations overriding earlier ones: aux target
+  // builtins win over target builtins, which win over target-independent
+  // ones. Aux target builtins are registered even if unsupported.
+  if (!Builtins)
+    return NotBuiltin;
+  unsigned Result = NotBuiltin;
+  for (unsigned ID : Builtins->lookup(Name)) {
+    if (ID <= Result)
+      continue;
+    const auto &[Shard, I] = getShardAndInfo(ID);
+    if (isAuxBuiltinID(ID) || builtinIsSupported(*Shard.Strings, I, LangOpts))
+      Result = ID;
+  }
+  if (Result == NotBuiltin)
+    return NotBuiltin;
+
+  // Library builtins can be disabled with -fno-builtin-foo, or with
+  // -fno-builtin-std-foo for those in namespace std.
+  if (isPredefinedLibFunction(Result)) {
+    bool InStdNamespace = isInStdNamespace(Result);
+    for (StringRef NoBuiltin : LangOpts.NoBuiltinFuncs)
+      if (NoBuiltin.consume_front("std-") == InStdNamespace &&
+          NoBuiltin == Name)
+        return NotBuiltin;
+  }
+  return Result;
+}
+
+void Builtin::Context::forEachBuiltinName(
+    const LangOptions &LangOpts, llvm::function_ref<void(StringRef)> Fn) const {
+  if (!Builtins)
+    return;
+  llvm::SmallString<256> NameBuf;
+  // Skip the "not a builtin" entry.
+  for (const auto &Shard : TargetIndependentShards)
+    for (const auto &I : Shard.Infos.drop_front())
+      if (builtinIsSupported(*Shard.Strings, I, LangOpts))
+        Fn(getBuiltinNameInto(Shard, I, NameBuf));
+  for (const auto &Shard : Builtins->getTargetShards())
+    for (const auto &I : Shard.Infos)
+      if (builtinIsSupported(*Shard.Strings, I, LangOpts))
+        Fn(getBuiltinNameInto(Shard, I, NameBuf));
+  for (const auto &Shard : Builtins->getAuxTargetShards())
+    for (const auto &I : Shard.Infos)
+      Fn(getBuiltinNameInto(Shard, I, NameBuf));
 }
 
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {

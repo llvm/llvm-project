@@ -699,6 +699,19 @@ class IdentifierTable {
 
   IdentifierInfoLookup* ExternalLookup;
 
+  /// Assigns builtin IDs to identifiers as they get created, for the builtins
+  /// that BuiltinLangOpts supports.
+  const Builtin::Context *Builtins = nullptr;
+  const LangOptions *BuiltinLangOpts = nullptr;
+
+  /// Set the builtin ID of a new identifier if it names a builtin.
+  void assignBuiltinID(IdentifierInfo &II) {
+    if (Builtins)
+      if (unsigned ID =
+              Builtins->lookupBuiltinID(II.getName(), *BuiltinLangOpts))
+        II.setBuiltinID(ID);
+  }
+
 public:
   /// Create the identifier table.
   explicit IdentifierTable(IdentifierInfoLookup *ExternalLookup = nullptr);
@@ -717,6 +730,14 @@ public:
   IdentifierInfoLookup *getExternalIdentifierLookup() const {
     return ExternalLookup;
   }
+
+  /// Assign builtin IDs from \p Builtins to the identifiers in the table, and
+  /// to every identifier that gets created from now on, for the builtins
+  /// supported by \p LangOpts. This lets the table avoid creating identifiers
+  /// for all builtins upfront. \p Builtins and \p LangOpts must outlive the
+  /// table, and \p LangOpts must not change afterwards.
+  void setBuiltinInfo(const Builtin::Context &Builtins,
+                      const LangOptions &LangOpts);
 
   llvm::BumpPtrAllocator& getAllocator() {
     return HashTable.getAllocator();
@@ -744,6 +765,8 @@ public:
     // Make sure getName() knows how to find the IdentifierInfo
     // contents.
     II->Entry = &Entry;
+
+    assignBuiltinID(*II);
 
     return *II;
   }
@@ -775,6 +798,8 @@ public:
     // Make sure getName() knows how to find the IdentifierInfo
     // contents.
     II->Entry = &Entry;
+
+    assignBuiltinID(*II);
 
     // If this is the 'import' or 'module' contextual keyword, mark it as such.
     if (Name == "import")

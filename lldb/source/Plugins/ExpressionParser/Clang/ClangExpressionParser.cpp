@@ -903,11 +903,6 @@ ClangExpressionParser::ClangExpressionParser(
   // 7. Most of this we get from the CompilerInstance, but we also want to give
   // the context an ExternalASTSource.
 
-  auto &PP = m_compiler->getPreprocessor();
-  auto &builtin_context = PP.getBuiltinInfo();
-  builtin_context.initializeBuiltins(PP.getIdentifierTable(),
-                                     m_compiler->getLangOpts());
-
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 

@@ -3935,6 +3935,9 @@ bool IsInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset,
                              bool IsModule, bool IsCPlusPlus) {
   bool NeedDecls = !IsModule || !IsCPlusPlus;
 
+  // TODO: The reader no longer restores builtin IDs from a PCH (they come
+  // from the importing compilation), so a builtin ID no longer makes an
+  // identifier interesting. Dropping it changes which identifiers get written.
   bool IsInteresting =
       II->getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
       II->getBuiltinID() != Builtin::ID::NotBuiltin ||

@@ -987,9 +987,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.setFileManager(AST->getFileManagerPtr());
     CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
-    Preprocessor &PP = CI.getPreprocessor();
-    PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
-                                           PP.getLangOpts());
     CI.setASTContext(AST->getASTContextPtr());
 
     setCurrentInput(Input, std::move(AST));
@@ -1294,9 +1291,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (!CI.getASTContext().getExternalSource())
           return false;
       }
-      // If modules are enabled, create the AST reader before creating
-      // any builtins, so that all declarations know that they might be
-      // extended by an external source.
+      // If modules are enabled, create the AST reader before Sema creates
+      // any builtin declarations, so that all declarations know that they
+      // might be extended by an external source.
       if (CI.getLangOpts().Modules || !CI.hasASTContext() ||
           !CI.getASTContext().getExternalSource()) {
         CI.createASTReader();
@@ -1308,21 +1305,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.setASTConsumer(std::move(Consumer));
     if (!CI.hasASTConsumer())
       return false;
-  }
-
-  // Initialize built-in info as long as we aren't using an external AST
-  // source.
-  if (CI.getLangOpts().Modules || !CI.hasASTContext() ||
-      !CI.getASTContext().getExternalSource()) {
-    Preprocessor &PP = CI.getPreprocessor();
-    PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
-                                           PP.getLangOpts());
-  } else {
-    // FIXME: If this is a problem, recover from it by creating a multiplex
-    // source.
-    assert((!CI.getLangOpts().Modules || CI.getASTReader()) &&
-           "modules enabled but created an external source that "
-           "doesn't support modules");
   }
 
   // If we were asked to load any module files, do so now.

@@ -152,11 +152,7 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
     Clang->setASTConsumer(std::move(consumer));
     Clang->createSema(TU_Prefix, nullptr);
 
-    if (firstInclude) {
-      Preprocessor &PP = Clang->getPreprocessor();
-      PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
-                                             PP.getLangOpts());
-    } else {
+    if (!firstInclude) {
       assert(!SerialBufs.empty());
       SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 4> Bufs;
       // TODO: Pass through the existing MemoryBuffer instances instead of
