@@ -626,6 +626,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::CTPOP},
                        MVT::i16, Promote);
 
+    // There is no i16 divrem. Expand so DAGCombiner doesn't merge promoted
+    // i16 div/rem pairs into an unselectable node.
+    setOperationAction({ISD::SDIVREM, ISD::UDIVREM}, MVT::i16, Expand);
+
     setOperationAction(ISD::LOAD, MVT::i16, Custom);
 
     setTruncStoreAction(MVT::i64, MVT::i16, Expand);
