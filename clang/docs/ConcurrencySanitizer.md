@@ -119,7 +119,11 @@ void check_access(volatile void *addr, u32 size, u32 type) {
 
 The probability of detecting a race and the overhead of the sanitizer is
 directly related to the probability of sampling and the length of the delay. The
-watchpoint table can be omitted to make a minimal detector with less coverage.
+minimal configuration, selected with `-mllvm -csan-minimal`, inlines the value
+comparison of the first eight bytes around a call to `__csan_delay`. The runtime
+samples that call and uses the same randomized stall as the watchpoint mode.
+Minimal mode omits watchpoints and skips atomic and volatile accesses. This
+trades race coverage for a smaller runtime.
 
 ## `__SANITIZE_CONCURRENCY__`
 

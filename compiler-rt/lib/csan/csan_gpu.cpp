@@ -452,5 +452,21 @@ INTERFACE void __csan_write_range(void *addr, uptr size, int flags) {
   check_access(addr, size, access_flags(flags, true), GET_CALLER_PC());
 }
 
+INTERFACE NOINLINE void __csan_delay(int access_type) {
+  const u64 lane_mask = __gpu_lane_mask();
+  if (should_watch(lane_mask, access_type))
+    sample_delay(lane_mask);
+}
+
+INTERFACE NOINLINE void __csan_report_race(void *addr, uptr size,
+                                           int access_type, u64, u64) {
+  const uptr pc = GET_CALLER_PC();
+  if (!addr || !size)
+    return;
+  const u32 report_size = size > ~u32(0) ? ~u32(0) : static_cast<u32>(size);
+  report(CSAN_RACE_UNKNOWN_ORIGIN, reinterpret_cast<uptr>(addr), report_size,
+         access_type, pc);
+}
+
 INTERFACE void __csan_atomic_thread_fence(int) {}
 INTERFACE void __csan_atomic_signal_fence(int) {}

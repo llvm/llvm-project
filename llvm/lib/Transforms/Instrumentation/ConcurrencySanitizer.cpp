@@ -33,10 +33,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <algorithm>
 #include <optional>
 
 using namespace llvm;
@@ -65,6 +67,10 @@ static cl::opt<bool> ClDistinguishVolatile(
     "csan-distinguish-volatile", cl::init(false),
     cl::desc("Treat aligned volatile accesses up to 8 bytes as atomic"),
     cl::Hidden);
+static cl::opt<bool>
+    ClMinimal("csan-minimal", cl::init(false),
+              cl::desc("Inline value checks; the runtime supplies the stall"),
+              cl::Hidden);
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumOmittedReadsBeforeWrite,
@@ -104,7 +110,8 @@ enum class AccessFlags : unsigned {
   None = 0,
   Atomic = 1u << 0,
   Compound = 1u << 1,
-  LLVM_MARK_AS_BITMASK_ENUM(Compound),
+  Write = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(Write),
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
@@ -202,6 +209,13 @@ private:
   bool insertAccessProbe(Instruction *I, Value *Addr, Type *AccessTy,
                          const DataLayout &DL, bool IsWrite, bool IsCompound,
                          bool IsAtomic);
+  bool insertTypedValueCheck(Instruction *I, Value *Addr, Type *AccessTy,
+                             const DataLayout &DL, bool IsWrite);
+  bool insertRangeProbe(Instruction *I, Value *Addr, Value *ByteSize,
+                        Align Alignment, bool IsWrite, bool IsAtomic);
+  bool emitValueCheck(Instruction *I, Value *Addr, Type *LoadTy,
+                      Value *ByteSize, Align Alignment, bool IsWrite);
+  void insertInlineDelay(Instruction *InsertBefore, bool IsWrite);
   bool shouldInstrumentAddress(Value *Addr) const;
   bool shouldInstrumentAccess(Instruction *I) const;
   void insertFuncEntryExit(Function &F);
@@ -242,6 +256,10 @@ private:
   FunctionCallee CsanAtomicThreadFence;
   // void __csan_atomic_signal_fence(i32);
   FunctionCallee CsanAtomicSignalFence;
+  // void __csan_report_race(ptr, intptr, i32, i64, i64);
+  FunctionCallee CsanReportRace;
+  // void __csan_delay(i32);
+  FunctionCallee CsanDelay;
 };
 
 void insertModuleCtor(Module &M) {
@@ -279,6 +297,14 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(M);
   Type *VoidTy = IRB.getVoidTy();
   Type *PtrTy = IRB.getPtrTy();
+  Type *Int64Ty = IRB.getInt64Ty();
+  AttributeList ReportAttrs = Attr.addFnAttribute(Ctx, Attribute::NoInline)
+                                  .addFnAttribute(Ctx, Attribute::Cold);
+  CsanReportRace =
+      M.getOrInsertFunction("__csan_report_race", ReportAttrs, VoidTy, PtrTy,
+                            IntptrTy, FlagsTy, Int64Ty, Int64Ty);
+  if (ClMinimal)
+    CsanDelay = M.getOrInsertFunction("__csan_delay", Attr, VoidTy, FlagsTy);
   CsanFuncEntry =
       M.getOrInsertFunction("__csan_func_entry", Attr, VoidTy, PtrTy);
   CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", Attr, VoidTy);
@@ -337,13 +363,15 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
       F.hasFnAttribute("sanitize_concurrency_no_checking_at_run_time");
   const bool SanitizeFunction =
       F.hasFnAttribute(Attribute::SanitizeConcurrency) && !SuppressChecking;
+  const bool CheckAtomics = ClInstrumentAtomics && !ClMinimal;
   const bool MayInstrument =
       SanitizeFunction &&
       ((ClInstrumentMemoryAccesses && !Acc.LoadsAndStores.empty()) ||
-       (ClInstrumentAtomics && !Acc.AtomicAccesses.empty()) ||
+       (CheckAtomics && !Acc.AtomicAccesses.empty()) ||
        (ClInstrumentMemIntrinsics && !Acc.MemIntrinCalls.empty()));
   const bool NeedsRuntimeIgnores = SuppressChecking && Acc.HasCalls;
-  const bool NeedsFuncEntryExit = ClInstrumentFuncEntryExit && Acc.HasCalls;
+  const bool NeedsFuncEntryExit =
+      ClInstrumentFuncEntryExit && Acc.HasCalls && !ClMinimal;
   if (!MayInstrument && !NeedsRuntimeIgnores && !NeedsFuncEntryExit)
     return false;
 
@@ -355,7 +383,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     for (Instruction *I : Acc.LoadsAndStores)
       Res |= instrumentLoadOrStore(I, DL);
 
-  if (ClInstrumentAtomics && SanitizeFunction)
+  if (CheckAtomics && SanitizeFunction)
     for (Instruction *I : Acc.AtomicAccesses)
       Res |= instrumentAtomic(I, DL);
 
@@ -368,7 +396,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     Res = true;
   }
 
-  if ((Res || Acc.HasCalls) && ClInstrumentFuncEntryExit) {
+  if (!ClMinimal && (Res || Acc.HasCalls) && ClInstrumentFuncEntryExit) {
     insertFuncEntryExit(F);
     Res = true;
   }
@@ -441,8 +469,14 @@ void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
 bool ConcurrencySanitizer::instrumentLoadOrStore(Instruction *I,
                                                  const DataLayout &DL) {
   const bool IsWrite = isa<StoreInst>(I);
+  const bool IsVolatile = IsWrite ? cast<StoreInst>(I)->isVolatile()
+                                  : cast<LoadInst>(I)->isVolatile();
+  if (ClMinimal && IsVolatile)
+    return false;
+
   Value *Addr = getLoadStorePointerOperand(I);
-  if (!insertAccessProbe(I, Addr, getLoadStoreType(I), DL, IsWrite,
+  Type *AccessTy = getLoadStoreType(I);
+  if (!insertAccessProbe(I, Addr, AccessTy, DL, IsWrite,
                          /*IsCompound=*/false, /*IsAtomic=*/false))
     return false;
   if (IsWrite)
@@ -521,16 +555,119 @@ bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
     TypeSize Size = DL.getTypeAllocSize(MSP->getValue()->getType());
     Len = IRB.CreateMul(Len, IRB.CreateTypeSize(IntptrTy, Size));
   }
-  Constant *Flags =
-      getFlags(MI && MI->isAtomic() ? AccessFlags::Atomic : AccessFlags::None);
-  if (InstrumentRead) {
-    IRB.CreateCall(CsanReadRange, {getCallbackAddress(IRB, Src), Len, Flags});
+
+  bool IsAtomic = MI && MI->isAtomic();
+  if (ClMinimal && IsAtomic)
+    return false;
+
+  Instruction *InsertBefore = II;
+  if (ClMinimal) {
+    if (auto *C = dyn_cast<ConstantInt>(Len)) {
+      if (C->isZero())
+        return false;
+    } else {
+      InstrumentationIRBuilder Guard(II);
+      InsertBefore = SplitBlockAndInsertIfThen(Guard.CreateIsNotNull(Len), II,
+                                               /*Unreachable=*/false);
+    }
+  }
+
+  bool Changed = false;
+  if (InstrumentRead && insertRangeProbe(InsertBefore, Src, Len, Align(1),
+                                         /*IsWrite=*/false, IsAtomic)) {
     ++NumInstrumentedReads;
+    Changed = true;
   }
-  if (InstrumentWrite) {
-    IRB.CreateCall(CsanWriteRange, {getCallbackAddress(IRB, Dst), Len, Flags});
+  if (InstrumentWrite && insertRangeProbe(InsertBefore, Dst, Len, Align(1),
+                                          /*IsWrite=*/true, IsAtomic)) {
     ++NumInstrumentedWrites;
+    Changed = true;
   }
+  return Changed;
+}
+
+void ConcurrencySanitizer::insertInlineDelay(Instruction *InsertBefore,
+                                             bool IsWrite) {
+  InstrumentationIRBuilder IRB(InsertBefore);
+  IRB.CreateCall(CsanDelay,
+                 {getFlags(IsWrite ? AccessFlags::Write : AccessFlags::None)});
+}
+
+static Type *sampleTy(LLVMContext &Ctx, uint64_t Bytes) {
+  Bytes = std::min(Bytes, uint64_t(8));
+  return Type::getIntNTy(Ctx, Bytes * 8);
+}
+
+// A memcpy has no value type. Read at most 8 bytes, or one byte when the
+// length is not a constant.
+static Type *rangeSampleTy(LLVMContext &Ctx, Value *ByteSize) {
+  if (auto *C = dyn_cast<ConstantInt>(ByteSize))
+    return sampleTy(Ctx, C->getZExtValue());
+  return Type::getInt8Ty(Ctx);
+}
+
+bool ConcurrencySanitizer::insertTypedValueCheck(Instruction *I, Value *Addr,
+                                                 Type *AccessTy,
+                                                 const DataLayout &DL,
+                                                 bool IsWrite) {
+  if (Addr->isSwiftError() || !AccessTy->isSized())
+    return false;
+  TypeSize StoreSize = DL.getTypeStoreSize(AccessTy);
+  if (StoreSize.isZero())
+    return false;
+
+  InstrumentationIRBuilder IRB(I);
+  Value *ByteSize = IRB.CreateTypeSize(IntptrTy, StoreSize);
+  Type *LoadTy = sampleTy(I->getContext(), StoreSize.getKnownMinValue());
+  return emitValueCheck(I, Addr, LoadTy, ByteSize, getLoadStoreAlignment(I),
+                        IsWrite);
+}
+
+bool ConcurrencySanitizer::insertRangeProbe(Instruction *I, Value *Addr,
+                                            Value *ByteSize, Align Alignment,
+                                            bool IsWrite, bool IsAtomic) {
+  if (ClMinimal) {
+    if (IsAtomic)
+      return false;
+    return emitValueCheck(I, Addr, rangeSampleTy(I->getContext(), ByteSize),
+                          ByteSize, Alignment, IsWrite);
+  }
+
+  InstrumentationIRBuilder IRB(I);
+  Constant *Flags =
+      getFlags(IsAtomic ? AccessFlags::Atomic : AccessFlags::None);
+  IRB.CreateCall(IsWrite ? CsanWriteRange : CsanReadRange,
+                 {getCallbackAddress(IRB, Addr), ByteSize, Flags});
+  return true;
+}
+
+bool ConcurrencySanitizer::emitValueCheck(Instruction *I, Value *Addr,
+                                          Type *LoadTy, Value *ByteSize,
+                                          Align Alignment, bool IsWrite) {
+  MDNode *NoSanitize = MDNode::get(I->getContext(), {});
+  InstrumentationIRBuilder IRB(I);
+  LoadInst *Old = IRB.CreateAlignedLoad(LoadTy, Addr, Alignment,
+                                        /*isVolatile=*/true, "csan.old");
+  Old->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
+
+  insertInlineDelay(I, IsWrite);
+
+  InstrumentationIRBuilder After(I);
+  LoadInst *New = After.CreateAlignedLoad(LoadTy, Addr, Alignment,
+                                          /*isVolatile=*/true, "csan.new");
+  New->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
+
+  Value *Changed = After.CreateICmpNE(Old, New, "csan.changed");
+
+  Instruction *ReportTerm =
+      SplitBlockAndInsertIfThen(Changed, I, /*Unreachable=*/false);
+  InstrumentationIRBuilder Report(ReportTerm);
+  Value *OldValue = Report.CreateZExt(Old, Report.getInt64Ty());
+  Value *NewValue = Report.CreateZExt(New, Report.getInt64Ty());
+  Report.CreateCall(CsanReportRace,
+                    {getCallbackAddress(Report, Addr), ByteSize,
+                     getFlags(IsWrite ? AccessFlags::Write : AccessFlags::None),
+                     OldValue, NewValue});
   return true;
 }
 
@@ -538,6 +675,8 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
                                              Type *AccessTy,
                                              const DataLayout &DL, bool IsWrite,
                                              bool IsCompound, bool IsAtomic) {
+  if (ClMinimal)
+    return insertTypedValueCheck(I, Addr, AccessTy, DL, IsWrite);
   if (Addr->isSwiftError())
     return false;
   AccessFlags Flags = AccessFlags::None;
@@ -551,9 +690,7 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
       return false;
     InstrumentationIRBuilder IRB(I);
     Value *Len = IRB.CreateTypeSize(IntptrTy, DL.getTypeStoreSize(AccessTy));
-    IRB.CreateCall(IsWrite ? CsanWriteRange : CsanReadRange,
-                   {getCallbackAddress(IRB, Addr), Len, getFlags(Flags)});
-    return true;
+    return insertRangeProbe(I, Addr, Len, Align(1), IsWrite, IsAtomic);
   }
 
   Align Alignment = Align(1);

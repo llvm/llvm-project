@@ -233,6 +233,18 @@ NOINLINE static void SetupWatchpoint(const volatile void *Ptr, uptr Size,
   GetHostWatchpoints().Remove(WP);
 }
 
+static void ReportRace(const volatile void *Ptr, uptr Size, int Type, u64 Old,
+                       u64 New, uptr PC, uptr BP) {
+  if (UNLIKELY(!Ptr || !Size))
+    return;
+  Initialize();
+  if (UNLIKELY(DisableCount))
+    return;
+  ScopedDisable Disable;
+  const AccessInfo AI = MakeAccessInfo(Ptr, Size, Type, PC, BP);
+  ReportUnknownOrigin(AI, Old, New);
+}
+
 ALWAYS_INLINE static void CheckAccess(const volatile void *Ptr, uptr Size,
                                       int Type, uptr PC, uptr BP) {
   if (UNLIKELY(!Ptr || !Size))
@@ -323,6 +335,20 @@ INTERFACE void __csan_read_range(void *Addr, uptr Size, int Flags) {
 INTERFACE void __csan_write_range(void *Addr, uptr Size, int Flags) {
   GET_CALLER_PC_BP;
   __csan::CheckAccess(Addr, Size, AccessFlags(Flags, true), pc, bp);
+}
+
+INTERFACE NOINLINE void __csan_delay(int Type) {
+  __csan::Initialize();
+  if (UNLIKELY(__csan::DisableCount) || !__csan::ShouldWatch(Type))
+    return;
+  __csan::ResetSkip();
+  __csan::DelayAccess(Type);
+}
+
+INTERFACE NOINLINE void __csan_report_race(void *Addr, uptr Size, int Type,
+                                           u64 Old, u64 New) {
+  GET_CALLER_PC_BP;
+  __csan::ReportRace(Addr, Size, Type, Old, New, pc, bp);
 }
 
 // TODO: Handle thread reordering checks like KCSAN.
