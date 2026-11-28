@@ -7,20 +7,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; DEBUG-LABEL: PR31671
-;
 ; Check a pointer in which one of its uses is consecutive-like and another of
 ; its uses is non-consecutive-like. In the test case below, %tmp3 is the
 ; pointer operand of an interleaved load, making it consecutive-like. However,
 ; it is also the pointer operand of a non-interleaved store that will become a
-; scatter operation. %tmp3 (and the induction variable) should not be marked
-; uniform-after-vectorization.
-;
-; DEBUG:       LV: Found uniform instruction: %tmp0 = getelementptr inbounds %data, ptr %d, i64 0, i32 3, i64 %i
-; DEBUG-NOT:   LV: Found uniform instruction: %tmp3 = getelementptr inbounds %data, ptr %d, i64 0, i32 0, i64 %i
-; DEBUG-NOT:   LV: Found uniform instruction: %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
-; DEBUG-NOT:   LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 5
-
+; scatter operation. %tmp3 (and the induction variable) must not be narrowed to
+; a single scalar.
 
 %data = type { [32000 x float], [3 x i32], [4 x i8], [32000 x float] }
 

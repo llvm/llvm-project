@@ -1000,8 +1000,8 @@ private:
   /// Collect the instructions that are uniform after vectorization. An
   /// instruction is uniform if we represent it with a single scalar value in
   /// the vectorized loop corresponding to each vector iteration. Examples of
-  /// uniform instructions include pointer operands of consecutive or
-  /// interleaved memory accesses. Note that although uniformity implies an
+  /// uniform instructions include loop exit conditions and memory accesses to
+  /// uniform addresses. Note that although uniformity implies an
   /// instruction will be scalar, the reverse is not true. In general, a
   /// scalarized instruction will be represented by VF scalar values in the
   /// vectorized loop, each corresponding to an iteration of the original
@@ -2326,38 +2326,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     return TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand());
   };
 
-  auto IsUniformDecision = [&](Instruction *I, ElementCount VF) {
-    InstWidening WideningDecision = getWideningDecision(I, VF);
-    assert(WideningDecision != CM_Unknown &&
-           "Widening decision should be ready at this moment");
-
-    if (IsUniformMemOpUse(I))
-      return true;
-
-    return (WideningDecision == CM_Widen ||
-            WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave);
-  };
-
-  // Returns true if Ptr is the pointer operand of a memory access instruction
-  // I, I is known to not require scalarization, and the pointer is not also
-  // stored.
-  auto IsVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
-    if (isa<StoreInst>(I) && I->getOperand(0) == Ptr)
-      return false;
-    return getLoadStorePointerOperand(I) == Ptr &&
-           (IsUniformDecision(I, VF) || Legal->isInvariant(Ptr));
-  };
-
-  // Holds a list of values which are known to have at least one uniform use.
-  // Note that there may be other uses which aren't uniform.  A "uniform use"
-  // here is something which only demands lane 0 of the unrolled iterations;
-  // it does not imply that all lanes produce the same value (e.g. this is not
-  // the usual meaning of uniform)
-  SetVector<Value *> HasUniformUse;
-
-  // Scan the loop for instructions which are either a) known to have only
-  // lane 0 demanded or b) are uses which demand only lane 0 of their operand.
+  // Scan the loop for instructions which are known to have only lane 0
+  // demanded.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -2398,25 +2368,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
       if (IsUniformMemOpUse(&I))
         AddToWorklistIfAllowed(&I);
-
-      if (IsVectorizedMemAccessUse(&I, Ptr))
-        HasUniformUse.insert(Ptr);
     }
-
-  // Add to the worklist any operands which have *only* uniform (e.g. lane 0
-  // demanding) users.  Since loops are assumed to be in LCSSA form, this
-  // disallows uses outside the loop as well.
-  for (auto *V : HasUniformUse) {
-    if (IsOutOfScope(V))
-      continue;
-    auto *I = cast<Instruction>(V);
-    bool UsersAreMemAccesses = all_of(I->users(), [&](User *U) -> bool {
-      auto *UI = cast<Instruction>(U);
-      return TheLoop->contains(UI) && IsVectorizedMemAccessUse(UI, V);
-    });
-    if (UsersAreMemAccesses)
-      AddToWorklistIfAllowed(I);
-  }
 
   // Expand Worklist in topological order: whenever a new instruction
   // is added , its users should be already inside Worklist.  It ensures
@@ -2439,7 +2391,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       auto *OI = cast<Instruction>(OV);
       if (llvm::all_of(OI->users(), [&](User *U) -> bool {
             auto *J = cast<Instruction>(U);
-            return Worklist.count(J) || IsVectorizedMemAccessUse(J, OI);
+            return Worklist.count(J);
           }))
         AddToWorklistIfAllowed(OI);
     }
@@ -2459,8 +2411,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // vectorization.
     bool UniformInd = all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I) ||
-             IsVectorizedMemAccessUse(I, Ind);
+      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I);
     });
     if (!UniformInd)
       continue;
@@ -2469,8 +2420,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // uniform after vectorization.
     bool UniformIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || Worklist.count(I) ||
-             IsVectorizedMemAccessUse(I, IndUpdate);
+      return I == Ind || Worklist.count(I);
     });
     if (!UniformIndUpdate)
       continue;
@@ -3786,9 +3736,14 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     if (isScalarWithPredication(I, VF))
       return false;
 
+    // Don't scalarize accesses already decided to be widened or interleaved,
+    // e.g. masked loads.
+    if (is_contained({CM_Widen, CM_Widen_Reverse, CM_Interleave},
+                     getWideningDecision(I, VF)))
+      return false;
+
     // If any of the instruction's operands are uniform after vectorization,
-    // the instruction cannot be scalarized. This prevents, for example, a
-    // masked load from being scalarized.
+    // the instruction cannot be scalarized.
     //
     // We assume we will only emit a value for lane zero of an instruction
     // marked uniform after vectorization, rather than VF identical values.
