@@ -56,6 +56,36 @@ static bool isPreprocessorDirectiveToken(const Token &Tok,
              SM.getExpansionLineNumber(Tok.getLocation());
 }
 
+// Returns the last non-comment token before the closing brace of Enum.
+// Lexer::findPreviousToken() can't be used for this: it starts lexing at the
+// beginning of a line, which may be inside a multi-line block comment.
+static std::optional<Token> findLastEnumToken(const EnumDecl *Enum,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  const auto [LBraceFile, LBraceOffset] =
+      SM.getDecomposedExpansionLoc(Enum->getBraceRange().getBegin());
+  const auto [RBraceFile, RBraceOffset] =
+      SM.getDecomposedExpansionLoc(Enum->getBraceRange().getEnd());
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(RBraceFile, &Invalid);
+  if (Invalid)
+    return std::nullopt;
+  // The braces are in different files if the enum's body is split across an
+  // #include. Then lex the closing brace's file from its beginning.
+  const bool SameFile = LBraceFile == RBraceFile;
+  Lexer RawLexer(SM.getLocForStartOfFile(RBraceFile), LangOpts, Buffer.begin(),
+                 Buffer.data() + (SameFile ? LBraceOffset : 0), Buffer.end());
+  Token Tok;
+  // Skip the opening brace.
+  if (SameFile && RawLexer.LexFromRawLexer(Tok))
+    return std::nullopt;
+  std::optional<Token> LastTok;
+  while (!RawLexer.LexFromRawLexer(Tok) &&
+         SM.getFileOffset(Tok.getLocation()) < RBraceOffset)
+    LastTok = Tok;
+  return LastTok;
+}
+
 namespace {
 
 AST_POLYMORPHIC_MATCHER(isMacro,
@@ -122,9 +152,8 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const std::optional<Token> LastTok = Lexer::findPreviousToken(
-      Enum->getBraceRange().getEnd(), *Result.SourceManager, getLangOpts(),
-      /*IncludeComments=*/false);
+  const std::optional<Token> LastTok =
+      findLastEnumToken(Enum, *Result.SourceManager, getLangOpts());
   if (!LastTok)
     return;
 
