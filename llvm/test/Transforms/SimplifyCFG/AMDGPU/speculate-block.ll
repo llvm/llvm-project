@@ -8,9 +8,15 @@
 define amdgpu_kernel void @ham(i1 %arg3, i1 %icmp84) {
 ; CHECK-LABEL: define amdgpu_kernel void @ham(
 ; CHECK-SAME: i1 [[ARG3:%.*]], i1 [[ICMP84:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[ICMP84]], <4 x float> zeroinitializer, <4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[ARG3]], <4 x float> [[SPEC_SELECT]], <4 x float> zeroinitializer
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[ARG3]], label %[[THEN:.*]], label %[[MERGE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[ICMP841:%.*]] = icmp sge i32 0, 0
+; CHECK-NEXT:    br i1 [[ICMP84]], label %[[THEN_IF:.*]], label %[[MERGE]]
+; CHECK:       [[THEN_IF]]:
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[PHI92:%.*]] = phi <4 x float> [ zeroinitializer, %[[THEN_IF]] ], [ splat (float 1.000000e+00), %[[THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

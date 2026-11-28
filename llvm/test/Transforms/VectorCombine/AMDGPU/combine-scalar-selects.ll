@@ -1436,44 +1436,26 @@ entry:
 
 ; Test <2 x i64> to <4 x i32> (64-bit elements to 32-bit elements)
 define amdgpu_kernel void @combine_v2i64_to_v4i32(
-; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_v2i64_to_v4i32(
-; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x i64> [[SRC:%.*]], i1 [[COND:%.*]]) {
-; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[COND]], <2 x i64> [[SRC]], <2 x i64> zeroinitializer
-; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x i64> [[COMBINED_SEL]] to <4 x i32>
-; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 0
-; CHECK-OPT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 1
-; CHECK-OPT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 2
-; CHECK-OPT-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 3
-; CHECK-OPT-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-OPT-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-OPT-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[PTR1]], align 4
-; CHECK-OPT-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-OPT-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[PTR2]], align 4
-; CHECK-OPT-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-OPT-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[PTR3]], align 4
-; CHECK-OPT-NEXT:    ret void
-;
-; CHECK-NOOPT-LABEL: define amdgpu_kernel void @combine_v2i64_to_v4i32(
-; CHECK-NOOPT-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x i64> [[SRC:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[WORDS:%.*]] = bitcast <2 x i64> [[SRC]] to <4 x i32>
-; CHECK-NOOPT-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[WORDS]], i64 0
-; CHECK-NOOPT-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[WORDS]], i64 1
-; CHECK-NOOPT-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[WORDS]], i64 2
-; CHECK-NOOPT-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[WORDS]], i64 3
-; CHECK-NOOPT-NEXT:    [[S0:%.*]] = select i1 [[COND]], i32 [[E0]], i32 0
-; CHECK-NOOPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i32 [[E1]], i32 0
-; CHECK-NOOPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i32 [[E2]], i32 0
-; CHECK-NOOPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i32 [[E3]], i32 0
-; CHECK-NOOPT-NEXT:    store i32 [[S0]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NOOPT-NEXT:    store i32 [[S1]], ptr addrspace(1) [[PTR1]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-NOOPT-NEXT:    store i32 [[S2]], ptr addrspace(1) [[PTR2]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-NOOPT-NEXT:    store i32 [[S3]], ptr addrspace(1) [[PTR3]], align 4
-; CHECK-NOOPT-NEXT:    ret void
+; CHECK-LABEL: define amdgpu_kernel void @combine_v2i64_to_v4i32(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x i64> [[SRC:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <2 x i64> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[WORDS]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[WORDS]], i64 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[WORDS]], i64 2
+; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[WORDS]], i64 3
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[COND]], i32 [[E0]], i32 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[COND]], i32 [[E1]], i32 0
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND]], i32 [[E2]], i32 0
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[COND]], i32 [[E3]], i32 0
+; CHECK-NEXT:    store i32 [[S0]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
+; CHECK-NEXT:    store i32 [[S1]], ptr addrspace(1) [[PTR1]], align 4
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-NEXT:    store i32 [[S2]], ptr addrspace(1) [[PTR2]], align 4
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
+; CHECK-NEXT:    store i32 [[S3]], ptr addrspace(1) [[PTR3]], align 4
+; CHECK-NEXT:    ret void
 ;
   ptr addrspace(1) %out,
   <2 x i64> %src,
@@ -1807,44 +1789,26 @@ entry:
 
 ; Test <2 x double> to <4 x i32> (double elements to 32-bit elements)
 define amdgpu_kernel void @combine_v2f64_to_v4i32(
-; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_v2f64_to_v4i32(
-; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x double> [[SRC:%.*]], i1 [[COND:%.*]]) {
-; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[COND]], <2 x double> [[SRC]], <2 x double> zeroinitializer
-; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x double> [[COMBINED_SEL]] to <4 x i32>
-; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 0
-; CHECK-OPT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 1
-; CHECK-OPT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 2
-; CHECK-OPT-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[COMBINED_BC]], i64 3
-; CHECK-OPT-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-OPT-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-OPT-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[PTR1]], align 4
-; CHECK-OPT-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-OPT-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[PTR2]], align 4
-; CHECK-OPT-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-OPT-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[PTR3]], align 4
-; CHECK-OPT-NEXT:    ret void
-;
-; CHECK-NOOPT-LABEL: define amdgpu_kernel void @combine_v2f64_to_v4i32(
-; CHECK-NOOPT-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x double> [[SRC:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[WORDS:%.*]] = bitcast <2 x double> [[SRC]] to <4 x i32>
-; CHECK-NOOPT-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[WORDS]], i64 0
-; CHECK-NOOPT-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[WORDS]], i64 1
-; CHECK-NOOPT-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[WORDS]], i64 2
-; CHECK-NOOPT-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[WORDS]], i64 3
-; CHECK-NOOPT-NEXT:    [[S0:%.*]] = select i1 [[COND]], i32 [[E0]], i32 0
-; CHECK-NOOPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i32 [[E1]], i32 0
-; CHECK-NOOPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i32 [[E2]], i32 0
-; CHECK-NOOPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i32 [[E3]], i32 0
-; CHECK-NOOPT-NEXT:    store i32 [[S0]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NOOPT-NEXT:    store i32 [[S1]], ptr addrspace(1) [[PTR1]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-NOOPT-NEXT:    store i32 [[S2]], ptr addrspace(1) [[PTR2]], align 4
-; CHECK-NOOPT-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-NOOPT-NEXT:    store i32 [[S3]], ptr addrspace(1) [[PTR3]], align 4
-; CHECK-NOOPT-NEXT:    ret void
+; CHECK-LABEL: define amdgpu_kernel void @combine_v2f64_to_v4i32(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x double> [[SRC:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <2 x double> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[WORDS]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[WORDS]], i64 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[WORDS]], i64 2
+; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[WORDS]], i64 3
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[COND]], i32 [[E0]], i32 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[COND]], i32 [[E1]], i32 0
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND]], i32 [[E2]], i32 0
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[COND]], i32 [[E3]], i32 0
+; CHECK-NEXT:    store i32 [[S0]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 1
+; CHECK-NEXT:    store i32 [[S1]], ptr addrspace(1) [[PTR1]], align 4
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-NEXT:    store i32 [[S2]], ptr addrspace(1) [[PTR2]], align 4
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 3
+; CHECK-NEXT:    store i32 [[S3]], ptr addrspace(1) [[PTR3]], align 4
+; CHECK-NEXT:    ret void
 ;
   ptr addrspace(1) %out,
   <2 x double> %src,
@@ -1967,63 +1931,36 @@ end:
 }
 
 define i8 @fold_selects_from_bitcast_dominance_multiblock2(<4 x i64> %v, i8 %a, i1 %flag) {
-; CHECK-OPT-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock2(
-; CHECK-OPT-SAME: <4 x i64> [[V:%.*]], i8 [[A:%.*]], i1 [[FLAG:%.*]]) {
-; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    br label %[[FIRST:.*]]
-; CHECK-OPT:       [[FIRST]]:
-; CHECK-OPT-NEXT:    br label %[[SECOND:.*]]
-; CHECK-OPT:       [[SECOND]]:
-; CHECK-OPT-NEXT:    [[COND:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-OPT-NEXT:    [[TMP0:%.*]] = select i1 [[COND]], <4 x i64> [[V]], <4 x i64> zeroinitializer
-; CHECK-OPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[TMP0]] to <32 x i8>
-; CHECK-OPT-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK-OPT:       [[THEN]]:
-; CHECK-OPT-NEXT:    [[S1:%.*]] = extractelement <32 x i8> [[TMP1]], i64 0
-; CHECK-OPT-NEXT:    br label %[[COMBINE:.*]]
-; CHECK-OPT:       [[ELSE]]:
-; CHECK-OPT-NEXT:    [[S2:%.*]] = extractelement <32 x i8> [[TMP1]], i64 7
-; CHECK-OPT-NEXT:    br label %[[COMBINE]]
-; CHECK-OPT:       [[COMBINE]]:
-; CHECK-OPT-NEXT:    [[R1:%.*]] = phi i8 [ [[S1]], %[[THEN]] ], [ [[S2]], %[[ELSE]] ]
-; CHECK-OPT-NEXT:    [[S3:%.*]] = extractelement <32 x i8> [[TMP1]], i64 1
-; CHECK-OPT-NEXT:    [[S4:%.*]] = extractelement <32 x i8> [[TMP1]], i64 8
-; CHECK-OPT-NEXT:    [[S5:%.*]] = extractelement <32 x i8> [[TMP1]], i64 9
-; CHECK-OPT-NEXT:    [[R2:%.*]] = add i8 [[R1]], [[S3]]
-; CHECK-OPT-NEXT:    [[R3:%.*]] = add i8 [[R2]], [[S4]]
-; CHECK-OPT-NEXT:    [[R4:%.*]] = add i8 [[R3]], [[S5]]
-; CHECK-OPT-NEXT:    ret i8 [[R4]]
-;
-; CHECK-NOOPT-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock2(
-; CHECK-NOOPT-SAME: <4 x i64> [[V:%.*]], i8 [[A:%.*]], i1 [[FLAG:%.*]]) {
-; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64> [[V]] to <32 x i8>
-; CHECK-NOOPT-NEXT:    br label %[[FIRST:.*]]
-; CHECK-NOOPT:       [[FIRST]]:
-; CHECK-NOOPT-NEXT:    [[VECEXT1:%.*]] = extractelement <32 x i8> [[TMP0]], i64 0
-; CHECK-NOOPT-NEXT:    [[VECEXT2:%.*]] = extractelement <32 x i8> [[TMP0]], i64 7
-; CHECK-NOOPT-NEXT:    [[VECEXT3:%.*]] = extractelement <32 x i8> [[TMP0]], i64 1
-; CHECK-NOOPT-NEXT:    [[VECEXT4:%.*]] = extractelement <32 x i8> [[TMP0]], i64 8
-; CHECK-NOOPT-NEXT:    [[VECEXT5:%.*]] = extractelement <32 x i8> [[TMP0]], i64 9
-; CHECK-NOOPT-NEXT:    br label %[[SECOND:.*]]
-; CHECK-NOOPT:       [[SECOND]]:
-; CHECK-NOOPT-NEXT:    [[COND:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NOOPT-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK-NOOPT:       [[THEN]]:
-; CHECK-NOOPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[VECEXT1]], i8 0
-; CHECK-NOOPT-NEXT:    br label %[[COMBINE:.*]]
-; CHECK-NOOPT:       [[ELSE]]:
-; CHECK-NOOPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[VECEXT2]], i8 0
-; CHECK-NOOPT-NEXT:    br label %[[COMBINE]]
-; CHECK-NOOPT:       [[COMBINE]]:
-; CHECK-NOOPT-NEXT:    [[R1:%.*]] = phi i8 [ [[S1]], %[[THEN]] ], [ [[S2]], %[[ELSE]] ]
-; CHECK-NOOPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[VECEXT3]], i8 0
-; CHECK-NOOPT-NEXT:    [[S4:%.*]] = select i1 [[COND]], i8 [[VECEXT4]], i8 0
-; CHECK-NOOPT-NEXT:    [[S5:%.*]] = select i1 [[COND]], i8 [[VECEXT5]], i8 0
-; CHECK-NOOPT-NEXT:    [[R2:%.*]] = add i8 [[R1]], [[S3]]
-; CHECK-NOOPT-NEXT:    [[R3:%.*]] = add i8 [[R2]], [[S4]]
-; CHECK-NOOPT-NEXT:    [[R4:%.*]] = add i8 [[R3]], [[S5]]
-; CHECK-NOOPT-NEXT:    ret i8 [[R4]]
+; CHECK-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock2(
+; CHECK-SAME: <4 x i64> [[V:%.*]], i8 [[A:%.*]], i1 [[FLAG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64> [[V]] to <32 x i8>
+; CHECK-NEXT:    br label %[[FIRST:.*]]
+; CHECK:       [[FIRST]]:
+; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <32 x i8> [[TMP0]], i64 0
+; CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <32 x i8> [[TMP0]], i64 7
+; CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <32 x i8> [[TMP0]], i64 1
+; CHECK-NEXT:    [[VECEXT4:%.*]] = extractelement <32 x i8> [[TMP0]], i64 8
+; CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <32 x i8> [[TMP0]], i64 9
+; CHECK-NEXT:    br label %[[SECOND:.*]]
+; CHECK:       [[SECOND]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[VECEXT1]], i8 0
+; CHECK-NEXT:    br label %[[COMBINE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[VECEXT2]], i8 0
+; CHECK-NEXT:    br label %[[COMBINE]]
+; CHECK:       [[COMBINE]]:
+; CHECK-NEXT:    [[R1:%.*]] = phi i8 [ [[S1]], %[[THEN]] ], [ [[S2]], %[[ELSE]] ]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[VECEXT3]], i8 0
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[COND]], i8 [[VECEXT4]], i8 0
+; CHECK-NEXT:    [[S5:%.*]] = select i1 [[COND]], i8 [[VECEXT5]], i8 0
+; CHECK-NEXT:    [[R2:%.*]] = add i8 [[R1]], [[S3]]
+; CHECK-NEXT:    [[R3:%.*]] = add i8 [[R2]], [[S4]]
+; CHECK-NEXT:    [[R4:%.*]] = add i8 [[R3]], [[S5]]
+; CHECK-NEXT:    ret i8 [[R4]]
 ;
 entry:
   %0 = bitcast <4 x i64> %v to <32 x i8>
@@ -2061,103 +1998,58 @@ combine:
 }
 
 define i8 @fold_selects_from_bitcast_dominance_multiblock3(<4 x i64> %v1, <4 x i64> %v2, i8 %a, i1 %flag1, i1 %flag2, i1 %flag3, i1 %flag4, i1 %cond2) {
-; CHECK-OPT-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock3(
-; CHECK-OPT-SAME: <4 x i64> [[V1:%.*]], <4 x i64> [[V2:%.*]], i8 [[A:%.*]], i1 [[FLAG1:%.*]], i1 [[FLAG2:%.*]], i1 [[FLAG3:%.*]], i1 [[FLAG4:%.*]], i1 [[COND2:%.*]]) {
-; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[TMP0:%.*]] = select i1 [[COND2]], <4 x i64> [[V2]], <4 x i64> zeroinitializer
-; CHECK-OPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[TMP0]] to <32 x i8>
-; CHECK-OPT-NEXT:    br label %[[FIRST:.*]]
-; CHECK-OPT:       [[FIRST]]:
-; CHECK-OPT-NEXT:    br label %[[T0:.*]]
-; CHECK-OPT:       [[T0]]:
-; CHECK-OPT-NEXT:    [[COND1:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-OPT-NEXT:    [[TMP2:%.*]] = select i1 [[COND1]], <4 x i64> [[V1]], <4 x i64> zeroinitializer
-; CHECK-OPT-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP2]] to <32 x i8>
-; CHECK-OPT-NEXT:    br i1 [[FLAG1]], label %[[R0:.*]], label %[[T1:.*]]
-; CHECK-OPT:       [[T1]]:
-; CHECK-OPT-NEXT:    br i1 [[FLAG2]], label %[[R1:.*]], label %[[T2:.*]]
-; CHECK-OPT:       [[T2]]:
-; CHECK-OPT-NEXT:    br i1 [[FLAG3]], label %[[R2:.*]], label %[[T3:.*]]
-; CHECK-OPT:       [[T3]]:
-; CHECK-OPT-NEXT:    br i1 [[FLAG4]], label %[[R3:.*]], label %[[R4:.*]]
-; CHECK-OPT:       [[R0]]:
-; CHECK-OPT-NEXT:    [[RES0:%.*]] = extractelement <32 x i8> [[TMP3]], i64 0
-; CHECK-OPT-NEXT:    [[RES1:%.*]] = extractelement <32 x i8> [[TMP1]], i64 1
-; CHECK-OPT-NEXT:    [[RES01:%.*]] = add i8 [[RES0]], [[RES1]]
-; CHECK-OPT-NEXT:    ret i8 [[RES01]]
-; CHECK-OPT:       [[R1]]:
-; CHECK-OPT-NEXT:    [[RES2:%.*]] = extractelement <32 x i8> [[TMP3]], i64 2
-; CHECK-OPT-NEXT:    [[RES3:%.*]] = extractelement <32 x i8> [[TMP1]], i64 3
-; CHECK-OPT-NEXT:    [[RES23:%.*]] = add i8 [[RES2]], [[RES3]]
-; CHECK-OPT-NEXT:    ret i8 [[RES23]]
-; CHECK-OPT:       [[R2]]:
-; CHECK-OPT-NEXT:    [[RES4:%.*]] = extractelement <32 x i8> [[TMP3]], i64 4
-; CHECK-OPT-NEXT:    [[RES5:%.*]] = extractelement <32 x i8> [[TMP1]], i64 5
-; CHECK-OPT-NEXT:    [[RES45:%.*]] = add i8 [[RES4]], [[RES5]]
-; CHECK-OPT-NEXT:    ret i8 [[RES45]]
-; CHECK-OPT:       [[R3]]:
-; CHECK-OPT-NEXT:    [[RES6:%.*]] = extractelement <32 x i8> [[TMP3]], i64 6
-; CHECK-OPT-NEXT:    [[RES7:%.*]] = extractelement <32 x i8> [[TMP1]], i64 7
-; CHECK-OPT-NEXT:    [[RES67:%.*]] = add i8 [[RES6]], [[RES7]]
-; CHECK-OPT-NEXT:    ret i8 [[RES67]]
-; CHECK-OPT:       [[R4]]:
-; CHECK-OPT-NEXT:    [[RES8:%.*]] = extractelement <32 x i8> [[TMP3]], i64 8
-; CHECK-OPT-NEXT:    [[RES9:%.*]] = extractelement <32 x i8> [[TMP1]], i64 9
-; CHECK-OPT-NEXT:    [[RES89:%.*]] = add i8 [[RES8]], [[RES9]]
-; CHECK-OPT-NEXT:    ret i8 [[RES89]]
-;
-; CHECK-NOOPT-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock3(
-; CHECK-NOOPT-SAME: <4 x i64> [[V1:%.*]], <4 x i64> [[V2:%.*]], i8 [[A:%.*]], i1 [[FLAG1:%.*]], i1 [[FLAG2:%.*]], i1 [[FLAG3:%.*]], i1 [[FLAG4:%.*]], i1 [[COND2:%.*]]) {
-; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64> [[V1]] to <32 x i8>
-; CHECK-NOOPT-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[V2]] to <32 x i8>
-; CHECK-NOOPT-NEXT:    br label %[[FIRST:.*]]
-; CHECK-NOOPT:       [[FIRST]]:
-; CHECK-NOOPT-NEXT:    [[VECEXT00:%.*]] = extractelement <32 x i8> [[TMP0]], i64 0
-; CHECK-NOOPT-NEXT:    [[VECEXT02:%.*]] = extractelement <32 x i8> [[TMP0]], i64 2
-; CHECK-NOOPT-NEXT:    [[VECEXT04:%.*]] = extractelement <32 x i8> [[TMP0]], i64 4
-; CHECK-NOOPT-NEXT:    [[VECEXT06:%.*]] = extractelement <32 x i8> [[TMP0]], i64 6
-; CHECK-NOOPT-NEXT:    [[VECEXT08:%.*]] = extractelement <32 x i8> [[TMP0]], i64 8
-; CHECK-NOOPT-NEXT:    [[VECEXT11:%.*]] = extractelement <32 x i8> [[TMP1]], i64 1
-; CHECK-NOOPT-NEXT:    [[VECEXT13:%.*]] = extractelement <32 x i8> [[TMP1]], i64 3
-; CHECK-NOOPT-NEXT:    [[VECEXT15:%.*]] = extractelement <32 x i8> [[TMP1]], i64 5
-; CHECK-NOOPT-NEXT:    [[VECEXT17:%.*]] = extractelement <32 x i8> [[TMP1]], i64 7
-; CHECK-NOOPT-NEXT:    [[VECEXT19:%.*]] = extractelement <32 x i8> [[TMP1]], i64 9
-; CHECK-NOOPT-NEXT:    br label %[[T0:.*]]
-; CHECK-NOOPT:       [[T0]]:
-; CHECK-NOOPT-NEXT:    [[COND1:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NOOPT-NEXT:    br i1 [[FLAG1]], label %[[R0:.*]], label %[[T1:.*]]
-; CHECK-NOOPT:       [[T1]]:
-; CHECK-NOOPT-NEXT:    br i1 [[FLAG2]], label %[[R1:.*]], label %[[T2:.*]]
-; CHECK-NOOPT:       [[T2]]:
-; CHECK-NOOPT-NEXT:    br i1 [[FLAG3]], label %[[R2:.*]], label %[[T3:.*]]
-; CHECK-NOOPT:       [[T3]]:
-; CHECK-NOOPT-NEXT:    br i1 [[FLAG4]], label %[[R3:.*]], label %[[R4:.*]]
-; CHECK-NOOPT:       [[R0]]:
-; CHECK-NOOPT-NEXT:    [[RES0:%.*]] = select i1 [[COND1]], i8 [[VECEXT00]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES1:%.*]] = select i1 [[COND2]], i8 [[VECEXT11]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES01:%.*]] = add i8 [[RES0]], [[RES1]]
-; CHECK-NOOPT-NEXT:    ret i8 [[RES01]]
-; CHECK-NOOPT:       [[R1]]:
-; CHECK-NOOPT-NEXT:    [[RES2:%.*]] = select i1 [[COND1]], i8 [[VECEXT02]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES3:%.*]] = select i1 [[COND2]], i8 [[VECEXT13]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES23:%.*]] = add i8 [[RES2]], [[RES3]]
-; CHECK-NOOPT-NEXT:    ret i8 [[RES23]]
-; CHECK-NOOPT:       [[R2]]:
-; CHECK-NOOPT-NEXT:    [[RES4:%.*]] = select i1 [[COND1]], i8 [[VECEXT04]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES5:%.*]] = select i1 [[COND2]], i8 [[VECEXT15]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES45:%.*]] = add i8 [[RES4]], [[RES5]]
-; CHECK-NOOPT-NEXT:    ret i8 [[RES45]]
-; CHECK-NOOPT:       [[R3]]:
-; CHECK-NOOPT-NEXT:    [[RES6:%.*]] = select i1 [[COND1]], i8 [[VECEXT06]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES7:%.*]] = select i1 [[COND2]], i8 [[VECEXT17]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES67:%.*]] = add i8 [[RES6]], [[RES7]]
-; CHECK-NOOPT-NEXT:    ret i8 [[RES67]]
-; CHECK-NOOPT:       [[R4]]:
-; CHECK-NOOPT-NEXT:    [[RES8:%.*]] = select i1 [[COND1]], i8 [[VECEXT08]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES9:%.*]] = select i1 [[COND2]], i8 [[VECEXT19]], i8 0
-; CHECK-NOOPT-NEXT:    [[RES89:%.*]] = add i8 [[RES8]], [[RES9]]
-; CHECK-NOOPT-NEXT:    ret i8 [[RES89]]
+; CHECK-LABEL: define i8 @fold_selects_from_bitcast_dominance_multiblock3(
+; CHECK-SAME: <4 x i64> [[V1:%.*]], <4 x i64> [[V2:%.*]], i8 [[A:%.*]], i1 [[FLAG1:%.*]], i1 [[FLAG2:%.*]], i1 [[FLAG3:%.*]], i1 [[FLAG4:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64> [[V1]] to <32 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[V2]] to <32 x i8>
+; CHECK-NEXT:    br label %[[FIRST:.*]]
+; CHECK:       [[FIRST]]:
+; CHECK-NEXT:    [[VECEXT00:%.*]] = extractelement <32 x i8> [[TMP0]], i64 0
+; CHECK-NEXT:    [[VECEXT02:%.*]] = extractelement <32 x i8> [[TMP0]], i64 2
+; CHECK-NEXT:    [[VECEXT04:%.*]] = extractelement <32 x i8> [[TMP0]], i64 4
+; CHECK-NEXT:    [[VECEXT06:%.*]] = extractelement <32 x i8> [[TMP0]], i64 6
+; CHECK-NEXT:    [[VECEXT08:%.*]] = extractelement <32 x i8> [[TMP0]], i64 8
+; CHECK-NEXT:    [[VECEXT11:%.*]] = extractelement <32 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[VECEXT13:%.*]] = extractelement <32 x i8> [[TMP1]], i64 3
+; CHECK-NEXT:    [[VECEXT15:%.*]] = extractelement <32 x i8> [[TMP1]], i64 5
+; CHECK-NEXT:    [[VECEXT17:%.*]] = extractelement <32 x i8> [[TMP1]], i64 7
+; CHECK-NEXT:    [[VECEXT19:%.*]] = extractelement <32 x i8> [[TMP1]], i64 9
+; CHECK-NEXT:    br label %[[T0:.*]]
+; CHECK:       [[T0]]:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[FLAG1]], label %[[R0:.*]], label %[[T1:.*]]
+; CHECK:       [[T1]]:
+; CHECK-NEXT:    br i1 [[FLAG2]], label %[[R1:.*]], label %[[T2:.*]]
+; CHECK:       [[T2]]:
+; CHECK-NEXT:    br i1 [[FLAG3]], label %[[R2:.*]], label %[[T3:.*]]
+; CHECK:       [[T3]]:
+; CHECK-NEXT:    br i1 [[FLAG4]], label %[[R3:.*]], label %[[R4:.*]]
+; CHECK:       [[R0]]:
+; CHECK-NEXT:    [[RES0:%.*]] = select i1 [[COND1]], i8 [[VECEXT00]], i8 0
+; CHECK-NEXT:    [[RES1:%.*]] = select i1 [[COND2]], i8 [[VECEXT11]], i8 0
+; CHECK-NEXT:    [[RES01:%.*]] = add i8 [[RES0]], [[RES1]]
+; CHECK-NEXT:    ret i8 [[RES01]]
+; CHECK:       [[R1]]:
+; CHECK-NEXT:    [[RES2:%.*]] = select i1 [[COND1]], i8 [[VECEXT02]], i8 0
+; CHECK-NEXT:    [[RES3:%.*]] = select i1 [[COND2]], i8 [[VECEXT13]], i8 0
+; CHECK-NEXT:    [[RES23:%.*]] = add i8 [[RES2]], [[RES3]]
+; CHECK-NEXT:    ret i8 [[RES23]]
+; CHECK:       [[R2]]:
+; CHECK-NEXT:    [[RES4:%.*]] = select i1 [[COND1]], i8 [[VECEXT04]], i8 0
+; CHECK-NEXT:    [[RES5:%.*]] = select i1 [[COND2]], i8 [[VECEXT15]], i8 0
+; CHECK-NEXT:    [[RES45:%.*]] = add i8 [[RES4]], [[RES5]]
+; CHECK-NEXT:    ret i8 [[RES45]]
+; CHECK:       [[R3]]:
+; CHECK-NEXT:    [[RES6:%.*]] = select i1 [[COND1]], i8 [[VECEXT06]], i8 0
+; CHECK-NEXT:    [[RES7:%.*]] = select i1 [[COND2]], i8 [[VECEXT17]], i8 0
+; CHECK-NEXT:    [[RES67:%.*]] = add i8 [[RES6]], [[RES7]]
+; CHECK-NEXT:    ret i8 [[RES67]]
+; CHECK:       [[R4]]:
+; CHECK-NEXT:    [[RES8:%.*]] = select i1 [[COND1]], i8 [[VECEXT08]], i8 0
+; CHECK-NEXT:    [[RES9:%.*]] = select i1 [[COND2]], i8 [[VECEXT19]], i8 0
+; CHECK-NEXT:    [[RES89:%.*]] = add i8 [[RES8]], [[RES9]]
+; CHECK-NEXT:    ret i8 [[RES89]]
 ;
 entry:
   %0 = bitcast <4 x i64> %v1 to <32 x i8>
