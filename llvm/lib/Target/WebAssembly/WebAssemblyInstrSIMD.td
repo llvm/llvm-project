@@ -1497,6 +1497,166 @@ def : Pat<(v16i8 (wasm_narrow_u (v8i16 V128:$left), (v8i16 V128:$right))),
           (NARROW_U_I8x16 $left, $right)>;
 def : Pat<(v8i16 (wasm_narrow_u (v4i32 V128:$left), (v4i32 V128:$right))),
           (NARROW_U_I16x8 $left, $right)>;
+// WebAssemblyISD::NARROW_S
+def wasm_narrow_s : SDNode<"WebAssemblyISD::NARROW_S", wasm_narrow_t>;
+def : Pat<(v16i8 (wasm_narrow_s (v8i16 V128:$left), (v8i16 V128:$right))),
+          (NARROW_S_I8x16 $left, $right)>;
+def : Pat<(v8i16 (wasm_narrow_s (v4i32 V128:$left), (v4i32 V128:$right))),
+          (NARROW_S_I16x8 $left, $right)>;
+
+// A signed narrow already saturates values above the largest value of its
+// result element type, so an equivalent upper clamp can be folded into it.
+multiclass SignedNarrowUpperClamp<ValueType input, ValueType output,
+                                  Instruction narrow, int minval, int maxval> {
+  def : Pat<
+    (output (wasm_narrow_s
+      (smax (smin (input V128:$left), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))),
+      (smax (smin (input V128:$right), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (smax (smin (input V128:$left), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))),
+      (smin (smax (input V128:$right), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (smin (smax (input V128:$left), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))),
+      (smax (smin (input V128:$right), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (smin (smax (input V128:$left), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))),
+      (smin (smax (input V128:$right), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  // Match both canonical orderings of a complete signed clamp on either
+  // input. The narrow itself performs the same saturation.
+  def : Pat<
+    (output (wasm_narrow_s
+      (smax (smin (input V128:$left), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))),
+      (input V128:$right))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (smin (smax (input V128:$left), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))),
+      (input V128:$right))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (input V128:$left),
+      (smax (smin (input V128:$right), (splat_vector (i32 maxval))),
+            (splat_vector (i32 minval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (input V128:$left),
+      (smin (smax (input V128:$right), (splat_vector (i32 minval))),
+            (splat_vector (i32 maxval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (smin (input V128:$left), (splat_vector (i32 maxval))),
+      (input V128:$right))),
+    (narrow V128:$left, V128:$right)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_s
+      (input V128:$left),
+      (smin (input V128:$right), (splat_vector (i32 maxval))))),
+    (narrow V128:$left, V128:$right)
+  >;
+}
+
+defm : SignedNarrowUpperClamp<v8i16, v16i8, NARROW_S_I8x16, -128, 127>;
+defm : SignedNarrowUpperClamp<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767>;
+
+// When narrowing i32 all the way to i8, the final narrow saturates at 127,
+// allowing that clamp to be removed before the intermediate i16 narrow too.
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 (wasm_narrow_s
+      (smin (v4i32 V128:$left), (splat_vector (i32 127))),
+      (smin (v4i32 V128:$right), (splat_vector (i32 127))))),
+    (v8i16 V128:$outer_pad))),
+  (NARROW_S_I8x16
+    (NARROW_S_I16x8 V128:$left, V128:$right), V128:$outer_pad)
+>;
+
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 V128:$outer_pad),
+    (v8i16 (wasm_narrow_s
+      (smin (v4i32 V128:$left), (splat_vector (i32 127))),
+      (smin (v4i32 V128:$right), (splat_vector (i32 127))))))),
+  (NARROW_S_I8x16 V128:$outer_pad,
+    (NARROW_S_I16x8 V128:$left, V128:$right))
+>;
+
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 (wasm_narrow_s
+      (smin (v4i32 V128:$value), (splat_vector (i32 127))),
+      (v4i32 V128:$inner_pad))),
+    (v8i16 V128:$outer_pad))),
+  (NARROW_S_I8x16
+    (NARROW_S_I16x8 V128:$value, V128:$inner_pad), V128:$outer_pad)
+>;
+
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 (wasm_narrow_s
+      (v4i32 V128:$inner_pad),
+      (smin (v4i32 V128:$value), (splat_vector (i32 127))))),
+    (v8i16 V128:$outer_pad))),
+  (NARROW_S_I8x16
+    (NARROW_S_I16x8 V128:$inner_pad, V128:$value), V128:$outer_pad)
+>;
+
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 V128:$outer_pad),
+    (v8i16 (wasm_narrow_s
+      (smin (v4i32 V128:$value), (splat_vector (i32 127))),
+      (v4i32 V128:$inner_pad))))),
+  (NARROW_S_I8x16 V128:$outer_pad,
+    (NARROW_S_I16x8 V128:$value, V128:$inner_pad))
+>;
+
+def : Pat<
+  (v16i8 (wasm_narrow_s
+    (v8i16 V128:$outer_pad),
+    (v8i16 (wasm_narrow_s
+      (v4i32 V128:$inner_pad),
+      (smin (v4i32 V128:$value), (splat_vector (i32 127))))))),
+  (NARROW_S_I8x16 V128:$outer_pad,
+    (NARROW_S_I16x8 V128:$inner_pad, V128:$value))
+>;
 
 // Recognize a saturating truncation and convert into the corresponding
 // narrow_TYPE_s or narrow_TYPE_u instruction.

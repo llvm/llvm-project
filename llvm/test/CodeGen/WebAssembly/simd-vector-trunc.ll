@@ -403,3 +403,485 @@ entry:
   %0 = trunc <4 x i64> %a to <4 x i8>
   ret <4 x i8> %0
 }
+
+define <8 x i16> @trunc8i32_8i16_signed_ashr(<8 x i32> %a) {
+; CHECK-LABEL: trunc8i32_8i16_signed_ashr:
+; CHECK:         .functype trunc8i32_8i16_signed_ashr (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 20
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 20
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %shift = ashr <8 x i32> %a, <i32 20, i32 20, i32 20, i32 20,
+                                   i32 20, i32 20, i32 20, i32 20>
+  %trunc = trunc <8 x i32> %shift to <8 x i16>
+  ret <8 x i16> %trunc
+}
+
+define <8 x i8> @trunc8i16_8i8_signed_ashr(<8 x i16> %a) {
+; CHECK-LABEL: trunc8i16_8i8_signed_ashr:
+; CHECK:         .functype trunc8i16_8i8_signed_ashr (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 10
+; CHECK-NEXT:    i16x8.shr_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %shift = ashr <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10,
+                                   i16 10, i16 10, i16 10, i16 10>
+  %trunc = trunc <8 x i16> %shift to <8 x i8>
+  ret <8 x i8> %trunc
+}
+
+define <8 x i8> @trunc8i32_8i8_signed_ashr(<8 x i32> %a) {
+; CHECK-LABEL: trunc8i32_8i8_signed_ashr:
+; CHECK:         .functype trunc8i32_8i8_signed_ashr (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 26
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 26
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %shift = ashr <8 x i32> %a, <i32 26, i32 26, i32 26, i32 26,
+                                   i32 26, i32 26, i32 26, i32 26>
+  %trunc = trunc <8 x i32> %shift to <8 x i8>
+  ret <8 x i8> %trunc
+}
+
+define <8 x i16> @trunc_sext_add_8i8_8i16(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: trunc_sext_add_8i8_8i16:
+; CHECK:         .functype trunc_sext_add_8i8_8i16 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s
+; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %a.ext = sext <8 x i8> %a to <8 x i32>
+  %b.ext = sext <8 x i8> %b to <8 x i32>
+  %sum = add <8 x i32> %a.ext, %b.ext
+  %trunc = trunc <8 x i32> %sum to <8 x i16>
+  ret <8 x i16> %trunc
+}
+
+define <16 x i8> @narrow_s_i16_i8_both_aa(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_both_aa:
+; CHECK:         .functype narrow_s_i16_i8_both_aa (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %x, <8 x i16> splat (i16 127))
+  %left = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %left.hi, <8 x i16> splat (i16 -128))
+  %right.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %y, <8 x i16> splat (i16 127))
+  %right = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %right.hi, <8 x i16> splat (i16 -128))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %left, <8 x i16> %right)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_both_ab(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_both_ab:
+; CHECK:         .functype narrow_s_i16_i8_both_ab (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %x, <8 x i16> splat (i16 127))
+  %left = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %left.hi, <8 x i16> splat (i16 -128))
+  %right.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %y, <8 x i16> splat (i16 -128))
+  %right = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %right.lo, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %left, <8 x i16> %right)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_both_ba(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_both_ba:
+; CHECK:         .functype narrow_s_i16_i8_both_ba (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %x, <8 x i16> splat (i16 -128))
+  %left = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %left.lo, <8 x i16> splat (i16 127))
+  %right.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %y, <8 x i16> splat (i16 127))
+  %right = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %right.hi, <8 x i16> splat (i16 -128))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %left, <8 x i16> %right)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_both_bb(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_both_bb:
+; CHECK:         .functype narrow_s_i16_i8_both_bb (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %x, <8 x i16> splat (i16 -128))
+  %left = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %left.lo, <8 x i16> splat (i16 127))
+  %right.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %y, <8 x i16> splat (i16 -128))
+  %right = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %right.lo, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %left, <8 x i16> %right)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_left_a(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_left_a:
+; CHECK:         .functype narrow_s_i16_i8_left_a (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %x, <8 x i16> splat (i16 127))
+  %clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %clamped.hi, <8 x i16> splat (i16 -128))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %clamped, <8 x i16> %y)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_left_b(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_left_b:
+; CHECK:         .functype narrow_s_i16_i8_left_b (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %x, <8 x i16> splat (i16 -128))
+  %clamped = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %clamped.lo, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %clamped, <8 x i16> %y)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_right_a(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_right_a:
+; CHECK:         .functype narrow_s_i16_i8_right_a (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.hi = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %y, <8 x i16> splat (i16 127))
+  %clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %clamped.hi, <8 x i16> splat (i16 -128))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %x, <8 x i16> %clamped)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_right_b(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_right_b:
+; CHECK:         .functype narrow_s_i16_i8_right_b (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.lo = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %y, <8 x i16> splat (i16 -128))
+  %clamped = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %clamped.lo, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %x, <8 x i16> %clamped)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_upper_left(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_upper_left:
+; CHECK:         .functype narrow_s_i16_i8_upper_left (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %x, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %clamped, <8 x i16> %y)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_i16_i8_upper_right(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: narrow_s_i16_i8_upper_right:
+; CHECK:         .functype narrow_s_i16_i8_upper_right (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %y, <8 x i16> splat (i16 127))
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %x, <8 x i16> %clamped)
+  ret <16 x i8> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_both_aa(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_both_aa:
+; CHECK:         .functype narrow_s_i32_i16_both_aa (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 32767))
+  %left = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %left.hi, <4 x i32> splat (i32 -32768))
+  %right.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 32767))
+  %right = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %right.hi, <4 x i32> splat (i32 -32768))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_both_ab(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_both_ab:
+; CHECK:         .functype narrow_s_i32_i16_both_ab (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 32767))
+  %left = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %left.hi, <4 x i32> splat (i32 -32768))
+  %right.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> splat (i32 -32768))
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %right.lo, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_both_ba(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_both_ba:
+; CHECK:         .functype narrow_s_i32_i16_both_ba (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 -32768))
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %left.lo, <4 x i32> splat (i32 32767))
+  %right.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 32767))
+  %right = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %right.hi, <4 x i32> splat (i32 -32768))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_both_bb(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_both_bb:
+; CHECK:         .functype narrow_s_i32_i16_both_bb (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %left.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 -32768))
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %left.lo, <4 x i32> splat (i32 32767))
+  %right.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> splat (i32 -32768))
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %right.lo, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_left_a(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_left_a:
+; CHECK:         .functype narrow_s_i32_i16_left_a (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 32767))
+  %clamped = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %clamped.hi, <4 x i32> splat (i32 -32768))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %clamped, <4 x i32> %y)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_left_b(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_left_b:
+; CHECK:         .functype narrow_s_i32_i16_left_b (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 -32768))
+  %clamped = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %clamped.lo, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %clamped, <4 x i32> %y)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_right_a(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_right_a:
+; CHECK:         .functype narrow_s_i32_i16_right_a (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.hi = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 32767))
+  %clamped = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %clamped.hi, <4 x i32> splat (i32 -32768))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %x, <4 x i32> %clamped)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_right_b(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_right_b:
+; CHECK:         .functype narrow_s_i32_i16_right_b (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped.lo = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> splat (i32 -32768))
+  %clamped = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %clamped.lo, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %x, <4 x i32> %clamped)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_upper_left(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_upper_left:
+; CHECK:         .functype narrow_s_i32_i16_upper_left (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %clamped, <4 x i32> %y)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @narrow_s_i32_i16_upper_right(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: narrow_s_i32_i16_upper_right:
+; CHECK:         .functype narrow_s_i32_i16_upper_right (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %clamped = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 32767))
+  %res = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %x, <4 x i32> %clamped)
+  ret <8 x i16> %res
+}
+
+define <16 x i8> @narrow_s_recursive_inner_left(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_inner_left:
+; CHECK:         .functype narrow_s_recursive_inner_left (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %y)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %inner, <8 x i16> %pad)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_recursive_inner_right(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_inner_right:
+; CHECK:         .functype narrow_s_recursive_inner_right (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %x, <4 x i32> %right)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %inner, <8 x i16> %pad)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_recursive_outer_right_inner_left(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_outer_right_inner_left:
+; CHECK:         .functype narrow_s_recursive_outer_right_inner_left (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %y)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %pad, <8 x i16> %inner)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_recursive_outer_right_inner_right(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_outer_right_inner_right:
+; CHECK:         .functype narrow_s_recursive_outer_right_inner_right (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %x, <4 x i32> %right)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %pad, <8 x i16> %inner)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_recursive_inner_both(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_inner_both:
+; CHECK:         .functype narrow_s_recursive_inner_both (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 127))
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %inner, <8 x i16> %pad)
+  ret <16 x i8> %res
+}
+
+define <16 x i8> @narrow_s_recursive_outer_right_inner_both(<4 x i32> %x, <4 x i32> %y, <8 x i16> %pad) {
+; CHECK-LABEL: narrow_s_recursive_outer_right_inner_both:
+; CHECK:         .functype narrow_s_recursive_outer_right_inner_both (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_s
+; CHECK-NEXT:    i8x16.narrow_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %left = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 127))
+  %right = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %y, <4 x i32> splat (i32 127))
+  %inner = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> %left, <4 x i32> %right)
+  %res = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> %pad, <8 x i16> %inner)
+  ret <16 x i8> %res
+}
+
+declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
+declare <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32>, <4 x i32>)
