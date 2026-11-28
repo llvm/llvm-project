@@ -1510,6 +1510,33 @@ void applyMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI,
       DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2)));
 }
 
+/// \returns true if \p MaskReg is a 128-bit constant vector whose low lanes are
+/// all ones up to \p KeptBits bits, and whose other lanes are all zeros.
+static bool isVectorLowLaneMask(Register MaskReg, unsigned KeptBits,
+                                const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(MaskReg);
+  if (!Ty.isFixedVector() || Ty.getSizeInBits() != 128)
+    return false;
+  auto *Mask = getOpcodeDef<GBuildVector>(MaskReg, MRI);
+  if (!Mask)
+    return false;
+  unsigned EltBits = Ty.getScalarSizeInBits();
+  // The kept bits must be whole lanes.
+  if (KeptBits % EltBits)
+    return false;
+  unsigned NumKept = KeptBits / EltBits;
+  for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I) {
+    auto C = getIConstantVRegValWithLookThrough(Mask->getSourceReg(I), MRI);
+    if (!C)
+      return false;
+    // Only the low EltBits of each element matter.
+    APInt V = C->Value.zextOrTrunc(EltBits);
+    if (I < NumKept ? !V.isAllOnes() : !V.isZero())
+      return false;
+  }
+  return true;
+}
+
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
