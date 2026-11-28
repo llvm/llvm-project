@@ -8,6 +8,7 @@
 // RUN: %env_tsan_opts=suppressions='%t.supp' not %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
 #include <stdio.h>
+#include <thread>
 
 int main() {
   pthread_mutex_t mu1, mu2;
@@ -15,10 +16,13 @@ int main() {
   pthread_mutex_init(&mu2, NULL);
 
   // mu1 => mu2
-  pthread_mutex_lock(&mu1);
-  pthread_mutex_lock(&mu2);
-  pthread_mutex_unlock(&mu2);
-  pthread_mutex_unlock(&mu1);
+  std::thread thread([&] {
+    pthread_mutex_lock(&mu1);
+    pthread_mutex_lock(&mu2);
+    pthread_mutex_unlock(&mu2);
+    pthread_mutex_unlock(&mu1);
+  });
+  thread.join();
 
   // mu2 => mu1
   pthread_mutex_lock(&mu2);

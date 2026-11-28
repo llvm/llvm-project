@@ -8,8 +8,10 @@
 //
 // This file is a part of Sanitizer runtime.
 // The deadlock detector maintains a directed graph of lock acquisitions.
-// When a lock event happens, the detector checks if the locks already held by
-// the current thread are reachable from the newly acquired lock.
+// Each edge records its thread and the locks held before the acquisition.
+// A cycle is reported only if its edges have distinct threads and compatible
+// held-lock sets. Unlocking changes only the thread-local held locks.
+// The caller's path buffer bounds the cycle length, as in the unlabeled graph.
 //
 // The detector can handle only a fixed amount of simultaneously live locks
 // (a lock is alive if it has been locked at least once and has not been
@@ -27,6 +29,7 @@
 
 #include "sanitizer_bvgraph.h"
 #include "sanitizer_common.h"
+#include "sanitizer_vector.h"
 
 namespace __sanitizer {
 
@@ -38,6 +41,7 @@ class DeadlockDetectorTLS {
   // No CTOR.
   void clear() {
     bv_.clear();
+    write_bv_.clear();
     epoch_ = 0;
     n_recursive_locks = 0;
     n_all_locks_ = 0;
@@ -48,6 +52,7 @@ class DeadlockDetectorTLS {
   void ensureCurrentEpoch(uptr current_epoch) {
     if (epoch_ == current_epoch) return;
     bv_.clear();
+    write_bv_.clear();
     epoch_ = current_epoch;
     n_recursive_locks = 0;
     n_all_locks_ = 0;
@@ -56,7 +61,7 @@ class DeadlockDetectorTLS {
   uptr getEpoch() const { return epoch_; }
 
   // Returns true if this is the first (non-recursive) acquisition of this lock.
-  bool addLock(uptr lock_id, uptr current_epoch, u32 stk) {
+  bool addLock(uptr lock_id, uptr current_epoch, u32 stk, bool wlock = true) {
     CHECK_EQ(epoch_, current_epoch);
     if (!bv_.setBit(lock_id)) {
       // The lock is already held by this thread, it must be recursive.
@@ -64,6 +69,8 @@ class DeadlockDetectorTLS {
       recursive_locks[n_recursive_locks++] = lock_id;
       return false;
     }
+    if (wlock)
+      write_bv_.setBit(lock_id);
     CHECK_LT(n_all_locks_, ARRAY_SIZE(all_locks_with_contexts_));
     // lock_id < BV::kSize, can cast to a smaller int.
     u32 lock_id_short = static_cast<u32>(lock_id);
@@ -84,6 +91,7 @@ class DeadlockDetectorTLS {
     }
     if (!bv_.clearBit(lock_id))
       return;  // probably addLock happened before flush
+    write_bv_.clearBit(lock_id);
     if (n_all_locks_) {
       for (sptr i = n_all_locks_ - 1; i >= 0; i--) {
         if (all_locks_with_contexts_[i].lock == static_cast<u32>(lock_id)) {
@@ -108,11 +116,14 @@ class DeadlockDetectorTLS {
     return bv_;
   }
 
-  uptr getNumLocks() const { return n_all_locks_; }
-  uptr getLock(uptr idx) const { return all_locks_with_contexts_[idx].lock; }
+  const BV& getWriteLocks(uptr current_epoch) const {
+    CHECK_EQ(epoch_, current_epoch);
+    return write_bv_;
+  }
 
  private:
   BV bv_;
+  BV write_bv_;
   uptr epoch_;
   uptr recursive_locks[64];
   uptr n_recursive_locks;
@@ -136,15 +147,24 @@ class DeadlockDetector {
  public:
   typedef BV BitVector;
 
+  struct Edge {
+    uptr from;
+    uptr to;
+    u32 stk_from;
+    u32 stk_to;
+    int unique_tid;
+    BV held_locks;
+    BV write_locks;
+  };
+
   uptr size() const { return g_.size(); }
 
-  // No CTOR.
   void clear() {
     current_epoch_ = 0;
     available_nodes_.clear();
     recycled_nodes_.clear();
     g_.clear();
-    n_edges_ = 0;
+    clearEdges();
   }
 
   // Allocate new deadlock detector node.
@@ -155,11 +175,19 @@ class DeadlockDetector {
     if (!available_nodes_.empty())
       return getAvailableNode(data);
     if (!recycled_nodes_.empty()) {
-      for (sptr i = n_edges_ - 1; i >= 0; i--) {
-        if (recycled_nodes_.getBit(edges_[i].from) ||
-            recycled_nodes_.getBit(edges_[i].to)) {
-          Swap(edges_[i], edges_[n_edges_ - 1]);
-          n_edges_--;
+      for (uptr from = 0; from < size(); ++from) {
+        auto& outgoing = edges_[from];
+        for (uptr idx = outgoing.Size(); idx != 0; --idx) {
+          Edge& edge = outgoing[idx - 1];
+          if (recycled_nodes_.getBit(nodeToIndex(edge.to))) {
+            if (idx != outgoing.Size())
+              internal_memcpy(&edge, &outgoing[outgoing.Size() - 1],
+                              sizeof(edge));
+            outgoing.PopBack();
+          } else {
+            edge.held_locks.setDifference(recycled_nodes_);
+            edge.write_locks.setDifference(recycled_nodes_);
+          }
         }
       }
       CHECK(available_nodes_.empty());
@@ -174,7 +202,7 @@ class DeadlockDetector {
     recycled_nodes_.clear();
     available_nodes_.setAll();
     g_.clear();
-    n_edges_ = 0;
+    clearEdges();
     return getAvailableNode(data);
   }
 
@@ -190,6 +218,7 @@ class DeadlockDetector {
     CHECK(!available_nodes_.getBit(idx));
     CHECK(recycled_nodes_.setBit(idx));
     g_.removeEdgesFrom(idx);
+    edges_[idx].Reset();
   }
 
   void ensureCurrentEpoch(DeadlockDetectorTLS<BV> *dtls) {
@@ -210,60 +239,86 @@ class DeadlockDetector {
   }
 
   // Add cur_node to the set of locks held currently by dtls.
-  void onLockAfter(DeadlockDetectorTLS<BV> *dtls, uptr cur_node, u32 stk = 0) {
+  void onLockAfter(DeadlockDetectorTLS<BV>* dtls, uptr cur_node, u32 stk = 0,
+                   bool wlock = true) {
     ensureCurrentEpoch(dtls);
     uptr cur_idx = nodeToIndex(cur_node);
-    dtls->addLock(cur_idx, current_epoch_, stk);
+    dtls->addLock(cur_idx, current_epoch_, stk, wlock);
   }
 
-  // Experimental *racy* fast path function.
-  // Returns true if all edges from the currently held locks to cur_node exist.
-  bool hasAllEdges(DeadlockDetectorTLS<BV> *dtls, uptr cur_node) {
-    uptr local_epoch = dtls->getEpoch();
-    // Read from current_epoch_ is racy.
-    if (cur_node && local_epoch == current_epoch_ &&
-        local_epoch == nodeToEpoch(cur_node)) {
-      uptr cur_idx = nodeToIndexUnchecked(cur_node);
-      for (uptr i = 0, n = dtls->getNumLocks(); i < n; i++) {
-        if (!g_.hasEdge(dtls->getLock(i), cur_idx))
-          return false;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  // Adds edges from currently held locks to cur_node,
-  // returns the number of added edges, and puts the sources of added edges
-  // into added_edges[].
+  // Adds labeled edges from currently held locks to cur_node and returns
+  // the number of new edges in the unlabeled graph.
   // Should be called before onLockAfter.
   uptr addEdges(DeadlockDetectorTLS<BV> *dtls, uptr cur_node, u32 stk,
                 int unique_tid) {
     ensureCurrentEpoch(dtls);
     uptr cur_idx = nodeToIndex(cur_node);
-    uptr added_edges[40];
-    uptr n_added_edges = g_.addEdges(dtls->getLocks(current_epoch_), cur_idx,
-                                     added_edges, ARRAY_SIZE(added_edges));
-    for (uptr i = 0; i < n_added_edges; i++) {
-      if (n_edges_ < ARRAY_SIZE(edges_)) {
-        Edge e = {(u16)added_edges[i], (u16)cur_idx,
-                  dtls->findLockContext(added_edges[i]), stk,
-                  unique_tid};
-        edges_[n_edges_++] = e;
+    if (dtls->empty())
+      return 0;
+    uptr n_added_edges = 0;
+    for (typename BV::Iterator it(dtls->getLocks(current_epoch_));
+         it.hasNext();) {
+      uptr from = it.next();
+      if (g_.addEdge(from, cur_idx))
+        ++n_added_edges;
+      auto& outgoing = edges_[from];
+      uptr idx = 0;
+      for (; idx < outgoing.Size(); ++idx) {
+        const Edge& edge = outgoing[idx];
+        if (edge.to == cur_node && edge.unique_tid == unique_tid &&
+            hasSameLocks(dtls, edge))
+          break;
       }
+      if (idx != outgoing.Size())
+        continue;
+      Edge* edge = outgoing.PushBack();
+      edge->from = indexToNode(from);
+      edge->to = cur_node;
+      edge->stk_from = dtls->findLockContext(from);
+      edge->stk_to = stk;
+      edge->unique_tid = unique_tid;
+      edge->held_locks.copyFrom(dtls->getLocks(current_epoch_));
+      edge->write_locks.copyFrom(dtls->getWriteLocks(current_epoch_));
     }
     return n_added_edges;
   }
 
-  bool findEdge(uptr from_node, uptr to_node, u32 *stk_from, u32 *stk_to,
-                int *unique_tid) {
+  uptr findGuardedCycle(DeadlockDetectorTLS<BV>* dtls, uptr cur_node,
+                        int unique_tid, const Edge** path, uptr path_size) {
+    ensureCurrentEpoch(dtls);
+    uptr cur_idx = nodeToIndex(cur_node);
+    for (uptr max_length = 2; max_length <= path_size; ++max_length) {
+      for (typename BV::Iterator it(dtls->getLocks(current_epoch_));
+           it.hasNext();) {
+        const auto& outgoing = edges_[it.next()];
+        for (uptr idx = 0; idx < outgoing.Size(); ++idx) {
+          const Edge& closing = outgoing[idx];
+          if (closing.to != cur_node || closing.unique_tid != unique_tid ||
+              !hasSameLocks(dtls, closing))
+            continue;
+          path[0] = &closing;
+          uptr length = findGuardedPath(cur_idx, path, 1, max_length);
+          if (length) {
+            for (uptr pos = 1; pos < length; ++pos)
+              Swap(path[pos - 1], path[pos]);
+            return length;
+          }
+        }
+      }
+    }
+    return 0;
+  }
+
+  bool findEdge(uptr from_node, uptr to_node, u32* stk_from, u32* stk_to,
+                int* unique_tid) {
     uptr from_idx = nodeToIndex(from_node);
-    uptr to_idx = nodeToIndex(to_node);
-    for (uptr i = 0; i < n_edges_; i++) {
-      if (edges_[i].from == from_idx && edges_[i].to == to_idx) {
-        *stk_from = edges_[i].stk_from;
-        *stk_to = edges_[i].stk_to;
-        *unique_tid = edges_[i].unique_tid;
+    const auto& outgoing = edges_[from_idx];
+    for (uptr idx = 0; idx < outgoing.Size(); ++idx) {
+      const Edge& edge = outgoing[idx];
+      if (edge.to == to_node) {
+        *stk_from = edge.stk_from;
+        *stk_to = edge.stk_to;
+        *unique_tid = edge.unique_tid;
         return true;
       }
     }
@@ -295,10 +350,12 @@ class DeadlockDetector {
   // Returns true iff dtls is empty (no locks are currently held) and we can
   // add the node to the currently held locks w/o changing the global state.
   // This operation is thread-safe as it only touches the dtls.
-  bool onFirstLock(DeadlockDetectorTLS<BV> *dtls, uptr node, u32 stk = 0) {
-    if (!dtls->empty()) return false;
+  bool onFirstLock(DeadlockDetectorTLS<BV>* dtls, uptr node, u32 stk = 0,
+                   bool wlock = true) {
+    if (!dtls->empty())
+      return false;
     if (dtls->getEpoch() && dtls->getEpoch() == nodeToEpoch(node)) {
-      dtls->addLock(nodeToIndexUnchecked(node), nodeToEpoch(node), stk);
+      dtls->addLock(nodeToIndexUnchecked(node), nodeToEpoch(node), stk, wlock);
       return true;
     }
     return false;
@@ -327,18 +384,6 @@ class DeadlockDetector {
       dtls->removeLock(nodeToIndexUnchecked(node));
   }
 
-  // Tries to handle the lock event w/o writing to global state.
-  // Returns true on success.
-  // This operation is thread-safe as it only touches the dtls
-  // (modulo racy nature of hasAllEdges).
-  bool onLockFast(DeadlockDetectorTLS<BV> *dtls, uptr node, u32 stk = 0) {
-    if (hasAllEdges(dtls, node)) {
-      dtls->addLock(nodeToIndexUnchecked(node), nodeToEpoch(node), stk);
-      return true;
-    }
-    return false;
-  }
-
   bool isHeld(DeadlockDetectorTLS<BV> *dtls, uptr node) const {
     return dtls->getLocks(current_epoch_).getBit(nodeToIndex(node));
   }
@@ -360,6 +405,59 @@ class DeadlockDetector {
   }
 
  private:
+  bool sameLocks(const BV& first, const BV& second) {
+    tmp_bv_.copyFrom(first);
+    tmp_bv_.setDifference(second);
+    if (!tmp_bv_.empty())
+      return false;
+    tmp_bv_.copyFrom(second);
+    tmp_bv_.setDifference(first);
+    return tmp_bv_.empty();
+  }
+
+  bool hasSameLocks(DeadlockDetectorTLS<BV>* dtls, const Edge& edge) {
+    return sameLocks(dtls->getLocks(current_epoch_), edge.held_locks) &&
+           sameLocks(dtls->getWriteLocks(current_epoch_), edge.write_locks);
+  }
+
+  void clearEdges() {
+    for (auto& outgoing : edges_) outgoing.Reset();
+  }
+
+  bool compatibleEdges(const Edge& first, const Edge& second) const {
+    if (first.unique_tid >= 0 && first.unique_tid == second.unique_tid)
+      return false;
+    return !first.held_locks.intersectsWith(second.write_locks) &&
+           !first.write_locks.intersectsWith(second.held_locks);
+  }
+
+  uptr findGuardedPath(uptr from, const Edge** path, uptr depth,
+                       uptr path_size) {
+    if (indexToNode(from) == path[0]->from)
+      return depth;
+    if (depth == path_size)
+      return 0;
+    const auto& outgoing = edges_[from];
+    for (uptr idx = 0; idx < outgoing.Size(); ++idx) {
+      const Edge& edge = outgoing[idx];
+      bool compatible = true;
+      for (uptr prev = 0; prev < depth; ++prev) {
+        if (edge.to == path[prev]->to || !compatibleEdges(edge, *path[prev])) {
+          compatible = false;
+          break;
+        }
+      }
+      if (!compatible)
+        continue;
+      path[depth] = &edge;
+      uptr length =
+          findGuardedPath(nodeToIndex(edge.to), path, depth + 1, path_size);
+      if (length)
+        return length;
+    }
+    return 0;
+  }
+
   void check_idx(uptr idx) const { CHECK_LT(idx, size()); }
 
   void check_node(uptr node) const {
@@ -387,22 +485,13 @@ class DeadlockDetector {
     return indexToNode(idx);
   }
 
-  struct Edge {
-    u16 from;
-    u16 to;
-    u32 stk_from;
-    u32 stk_to;
-    int unique_tid;
-  };
-
   uptr current_epoch_;
   BV available_nodes_;
   BV recycled_nodes_;
   BV tmp_bv_;
   BVGraph<BV> g_;
   uptr data_[BV::kSize];
-  Edge edges_[BV::kSize * 32];
-  uptr n_edges_;
+  Vector<Edge> edges_[BV::kSize];
 };
 
 } // namespace __sanitizer

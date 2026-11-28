@@ -1,9 +1,9 @@
 // RUN: %clangxx_tsan %s -o %t
-// RUN: not %run %t 5 2>&1 | FileCheck %s
-// RUN: not %run %t 10 2>&1 | FileCheck %s
-// RUN: not %run %t 15 2>&1 | FileCheck %s
-// RUN: not %run %t 20 2>&1 | FileCheck %s
-// RUN: %run %t 30 2>&1 | FileCheck %s --check-prefix=CHECK-TOO-LONG-CYCLE
+// RUN: %run %t 5 2>&1 | FileCheck %s
+// RUN: %run %t 10 2>&1 | FileCheck %s
+// RUN: %run %t 15 2>&1 | FileCheck %s
+// RUN: %run %t 20 2>&1 | FileCheck %s
+// RUN: %run %t 30 2>&1 | FileCheck %s --check-prefix=LONG
 
 #include <pthread.h>
 #include <stdio.h>
@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "PASS\n");
 }
 
-// CHECK: ThreadSanitizer: lock-order-inversion (potential deadlock)
-// CHECK-TOO-LONG-CYCLE: WARNING: too long mutex cycle found
+// CHECK-NOT: WARNING:
 // CHECK: PASS
+// CHECK-NOT: WARNING:
+// LONG: WARNING: too long mutex cycle found
+// LONG: PASS
