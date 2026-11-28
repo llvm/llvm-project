@@ -63,6 +63,8 @@
 .endmacro
 .macro KMP_CFI_REGISTER
 .endmacro
+.macro KMP_CFI_RESTORE
+.endmacro
 .macro KMP_CFI_DEF
 .endmacro
 .macro ALIGN
@@ -114,6 +116,9 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 .macro KMP_CFI_REGISTER reg
 	.cfi_def_cfa_register	\reg
+.endm
+.macro KMP_CFI_RESTORE reg
+	.cfi_restore	\reg
 .endm
 .macro KMP_CFI_DEF reg, sz
 	.cfi_def_cfa	\reg,\sz
@@ -619,6 +624,7 @@ __kmp_unnamed_critical_addr:
 				//	temp: -8(%ebp)
 				//
 	pushl %ebx		// save %ebx to use during this routine
+	KMP_CFI_OFFSET ebx,-20
 				//
 #if OMPT_SUPPORT
 	movl 28(%ebp),%ebx	// get exit_frame address
@@ -669,6 +675,7 @@ KMP_LABEL(invoke_3):
 	movl $1,%eax			// return 1;
 
 	movl -12(%ebp),%ebx		// restore %ebx
+	KMP_CFI_RESTORE ebx
 	leave
 	KMP_CFI_DEF esp,4
 	ret
@@ -1150,6 +1157,7 @@ __tid = -24
 #endif
 
 	pushq 	%rbx		// %rbx is callee-saved register
+	KMP_CFI_OFFSET rbx,-24
 	pushq	%rsi		// Put gtid on stack so can pass &tgid to pkfn
 	pushq	%rdx		// Put tid on stack so can pass &tid to pkfn
 
@@ -1263,6 +1271,7 @@ KMP_LABEL(kmp_no_args):
 	movq	$1, %rax	// move 1 into return register;
 
 	movq	-8(%rbp), %rbx	// restore %rbx	using %rbp since %rsp was modified
+	KMP_CFI_RESTORE rbx
 	movq 	%rbp, %rsp	// restore stack pointer
 	popq 	%rbp		// restore frame pointer
 	KMP_CFI_DEF rsp,8
