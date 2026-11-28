@@ -15815,14 +15815,26 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                    Load->getAddressSpace(), Kind, false);
   };
   // Look for signed compares that benefit from widening without introducing
-  // an illegal compare or losing a supported extending load.
-  if (NonNegZExt && TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
-      (!TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT) ||
-       !TLI.isZExtFree(V, VT)) &&
+  // any obvious regressions.
+  if (NonNegZExt &&
       (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    bool PreferSigned = false;
+
+    bool CanHarm = false;
+    bool CanHelp = false;
+    bool WideCmpSupported = TLI.isOperationLegalOrCustom(ISD::SETCC, VT);
+    if (!WideCmpSupported && !LegalOperations && SrcVT.isScalarInteger() &&
+        VT.isScalarInteger()) {
+      LLVMContext &Ctx = *DAG.getContext();
+      auto [SrcAction, SrcLegalVT] = TLI.getTypeConversion(Ctx, SrcVT);
+      auto [DstAction, DstLegalVT] = TLI.getTypeConversion(Ctx, VT);
+      WideCmpSupported = SrcAction == TargetLowering::TypePromoteInteger &&
+                         DstAction == TargetLowering::TypePromoteInteger &&
+                         SrcLegalVT == DstLegalVT &&
+                         TLI.isOperationLegalOrCustom(ISD::SETCC, DstLegalVT);
+    }
+
     for (SDUse &Use : Load->uses()) {
       if (Use.getResNo() != V.getResNo())
         continue;
@@ -15830,22 +15842,61 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       // An ordinary zext still needs the zero high bits.
       if (User->getOpcode() == ISD::ZERO_EXTEND &&
           !User->getFlags().hasNonNeg()) {
-        PreferSigned = false;
+        CanHarm = true;
         break;
       }
       bool IsSetCC = User->getOpcode() == ISD::SETCC;
       if ((!IsSetCC && User->getOpcode() != ISD::SELECT_CC) ||
           Use.getOperandNo() >= 2)
         continue;
+      // Don't introduce a compare that needs more legalization.
+      if (IsSetCC && !WideCmpSupported &&
+          isa<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo()))) {
+        CanHarm = true;
+        break;
+      }
       ISD::CondCode CC = User->getOperandCondCode(IsSetCC ? 2 : 4);
       // Promotion of an unsigned compare can require masking a signed load.
       if (ISD::isUnsignedIntSetCC(CC) && !TLI.isTypeLegal(SrcVT)) {
-        PreferSigned = false;
+        CanHarm = true;
         break;
       }
-      PreferSigned |= ISD::isSignedIntSetCC(CC);
+
+      if (!ISD::isSignedIntSetCC(CC) || CanHelp)
+        continue;
+      CanHelp |= !TLI.isZExtFree(V, VT) ||
+                 !TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT);
+      if (CanHelp)
+        continue;
+
+      // Widening one sign test can let foldLogicOfSetCCs replace two sign
+      // tests with one test of the AND or OR of their inputs.
+      if (!IsSetCC || !VT.isScalarInteger() || Use.getOperandNo() != 0 ||
+          !User->hasOneUse())
+        continue;
+      auto IsMatchingSignTest = [CC](SDValue RHS) {
+        return (CC == ISD::SETLT && isNullConstant(RHS)) ||
+               (CC == ISD::SETGT && isAllOnesConstant(RHS));
+      };
+      if (!IsMatchingSignTest(User->getOperand(1)))
+        continue;
+      EVT CmpVT = User->getValueType(0);
+      if ((LegalOperations || CmpVT != MVT::i1) &&
+          CmpVT != TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                        VT))
+        continue;
+      const SDUse &CmpUse = *User->use_begin();
+      const SDNode *Logic = CmpUse.getUser();
+      if (Logic->getOpcode() != ISD::AND && Logic->getOpcode() != ISD::OR)
+        continue;
+      SDValue Peer = Logic->getOperand(1 - CmpUse.getOperandNo());
+      CanHelp |= Peer.getOpcode() == ISD::SETCC && Peer.hasOneUse() &&
+                 Peer.getOperand(0).getValueType() == VT &&
+                 Peer.getOperandCondCode(2) == CC &&
+                 IsMatchingSignTest(Peer.getOperand(1));
     }
-    if (PreferSigned) {
+
+    if (!CanHarm && CanHelp) {
       ExtLoadType = ISD::SEXTLOAD;
       ExtOpc = ISD::SIGN_EXTEND;
     }
