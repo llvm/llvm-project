@@ -7396,6 +7396,21 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     CallInst *Fn =
         Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+    // The value of a reference to an enumerator of a preserve_access_index
+    // enum is converted to the type of the enumerator. If the type has at most
+    // 32 bits, tell the backend the value is in the range of int or unsigned
+    // int, so that it loads the value with a 32-bit immediate and the
+    // conversion goes away. libbpf can then reject a target value that does
+    // not fit, instead of truncating it.
+    QualType EnumeratorTy = Enumerator->getType();
+    if (Enumerator == BPFPreserveAIEnumerator &&
+        getContext().getIntWidth(EnumeratorTy) <= 32) {
+      llvm::ConstantRange Range = llvm::ConstantRange::getFull(32);
+      Fn->addRangeRetAttr(EnumeratorTy->isSignedIntegerOrEnumerationType()
+                              ? Range.signExtend(64)
+                              : Range.zeroExtend(64));
+    }
     return Fn;
   }
   }

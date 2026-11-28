@@ -633,6 +633,10 @@ public:
   /// __builtin_preserve_field_info.
   bool IsInPreserveFieldInfo = false;
 
+  /// The enumerator of a BPF preserve_access_index enum whose reference
+  /// CodeGen currently emits as a __builtin_preserve_enum_value() call.
+  const EnumConstantDecl *BPFPreserveAIEnumerator = nullptr;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 

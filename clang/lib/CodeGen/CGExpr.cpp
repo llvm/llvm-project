@@ -7471,6 +7471,14 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
       return result;
     }
 
+  // Otherwise, its semantic form is a __builtin_preserve_enum_value() call,
+  // whose value is converted to the type of the enumerator.
+  llvm::SaveAndRestore SaveBPFPreserveAIEnumerator(CGF.BPFPreserveAIEnumerator);
+  if (CGF.getTarget().getTriple().isBPF())
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm()))
+      if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl()))
+        CGF.BPFPreserveAIEnumerator = ECD;
+
   for (PseudoObjectExpr::const_semantics_iterator
          i = E->semantics_begin(), e = E->semantics_end(); i != e; ++i) {
     const Expr *semantic = *i;

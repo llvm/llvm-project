@@ -12,7 +12,7 @@ unsigned long test1(int n) {
 }
 
 // CHECK: define internal ptr @__test1_block_invoke(
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_A]], i64 1)
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_A]], i64 1)
 
 // A static local variable needs a constant initializer, and a block literal is
 // one. Its body runs only when the block is called, so the enumerator there is
@@ -23,4 +23,4 @@ int test2(void) {
 }
 
 // CHECK: define internal i32 @_block_invoke(
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1)
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1)
