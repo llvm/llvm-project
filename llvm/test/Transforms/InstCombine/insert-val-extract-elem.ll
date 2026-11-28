@@ -62,6 +62,82 @@ top:
   ret void
 }
 
+; i31 has padding (31 bits of data, 32 bits of alloc size), so the array
+; elements are not laid out like the bit-packed vector lanes.
+define void @not_bitcast_array_i31(ptr %p, <2 x i31> %x) {
+; CHECK-LABEL: define void @not_bitcast_array_i31(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i31> [[X:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x i31> [[X]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x i31> [[X]], i64 1
+; CHECK-NEXT:    store i31 [[X0]], ptr [[P]], align 8
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store i31 [[X1]], ptr [[P_REPACK1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <2 x i31> %x, i32 0
+  %i0 = insertvalue [2 x i31] poison, i31 %x0, 0
+  %x1 = extractelement <2 x i31> %x, i32 1
+  %i1 = insertvalue [2 x i31] %i0, i31 %x1, 1
+  store [2 x i31] %i1, ptr %p, align 8
+  ret void
+}
+
+%paddedvec = type { i31, i31 }
+
+define void @not_bitcast_struct_i31(ptr %p, <2 x i31> %x) {
+; CHECK-LABEL: define void @not_bitcast_struct_i31(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i31> [[X:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x i31> [[X]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x i31> [[X]], i64 1
+; CHECK-NEXT:    store i31 [[X0]], ptr [[P]], align 8
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store i31 [[X1]], ptr [[P_REPACK1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <2 x i31> %x, i32 0
+  %i0 = insertvalue %paddedvec poison, i31 %x0, 0
+  %x1 = extractelement <2 x i31> %x, i32 1
+  %i1 = insertvalue %paddedvec %i0, i31 %x1, 1
+  store %paddedvec %i1, ptr %p, align 8
+  ret void
+}
+
+%packedvec = type <{ i31, i31 }>
+
+; A packed struct still allocates each member at its alloc size, so it does
+; not match the bit-packed vector layout either.
+define void @not_bitcast_packed_struct_i31(ptr %p, <2 x i31> %x) {
+; CHECK-LABEL: define void @not_bitcast_packed_struct_i31(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i31> [[X:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x i31> [[X]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x i31> [[X]], i64 1
+; CHECK-NEXT:    store i31 [[X0]], ptr [[P]], align 8
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store i31 [[X1]], ptr [[P_REPACK1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <2 x i31> %x, i32 0
+  %i0 = insertvalue %packedvec poison, i31 %x0, 0
+  %x1 = extractelement <2 x i31> %x, i32 1
+  %i1 = insertvalue %packedvec %i0, i31 %x1, 1
+  store %packedvec %i1, ptr %p, align 8
+  ret void
+}
+
+; A single-element aggregate has no element stride, so the padding in the
+; element does not matter and the store can still use the vector type.
+define void @bitcast_array_1xi31(ptr %p, <1 x i31> %x) {
+; CHECK-LABEL: define void @bitcast_array_1xi31(
+; CHECK-SAME: ptr [[P:%.*]], <1 x i31> [[X:%.*]]) {
+; CHECK-NEXT:    store <1 x i31> [[X]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <1 x i31> %x, i32 0
+  %i0 = insertvalue [1 x i31] poison, i31 %x0, 0
+  store [1 x i31] %i0, ptr %p, align 4
+  ret void
+}
+
 %pseudovec = type { float, float, float, float }
 
 define void @julia_pseudovec(ptr sret(%pseudovec), ptr) {
