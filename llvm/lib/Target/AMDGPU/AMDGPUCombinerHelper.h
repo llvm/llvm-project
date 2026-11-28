@@ -49,6 +49,9 @@ public:
 
   bool matchConstantIs32BitMask(Register Reg) const;
 
+  // Narrow a 64-bit shift when the amount is KnownBits->=32 but not constant.
+  bool matchShiftKnownGeHalfWidth(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   /// Match an s64 and/or where one operand is a 32-bit mask (see
   /// matchConstantIs32BitMask), used to narrow it into two s32 ops. Bails when
   /// both operands are constants, since folding the binop to a single constant
