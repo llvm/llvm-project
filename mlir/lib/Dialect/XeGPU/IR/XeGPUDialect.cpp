@@ -698,13 +698,18 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 // instead of the leftover. order entries past `dim` shift up by
 // `targetShape.size() - 1`.
 //
-// Examples (only the affected dim shown; assume rank-1 input):
-//   sg_layout=[8], sg_data=[512],   expandDim(0, [8,16,32])
-//     -> sg_layout=[8,1,1],   sg_data=[1,16,32]
-//   sg_layout=[4], sg_data=[4],     expandDim(0, [2,16])
-//     -> sg_layout=[1,4],     sg_data=[1,4]      (wrap-around)
-//   inst_data=[32], lane_layout=[16], lane_data=[1], expandDim(0, [8,16,32])
+// Examples (rank-1 input; the tile is the vector being expanded):
+//   vector<4096> -> vector<8x16x32>, sg_layout=[8], sg_data=[512]
+//     -> sg_layout=[8,1,1], sg_data=[1,16,32]   (split: innermost-first)
+//   vector<32> -> vector<2x16>, sg_layout=[4], sg_data=[4]
+//     -> sg_layout=[1,4], sg_data=[1,4]         (split: innermost-first,
+//                                                wrap-around)
+//   vector<64> -> vector<8x8>, sg_layout=[2], sg_data=[64]
+//     -> sg_layout=[2,1], sg_data=[8,8]         (replicated: outermost-first)
+//   vector<4096> -> vector<8x16x32>, inst_data=[32], lane_layout=[16],
+//   lane_data=[1]
 //     -> inst_data=[1,1,32], lane_layout=[1,1,16], lane_data=[1,1,1]
+//                                               (split: innermost-first)
 DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
                                            ArrayRef<int64_t> targetShape) {
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
@@ -728,13 +733,14 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   int64_t origLaneDataDim = laneData.empty() ? 1 : laneData[dim];
   int64_t origInstDataDim = instData.empty() ? 1 : instData[dim];
 
-  // Spread `total` across the new dims (length expCount), innermost-first,
-  // capped per dim by `dimSizeCap[i]`.
-  auto spread = [&](int64_t total,
-                    ArrayRef<int64_t> dimSizeCap) -> SmallVector<int64_t> {
+  // Distribute `total` over the new dims, at most `dimSizeCap[i]` on dim i.
+  // Fill from the innermost dim, or from the outermost if `outermostFirst`.
+  auto spread = [&](int64_t total, ArrayRef<int64_t> dimSizeCap,
+                    bool outermostFirst = false) -> SmallVector<int64_t> {
     SmallVector<int64_t> out(expCount, 1);
     int64_t remaining = total;
-    for (int64_t i = expCount - 1; i >= 0; --i) {
+    for (int64_t step = 0; step < expCount; ++step) {
+      int64_t i = outermostFirst ? step : expCount - 1 - step;
       if (remaining == 1)
         break;
       int64_t take = std::min(remaining, dimSizeCap[i]);
@@ -763,9 +769,13 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   bool hasLaneData = !laneData.empty();
   bool hasInstData = !instData.empty();
 
-  // sg_data first, then sg_layout into the per-dim leftover. When sg_data is
-  // replicated across subgroups it spans the full extent, so sg_layout is
-  // capped by targetShape itself instead of the leftover.
+  // Distribute sg_data first, then sg_layout over what each dim has left.
+  // - Split dim: the shape_cast must keep which subgroup owns each element,
+  //   and filling from the innermost dim does that.
+  // - Replicated dim (sg_data spans the whole dim): every subgroup holds all
+  //   of it, so the replicas could sit on any of the new dims. Put them on the
+  //   outermost dims (capped by the dim sizes): later ops usually reduce or
+  //   slice away the inner dims, where a replica would look like a split.
   bool sgDataReplicated =
       hasSgData && origSgDataDim == computeProduct(targetShape);
   SmallVector<int64_t> expSgData(expCount, 1);
@@ -779,7 +789,8 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     if (hasSgData && !sgDataReplicated)
       for (int64_t i = 0; i < expCount; ++i)
         dimSizeCap[i] /= expSgData[i];
-    expSgLayout = spread(origSgLayoutDim, dimSizeCap);
+    expSgLayout = spread(origSgLayoutDim, dimSizeCap,
+                         /*outermostFirst=*/sgDataReplicated);
     splice(sgLayout, expSgLayout);
   }
 
