@@ -380,6 +380,45 @@ void MachineRegisterInfo::moveOperands(MachineOperand *Dst,
   } while (--NumOps);
 }
 
+/// Swap the contents of operands A and B, updating use-def lists as needed.
+///
+/// Register operands keep their relative positions in use-def lists, as if A
+/// and B had been moved with moveOperands. Each operand keeps its parent
+/// instruction and its tied-operand status.
+void MachineRegisterInfo::swapOperands(MachineOperand *A, MachineOperand *B) {
+  assert(A != B && "Noop swapOperands");
+  assert((!A->isReg() || !A->isTied() || B->isReg()) &&
+         (!B->isReg() || !B->isTied() || A->isReg()) &&
+         "Cannot swap a tied operand with a non-register operand");
+
+  MachineInstr *ParentA = A->ParentMI;
+  MachineInstr *ParentB = B->ParentMI;
+  unsigned TiedA = A->isReg() ? A->TiedTo : 0;
+  unsigned TiedB = B->isReg() ? B->TiedTo : 0;
+
+  // Move Src to Dst. Register operands that are not on a use-def list (e.g.
+  // in an instruction that has not been inserted into a function yet) are
+  // simply copied.
+  auto Move = [this](MachineOperand *Dst, MachineOperand *Src) {
+    if (Src->isReg() && Src->isOnRegUseList())
+      moveOperands(Dst, Src, 1);
+    else
+      new (Dst) MachineOperand(*Src);
+  };
+
+  MachineOperand Tmp(*A);
+  Move(&Tmp, A);
+  Move(A, B);
+  Move(B, &Tmp);
+
+  A->ParentMI = ParentA;
+  B->ParentMI = ParentB;
+  if (A->isReg())
+    A->TiedTo = TiedA;
+  if (B->isReg())
+    B->TiedTo = TiedB;
+}
+
 /// replaceRegWith - Replace all instances of FromReg with ToReg in the
 /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),
 /// except that it also changes any definitions of the register as well.
