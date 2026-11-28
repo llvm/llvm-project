@@ -539,8 +539,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   // SGPRs).
   MCSymbol *NumSGPRSymbol =
       RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext);
-  if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      !STM.hasSGPRInitBug()) {
+  if (!STM.hasLimitedTotalNumSGPRs()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     uint64_t NumSgpr;
     if (NumSGPRSymbol->isVariable() &&
@@ -570,8 +569,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     NumSgpr += IsaInfo::getNumExtraSGPRs(
         STM, VCCUsed, FlatUsed,
         getTargetStreamer()->getTargetID()->isXnackOnOrAny());
-    if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
-        STM.hasSGPRInitBug()) {
+    if (STM.hasLimitedTotalNumSGPRs()) {
       unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
       if (NumSgpr > MaxAddressableNumSGPRs) {
         F.getContext().diagnose(DiagnosticInfoResourceLimit(
@@ -1347,8 +1345,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Ctx);
 
   // Check the addressable register limit before we add ExtraSGPRs.
-  if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      !STM.hasSGPRInitBug()) {
+  if (!STM.hasLimitedTotalNumSGPRs()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     uint64_t NumSgpr;
     if (TryGetMCExprValue(ProgInfo.NumSGPR, NumSgpr) &&
@@ -1401,8 +1398,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                    MaxWaves, MFI->getDynamicVGPRBlockSize()))},
                               Ctx);
 
-  if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
-      STM.hasSGPRInitBug()) {
+  if (STM.hasLimitedTotalNumSGPRs()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     uint64_t NumSgpr;
     if (TryGetMCExprValue(ProgInfo.NumSGPR, NumSgpr) &&

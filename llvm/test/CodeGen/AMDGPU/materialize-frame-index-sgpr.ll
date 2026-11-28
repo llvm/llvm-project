@@ -1120,8 +1120,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-NEXT:    s_add_i32 s6, s32, 0x201100
 ; GFX7-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GFX7-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX7-NEXT:    v_writelane_b32 v23, s28, 17
-; GFX7-NEXT:    v_writelane_b32 v23, s29, 18
+; GFX7-NEXT:    v_writelane_b32 v23, s26, 17
+; GFX7-NEXT:    v_writelane_b32 v23, s27, 18
 ; GFX7-NEXT:    v_writelane_b32 v23, s33, 0
 ; GFX7-NEXT:    v_writelane_b32 v23, s34, 1
 ; GFX7-NEXT:    v_writelane_b32 v23, s35, 2
@@ -1175,8 +1175,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-NEXT:    v_readlane_b32 s35, v23, 2
 ; GFX7-NEXT:    v_readlane_b32 s34, v23, 1
 ; GFX7-NEXT:    v_readlane_b32 s33, v23, 0
-; GFX7-NEXT:    v_readlane_b32 s28, v23, 17
-; GFX7-NEXT:    v_readlane_b32 s29, v23, 18
+; GFX7-NEXT:    v_readlane_b32 s26, v23, 17
+; GFX7-NEXT:    v_readlane_b32 s27, v23, 18
 ; GFX7-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX7-NEXT:    s_add_i32 s6, s32, 0x201000
 ; GFX7-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload

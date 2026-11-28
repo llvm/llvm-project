@@ -4381,6 +4381,13 @@ define inreg <56 x i16> @bitcast_v28i32_to_v56i16_scalar(<28 x i32> inreg %a, i3
 ; VI-LABEL: bitcast_v28i32_to_v56i16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s30, 2
+; VI-NEXT:    v_writelane_b32 v28, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -4450,24 +4457,24 @@ define inreg <56 x i16> @bitcast_v28i32_to_v56i16_scalar(<28 x i32> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s91, s91, 16
+; VI-NEXT:    s_lshl_b32 s31, s31, 16
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s90, s90, 16
+; VI-NEXT:    s_lshl_b32 s30, s30, 16
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s89, s89, 16
+; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s88, s88, 16
+; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s22
 ; VI-NEXT:    s_lshl_b32 s79, s79, 16
 ; VI-NEXT:    s_and_b32 s23, 0xffff, s23
@@ -4512,12 +4519,12 @@ define inreg <56 x i16> @bitcast_v28i32_to_v56i16_scalar(<28 x i32> inreg %a, i3
 ; VI-NEXT:    s_lshl_b32 s42, s42, 16
 ; VI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; VI-NEXT:    s_lshl_b32 s40, s40, 16
-; VI-NEXT:    s_or_b32 s16, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s17, s17, vcc_lo
-; VI-NEXT:    s_or_b32 s18, s18, s91
-; VI-NEXT:    s_or_b32 s19, s19, s90
-; VI-NEXT:    s_or_b32 s20, s20, s89
-; VI-NEXT:    s_or_b32 s21, s21, s88
+; VI-NEXT:    s_or_b32 s16, s16, s35
+; VI-NEXT:    s_or_b32 s17, s17, s34
+; VI-NEXT:    s_or_b32 s18, s18, s31
+; VI-NEXT:    s_or_b32 s19, s19, s30
+; VI-NEXT:    s_or_b32 s20, s20, vcc_hi
+; VI-NEXT:    s_or_b32 s21, s21, vcc_lo
 ; VI-NEXT:    s_or_b32 s22, s22, s79
 ; VI-NEXT:    s_or_b32 s23, s23, s78
 ; VI-NEXT:    s_or_b32 s24, s24, s77
@@ -4540,6 +4547,7 @@ define inreg <56 x i16> @bitcast_v28i32_to_v56i16_scalar(<28 x i32> inreg %a, i3
 ; VI-NEXT:    s_or_b32 s6, s6, s44
 ; VI-NEXT:    s_or_b32 s5, s5, s42
 ; VI-NEXT:    s_or_b32 s4, s4, s40
+; VI-NEXT:    v_readlane_b32 s30, v28, 2
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
@@ -4568,6 +4576,13 @@ define inreg <56 x i16> @bitcast_v28i32_to_v56i16_scalar(<28 x i32> inreg %a, i3
 ; VI-NEXT:    v_mov_b32_e32 v25, s6
 ; VI-NEXT:    v_mov_b32_e32 v26, s5
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
+; VI-NEXT:    v_readlane_b32 s31, v28, 3
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v28i32_to_v56i16_scalar:
@@ -6382,8 +6397,11 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v28, s30, 0
-; VI-NEXT:    v_writelane_b32 v28, s31, 1
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s36, 2
+; VI-NEXT:    v_writelane_b32 v28, s30, 3
+; VI-NEXT:    v_writelane_b32 v28, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v12
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
@@ -6404,12 +6422,12 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s75, s26, 16
 ; VI-NEXT:    s_lshr_b32 s78, s25, 16
 ; VI-NEXT:    s_lshr_b32 s79, s24, 16
-; VI-NEXT:    s_lshr_b32 s88, s23, 16
-; VI-NEXT:    s_lshr_b32 s89, s22, 16
-; VI-NEXT:    s_lshr_b32 s90, s21, 16
-; VI-NEXT:    s_lshr_b32 s91, s20, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s19, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s18, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s23, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s22, 16
+; VI-NEXT:    s_lshr_b32 s30, s21, 16
+; VI-NEXT:    s_lshr_b32 s31, s20, 16
+; VI-NEXT:    s_lshr_b32 s34, s19, 16
+; VI-NEXT:    s_lshr_b32 s35, s18, 16
 ; VI-NEXT:    s_lshr_b32 s13, s17, 16
 ; VI-NEXT:    s_lshr_b32 s12, s16, 16
 ; VI-NEXT:    s_lshr_b32 s4, s5, 16
@@ -6426,8 +6444,8 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s62, s63, 16
 ; VI-NEXT:    s_lshr_b32 s73, s74, 16
 ; VI-NEXT:    s_lshr_b32 s76, s77, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB15_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
@@ -6437,22 +6455,22 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshl_b32 s13, s13, 16
 ; VI-NEXT:    s_or_b32 s13, s16, s13
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_or_b32 s16, s16, s17
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_or_b32 s17, s17, s18
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_or_b32 s18, s18, s19
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_or_b32 s19, s19, s20
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s22
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s20, s20, s21
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s23
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_or_b32 s21, s21, s22
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s24
 ; VI-NEXT:    s_lshl_b32 s23, s79, 16
@@ -6526,27 +6544,27 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_add_i32 s18, s18, 3
 ; VI-NEXT:    s_or_b32 s13, s13, s16
 ; VI-NEXT:    s_and_b32 s16, s18, 0xffff
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_add_i32 s19, s19, 3
 ; VI-NEXT:    s_or_b32 s16, s17, s16
 ; VI-NEXT:    s_and_b32 s17, s19, 0xffff
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_add_i32 s20, s20, 3
 ; VI-NEXT:    s_or_b32 s17, s18, s17
 ; VI-NEXT:    s_and_b32 s18, s20, 0xffff
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_add_i32 s21, s21, 3
 ; VI-NEXT:    s_or_b32 s18, s19, s18
 ; VI-NEXT:    s_and_b32 s19, s21, 0xffff
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_add_i32 s22, s22, 3
 ; VI-NEXT:    s_or_b32 s19, s20, s19
 ; VI-NEXT:    s_and_b32 s20, s22, 0xffff
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_add_i32 s23, s23, 3
 ; VI-NEXT:    s_or_b32 s20, s21, s20
 ; VI-NEXT:    s_and_b32 s21, s23, 0xffff
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_add_i32 s24, s24, 3
 ; VI-NEXT:    s_or_b32 s21, s22, s21
 ; VI-NEXT:    s_and_b32 s22, s24, 0xffff
@@ -6657,7 +6675,7 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_add_i32 s6, s6, 0x30000
 ; VI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; VI-NEXT:  .LBB15_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v28, 0
+; VI-NEXT:    v_readlane_b32 s30, v28, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s16
@@ -6686,7 +6704,10 @@ define inreg <28 x i32> @bitcast_v56i16_to_v28i32_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    v_mov_b32_e32 v25, s8
 ; VI-NEXT:    v_mov_b32_e32 v26, s6
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
-; VI-NEXT:    v_readlane_b32 s31, v28, 1
+; VI-NEXT:    v_readlane_b32 s31, v28, 4
+; VI-NEXT:    v_readlane_b32 s36, v28, 2
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -8134,6 +8155,13 @@ define inreg <56 x half> @bitcast_v28i32_to_v56f16_scalar(<28 x i32> inreg %a, i
 ; VI-LABEL: bitcast_v28i32_to_v56f16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s30, 2
+; VI-NEXT:    v_writelane_b32 v28, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -8203,24 +8231,24 @@ define inreg <56 x half> @bitcast_v28i32_to_v56f16_scalar(<28 x i32> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s91, s91, 16
+; VI-NEXT:    s_lshl_b32 s31, s31, 16
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s90, s90, 16
+; VI-NEXT:    s_lshl_b32 s30, s30, 16
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s89, s89, 16
+; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s88, s88, 16
+; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s22
 ; VI-NEXT:    s_lshl_b32 s79, s79, 16
 ; VI-NEXT:    s_and_b32 s23, 0xffff, s23
@@ -8265,12 +8293,12 @@ define inreg <56 x half> @bitcast_v28i32_to_v56f16_scalar(<28 x i32> inreg %a, i
 ; VI-NEXT:    s_lshl_b32 s42, s42, 16
 ; VI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; VI-NEXT:    s_lshl_b32 s40, s40, 16
-; VI-NEXT:    s_or_b32 s16, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s17, s17, vcc_lo
-; VI-NEXT:    s_or_b32 s18, s18, s91
-; VI-NEXT:    s_or_b32 s19, s19, s90
-; VI-NEXT:    s_or_b32 s20, s20, s89
-; VI-NEXT:    s_or_b32 s21, s21, s88
+; VI-NEXT:    s_or_b32 s16, s16, s35
+; VI-NEXT:    s_or_b32 s17, s17, s34
+; VI-NEXT:    s_or_b32 s18, s18, s31
+; VI-NEXT:    s_or_b32 s19, s19, s30
+; VI-NEXT:    s_or_b32 s20, s20, vcc_hi
+; VI-NEXT:    s_or_b32 s21, s21, vcc_lo
 ; VI-NEXT:    s_or_b32 s22, s22, s79
 ; VI-NEXT:    s_or_b32 s23, s23, s78
 ; VI-NEXT:    s_or_b32 s24, s24, s77
@@ -8293,6 +8321,7 @@ define inreg <56 x half> @bitcast_v28i32_to_v56f16_scalar(<28 x i32> inreg %a, i
 ; VI-NEXT:    s_or_b32 s6, s6, s44
 ; VI-NEXT:    s_or_b32 s5, s5, s42
 ; VI-NEXT:    s_or_b32 s4, s4, s40
+; VI-NEXT:    v_readlane_b32 s30, v28, 2
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
@@ -8321,6 +8350,13 @@ define inreg <56 x half> @bitcast_v28i32_to_v56f16_scalar(<28 x i32> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v25, s6
 ; VI-NEXT:    v_mov_b32_e32 v26, s5
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
+; VI-NEXT:    v_readlane_b32 s31, v28, 3
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v28i32_to_v56f16_scalar:
@@ -10397,20 +10433,22 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v32, s36, 0
-; VI-NEXT:    v_writelane_b32 v32, s37, 1
-; VI-NEXT:    v_writelane_b32 v32, s38, 2
-; VI-NEXT:    v_writelane_b32 v32, s39, 3
-; VI-NEXT:    v_writelane_b32 v32, s48, 4
-; VI-NEXT:    v_writelane_b32 v32, s49, 5
-; VI-NEXT:    v_writelane_b32 v32, s50, 6
-; VI-NEXT:    v_writelane_b32 v32, s51, 7
-; VI-NEXT:    v_writelane_b32 v32, s52, 8
-; VI-NEXT:    v_writelane_b32 v32, s53, 9
-; VI-NEXT:    v_writelane_b32 v32, s54, 10
-; VI-NEXT:    v_writelane_b32 v32, s55, 11
-; VI-NEXT:    v_writelane_b32 v32, s30, 12
-; VI-NEXT:    v_writelane_b32 v32, s31, 13
+; VI-NEXT:    v_writelane_b32 v32, s34, 0
+; VI-NEXT:    v_writelane_b32 v32, s35, 1
+; VI-NEXT:    v_writelane_b32 v32, s36, 2
+; VI-NEXT:    v_writelane_b32 v32, s37, 3
+; VI-NEXT:    v_writelane_b32 v32, s38, 4
+; VI-NEXT:    v_writelane_b32 v32, s39, 5
+; VI-NEXT:    v_writelane_b32 v32, s48, 6
+; VI-NEXT:    v_writelane_b32 v32, s49, 7
+; VI-NEXT:    v_writelane_b32 v32, s50, 8
+; VI-NEXT:    v_writelane_b32 v32, s51, 9
+; VI-NEXT:    v_writelane_b32 v32, s52, 10
+; VI-NEXT:    v_writelane_b32 v32, s53, 11
+; VI-NEXT:    v_writelane_b32 v32, s54, 12
+; VI-NEXT:    v_writelane_b32 v32, s55, 13
+; VI-NEXT:    v_writelane_b32 v32, s30, 14
+; VI-NEXT:    v_writelane_b32 v32, s31, 15
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s6, v12
 ; VI-NEXT:    v_readfirstlane_b32 s8, v11
@@ -10424,7 +10462,7 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_readfirstlane_b32 s73, v3
 ; VI-NEXT:    v_readfirstlane_b32 s76, v2
 ; VI-NEXT:    v_readfirstlane_b32 s78, v1
-; VI-NEXT:    v_readfirstlane_b32 s88, v0
+; VI-NEXT:    v_readfirstlane_b32 vcc_lo, v0
 ; VI-NEXT:    s_lshr_b32 s72, s29, 16
 ; VI-NEXT:    s_lshr_b32 s75, s28, 16
 ; VI-NEXT:    s_lshr_b32 s47, s27, 16
@@ -10435,10 +10473,10 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s42, s22, 16
 ; VI-NEXT:    s_lshr_b32 s41, s21, 16
 ; VI-NEXT:    s_lshr_b32 s40, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    s_lshr_b32 s7, s6, 16
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
@@ -10452,22 +10490,22 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s74, s73, 16
 ; VI-NEXT:    s_lshr_b32 s77, s76, 16
 ; VI-NEXT:    s_lshr_b32 s79, s78, 16
-; VI-NEXT:    s_lshr_b32 s89, s88, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    s_lshr_b32 vcc_hi, vcc_lo, 16
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB19_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
-; VI-NEXT:    s_or_b32 s36, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s37, s17, vcc_lo
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
+; VI-NEXT:    s_or_b32 s36, s16, s35
+; VI-NEXT:    s_or_b32 s37, s17, s34
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, s91, 16
+; VI-NEXT:    s_lshl_b32 s17, s31, 16
 ; VI-NEXT:    s_or_b32 s38, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s17, s90, 16
+; VI-NEXT:    s_lshl_b32 s17, s30, 16
 ; VI-NEXT:    s_or_b32 s39, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s20
 ; VI-NEXT:    s_lshl_b32 s17, s40, 16
@@ -10499,8 +10537,8 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s29
 ; VI-NEXT:    s_lshl_b32 s17, s72, 16
 ; VI-NEXT:    s_or_b32 s49, s16, s17
-; VI-NEXT:    s_and_b32 s16, 0xffff, s88
-; VI-NEXT:    s_lshl_b32 s17, s89, 16
+; VI-NEXT:    s_and_b32 s16, 0xffff, vcc_lo
+; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s50, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s78
 ; VI-NEXT:    s_lshl_b32 s17, s79, 16
@@ -10576,19 +10614,19 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_branch .LBB19_3
 ; VI-NEXT:  .LBB19_2: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v27, 0x200
-; VI-NEXT:    v_mov_b32_e32 v0, vcc_hi
-; VI-NEXT:    v_mov_b32_e32 v2, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v0, s35
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v27
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s17, v27
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_or_b32_e32 v1, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v2, s91
+; VI-NEXT:    v_mov_b32_e32 v2, s31
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v27
 ; VI-NEXT:    v_or_b32_e32 v2, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v3, s90
+; VI-NEXT:    v_mov_b32_e32 v3, s30
 ; VI-NEXT:    v_add_f16_sdwa v3, v3, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v4, s19, v27
 ; VI-NEXT:    v_or_b32_e32 v3, v4, v3
@@ -10632,9 +10670,9 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_sdwa v13, v13, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v14, s29, v27
 ; VI-NEXT:    v_or_b32_e32 v13, v14, v13
-; VI-NEXT:    v_mov_b32_e32 v14, s89
+; VI-NEXT:    v_mov_b32_e32 v14, vcc_hi
 ; VI-NEXT:    v_add_f16_sdwa v14, v14, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v15, s88, v27
+; VI-NEXT:    v_add_f16_e32 v15, vcc_lo, v27
 ; VI-NEXT:    v_or_b32_e32 v14, v15, v14
 ; VI-NEXT:    v_mov_b32_e32 v15, s79
 ; VI-NEXT:    v_add_f16_sdwa v15, v15, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -10689,20 +10727,22 @@ define inreg <28 x i32> @bitcast_v56f16_to_v28i32_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_e32 v27, s4, v27
 ; VI-NEXT:    v_or_b32_e32 v27, v27, v28
 ; VI-NEXT:  .LBB19_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v32, 12
-; VI-NEXT:    v_readlane_b32 s31, v32, 13
-; VI-NEXT:    v_readlane_b32 s55, v32, 11
-; VI-NEXT:    v_readlane_b32 s54, v32, 10
-; VI-NEXT:    v_readlane_b32 s53, v32, 9
-; VI-NEXT:    v_readlane_b32 s52, v32, 8
-; VI-NEXT:    v_readlane_b32 s51, v32, 7
-; VI-NEXT:    v_readlane_b32 s50, v32, 6
-; VI-NEXT:    v_readlane_b32 s49, v32, 5
-; VI-NEXT:    v_readlane_b32 s48, v32, 4
-; VI-NEXT:    v_readlane_b32 s39, v32, 3
-; VI-NEXT:    v_readlane_b32 s38, v32, 2
-; VI-NEXT:    v_readlane_b32 s37, v32, 1
-; VI-NEXT:    v_readlane_b32 s36, v32, 0
+; VI-NEXT:    v_readlane_b32 s30, v32, 14
+; VI-NEXT:    v_readlane_b32 s31, v32, 15
+; VI-NEXT:    v_readlane_b32 s55, v32, 13
+; VI-NEXT:    v_readlane_b32 s54, v32, 12
+; VI-NEXT:    v_readlane_b32 s53, v32, 11
+; VI-NEXT:    v_readlane_b32 s52, v32, 10
+; VI-NEXT:    v_readlane_b32 s51, v32, 9
+; VI-NEXT:    v_readlane_b32 s50, v32, 8
+; VI-NEXT:    v_readlane_b32 s49, v32, 7
+; VI-NEXT:    v_readlane_b32 s48, v32, 6
+; VI-NEXT:    v_readlane_b32 s39, v32, 5
+; VI-NEXT:    v_readlane_b32 s38, v32, 4
+; VI-NEXT:    v_readlane_b32 s37, v32, 3
+; VI-NEXT:    v_readlane_b32 s36, v32, 2
+; VI-NEXT:    v_readlane_b32 s35, v32, 1
+; VI-NEXT:    v_readlane_b32 s34, v32, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14677,6 +14717,9 @@ define inreg <56 x i16> @bitcast_v28f32_to_v56i16_scalar(<28 x float> inreg %a, 
 ; VI-LABEL: bitcast_v28f32_to_v56i16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
@@ -14685,6 +14728,10 @@ define inreg <56 x i16> @bitcast_v28f32_to_v56i16_scalar(<28 x float> inreg %a, 
 ; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_writelane_b32 v56, s34, 0
+; VI-NEXT:    v_writelane_b32 v56, s35, 1
+; VI-NEXT:    v_writelane_b32 v56, s30, 2
+; VI-NEXT:    v_writelane_b32 v56, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s41, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -14725,24 +14772,24 @@ define inreg <56 x i16> @bitcast_v28f32_to_v56i16_scalar(<28 x float> inreg %a, 
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
-; VI-NEXT:    v_mov_b32_e32 v47, vcc_hi
+; VI-NEXT:    v_mov_b32_e32 v47, s35
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
-; VI-NEXT:    v_mov_b32_e32 v46, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v46, s34
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v45, s91
+; VI-NEXT:    v_mov_b32_e32 v45, s31
 ; VI-NEXT:    v_mov_b32_e32 v3, s19
-; VI-NEXT:    v_mov_b32_e32 v44, s90
+; VI-NEXT:    v_mov_b32_e32 v44, s30
 ; VI-NEXT:    v_mov_b32_e32 v4, s20
-; VI-NEXT:    v_mov_b32_e32 v43, s89
+; VI-NEXT:    v_mov_b32_e32 v43, vcc_hi
 ; VI-NEXT:    v_mov_b32_e32 v5, s21
-; VI-NEXT:    v_mov_b32_e32 v42, s88
+; VI-NEXT:    v_mov_b32_e32 v42, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v6, s22
 ; VI-NEXT:    v_mov_b32_e32 v41, s79
 ; VI-NEXT:    v_mov_b32_e32 v7, s23
@@ -14890,6 +14937,7 @@ define inreg <56 x i16> @bitcast_v28f32_to_v56i16_scalar(<28 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
 ; VI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; VI-NEXT:    v_readlane_b32 s30, v56, 2
 ; VI-NEXT:    v_or_b32_sdwa v8, v8, v55 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v9, v9, v54 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v10, v10, v53 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -14910,6 +14958,12 @@ define inreg <56 x i16> @bitcast_v28f32_to_v56i16_scalar(<28 x float> inreg %a, 
 ; VI-NEXT:    v_or_b32_sdwa v25, v25, v30 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v26, v26, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v27, v27, v28 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readlane_b32 s31, v56, 3
+; VI-NEXT:    v_readlane_b32 s35, v56, 1
+; VI-NEXT:    v_readlane_b32 s34, v56, 0
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -17064,8 +17118,11 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v28, s30, 0
-; VI-NEXT:    v_writelane_b32 v28, s31, 1
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s36, 2
+; VI-NEXT:    v_writelane_b32 v28, s30, 3
+; VI-NEXT:    v_writelane_b32 v28, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v12
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
@@ -17086,12 +17143,12 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_lshr_b32 s75, s26, 16
 ; VI-NEXT:    s_lshr_b32 s78, s25, 16
 ; VI-NEXT:    s_lshr_b32 s79, s24, 16
-; VI-NEXT:    s_lshr_b32 s88, s23, 16
-; VI-NEXT:    s_lshr_b32 s89, s22, 16
-; VI-NEXT:    s_lshr_b32 s90, s21, 16
-; VI-NEXT:    s_lshr_b32 s91, s20, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s19, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s18, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s23, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s22, 16
+; VI-NEXT:    s_lshr_b32 s30, s21, 16
+; VI-NEXT:    s_lshr_b32 s31, s20, 16
+; VI-NEXT:    s_lshr_b32 s34, s19, 16
+; VI-NEXT:    s_lshr_b32 s35, s18, 16
 ; VI-NEXT:    s_lshr_b32 s13, s17, 16
 ; VI-NEXT:    s_lshr_b32 s12, s16, 16
 ; VI-NEXT:    s_lshr_b32 s4, s5, 16
@@ -17108,8 +17165,8 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_lshr_b32 s62, s63, 16
 ; VI-NEXT:    s_lshr_b32 s73, s74, 16
 ; VI-NEXT:    s_lshr_b32 s76, s77, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB31_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
@@ -17119,22 +17176,22 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_lshl_b32 s13, s13, 16
 ; VI-NEXT:    s_or_b32 s13, s16, s13
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_or_b32 s16, s16, s17
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_or_b32 s17, s17, s18
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_or_b32 s18, s18, s19
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_or_b32 s19, s19, s20
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s22
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s20, s20, s21
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s23
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_or_b32 s21, s21, s22
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s24
 ; VI-NEXT:    s_lshl_b32 s23, s79, 16
@@ -17208,27 +17265,27 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_add_i32 s18, s18, 3
 ; VI-NEXT:    s_or_b32 s13, s13, s16
 ; VI-NEXT:    s_and_b32 s16, s18, 0xffff
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_add_i32 s19, s19, 3
 ; VI-NEXT:    s_or_b32 s16, s17, s16
 ; VI-NEXT:    s_and_b32 s17, s19, 0xffff
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_add_i32 s20, s20, 3
 ; VI-NEXT:    s_or_b32 s17, s18, s17
 ; VI-NEXT:    s_and_b32 s18, s20, 0xffff
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_add_i32 s21, s21, 3
 ; VI-NEXT:    s_or_b32 s18, s19, s18
 ; VI-NEXT:    s_and_b32 s19, s21, 0xffff
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_add_i32 s22, s22, 3
 ; VI-NEXT:    s_or_b32 s19, s20, s19
 ; VI-NEXT:    s_and_b32 s20, s22, 0xffff
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_add_i32 s23, s23, 3
 ; VI-NEXT:    s_or_b32 s20, s21, s20
 ; VI-NEXT:    s_and_b32 s21, s23, 0xffff
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_add_i32 s24, s24, 3
 ; VI-NEXT:    s_or_b32 s21, s22, s21
 ; VI-NEXT:    s_and_b32 s22, s24, 0xffff
@@ -17339,7 +17396,7 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    s_add_i32 s6, s6, 0x30000
 ; VI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; VI-NEXT:  .LBB31_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v28, 0
+; VI-NEXT:    v_readlane_b32 s30, v28, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s16
@@ -17368,7 +17425,10 @@ define inreg <28 x float> @bitcast_v56i16_to_v28f32_scalar(<56 x i16> inreg %a, 
 ; VI-NEXT:    v_mov_b32_e32 v25, s8
 ; VI-NEXT:    v_mov_b32_e32 v26, s6
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
-; VI-NEXT:    v_readlane_b32 s31, v28, 1
+; VI-NEXT:    v_readlane_b32 s31, v28, 4
+; VI-NEXT:    v_readlane_b32 s36, v28, 2
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18856,6 +18916,9 @@ define inreg <56 x half> @bitcast_v28f32_to_v56f16_scalar(<28 x float> inreg %a,
 ; VI-LABEL: bitcast_v28f32_to_v56f16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
@@ -18864,6 +18927,10 @@ define inreg <56 x half> @bitcast_v28f32_to_v56f16_scalar(<28 x float> inreg %a,
 ; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_writelane_b32 v56, s34, 0
+; VI-NEXT:    v_writelane_b32 v56, s35, 1
+; VI-NEXT:    v_writelane_b32 v56, s30, 2
+; VI-NEXT:    v_writelane_b32 v56, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s41, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -18904,24 +18971,24 @@ define inreg <56 x half> @bitcast_v28f32_to_v56f16_scalar(<28 x float> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
-; VI-NEXT:    v_mov_b32_e32 v47, vcc_hi
+; VI-NEXT:    v_mov_b32_e32 v47, s35
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
-; VI-NEXT:    v_mov_b32_e32 v46, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v46, s34
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v45, s91
+; VI-NEXT:    v_mov_b32_e32 v45, s31
 ; VI-NEXT:    v_mov_b32_e32 v3, s19
-; VI-NEXT:    v_mov_b32_e32 v44, s90
+; VI-NEXT:    v_mov_b32_e32 v44, s30
 ; VI-NEXT:    v_mov_b32_e32 v4, s20
-; VI-NEXT:    v_mov_b32_e32 v43, s89
+; VI-NEXT:    v_mov_b32_e32 v43, vcc_hi
 ; VI-NEXT:    v_mov_b32_e32 v5, s21
-; VI-NEXT:    v_mov_b32_e32 v42, s88
+; VI-NEXT:    v_mov_b32_e32 v42, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v6, s22
 ; VI-NEXT:    v_mov_b32_e32 v41, s79
 ; VI-NEXT:    v_mov_b32_e32 v7, s23
@@ -19069,6 +19136,7 @@ define inreg <56 x half> @bitcast_v28f32_to_v56f16_scalar(<28 x float> inreg %a,
 ; VI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
 ; VI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; VI-NEXT:    v_readlane_b32 s30, v56, 2
 ; VI-NEXT:    v_or_b32_sdwa v8, v8, v55 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v9, v9, v54 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v10, v10, v53 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -19089,6 +19157,12 @@ define inreg <56 x half> @bitcast_v28f32_to_v56f16_scalar(<28 x float> inreg %a,
 ; VI-NEXT:    v_or_b32_sdwa v25, v25, v30 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v26, v26, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v27, v27, v28 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readlane_b32 s31, v56, 3
+; VI-NEXT:    v_readlane_b32 s35, v56, 1
+; VI-NEXT:    v_readlane_b32 s34, v56, 0
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -21505,20 +21579,22 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v32, s36, 0
-; VI-NEXT:    v_writelane_b32 v32, s37, 1
-; VI-NEXT:    v_writelane_b32 v32, s38, 2
-; VI-NEXT:    v_writelane_b32 v32, s39, 3
-; VI-NEXT:    v_writelane_b32 v32, s48, 4
-; VI-NEXT:    v_writelane_b32 v32, s49, 5
-; VI-NEXT:    v_writelane_b32 v32, s50, 6
-; VI-NEXT:    v_writelane_b32 v32, s51, 7
-; VI-NEXT:    v_writelane_b32 v32, s52, 8
-; VI-NEXT:    v_writelane_b32 v32, s53, 9
-; VI-NEXT:    v_writelane_b32 v32, s54, 10
-; VI-NEXT:    v_writelane_b32 v32, s55, 11
-; VI-NEXT:    v_writelane_b32 v32, s30, 12
-; VI-NEXT:    v_writelane_b32 v32, s31, 13
+; VI-NEXT:    v_writelane_b32 v32, s34, 0
+; VI-NEXT:    v_writelane_b32 v32, s35, 1
+; VI-NEXT:    v_writelane_b32 v32, s36, 2
+; VI-NEXT:    v_writelane_b32 v32, s37, 3
+; VI-NEXT:    v_writelane_b32 v32, s38, 4
+; VI-NEXT:    v_writelane_b32 v32, s39, 5
+; VI-NEXT:    v_writelane_b32 v32, s48, 6
+; VI-NEXT:    v_writelane_b32 v32, s49, 7
+; VI-NEXT:    v_writelane_b32 v32, s50, 8
+; VI-NEXT:    v_writelane_b32 v32, s51, 9
+; VI-NEXT:    v_writelane_b32 v32, s52, 10
+; VI-NEXT:    v_writelane_b32 v32, s53, 11
+; VI-NEXT:    v_writelane_b32 v32, s54, 12
+; VI-NEXT:    v_writelane_b32 v32, s55, 13
+; VI-NEXT:    v_writelane_b32 v32, s30, 14
+; VI-NEXT:    v_writelane_b32 v32, s31, 15
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s6, v12
 ; VI-NEXT:    v_readfirstlane_b32 s8, v11
@@ -21532,7 +21608,7 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    v_readfirstlane_b32 s73, v3
 ; VI-NEXT:    v_readfirstlane_b32 s76, v2
 ; VI-NEXT:    v_readfirstlane_b32 s78, v1
-; VI-NEXT:    v_readfirstlane_b32 s88, v0
+; VI-NEXT:    v_readfirstlane_b32 vcc_lo, v0
 ; VI-NEXT:    s_lshr_b32 s72, s29, 16
 ; VI-NEXT:    s_lshr_b32 s75, s28, 16
 ; VI-NEXT:    s_lshr_b32 s47, s27, 16
@@ -21543,10 +21619,10 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s42, s22, 16
 ; VI-NEXT:    s_lshr_b32 s41, s21, 16
 ; VI-NEXT:    s_lshr_b32 s40, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    s_lshr_b32 s7, s6, 16
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
@@ -21560,22 +21636,22 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s74, s73, 16
 ; VI-NEXT:    s_lshr_b32 s77, s76, 16
 ; VI-NEXT:    s_lshr_b32 s79, s78, 16
-; VI-NEXT:    s_lshr_b32 s89, s88, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    s_lshr_b32 vcc_hi, vcc_lo, 16
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB35_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
-; VI-NEXT:    s_or_b32 s36, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s37, s17, vcc_lo
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
+; VI-NEXT:    s_or_b32 s36, s16, s35
+; VI-NEXT:    s_or_b32 s37, s17, s34
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, s91, 16
+; VI-NEXT:    s_lshl_b32 s17, s31, 16
 ; VI-NEXT:    s_or_b32 s38, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s17, s90, 16
+; VI-NEXT:    s_lshl_b32 s17, s30, 16
 ; VI-NEXT:    s_or_b32 s39, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s20
 ; VI-NEXT:    s_lshl_b32 s17, s40, 16
@@ -21607,8 +21683,8 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s29
 ; VI-NEXT:    s_lshl_b32 s17, s72, 16
 ; VI-NEXT:    s_or_b32 s49, s16, s17
-; VI-NEXT:    s_and_b32 s16, 0xffff, s88
-; VI-NEXT:    s_lshl_b32 s17, s89, 16
+; VI-NEXT:    s_and_b32 s16, 0xffff, vcc_lo
+; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s50, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s78
 ; VI-NEXT:    s_lshl_b32 s17, s79, 16
@@ -21684,19 +21760,19 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    s_branch .LBB35_3
 ; VI-NEXT:  .LBB35_2: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v27, 0x200
-; VI-NEXT:    v_mov_b32_e32 v0, vcc_hi
-; VI-NEXT:    v_mov_b32_e32 v2, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v0, s35
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v27
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s17, v27
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_or_b32_e32 v1, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v2, s91
+; VI-NEXT:    v_mov_b32_e32 v2, s31
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v27
 ; VI-NEXT:    v_or_b32_e32 v2, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v3, s90
+; VI-NEXT:    v_mov_b32_e32 v3, s30
 ; VI-NEXT:    v_add_f16_sdwa v3, v3, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v4, s19, v27
 ; VI-NEXT:    v_or_b32_e32 v3, v4, v3
@@ -21740,9 +21816,9 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    v_add_f16_sdwa v13, v13, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v14, s29, v27
 ; VI-NEXT:    v_or_b32_e32 v13, v14, v13
-; VI-NEXT:    v_mov_b32_e32 v14, s89
+; VI-NEXT:    v_mov_b32_e32 v14, vcc_hi
 ; VI-NEXT:    v_add_f16_sdwa v14, v14, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v15, s88, v27
+; VI-NEXT:    v_add_f16_e32 v15, vcc_lo, v27
 ; VI-NEXT:    v_or_b32_e32 v14, v15, v14
 ; VI-NEXT:    v_mov_b32_e32 v15, s79
 ; VI-NEXT:    v_add_f16_sdwa v15, v15, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -21797,20 +21873,22 @@ define inreg <28 x float> @bitcast_v56f16_to_v28f32_scalar(<56 x half> inreg %a,
 ; VI-NEXT:    v_add_f16_e32 v27, s4, v27
 ; VI-NEXT:    v_or_b32_e32 v27, v27, v28
 ; VI-NEXT:  .LBB35_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v32, 12
-; VI-NEXT:    v_readlane_b32 s31, v32, 13
-; VI-NEXT:    v_readlane_b32 s55, v32, 11
-; VI-NEXT:    v_readlane_b32 s54, v32, 10
-; VI-NEXT:    v_readlane_b32 s53, v32, 9
-; VI-NEXT:    v_readlane_b32 s52, v32, 8
-; VI-NEXT:    v_readlane_b32 s51, v32, 7
-; VI-NEXT:    v_readlane_b32 s50, v32, 6
-; VI-NEXT:    v_readlane_b32 s49, v32, 5
-; VI-NEXT:    v_readlane_b32 s48, v32, 4
-; VI-NEXT:    v_readlane_b32 s39, v32, 3
-; VI-NEXT:    v_readlane_b32 s38, v32, 2
-; VI-NEXT:    v_readlane_b32 s37, v32, 1
-; VI-NEXT:    v_readlane_b32 s36, v32, 0
+; VI-NEXT:    v_readlane_b32 s30, v32, 14
+; VI-NEXT:    v_readlane_b32 s31, v32, 15
+; VI-NEXT:    v_readlane_b32 s55, v32, 13
+; VI-NEXT:    v_readlane_b32 s54, v32, 12
+; VI-NEXT:    v_readlane_b32 s53, v32, 11
+; VI-NEXT:    v_readlane_b32 s52, v32, 10
+; VI-NEXT:    v_readlane_b32 s51, v32, 9
+; VI-NEXT:    v_readlane_b32 s50, v32, 8
+; VI-NEXT:    v_readlane_b32 s49, v32, 7
+; VI-NEXT:    v_readlane_b32 s48, v32, 6
+; VI-NEXT:    v_readlane_b32 s39, v32, 5
+; VI-NEXT:    v_readlane_b32 s38, v32, 4
+; VI-NEXT:    v_readlane_b32 s37, v32, 3
+; VI-NEXT:    v_readlane_b32 s36, v32, 2
+; VI-NEXT:    v_readlane_b32 s35, v32, 1
+; VI-NEXT:    v_readlane_b32 s34, v32, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -24338,6 +24416,13 @@ define inreg <56 x i16> @bitcast_v14i64_to_v56i16_scalar(<14 x i64> inreg %a, i3
 ; VI-LABEL: bitcast_v14i64_to_v56i16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s30, 2
+; VI-NEXT:    v_writelane_b32 v28, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -24407,24 +24492,24 @@ define inreg <56 x i16> @bitcast_v14i64_to_v56i16_scalar(<14 x i64> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s91, s91, 16
+; VI-NEXT:    s_lshl_b32 s31, s31, 16
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s90, s90, 16
+; VI-NEXT:    s_lshl_b32 s30, s30, 16
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s89, s89, 16
+; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s88, s88, 16
+; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s22
 ; VI-NEXT:    s_lshl_b32 s79, s79, 16
 ; VI-NEXT:    s_and_b32 s23, 0xffff, s23
@@ -24469,12 +24554,12 @@ define inreg <56 x i16> @bitcast_v14i64_to_v56i16_scalar(<14 x i64> inreg %a, i3
 ; VI-NEXT:    s_lshl_b32 s42, s42, 16
 ; VI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; VI-NEXT:    s_lshl_b32 s40, s40, 16
-; VI-NEXT:    s_or_b32 s16, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s17, s17, vcc_lo
-; VI-NEXT:    s_or_b32 s18, s18, s91
-; VI-NEXT:    s_or_b32 s19, s19, s90
-; VI-NEXT:    s_or_b32 s20, s20, s89
-; VI-NEXT:    s_or_b32 s21, s21, s88
+; VI-NEXT:    s_or_b32 s16, s16, s35
+; VI-NEXT:    s_or_b32 s17, s17, s34
+; VI-NEXT:    s_or_b32 s18, s18, s31
+; VI-NEXT:    s_or_b32 s19, s19, s30
+; VI-NEXT:    s_or_b32 s20, s20, vcc_hi
+; VI-NEXT:    s_or_b32 s21, s21, vcc_lo
 ; VI-NEXT:    s_or_b32 s22, s22, s79
 ; VI-NEXT:    s_or_b32 s23, s23, s78
 ; VI-NEXT:    s_or_b32 s24, s24, s77
@@ -24497,6 +24582,7 @@ define inreg <56 x i16> @bitcast_v14i64_to_v56i16_scalar(<14 x i64> inreg %a, i3
 ; VI-NEXT:    s_or_b32 s6, s6, s44
 ; VI-NEXT:    s_or_b32 s5, s5, s42
 ; VI-NEXT:    s_or_b32 s4, s4, s40
+; VI-NEXT:    v_readlane_b32 s30, v28, 2
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
@@ -24525,6 +24611,13 @@ define inreg <56 x i16> @bitcast_v14i64_to_v56i16_scalar(<14 x i64> inreg %a, i3
 ; VI-NEXT:    v_mov_b32_e32 v25, s6
 ; VI-NEXT:    v_mov_b32_e32 v26, s5
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
+; VI-NEXT:    v_readlane_b32 s31, v28, 3
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v14i64_to_v56i16_scalar:
@@ -26339,8 +26432,11 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v28, s30, 0
-; VI-NEXT:    v_writelane_b32 v28, s31, 1
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s36, 2
+; VI-NEXT:    v_writelane_b32 v28, s30, 3
+; VI-NEXT:    v_writelane_b32 v28, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v12
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
@@ -26361,12 +26457,12 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s75, s26, 16
 ; VI-NEXT:    s_lshr_b32 s78, s25, 16
 ; VI-NEXT:    s_lshr_b32 s79, s24, 16
-; VI-NEXT:    s_lshr_b32 s88, s23, 16
-; VI-NEXT:    s_lshr_b32 s89, s22, 16
-; VI-NEXT:    s_lshr_b32 s90, s21, 16
-; VI-NEXT:    s_lshr_b32 s91, s20, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s19, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s18, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s23, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s22, 16
+; VI-NEXT:    s_lshr_b32 s30, s21, 16
+; VI-NEXT:    s_lshr_b32 s31, s20, 16
+; VI-NEXT:    s_lshr_b32 s34, s19, 16
+; VI-NEXT:    s_lshr_b32 s35, s18, 16
 ; VI-NEXT:    s_lshr_b32 s13, s17, 16
 ; VI-NEXT:    s_lshr_b32 s12, s16, 16
 ; VI-NEXT:    s_lshr_b32 s4, s5, 16
@@ -26383,8 +26479,8 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshr_b32 s62, s63, 16
 ; VI-NEXT:    s_lshr_b32 s73, s74, 16
 ; VI-NEXT:    s_lshr_b32 s76, s77, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB43_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
@@ -26394,22 +26490,22 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_lshl_b32 s13, s13, 16
 ; VI-NEXT:    s_or_b32 s13, s16, s13
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_or_b32 s16, s16, s17
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_or_b32 s17, s17, s18
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_or_b32 s18, s18, s19
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_or_b32 s19, s19, s20
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s22
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s20, s20, s21
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s23
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_or_b32 s21, s21, s22
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s24
 ; VI-NEXT:    s_lshl_b32 s23, s79, 16
@@ -26483,27 +26579,27 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_add_i32 s18, s18, 3
 ; VI-NEXT:    s_or_b32 s13, s13, s16
 ; VI-NEXT:    s_and_b32 s16, s18, 0xffff
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_add_i32 s19, s19, 3
 ; VI-NEXT:    s_or_b32 s16, s17, s16
 ; VI-NEXT:    s_and_b32 s17, s19, 0xffff
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_add_i32 s20, s20, 3
 ; VI-NEXT:    s_or_b32 s17, s18, s17
 ; VI-NEXT:    s_and_b32 s18, s20, 0xffff
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_add_i32 s21, s21, 3
 ; VI-NEXT:    s_or_b32 s18, s19, s18
 ; VI-NEXT:    s_and_b32 s19, s21, 0xffff
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_add_i32 s22, s22, 3
 ; VI-NEXT:    s_or_b32 s19, s20, s19
 ; VI-NEXT:    s_and_b32 s20, s22, 0xffff
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_add_i32 s23, s23, 3
 ; VI-NEXT:    s_or_b32 s20, s21, s20
 ; VI-NEXT:    s_and_b32 s21, s23, 0xffff
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_add_i32 s24, s24, 3
 ; VI-NEXT:    s_or_b32 s21, s22, s21
 ; VI-NEXT:    s_and_b32 s22, s24, 0xffff
@@ -26614,7 +26710,7 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    s_add_i32 s6, s6, 0x30000
 ; VI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; VI-NEXT:  .LBB43_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v28, 0
+; VI-NEXT:    v_readlane_b32 s30, v28, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s16
@@ -26643,7 +26739,10 @@ define inreg <14 x i64> @bitcast_v56i16_to_v14i64_scalar(<56 x i16> inreg %a, i3
 ; VI-NEXT:    v_mov_b32_e32 v25, s8
 ; VI-NEXT:    v_mov_b32_e32 v26, s6
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
-; VI-NEXT:    v_readlane_b32 s31, v28, 1
+; VI-NEXT:    v_readlane_b32 s31, v28, 4
+; VI-NEXT:    v_readlane_b32 s36, v28, 2
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -28073,6 +28172,13 @@ define inreg <56 x half> @bitcast_v14i64_to_v56f16_scalar(<14 x i64> inreg %a, i
 ; VI-LABEL: bitcast_v14i64_to_v56f16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s30, 2
+; VI-NEXT:    v_writelane_b32 v28, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
@@ -28142,24 +28248,24 @@ define inreg <56 x half> @bitcast_v14i64_to_v56f16_scalar(<14 x i64> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s91, s91, 16
+; VI-NEXT:    s_lshl_b32 s31, s31, 16
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s90, s90, 16
+; VI-NEXT:    s_lshl_b32 s30, s30, 16
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s89, s89, 16
+; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s88, s88, 16
+; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s22
 ; VI-NEXT:    s_lshl_b32 s79, s79, 16
 ; VI-NEXT:    s_and_b32 s23, 0xffff, s23
@@ -28204,12 +28310,12 @@ define inreg <56 x half> @bitcast_v14i64_to_v56f16_scalar(<14 x i64> inreg %a, i
 ; VI-NEXT:    s_lshl_b32 s42, s42, 16
 ; VI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; VI-NEXT:    s_lshl_b32 s40, s40, 16
-; VI-NEXT:    s_or_b32 s16, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s17, s17, vcc_lo
-; VI-NEXT:    s_or_b32 s18, s18, s91
-; VI-NEXT:    s_or_b32 s19, s19, s90
-; VI-NEXT:    s_or_b32 s20, s20, s89
-; VI-NEXT:    s_or_b32 s21, s21, s88
+; VI-NEXT:    s_or_b32 s16, s16, s35
+; VI-NEXT:    s_or_b32 s17, s17, s34
+; VI-NEXT:    s_or_b32 s18, s18, s31
+; VI-NEXT:    s_or_b32 s19, s19, s30
+; VI-NEXT:    s_or_b32 s20, s20, vcc_hi
+; VI-NEXT:    s_or_b32 s21, s21, vcc_lo
 ; VI-NEXT:    s_or_b32 s22, s22, s79
 ; VI-NEXT:    s_or_b32 s23, s23, s78
 ; VI-NEXT:    s_or_b32 s24, s24, s77
@@ -28232,6 +28338,7 @@ define inreg <56 x half> @bitcast_v14i64_to_v56f16_scalar(<14 x i64> inreg %a, i
 ; VI-NEXT:    s_or_b32 s6, s6, s44
 ; VI-NEXT:    s_or_b32 s5, s5, s42
 ; VI-NEXT:    s_or_b32 s4, s4, s40
+; VI-NEXT:    v_readlane_b32 s30, v28, 2
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
@@ -28260,6 +28367,13 @@ define inreg <56 x half> @bitcast_v14i64_to_v56f16_scalar(<14 x i64> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v25, s6
 ; VI-NEXT:    v_mov_b32_e32 v26, s5
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
+; VI-NEXT:    v_readlane_b32 s31, v28, 3
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
+; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v14i64_to_v56f16_scalar:
@@ -30336,20 +30450,22 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v32, s36, 0
-; VI-NEXT:    v_writelane_b32 v32, s37, 1
-; VI-NEXT:    v_writelane_b32 v32, s38, 2
-; VI-NEXT:    v_writelane_b32 v32, s39, 3
-; VI-NEXT:    v_writelane_b32 v32, s48, 4
-; VI-NEXT:    v_writelane_b32 v32, s49, 5
-; VI-NEXT:    v_writelane_b32 v32, s50, 6
-; VI-NEXT:    v_writelane_b32 v32, s51, 7
-; VI-NEXT:    v_writelane_b32 v32, s52, 8
-; VI-NEXT:    v_writelane_b32 v32, s53, 9
-; VI-NEXT:    v_writelane_b32 v32, s54, 10
-; VI-NEXT:    v_writelane_b32 v32, s55, 11
-; VI-NEXT:    v_writelane_b32 v32, s30, 12
-; VI-NEXT:    v_writelane_b32 v32, s31, 13
+; VI-NEXT:    v_writelane_b32 v32, s34, 0
+; VI-NEXT:    v_writelane_b32 v32, s35, 1
+; VI-NEXT:    v_writelane_b32 v32, s36, 2
+; VI-NEXT:    v_writelane_b32 v32, s37, 3
+; VI-NEXT:    v_writelane_b32 v32, s38, 4
+; VI-NEXT:    v_writelane_b32 v32, s39, 5
+; VI-NEXT:    v_writelane_b32 v32, s48, 6
+; VI-NEXT:    v_writelane_b32 v32, s49, 7
+; VI-NEXT:    v_writelane_b32 v32, s50, 8
+; VI-NEXT:    v_writelane_b32 v32, s51, 9
+; VI-NEXT:    v_writelane_b32 v32, s52, 10
+; VI-NEXT:    v_writelane_b32 v32, s53, 11
+; VI-NEXT:    v_writelane_b32 v32, s54, 12
+; VI-NEXT:    v_writelane_b32 v32, s55, 13
+; VI-NEXT:    v_writelane_b32 v32, s30, 14
+; VI-NEXT:    v_writelane_b32 v32, s31, 15
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s6, v12
 ; VI-NEXT:    v_readfirstlane_b32 s8, v11
@@ -30363,7 +30479,7 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_readfirstlane_b32 s73, v3
 ; VI-NEXT:    v_readfirstlane_b32 s76, v2
 ; VI-NEXT:    v_readfirstlane_b32 s78, v1
-; VI-NEXT:    v_readfirstlane_b32 s88, v0
+; VI-NEXT:    v_readfirstlane_b32 vcc_lo, v0
 ; VI-NEXT:    s_lshr_b32 s72, s29, 16
 ; VI-NEXT:    s_lshr_b32 s75, s28, 16
 ; VI-NEXT:    s_lshr_b32 s47, s27, 16
@@ -30374,10 +30490,10 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s42, s22, 16
 ; VI-NEXT:    s_lshr_b32 s41, s21, 16
 ; VI-NEXT:    s_lshr_b32 s40, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    s_lshr_b32 s7, s6, 16
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
@@ -30391,22 +30507,22 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s74, s73, 16
 ; VI-NEXT:    s_lshr_b32 s77, s76, 16
 ; VI-NEXT:    s_lshr_b32 s79, s78, 16
-; VI-NEXT:    s_lshr_b32 s89, s88, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    s_lshr_b32 vcc_hi, vcc_lo, 16
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB47_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
-; VI-NEXT:    s_or_b32 s36, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s37, s17, vcc_lo
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
+; VI-NEXT:    s_or_b32 s36, s16, s35
+; VI-NEXT:    s_or_b32 s37, s17, s34
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, s91, 16
+; VI-NEXT:    s_lshl_b32 s17, s31, 16
 ; VI-NEXT:    s_or_b32 s38, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s17, s90, 16
+; VI-NEXT:    s_lshl_b32 s17, s30, 16
 ; VI-NEXT:    s_or_b32 s39, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s20
 ; VI-NEXT:    s_lshl_b32 s17, s40, 16
@@ -30438,8 +30554,8 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s29
 ; VI-NEXT:    s_lshl_b32 s17, s72, 16
 ; VI-NEXT:    s_or_b32 s49, s16, s17
-; VI-NEXT:    s_and_b32 s16, 0xffff, s88
-; VI-NEXT:    s_lshl_b32 s17, s89, 16
+; VI-NEXT:    s_and_b32 s16, 0xffff, vcc_lo
+; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s50, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s78
 ; VI-NEXT:    s_lshl_b32 s17, s79, 16
@@ -30515,19 +30631,19 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_branch .LBB47_3
 ; VI-NEXT:  .LBB47_2: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v27, 0x200
-; VI-NEXT:    v_mov_b32_e32 v0, vcc_hi
-; VI-NEXT:    v_mov_b32_e32 v2, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v0, s35
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v27
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s17, v27
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_or_b32_e32 v1, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v2, s91
+; VI-NEXT:    v_mov_b32_e32 v2, s31
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v27
 ; VI-NEXT:    v_or_b32_e32 v2, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v3, s90
+; VI-NEXT:    v_mov_b32_e32 v3, s30
 ; VI-NEXT:    v_add_f16_sdwa v3, v3, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v4, s19, v27
 ; VI-NEXT:    v_or_b32_e32 v3, v4, v3
@@ -30571,9 +30687,9 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_sdwa v13, v13, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v14, s29, v27
 ; VI-NEXT:    v_or_b32_e32 v13, v14, v13
-; VI-NEXT:    v_mov_b32_e32 v14, s89
+; VI-NEXT:    v_mov_b32_e32 v14, vcc_hi
 ; VI-NEXT:    v_add_f16_sdwa v14, v14, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v15, s88, v27
+; VI-NEXT:    v_add_f16_e32 v15, vcc_lo, v27
 ; VI-NEXT:    v_or_b32_e32 v14, v15, v14
 ; VI-NEXT:    v_mov_b32_e32 v15, s79
 ; VI-NEXT:    v_add_f16_sdwa v15, v15, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -30628,20 +30744,22 @@ define inreg <14 x i64> @bitcast_v56f16_to_v14i64_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_e32 v27, s4, v27
 ; VI-NEXT:    v_or_b32_e32 v27, v27, v28
 ; VI-NEXT:  .LBB47_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v32, 12
-; VI-NEXT:    v_readlane_b32 s31, v32, 13
-; VI-NEXT:    v_readlane_b32 s55, v32, 11
-; VI-NEXT:    v_readlane_b32 s54, v32, 10
-; VI-NEXT:    v_readlane_b32 s53, v32, 9
-; VI-NEXT:    v_readlane_b32 s52, v32, 8
-; VI-NEXT:    v_readlane_b32 s51, v32, 7
-; VI-NEXT:    v_readlane_b32 s50, v32, 6
-; VI-NEXT:    v_readlane_b32 s49, v32, 5
-; VI-NEXT:    v_readlane_b32 s48, v32, 4
-; VI-NEXT:    v_readlane_b32 s39, v32, 3
-; VI-NEXT:    v_readlane_b32 s38, v32, 2
-; VI-NEXT:    v_readlane_b32 s37, v32, 1
-; VI-NEXT:    v_readlane_b32 s36, v32, 0
+; VI-NEXT:    v_readlane_b32 s30, v32, 14
+; VI-NEXT:    v_readlane_b32 s31, v32, 15
+; VI-NEXT:    v_readlane_b32 s55, v32, 13
+; VI-NEXT:    v_readlane_b32 s54, v32, 12
+; VI-NEXT:    v_readlane_b32 s53, v32, 11
+; VI-NEXT:    v_readlane_b32 s52, v32, 10
+; VI-NEXT:    v_readlane_b32 s51, v32, 9
+; VI-NEXT:    v_readlane_b32 s50, v32, 8
+; VI-NEXT:    v_readlane_b32 s49, v32, 7
+; VI-NEXT:    v_readlane_b32 s48, v32, 6
+; VI-NEXT:    v_readlane_b32 s39, v32, 5
+; VI-NEXT:    v_readlane_b32 s38, v32, 4
+; VI-NEXT:    v_readlane_b32 s37, v32, 3
+; VI-NEXT:    v_readlane_b32 s36, v32, 2
+; VI-NEXT:    v_readlane_b32 s35, v32, 1
+; VI-NEXT:    v_readlane_b32 s34, v32, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -32074,6 +32192,9 @@ define inreg <56 x i16> @bitcast_v14f64_to_v56i16_scalar(<14 x double> inreg %a,
 ; VI-LABEL: bitcast_v14f64_to_v56i16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
@@ -32082,6 +32203,10 @@ define inreg <56 x i16> @bitcast_v14f64_to_v56i16_scalar(<14 x double> inreg %a,
 ; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_writelane_b32 v56, s34, 0
+; VI-NEXT:    v_writelane_b32 v56, s35, 1
+; VI-NEXT:    v_writelane_b32 v56, s30, 2
+; VI-NEXT:    v_writelane_b32 v56, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s4, v12
@@ -32122,24 +32247,24 @@ define inreg <56 x i16> @bitcast_v14f64_to_v56i16_scalar(<14 x double> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
-; VI-NEXT:    v_mov_b32_e32 v47, vcc_hi
+; VI-NEXT:    v_mov_b32_e32 v47, s35
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
-; VI-NEXT:    v_mov_b32_e32 v46, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v46, s34
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v45, s91
+; VI-NEXT:    v_mov_b32_e32 v45, s31
 ; VI-NEXT:    v_mov_b32_e32 v3, s19
-; VI-NEXT:    v_mov_b32_e32 v44, s90
+; VI-NEXT:    v_mov_b32_e32 v44, s30
 ; VI-NEXT:    v_mov_b32_e32 v4, s20
-; VI-NEXT:    v_mov_b32_e32 v43, s89
+; VI-NEXT:    v_mov_b32_e32 v43, vcc_hi
 ; VI-NEXT:    v_mov_b32_e32 v5, s21
-; VI-NEXT:    v_mov_b32_e32 v42, s88
+; VI-NEXT:    v_mov_b32_e32 v42, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v6, s22
 ; VI-NEXT:    v_mov_b32_e32 v41, s79
 ; VI-NEXT:    v_mov_b32_e32 v7, s23
@@ -32273,6 +32398,7 @@ define inreg <56 x i16> @bitcast_v14f64_to_v56i16_scalar(<14 x double> inreg %a,
 ; VI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
 ; VI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; VI-NEXT:    v_readlane_b32 s30, v56, 2
 ; VI-NEXT:    v_or_b32_sdwa v8, v8, v55 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v9, v9, v54 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v10, v10, v53 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -32293,6 +32419,12 @@ define inreg <56 x i16> @bitcast_v14f64_to_v56i16_scalar(<14 x double> inreg %a,
 ; VI-NEXT:    v_or_b32_sdwa v25, v25, v30 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v26, v26, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v27, v27, v28 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readlane_b32 s31, v56, 3
+; VI-NEXT:    v_readlane_b32 s35, v56, 1
+; VI-NEXT:    v_readlane_b32 s34, v56, 0
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -34405,8 +34537,11 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v28, s30, 0
-; VI-NEXT:    v_writelane_b32 v28, s31, 1
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s36, 2
+; VI-NEXT:    v_writelane_b32 v28, s30, 3
+; VI-NEXT:    v_writelane_b32 v28, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v12
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
@@ -34427,12 +34562,12 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s75, s26, 16
 ; VI-NEXT:    s_lshr_b32 s78, s25, 16
 ; VI-NEXT:    s_lshr_b32 s79, s24, 16
-; VI-NEXT:    s_lshr_b32 s88, s23, 16
-; VI-NEXT:    s_lshr_b32 s89, s22, 16
-; VI-NEXT:    s_lshr_b32 s90, s21, 16
-; VI-NEXT:    s_lshr_b32 s91, s20, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s19, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s18, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s23, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s22, 16
+; VI-NEXT:    s_lshr_b32 s30, s21, 16
+; VI-NEXT:    s_lshr_b32 s31, s20, 16
+; VI-NEXT:    s_lshr_b32 s34, s19, 16
+; VI-NEXT:    s_lshr_b32 s35, s18, 16
 ; VI-NEXT:    s_lshr_b32 s13, s17, 16
 ; VI-NEXT:    s_lshr_b32 s12, s16, 16
 ; VI-NEXT:    s_lshr_b32 s4, s5, 16
@@ -34449,8 +34584,8 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_lshr_b32 s62, s63, 16
 ; VI-NEXT:    s_lshr_b32 s73, s74, 16
 ; VI-NEXT:    s_lshr_b32 s76, s77, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB51_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
@@ -34460,22 +34595,22 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_lshl_b32 s13, s13, 16
 ; VI-NEXT:    s_or_b32 s13, s16, s13
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_or_b32 s16, s16, s17
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_or_b32 s17, s17, s18
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s20
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_or_b32 s18, s18, s19
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s21
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_or_b32 s19, s19, s20
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s22
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s20, s20, s21
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s23
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_or_b32 s21, s21, s22
 ; VI-NEXT:    s_and_b32 s22, 0xffff, s24
 ; VI-NEXT:    s_lshl_b32 s23, s79, 16
@@ -34549,27 +34684,27 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_add_i32 s18, s18, 3
 ; VI-NEXT:    s_or_b32 s13, s13, s16
 ; VI-NEXT:    s_and_b32 s16, s18, 0xffff
-; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s17, s35, 16
 ; VI-NEXT:    s_add_i32 s19, s19, 3
 ; VI-NEXT:    s_or_b32 s16, s17, s16
 ; VI-NEXT:    s_and_b32 s17, s19, 0xffff
-; VI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s18, s34, 16
 ; VI-NEXT:    s_add_i32 s20, s20, 3
 ; VI-NEXT:    s_or_b32 s17, s18, s17
 ; VI-NEXT:    s_and_b32 s18, s20, 0xffff
-; VI-NEXT:    s_lshl_b32 s19, s91, 16
+; VI-NEXT:    s_lshl_b32 s19, s31, 16
 ; VI-NEXT:    s_add_i32 s21, s21, 3
 ; VI-NEXT:    s_or_b32 s18, s19, s18
 ; VI-NEXT:    s_and_b32 s19, s21, 0xffff
-; VI-NEXT:    s_lshl_b32 s20, s90, 16
+; VI-NEXT:    s_lshl_b32 s20, s30, 16
 ; VI-NEXT:    s_add_i32 s22, s22, 3
 ; VI-NEXT:    s_or_b32 s19, s20, s19
 ; VI-NEXT:    s_and_b32 s20, s22, 0xffff
-; VI-NEXT:    s_lshl_b32 s21, s89, 16
+; VI-NEXT:    s_lshl_b32 s21, vcc_hi, 16
 ; VI-NEXT:    s_add_i32 s23, s23, 3
 ; VI-NEXT:    s_or_b32 s20, s21, s20
 ; VI-NEXT:    s_and_b32 s21, s23, 0xffff
-; VI-NEXT:    s_lshl_b32 s22, s88, 16
+; VI-NEXT:    s_lshl_b32 s22, vcc_lo, 16
 ; VI-NEXT:    s_add_i32 s24, s24, 3
 ; VI-NEXT:    s_or_b32 s21, s22, s21
 ; VI-NEXT:    s_and_b32 s22, s24, 0xffff
@@ -34680,7 +34815,7 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    s_add_i32 s6, s6, 0x30000
 ; VI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; VI-NEXT:  .LBB51_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v28, 0
+; VI-NEXT:    v_readlane_b32 s30, v28, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s16
@@ -34709,7 +34844,10 @@ define inreg <14 x double> @bitcast_v56i16_to_v14f64_scalar(<56 x i16> inreg %a,
 ; VI-NEXT:    v_mov_b32_e32 v25, s8
 ; VI-NEXT:    v_mov_b32_e32 v26, s6
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
-; VI-NEXT:    v_readlane_b32 s31, v28, 1
+; VI-NEXT:    v_readlane_b32 s31, v28, 4
+; VI-NEXT:    v_readlane_b32 s36, v28, 2
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -36141,6 +36279,9 @@ define inreg <56 x half> @bitcast_v14f64_to_v56f16_scalar(<14 x double> inreg %a
 ; VI-LABEL: bitcast_v14f64_to_v56f16_scalar:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
@@ -36149,6 +36290,10 @@ define inreg <56 x half> @bitcast_v14f64_to_v56f16_scalar(<14 x double> inreg %a
 ; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_writelane_b32 v56, s34, 0
+; VI-NEXT:    v_writelane_b32 v56, s35, 1
+; VI-NEXT:    v_writelane_b32 v56, s30, 2
+; VI-NEXT:    v_writelane_b32 v56, s31, 3
 ; VI-NEXT:    v_readfirstlane_b32 s40, v14
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s4, v12
@@ -36189,24 +36334,24 @@ define inreg <56 x half> @bitcast_v14f64_to_v56f16_scalar(<14 x double> inreg %a
 ; VI-NEXT:    s_lshr_b32 s77, s24, 16
 ; VI-NEXT:    s_lshr_b32 s78, s23, 16
 ; VI-NEXT:    s_lshr_b32 s79, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
-; VI-NEXT:    v_mov_b32_e32 v47, vcc_hi
+; VI-NEXT:    v_mov_b32_e32 v47, s35
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
-; VI-NEXT:    v_mov_b32_e32 v46, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v46, s34
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v45, s91
+; VI-NEXT:    v_mov_b32_e32 v45, s31
 ; VI-NEXT:    v_mov_b32_e32 v3, s19
-; VI-NEXT:    v_mov_b32_e32 v44, s90
+; VI-NEXT:    v_mov_b32_e32 v44, s30
 ; VI-NEXT:    v_mov_b32_e32 v4, s20
-; VI-NEXT:    v_mov_b32_e32 v43, s89
+; VI-NEXT:    v_mov_b32_e32 v43, vcc_hi
 ; VI-NEXT:    v_mov_b32_e32 v5, s21
-; VI-NEXT:    v_mov_b32_e32 v42, s88
+; VI-NEXT:    v_mov_b32_e32 v42, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v6, s22
 ; VI-NEXT:    v_mov_b32_e32 v41, s79
 ; VI-NEXT:    v_mov_b32_e32 v7, s23
@@ -36340,6 +36485,7 @@ define inreg <56 x half> @bitcast_v14f64_to_v56f16_scalar(<14 x double> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
 ; VI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; VI-NEXT:    v_readlane_b32 s30, v56, 2
 ; VI-NEXT:    v_or_b32_sdwa v8, v8, v55 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v9, v9, v54 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v10, v10, v53 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -36360,6 +36506,12 @@ define inreg <56 x half> @bitcast_v14f64_to_v56f16_scalar(<14 x double> inreg %a
 ; VI-NEXT:    v_or_b32_sdwa v25, v25, v30 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v26, v26, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v27, v27, v28 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readlane_b32 s31, v56, 3
+; VI-NEXT:    v_readlane_b32 s35, v56, 1
+; VI-NEXT:    v_readlane_b32 s34, v56, 0
+; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -38734,20 +38886,22 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v32, s36, 0
-; VI-NEXT:    v_writelane_b32 v32, s37, 1
-; VI-NEXT:    v_writelane_b32 v32, s38, 2
-; VI-NEXT:    v_writelane_b32 v32, s39, 3
-; VI-NEXT:    v_writelane_b32 v32, s48, 4
-; VI-NEXT:    v_writelane_b32 v32, s49, 5
-; VI-NEXT:    v_writelane_b32 v32, s50, 6
-; VI-NEXT:    v_writelane_b32 v32, s51, 7
-; VI-NEXT:    v_writelane_b32 v32, s52, 8
-; VI-NEXT:    v_writelane_b32 v32, s53, 9
-; VI-NEXT:    v_writelane_b32 v32, s54, 10
-; VI-NEXT:    v_writelane_b32 v32, s55, 11
-; VI-NEXT:    v_writelane_b32 v32, s30, 12
-; VI-NEXT:    v_writelane_b32 v32, s31, 13
+; VI-NEXT:    v_writelane_b32 v32, s34, 0
+; VI-NEXT:    v_writelane_b32 v32, s35, 1
+; VI-NEXT:    v_writelane_b32 v32, s36, 2
+; VI-NEXT:    v_writelane_b32 v32, s37, 3
+; VI-NEXT:    v_writelane_b32 v32, s38, 4
+; VI-NEXT:    v_writelane_b32 v32, s39, 5
+; VI-NEXT:    v_writelane_b32 v32, s48, 6
+; VI-NEXT:    v_writelane_b32 v32, s49, 7
+; VI-NEXT:    v_writelane_b32 v32, s50, 8
+; VI-NEXT:    v_writelane_b32 v32, s51, 9
+; VI-NEXT:    v_writelane_b32 v32, s52, 10
+; VI-NEXT:    v_writelane_b32 v32, s53, 11
+; VI-NEXT:    v_writelane_b32 v32, s54, 12
+; VI-NEXT:    v_writelane_b32 v32, s55, 13
+; VI-NEXT:    v_writelane_b32 v32, s30, 14
+; VI-NEXT:    v_writelane_b32 v32, s31, 15
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s6, v12
 ; VI-NEXT:    v_readfirstlane_b32 s8, v11
@@ -38761,7 +38915,7 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    v_readfirstlane_b32 s73, v3
 ; VI-NEXT:    v_readfirstlane_b32 s76, v2
 ; VI-NEXT:    v_readfirstlane_b32 s78, v1
-; VI-NEXT:    v_readfirstlane_b32 s88, v0
+; VI-NEXT:    v_readfirstlane_b32 vcc_lo, v0
 ; VI-NEXT:    s_lshr_b32 s72, s29, 16
 ; VI-NEXT:    s_lshr_b32 s75, s28, 16
 ; VI-NEXT:    s_lshr_b32 s47, s27, 16
@@ -38772,10 +38926,10 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    s_lshr_b32 s42, s22, 16
 ; VI-NEXT:    s_lshr_b32 s41, s21, 16
 ; VI-NEXT:    s_lshr_b32 s40, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    s_lshr_b32 s7, s6, 16
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
@@ -38789,22 +38943,22 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    s_lshr_b32 s74, s73, 16
 ; VI-NEXT:    s_lshr_b32 s77, s76, 16
 ; VI-NEXT:    s_lshr_b32 s79, s78, 16
-; VI-NEXT:    s_lshr_b32 s89, s88, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    s_lshr_b32 vcc_hi, vcc_lo, 16
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB55_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
-; VI-NEXT:    s_or_b32 s36, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s37, s17, vcc_lo
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
+; VI-NEXT:    s_or_b32 s36, s16, s35
+; VI-NEXT:    s_or_b32 s37, s17, s34
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s17, s91, 16
+; VI-NEXT:    s_lshl_b32 s17, s31, 16
 ; VI-NEXT:    s_or_b32 s38, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s17, s90, 16
+; VI-NEXT:    s_lshl_b32 s17, s30, 16
 ; VI-NEXT:    s_or_b32 s39, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s20
 ; VI-NEXT:    s_lshl_b32 s17, s40, 16
@@ -38836,8 +38990,8 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s29
 ; VI-NEXT:    s_lshl_b32 s17, s72, 16
 ; VI-NEXT:    s_or_b32 s49, s16, s17
-; VI-NEXT:    s_and_b32 s16, 0xffff, s88
-; VI-NEXT:    s_lshl_b32 s17, s89, 16
+; VI-NEXT:    s_and_b32 s16, 0xffff, vcc_lo
+; VI-NEXT:    s_lshl_b32 s17, vcc_hi, 16
 ; VI-NEXT:    s_or_b32 s50, s16, s17
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s78
 ; VI-NEXT:    s_lshl_b32 s17, s79, 16
@@ -38913,19 +39067,19 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    s_branch .LBB55_3
 ; VI-NEXT:  .LBB55_2: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v27, 0x200
-; VI-NEXT:    v_mov_b32_e32 v0, vcc_hi
-; VI-NEXT:    v_mov_b32_e32 v2, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v0, s35
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v27
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s17, v27
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_or_b32_e32 v1, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v2, s91
+; VI-NEXT:    v_mov_b32_e32 v2, s31
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v27
 ; VI-NEXT:    v_or_b32_e32 v2, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v3, s90
+; VI-NEXT:    v_mov_b32_e32 v3, s30
 ; VI-NEXT:    v_add_f16_sdwa v3, v3, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v4, s19, v27
 ; VI-NEXT:    v_or_b32_e32 v3, v4, v3
@@ -38969,9 +39123,9 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    v_add_f16_sdwa v13, v13, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v14, s29, v27
 ; VI-NEXT:    v_or_b32_e32 v13, v14, v13
-; VI-NEXT:    v_mov_b32_e32 v14, s89
+; VI-NEXT:    v_mov_b32_e32 v14, vcc_hi
 ; VI-NEXT:    v_add_f16_sdwa v14, v14, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v15, s88, v27
+; VI-NEXT:    v_add_f16_e32 v15, vcc_lo, v27
 ; VI-NEXT:    v_or_b32_e32 v14, v15, v14
 ; VI-NEXT:    v_mov_b32_e32 v15, s79
 ; VI-NEXT:    v_add_f16_sdwa v15, v15, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -39026,20 +39180,22 @@ define inreg <14 x double> @bitcast_v56f16_to_v14f64_scalar(<56 x half> inreg %a
 ; VI-NEXT:    v_add_f16_e32 v27, s4, v27
 ; VI-NEXT:    v_or_b32_e32 v27, v27, v28
 ; VI-NEXT:  .LBB55_3: ; %end
-; VI-NEXT:    v_readlane_b32 s30, v32, 12
-; VI-NEXT:    v_readlane_b32 s31, v32, 13
-; VI-NEXT:    v_readlane_b32 s55, v32, 11
-; VI-NEXT:    v_readlane_b32 s54, v32, 10
-; VI-NEXT:    v_readlane_b32 s53, v32, 9
-; VI-NEXT:    v_readlane_b32 s52, v32, 8
-; VI-NEXT:    v_readlane_b32 s51, v32, 7
-; VI-NEXT:    v_readlane_b32 s50, v32, 6
-; VI-NEXT:    v_readlane_b32 s49, v32, 5
-; VI-NEXT:    v_readlane_b32 s48, v32, 4
-; VI-NEXT:    v_readlane_b32 s39, v32, 3
-; VI-NEXT:    v_readlane_b32 s38, v32, 2
-; VI-NEXT:    v_readlane_b32 s37, v32, 1
-; VI-NEXT:    v_readlane_b32 s36, v32, 0
+; VI-NEXT:    v_readlane_b32 s30, v32, 14
+; VI-NEXT:    v_readlane_b32 s31, v32, 15
+; VI-NEXT:    v_readlane_b32 s55, v32, 13
+; VI-NEXT:    v_readlane_b32 s54, v32, 12
+; VI-NEXT:    v_readlane_b32 s53, v32, 11
+; VI-NEXT:    v_readlane_b32 s52, v32, 10
+; VI-NEXT:    v_readlane_b32 s51, v32, 9
+; VI-NEXT:    v_readlane_b32 s50, v32, 8
+; VI-NEXT:    v_readlane_b32 s49, v32, 7
+; VI-NEXT:    v_readlane_b32 s48, v32, 6
+; VI-NEXT:    v_readlane_b32 s39, v32, 5
+; VI-NEXT:    v_readlane_b32 s38, v32, 4
+; VI-NEXT:    v_readlane_b32 s37, v32, 3
+; VI-NEXT:    v_readlane_b32 s36, v32, 2
+; VI-NEXT:    v_readlane_b32 s35, v32, 1
+; VI-NEXT:    v_readlane_b32 s34, v32, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -41297,8 +41453,11 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v28, s30, 0
-; VI-NEXT:    v_writelane_b32 v28, s31, 1
+; VI-NEXT:    v_writelane_b32 v28, s34, 0
+; VI-NEXT:    v_writelane_b32 v28, s35, 1
+; VI-NEXT:    v_writelane_b32 v28, s36, 2
+; VI-NEXT:    v_writelane_b32 v28, s30, 3
+; VI-NEXT:    v_writelane_b32 v28, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s4, v13
 ; VI-NEXT:    v_readfirstlane_b32 s6, v12
 ; VI-NEXT:    v_readfirstlane_b32 s8, v11
@@ -41312,7 +41471,7 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    v_readfirstlane_b32 s62, v3
 ; VI-NEXT:    v_readfirstlane_b32 s74, v2
 ; VI-NEXT:    v_readfirstlane_b32 s77, v1
-; VI-NEXT:    v_readfirstlane_b32 s88, v0
+; VI-NEXT:    v_readfirstlane_b32 vcc_lo, v0
 ; VI-NEXT:    s_lshr_b32 s40, s29, 16
 ; VI-NEXT:    s_lshr_b32 s43, s28, 16
 ; VI-NEXT:    s_lshr_b32 s44, s27, 16
@@ -41323,10 +41482,10 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s73, s22, 16
 ; VI-NEXT:    s_lshr_b32 s76, s21, 16
 ; VI-NEXT:    s_lshr_b32 s79, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    s_lshr_b32 s7, s6, 16
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
@@ -41340,19 +41499,19 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s63, s62, 16
 ; VI-NEXT:    s_lshr_b32 s75, s74, 16
 ; VI-NEXT:    s_lshr_b32 s78, s77, 16
-; VI-NEXT:    s_lshr_b32 s89, s88, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    s_lshr_b32 vcc_hi, vcc_lo, 16
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc1 .LBB57_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.true
 ; VI-NEXT:    s_add_i32 s16, s16, 3
-; VI-NEXT:    s_add_i32 vcc_hi, vcc_hi, 3
+; VI-NEXT:    s_add_i32 s35, s35, 3
 ; VI-NEXT:    s_add_i32 s17, s17, 3
-; VI-NEXT:    s_add_i32 vcc_lo, vcc_lo, 3
+; VI-NEXT:    s_add_i32 s34, s34, 3
 ; VI-NEXT:    s_add_i32 s18, s18, 3
-; VI-NEXT:    s_add_i32 s91, s91, 3
+; VI-NEXT:    s_add_i32 s31, s31, 3
 ; VI-NEXT:    s_add_i32 s19, s19, 3
-; VI-NEXT:    s_add_i32 s90, s90, 3
+; VI-NEXT:    s_add_i32 s30, s30, 3
 ; VI-NEXT:    s_add_i32 s20, s20, 3
 ; VI-NEXT:    s_add_i32 s79, s79, 3
 ; VI-NEXT:    s_add_i32 s21, s21, 3
@@ -41373,8 +41532,8 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_add_i32 s43, s43, 3
 ; VI-NEXT:    s_add_i32 s29, s29, 3
 ; VI-NEXT:    s_add_i32 s40, s40, 3
-; VI-NEXT:    s_add_i32 s88, s88, 3
-; VI-NEXT:    s_add_i32 s89, s89, 3
+; VI-NEXT:    s_add_i32 vcc_lo, vcc_lo, 3
+; VI-NEXT:    s_add_i32 vcc_hi, vcc_hi, 3
 ; VI-NEXT:    s_add_i32 s77, s77, 3
 ; VI-NEXT:    s_add_i32 s78, s78, 3
 ; VI-NEXT:    s_add_i32 s74, s74, 3
@@ -41410,8 +41569,8 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_lshl_b32 s44, s44, 16
 ; VI-NEXT:    s_or_b32 s28, s28, s43
 ; VI-NEXT:    s_or_b32 s29, s29, s40
-; VI-NEXT:    s_and_b32 s40, 0xffff, s88
-; VI-NEXT:    s_lshl_b32 s43, s89, 16
+; VI-NEXT:    s_and_b32 s40, 0xffff, vcc_lo
+; VI-NEXT:    s_lshl_b32 s43, vcc_hi, 16
 ; VI-NEXT:    s_and_b32 s26, 0xffff, s26
 ; VI-NEXT:    s_lshl_b32 s47, s47, 16
 ; VI-NEXT:    s_or_b32 s27, s27, s44
@@ -41429,13 +41588,13 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_and_b32 s47, 0xffff, s62
 ; VI-NEXT:    s_lshl_b32 s58, s63, 16
 ; VI-NEXT:    s_and_b32 s16, 0xffff, s16
-; VI-NEXT:    s_lshl_b32 vcc_hi, vcc_hi, 16
+; VI-NEXT:    s_lshl_b32 s35, s35, 16
 ; VI-NEXT:    s_and_b32 s17, 0xffff, s17
-; VI-NEXT:    s_lshl_b32 vcc_lo, vcc_lo, 16
+; VI-NEXT:    s_lshl_b32 s34, s34, 16
 ; VI-NEXT:    s_and_b32 s18, 0xffff, s18
-; VI-NEXT:    s_lshl_b32 s91, s91, 16
+; VI-NEXT:    s_lshl_b32 s31, s31, 16
 ; VI-NEXT:    s_and_b32 s19, 0xffff, s19
-; VI-NEXT:    s_lshl_b32 s90, s90, 16
+; VI-NEXT:    s_lshl_b32 s30, s30, 16
 ; VI-NEXT:    s_and_b32 s20, 0xffff, s20
 ; VI-NEXT:    s_lshl_b32 s79, s79, 16
 ; VI-NEXT:    s_and_b32 s21, 0xffff, s21
@@ -41467,10 +41626,10 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_lshl_b32 s7, s7, 16
 ; VI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; VI-NEXT:    s_lshl_b32 s5, s5, 16
-; VI-NEXT:    s_or_b32 s16, s16, vcc_hi
-; VI-NEXT:    s_or_b32 s17, s17, vcc_lo
-; VI-NEXT:    s_or_b32 s18, s18, s91
-; VI-NEXT:    s_or_b32 s19, s19, s90
+; VI-NEXT:    s_or_b32 s16, s16, s35
+; VI-NEXT:    s_or_b32 s17, s17, s34
+; VI-NEXT:    s_or_b32 s18, s18, s31
+; VI-NEXT:    s_or_b32 s19, s19, s30
 ; VI-NEXT:    s_or_b32 s20, s20, s79
 ; VI-NEXT:    s_or_b32 s21, s21, s76
 ; VI-NEXT:    s_or_b32 s22, s22, s73
@@ -41486,7 +41645,7 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    s_or_b32 s8, s8, s9
 ; VI-NEXT:    s_or_b32 s6, s6, s7
 ; VI-NEXT:    s_or_b32 s4, s4, s5
-; VI-NEXT:    v_readlane_b32 s30, v28, 0
+; VI-NEXT:    v_readlane_b32 s30, v28, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
@@ -41515,7 +41674,10 @@ define inreg <56 x half> @bitcast_v56i16_to_v56f16_scalar(<56 x i16> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v25, s8
 ; VI-NEXT:    v_mov_b32_e32 v26, s6
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
-; VI-NEXT:    v_readlane_b32 s31, v28, 1
+; VI-NEXT:    v_readlane_b32 s31, v28, 4
+; VI-NEXT:    v_readlane_b32 s36, v28, 2
+; VI-NEXT:    v_readlane_b32 s35, v28, 1
+; VI-NEXT:    v_readlane_b32 s34, v28, 0
 ; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
@@ -43700,8 +43862,11 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 ; 4-byte Folded Spill
-; VI-NEXT:    v_writelane_b32 v56, s30, 0
-; VI-NEXT:    v_writelane_b32 v56, s31, 1
+; VI-NEXT:    v_writelane_b32 v56, s34, 0
+; VI-NEXT:    v_writelane_b32 v56, s35, 1
+; VI-NEXT:    v_writelane_b32 v56, s36, 2
+; VI-NEXT:    v_writelane_b32 v56, s30, 3
+; VI-NEXT:    v_writelane_b32 v56, s31, 4
 ; VI-NEXT:    v_readfirstlane_b32 s5, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v12
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
@@ -43724,12 +43889,12 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s63, s24, 16
 ; VI-NEXT:    s_lshr_b32 s74, s23, 16
 ; VI-NEXT:    s_lshr_b32 s77, s22, 16
-; VI-NEXT:    s_lshr_b32 s88, s21, 16
-; VI-NEXT:    s_lshr_b32 s89, s20, 16
-; VI-NEXT:    s_lshr_b32 s90, s19, 16
-; VI-NEXT:    s_lshr_b32 s91, s18, 16
-; VI-NEXT:    s_lshr_b32 vcc_lo, s17, 16
-; VI-NEXT:    s_lshr_b32 vcc_hi, s16, 16
+; VI-NEXT:    s_lshr_b32 vcc_lo, s21, 16
+; VI-NEXT:    s_lshr_b32 vcc_hi, s20, 16
+; VI-NEXT:    s_lshr_b32 s30, s19, 16
+; VI-NEXT:    s_lshr_b32 s31, s18, 16
+; VI-NEXT:    s_lshr_b32 s34, s17, 16
+; VI-NEXT:    s_lshr_b32 s35, s16, 16
 ; VI-NEXT:    s_lshr_b32 s4, s5, 16
 ; VI-NEXT:    s_lshr_b32 s6, s7, 16
 ; VI-NEXT:    s_lshr_b32 s8, s9, 16
@@ -43744,22 +43909,22 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s72, s73, 16
 ; VI-NEXT:    s_lshr_b32 s75, s76, 16
 ; VI-NEXT:    s_lshr_b32 s78, s79, 16
-; VI-NEXT:    v_readfirstlane_b32 s30, v14
-; VI-NEXT:    s_cmp_lg_u32 s30, 0
+; VI-NEXT:    v_readfirstlane_b32 s36, v14
+; VI-NEXT:    s_cmp_lg_u32 s36, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB59_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.false
 ; VI-NEXT:    v_mov_b32_e32 v0, s16
-; VI-NEXT:    v_mov_b32_e32 v2, vcc_hi
+; VI-NEXT:    v_mov_b32_e32 v2, s35
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
-; VI-NEXT:    v_mov_b32_e32 v4, vcc_lo
+; VI-NEXT:    v_mov_b32_e32 v4, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s18
-; VI-NEXT:    v_mov_b32_e32 v6, s91
+; VI-NEXT:    v_mov_b32_e32 v6, s31
 ; VI-NEXT:    v_mov_b32_e32 v5, s19
-; VI-NEXT:    v_mov_b32_e32 v8, s90
+; VI-NEXT:    v_mov_b32_e32 v8, s30
 ; VI-NEXT:    v_mov_b32_e32 v7, s20
-; VI-NEXT:    v_mov_b32_e32 v10, s89
+; VI-NEXT:    v_mov_b32_e32 v10, vcc_hi
 ; VI-NEXT:    v_mov_b32_e32 v9, s21
-; VI-NEXT:    v_mov_b32_e32 v12, s88
+; VI-NEXT:    v_mov_b32_e32 v12, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v11, s22
 ; VI-NEXT:    v_mov_b32_e32 v14, s77
 ; VI-NEXT:    v_mov_b32_e32 v13, s23
@@ -43808,17 +43973,17 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:  .LBB59_2: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v47, 0x200
 ; VI-NEXT:    v_add_f16_e32 v0, s16, v47
-; VI-NEXT:    v_add_f16_e32 v2, vcc_hi, v47
+; VI-NEXT:    v_add_f16_e32 v2, s35, v47
 ; VI-NEXT:    v_add_f16_e32 v1, s17, v47
-; VI-NEXT:    v_add_f16_e32 v4, vcc_lo, v47
+; VI-NEXT:    v_add_f16_e32 v4, s34, v47
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v47
-; VI-NEXT:    v_add_f16_e32 v6, s91, v47
+; VI-NEXT:    v_add_f16_e32 v6, s31, v47
 ; VI-NEXT:    v_add_f16_e32 v5, s19, v47
-; VI-NEXT:    v_add_f16_e32 v8, s90, v47
+; VI-NEXT:    v_add_f16_e32 v8, s30, v47
 ; VI-NEXT:    v_add_f16_e32 v7, s20, v47
-; VI-NEXT:    v_add_f16_e32 v10, s89, v47
+; VI-NEXT:    v_add_f16_e32 v10, vcc_hi, v47
 ; VI-NEXT:    v_add_f16_e32 v9, s21, v47
-; VI-NEXT:    v_add_f16_e32 v12, s88, v47
+; VI-NEXT:    v_add_f16_e32 v12, vcc_lo, v47
 ; VI-NEXT:    v_add_f16_e32 v11, s22, v47
 ; VI-NEXT:    v_add_f16_e32 v14, s77, v47
 ; VI-NEXT:    v_add_f16_e32 v13, s23, v47
@@ -43918,7 +44083,7 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_lshlrev_b32_e32 v20, 16, v50
 ; VI-NEXT:    v_lshlrev_b32_e32 v21, 16, v52
 ; VI-NEXT:    v_lshlrev_b32_e32 v22, 16, v54
-; VI-NEXT:    v_readlane_b32 s30, v56, 0
+; VI-NEXT:    v_readlane_b32 s30, v56, 3
 ; VI-NEXT:    v_or_b32_sdwa v15, v29, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v16, v31, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v17, v33, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -43929,7 +44094,10 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; VI-NEXT:    v_or_b32_sdwa v22, v51, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v23, v53, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v24, v55, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    v_readlane_b32 s31, v56, 1
+; VI-NEXT:    v_readlane_b32 s31, v56, 4
+; VI-NEXT:    v_readlane_b32 s36, v56, 2
+; VI-NEXT:    v_readlane_b32 s35, v56, 1
+; VI-NEXT:    v_readlane_b32 s34, v56, 0
 ; VI-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b64 exec, s[4:5]
