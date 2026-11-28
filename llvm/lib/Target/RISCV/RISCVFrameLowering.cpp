@@ -3020,10 +3020,12 @@ bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   // Inserting a call to a __riscv_save libcall requires the use of the register
   // t0 (X5) to hold the return address. Therefore if this register is already
   // used we can't insert the call.
+  // The libcall also clobbers t1 (X6) and t2 (X7), see emitPrologue.
 
   RegScavenger RS;
   RS.enterBasicBlock(*TmpMBB);
-  return !RS.isRegUsed(RISCV::X5);
+  return !RS.isRegUsed(RISCV::X5) && !RS.isRegUsed(RISCV::X6) &&
+         !RS.isRegUsed(RISCV::X7);
 }
 
 bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
