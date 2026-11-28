@@ -16,6 +16,7 @@
 #include "LLVMDialectBytecode.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -73,6 +74,18 @@ LogicalResult LLVMDialect::verifyDataLayoutString(
 /// Verify LLVM dialect attributes.
 LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
+  // `llvm.strictfp` marks the call an intrinsic op translates to. The call ops
+  // have an inherent `strictfp` attribute instead.
+  if (attr.getName() == LLVMDialect::getStrictFPAttrName()) {
+    if (!isa<UnitAttr>(attr.getValue()))
+      return op->emitOpError() << "expected '" << getStrictFPAttrName()
+                               << "' to be a unit attribute";
+    if (!op->hasTrait<IntrinsicOpTrait>())
+      return op->emitOpError()
+             << "expected '" << getStrictFPAttrName() << "' on an intrinsic op";
+    return success();
+  }
+
   // If the data layout attribute is present, it must use the LLVM data layout
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)

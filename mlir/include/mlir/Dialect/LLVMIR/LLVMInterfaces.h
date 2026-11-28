@@ -45,6 +45,12 @@ LogicalResult verifyDereferenceableOpInterface(Operation *op);
 /// matches the bitwidth of its single integer (element) result.
 LogicalResult verifyRangeOpInterface(Operation *op);
 } // namespace detail
+
+/// Marks an LLVM dialect operation that translates to a call of an LLVM
+/// intrinsic.
+template <typename ConcreteType>
+class IntrinsicOpTrait
+    : public OpTrait::TraitBase<ConcreteType, IntrinsicOpTrait> {};
 } // namespace LLVM
 } // namespace mlir
 

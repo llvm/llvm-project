@@ -1039,6 +1039,13 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
     }
     return success();
   }
+  // The verifier allows `llvm.strictfp` only on intrinsic ops.
+  if (name == LLVMDialect::getStrictFPAttrName()) {
+    for (llvm::Instruction *inst : instructions)
+      if (auto *call = dyn_cast<llvm::CallBase>(inst))
+        call->addFnAttr(llvm::Attribute::StrictFP);
+    return success();
+  }
   return success();
 }
 

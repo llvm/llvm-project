@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_LLVMGENERALINTRINSICOPS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 namespace mlir {
 namespace LLVM {

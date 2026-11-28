@@ -44,6 +44,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getMmraAttrName() { return "llvm.mmra"; }
     static StringRef getMemProfAttrName() { return "llvm.memprof"; }
     static StringRef getCallsiteAttrName() { return "llvm.callsite"; }
+    static StringRef getStrictFPAttrName() { return "llvm.strictfp"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }

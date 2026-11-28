@@ -443,6 +443,18 @@ between "core" operations and "intrinsics". General LLVM IR intrinsics are
 modeled as first-class operations in the LLVM dialect. Target-specific LLVM IR
 intrinsics, e.g., NVVM or ROCDL, are modeled as separate dialects.
 
+An intrinsic operation has no inherent `strictfp` attribute. The discardable
+`llvm.strictfp` unit attribute marks the call it translates to `strictfp`,
+which LLVM requires for every call in a function that uses constrained
+floating-point intrinsics:
+
+```mlir
+llvm.func @f(%arg0: f32) -> f32 attributes {strictfp} {
+  %0 = llvm.intr.fabs(%arg0) {llvm.strictfp} : (f32) -> f32
+  llvm.return %0 : f32
+}
+```
+
 [include "Dialects/LLVMIntrinsicOps.md"]
 
 ### Debug Info

@@ -2570,8 +2570,17 @@ FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
 }
 
 LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
-  if (succeeded(iface.convertIntrinsic(builder, inst, *this)))
+  if (succeeded(iface.convertIntrinsic(builder, inst, *this))) {
+    // Named intrinsic ops have no inherent `strictfp`, so a strictfp call site
+    // becomes the discardable `llvm.strictfp` attribute.
+    if (inst->getAttributes().hasFnAttr(llvm::Attribute::StrictFP)) {
+      Operation *op = lookupOperation(inst);
+      if (op && op->hasTrait<LLVM::IntrinsicOpTrait>())
+        op->setDiscardableAttr(LLVMDialect::getStrictFPAttrName(),
+                               builder.getUnitAttr());
+    }
     return success();
+  }
 
   Location loc = translateLoc(inst->getDebugLoc());
   return emitError(loc) << "unhandled intrinsic: " << renderValue(*inst);
