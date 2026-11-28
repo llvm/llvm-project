@@ -14,6 +14,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/DebugLog.h"
 #include <memory>
 
@@ -33,6 +34,7 @@ class ConvertToLLVMPassInterface {
 public:
   ConvertToLLVMPassInterface(MLIRContext *context,
                              ArrayRef<std::string> filterDialects,
+                             ArrayRef<std::string> addLowering,
                              bool allowPatternRollback = true);
   virtual ~ConvertToLLVMPassInterface() = default;
 
@@ -56,12 +58,15 @@ protected:
   /// Visit the `ConvertToLLVMPatternInterface` dialect interfaces and call
   /// `visitor` with each of the interfaces. If `filterDialects` is non-empty,
   /// then `visitor` is invoked only with the dialects in the `filterDialects`
-  /// list.
+  /// and `addLowering` lists. Fails if a dialect in `addLowering` does not
+  /// implement the interface.
   LogicalResult visitInterfaces(
       llvm::function_ref<void(ConvertToLLVMPatternInterface *)> visitor);
   MLIRContext *context;
   /// List of dialects names to use as filters.
   ArrayRef<std::string> filterDialects;
+  /// List of dialect names whose patterns are always used.
+  ArrayRef<std::string> addLowering;
   /// An experimental flag to disallow pattern rollback. This is more efficient
   /// but not supported by all lowering patterns.
   bool allowPatternRollback;
@@ -209,17 +214,21 @@ public:
   using impl::ConvertToLLVMPassBase<ConvertToLLVMPass>::ConvertToLLVMPassBase;
   void getDependentDialects(DialectRegistry &registry) const final {
     ConvertToLLVMPassInterface::getDependentDialects(registry);
+    // The allocators of the dialects named via `add-lowering` are resolved
+    // from the MLIRContext's own registry when the pass manager loads them.
+    for (const std::string &name : addLowering)
+      registry.addDialectToPreload(name);
   }
 
   LogicalResult initialize(MLIRContext *context) final {
     std::shared_ptr<ConvertToLLVMPassInterface> impl;
     // Choose the pass implementation.
     if (useDynamic)
-      impl = std::make_shared<DynamicConvertToLLVM>(context, filterDialects,
-                                                    allowPatternRollback);
+      impl = std::make_shared<DynamicConvertToLLVM>(
+          context, filterDialects, addLowering, allowPatternRollback);
     else
-      impl = std::make_shared<StaticConvertToLLVM>(context, filterDialects,
-                                                   allowPatternRollback);
+      impl = std::make_shared<StaticConvertToLLVM>(
+          context, filterDialects, addLowering, allowPatternRollback);
     if (failed(impl->initialize()))
       return failure();
     this->impl = impl;
@@ -240,9 +249,9 @@ public:
 
 ConvertToLLVMPassInterface::ConvertToLLVMPassInterface(
     MLIRContext *context, ArrayRef<std::string> filterDialects,
-    bool allowPatternRollback)
+    ArrayRef<std::string> addLowering, bool allowPatternRollback)
     : context(context), filterDialects(filterDialects),
-      allowPatternRollback(allowPatternRollback) {}
+      addLowering(addLowering), allowPatternRollback(allowPatternRollback) {}
 
 void ConvertToLLVMPassInterface::getDependentDialects(
     DialectRegistry &registry) {
@@ -252,23 +261,39 @@ void ConvertToLLVMPassInterface::getDependentDialects(
 
 LogicalResult ConvertToLLVMPassInterface::visitInterfaces(
     llvm::function_ref<void(ConvertToLLVMPatternInterface *)> visitor) {
+  // Produce an error if the dialect is not loaded or does not implement the
+  // interface.
+  auto getInterface =
+      [&](StringRef dialectName) -> FailureOr<ConvertToLLVMPatternInterface *> {
+    Dialect *dialect = context->getLoadedDialect(dialectName);
+    if (!dialect)
+      return emitError(UnknownLoc::get(context))
+             << "dialect not loaded: " << dialectName << "\n";
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    if (!iface)
+      return emitError(UnknownLoc::get(context))
+             << "dialect does not implement ConvertToLLVMPatternInterface: "
+             << dialectName << "\n";
+    return iface;
+  };
+
   if (!filterDialects.empty()) {
-    // Test mode: Populate only patterns from the specified dialects. Produce
-    // an error if the dialect is not loaded or does not implement the
-    // interface.
-    for (StringRef dialectName : filterDialects) {
-      Dialect *dialect = context->getLoadedDialect(dialectName);
-      if (!dialect)
-        return emitError(UnknownLoc::get(context))
-               << "dialect not loaded: " << dialectName << "\n";
-      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-      if (!iface)
-        return emitError(UnknownLoc::get(context))
-               << "dialect does not implement ConvertToLLVMPatternInterface: "
-               << dialectName << "\n";
-      visitor(iface);
+    // Test mode: Populate only patterns from the specified dialects, including
+    // the ones of `addLowering`.
+    llvm::SetVector<StringRef> dialectNames;
+    dialectNames.insert_range(filterDialects);
+    dialectNames.insert_range(addLowering);
+    for (StringRef dialectName : dialectNames) {
+      FailureOr<ConvertToLLVMPatternInterface *> iface =
+          getInterface(dialectName);
+      if (failed(iface))
+        return failure();
+      visitor(*iface);
     }
   } else {
+    for (StringRef dialectName : addLowering)
+      if (failed(getInterface(dialectName)))
+        return failure();
     // Normal mode: Populate all patterns from all dialects that implement the
     // interface.
     // First time we encounter this dialect: if it implements the interface,

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -convert-arith-to-llvm -cse -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-to-llvm="add-lowering=arm_sve" -cse -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Dot ops
