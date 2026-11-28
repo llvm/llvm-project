@@ -4796,11 +4796,9 @@ template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseConversionExpr() {
   if (!consumeIf("cv"))
     return nullptr;
-  Node *Ty;
-  {
-    ScopedOverride<bool> SaveTemp(TryToParseTemplateArgs, false);
-    Ty = getDerived().parseType();
-  }
+  // No <expression> starts with 'I', so a template-template-param type may
+  // safely take <template-args> here.
+  Node *Ty = getDerived().parseType();
 
   if (Ty == nullptr)
     return nullptr;
@@ -5310,11 +5308,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     }
     case OperatorInfo::CCast: {
       // C Cast: (type)expr
-      Node *Ty;
-      {
-        ScopedOverride<bool> SaveTemp(TryToParseTemplateArgs, false);
-        Ty = getDerived().parseType();
-      }
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
 
