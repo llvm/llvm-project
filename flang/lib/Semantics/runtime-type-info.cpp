@@ -671,6 +671,19 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
         IntExpr(
             1, derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
+    // F2023 enumeration type: lets the runtime range check formatted input
+    // and restrict the edit descriptors (13.7.2.2 p6).
+    const DerivedTypeDetails *enumDetails{nullptr};
+    if (const Symbol *dtSymbol{dtScope.symbol()}) {
+      if (const auto *details{dtSymbol->detailsIf<DerivedTypeDetails>()};
+          details && details->isEnumerationType()) {
+        enumDetails = details;
+      }
+    }
+    AddValue(dtValues, derivedTypeSchema_, "isenumeration"s,
+        IntExpr(1, enumDetails != nullptr));
+    AddValue(dtValues, derivedTypeSchema_, "enumeratorcount"s,
+        IntExpr(4, enumDetails ? enumDetails->enumeratorCount() : 0));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});

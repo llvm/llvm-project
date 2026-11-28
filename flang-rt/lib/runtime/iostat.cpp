@@ -125,6 +125,8 @@ const char *IostatErrorString(int iostat) {
     return "ASYNCHRONOUS='YES' on a parent data transfer statement";
   case IostatChildAsynchronous:
     return "ASYNCHRONOUS='YES' on a child data transfer statement";
+  case IostatEnumerationInputOutOfRange:
+    return "Enumeration type input value is out of range";
   default:
     return nullptr;
   }

@@ -212,10 +212,11 @@ page](https://llvm.org/releases/).
   - the `INT` intrinsic applied to an enumeration value, and the `HUGE`,
     `NEXT` and `PREVIOUS` intrinsics;
   - formatted I/O using the `I`, `B`, `O` and `Z` edit descriptors.
+  - out-of-range input values receive the new IostatEnumerationInputOutOfRange
+    and are left unchanged.
 
   Known Limitations:
   - unformatted I/O of enumeration types is rejected (issue 231638);
-  - formatted input is not range-checked (231636);
   - NEXT/PREVIOUS with STAT= inside FORALL is not yet implemented (229873);
   - WHERE with a derived-type vector-subscript gather fails to verify (230617).
 
@@ -225,6 +226,8 @@ page](https://llvm.org/releases/).
     function with either name now requires an EXTERNAL declaration or an
     explicit interface.  A CALL to an external subroutine with either name is
     unaffected.
+  - formatted I/O using `G` (and legacy `A`) now fail at runtime with
+    IOSTAT=1005.
 
 ## Build System Changes
 
