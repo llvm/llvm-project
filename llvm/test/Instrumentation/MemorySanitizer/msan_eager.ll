@@ -187,3 +187,58 @@ define void @CallPartial() nounwind uwtable sanitize_memory {
   call void @PartialArg(i32 %r) nounwind uwtable sanitize_memory
   ret void
 }
+
+define void @SRetArg(ptr sret(i64) %a, i32 %b) nounwind uwtable sanitize_memory {
+; CHECK-LABEL: @SRetArg(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    store i64 0, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store ptr [[A:%.*]], ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
+; CHECK:       13:
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p = inttoptr i64 0 to ptr
+  store ptr %a, ptr %p
+  store i32 %b, ptr %a
+  ret void
+}
+
+define void @CallSRetArg(ptr %r) nounwind uwtable sanitize_memory {
+; CHECK-LABEL: @CallSRetArg(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
+; CHECK:       3:
+; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR3]]
+; CHECK-NEXT:    unreachable
+; CHECK:       4:
+; CHECK-NEXT:    call void @SRetArg(ptr sret(i64) [[R:%.*]], i32 0) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  call void @SRetArg(ptr sret(i64) %r, i32 0) nounwind uwtable sanitize_memory
+  ret void
+}
+
+
