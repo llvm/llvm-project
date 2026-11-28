@@ -25,8 +25,8 @@ define i1 @pow2_or_zero_is_negative(i8 %x) {
 
 define i1 @pow2_or_zero_is_negative_commute(i8 %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul i8 [[A:%.*]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = mul i8 42, %A ; thwart complexity-based canonicalization
@@ -53,8 +53,8 @@ define <2 x i1> @pow2_or_zero_is_negative_vec(<2 x i8> %x) {
 
 define <2 x i1> @pow2_or_zero_is_negative_vec_commute(<2 x i8> %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], splat (i8 42)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], splat (i8 -128)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[TMP1]], splat (i8 64)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = mul <2 x i8> <i8 42, i8 42>, %A ; thwart complexity-based canonicalization
@@ -81,8 +81,8 @@ define i1 @pow2_or_zero_is_not_negative(i8 %x) {
 
 define i1 @pow2_or_zero_is_not_negative_commute(i8 %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_not_negative_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul i8 [[A:%.*]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = mul i8 42, %A ; thwart complexity-based canonicalization
@@ -109,8 +109,8 @@ define <2 x i1> @pow2_or_zero_is_not_negative_vec(<2 x i8> %x) {
 
 define <2 x i1> @pow2_or_zero_is_not_negative_vec_commute(<2 x i8> %A) {
 ; CHECK-LABEL: @pow2_or_zero_is_not_negative_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[A:%.*]], splat (i8 42)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], splat (i8 -128)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], splat (i8 64)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = mul <2 x i8> <i8 42, i8 42>, %A ; thwart complexity-based canonicalization
