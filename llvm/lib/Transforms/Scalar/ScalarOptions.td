@@ -148,10 +148,14 @@ defm : ValueField<"gvn-max-hoisted", "int", "-1",
 defm : BoolField<"irce-allow-narrow-latch", "true",
   "If set to true, IRCE may eliminate wide range checks in loops with narrow latch condition">;
 defm : BoolField<"irce-allow-unsigned-latch", "true", "">;
+defm : BoolField<"irce-allow-scaled-range-checks", "true",
+  "If set to true, IRCE may eliminate range checks whose step is a positive constant multiple of the induction variable's step (e.g. a check on 4 * i + c in a loop over i).">;
 defm : ValueField<"irce-loop-size-cutoff", "unsigned", "64", "">;
 defm : ValueField<"irce-max-type-size-for-overflow-check", "unsigned", "32",
   "Maximum size of range check type for which can be produced runtime overflow check of its limit's computation">;
 defm : ValueField<"irce-min-eliminated-checks", "unsigned", "10", "">;
+defm : ValueField<"irce-min-scaled-range-checks", "unsigned", "2",
+  "Minimum number of scaled range checks in a loop for IRCE to eliminate them">;
 defm : BoolField<"irce-print-changed-loops", "false", "">;
 defm : BoolField<"irce-print-range-checks", "false", "">;
 defm : BoolField<"irce-print-scaled-boundary-range-checks", "false", "">;

@@ -174,10 +174,13 @@ public:
   /// Computes a range for the induction variable (IndVar) in which the range
   /// check is redundant and can be constant-folded away.  The induction
   /// variable is not required to be the canonical {0,+,1} induction variable.
+  /// If \p IsScaled is non-null, it is set to true when the returned range
+  /// was computed for a range check whose step is a multiple N > 1 of the
+  /// induction variable's step.
   std::optional<Range>
   computeSafeIterationSpace(ScalarEvolution &SE, const SCEVAddRecExpr *IndVar,
-                            bool IsLatchSigned,
-                            const ScalarOptions &Opts) const;
+                            bool IsLatchSigned, const ScalarOptions &Opts,
+                            bool *IsScaled = nullptr) const;
 };
 
 class InductiveRangeCheckElimination {
@@ -626,9 +629,11 @@ calculateSubRanges(const ScalarOptions &Opts, ScalarEvolution &SE,
 /// in which the range check can be safely elided.  If it cannot compute such a
 /// range, returns std::nullopt.
 std::optional<InductiveRangeCheck::Range>
-InductiveRangeCheck::computeSafeIterationSpace(
-    ScalarEvolution &SE, const SCEVAddRecExpr *IndVar, bool IsLatchSigned,
-    const ScalarOptions &Opts) const {
+InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
+                                               const SCEVAddRecExpr *IndVar,
+                                               bool IsLatchSigned,
+                                               const ScalarOptions &Opts,
+                                               bool *IsScaled) const {
   // We can deal when types of latch check and range checks don't match in case
   // if latch check is more narrow.
   auto *IVType = dyn_cast<IntegerType>(IndVar->getType());
@@ -659,6 +664,10 @@ InductiveRangeCheck::computeSafeIterationSpace(
   // this to "everything greater than 0 is safe", assuming that values between
   // -M and 0 just do not exist in unsigned iteration space, and we don't want
   // to deal with overflown values.
+  //
+  // With irce-allow-scaled-range-checks we also handle N > 1, i.e. the range
+  // check's step is a positive constant multiple of the IV's step (for example
+  // a check on "4 * i + c" in a loop over "i"); see the end of this function.
 
   if (!IndVar->isAffine())
     return std::nullopt;
@@ -672,8 +681,22 @@ InductiveRangeCheck::computeSafeIterationSpace(
 
   const SCEV *C = getBegin();
   const SCEVConstant *D = dyn_cast<SCEVConstant>(getStep());
-  if (D != B)
+  if (!D)
     return std::nullopt;
+
+  // N = D / B. N == 1 is the classic case. When irce-allow-scaled-range-checks
+  // is set we additionally accept an integer N > 1 with both steps positive.
+  // B has been extended to RCType above, so B and D have the same bit width.
+  // With both positive and D a multiple of B, 1 <= N <= D fits in RCType.
+  APInt N(D->getAPInt().getBitWidth(), 1);
+  if (D != B) {
+    const APInt &BV = B->getAPInt();
+    const APInt &DV = D->getAPInt();
+    if (!Opts.irce_allow_scaled_range_checks || !BV.isStrictlyPositive() ||
+        !DV.isStrictlyPositive() || DV.ult(BV) || !DV.urem(BV).isZero())
+      return std::nullopt;
+    N = DV.udiv(BV);
+  }
 
   assert(!D->getValue()->isZero() && "Recurrence with zero step?");
   unsigned BitWidth = RCType->getBitWidth();
@@ -724,7 +747,23 @@ InductiveRangeCheck::computeSafeIterationSpace(
       // It gives us smin(X, Y) to subtract in all cases.
       return SE.getMinusSCEV(X, SE.getSMinExpr(X, Y), SCEV::FlagNUW);
   };
-  const SCEV *M = SE.getMinusSCEV(C, A);
+  const SCEV *M = [&]() -> const SCEV * {
+    if (N.isOne())
+      return SE.getMinusSCEV(C, A);
+
+    // We reason about the mathematical value of M = C - N * A below, so it
+    // must be computed without wrapping.
+    const SCEV *NS = SE.getConstant(N);
+    const SCEV *NA = SE.getMulExpr(NS, A);
+    if (!A->isZero() &&
+        !(SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, NS, A) &&
+          SE.willNotOverflow(Instruction::Sub, /*Signed=*/true, C, NA)))
+      return nullptr;
+
+    return SE.getMinusSCEV(C, NA);
+  }();
+  if (!M)
+    return std::nullopt;
   const SCEV *Zero = SE.getZero(M->getType());
 
   // This function returns SCEV equal to 1 if X is non-negative 0 otherwise.
@@ -796,6 +835,27 @@ InductiveRangeCheck::computeSafeIterationSpace(
 
   const SCEV *RuntimeChecks =
       SE.getMulExpr(SCEVCheckNonNegative(REnd), EndWillNotOverflow);
+
+  if (!N.isOne()) {
+    // Scaled range check: the value being checked is N * IndVar + M, N > 1.
+    // We only use the conservative sub-range
+    //
+    //   0 <= IndVar < floor(max(L - M, 0) / N)        (requires M >= 0)
+    //
+    // For such IndVar, N * IndVar + M >= M >= 0, and
+    // N * IndVar + M <= L - N < L, so the check holds and nothing wraps.
+    // M >= 0 is checked at runtime like REnd: if it fails, the range is empty
+    // and every iteration keeps its range check (pre/post loops). With
+    // M >= 0 and 0 <= L <= SINT_MAX, ClampedSubtract(REnd, M) is exact.
+    RuntimeChecks = SE.getMulExpr(RuntimeChecks, SCEVCheckNonNegative(M));
+    const SCEV *NS = SE.getConstant(N);
+    const SCEV *Span = SE.getSMaxExpr(ClampedSubtract(REnd, M), Zero);
+    const SCEV *End = SE.getMulExpr(SE.getUDivExpr(Span, NS), RuntimeChecks);
+    if (IsScaled)
+      *IsScaled = true;
+    return InductiveRangeCheck::Range(Zero, End);
+  }
+
   const SCEV *Begin = SE.getMulExpr(ClampedSubtract(Zero, M), RuntimeChecks);
   const SCEV *End = SE.getMulExpr(ClampedSubtract(REnd, M), RuntimeChecks);
 
@@ -1024,9 +1084,32 @@ bool InductiveRangeCheckElimination::run(
   auto IntersectRange =
       LS.IsSignedPredicate ? IntersectSignedRange : IntersectUnsignedRange;
 
+  // Eliminating scaled range checks splits the loop like any other range
+  // check, but a loop with a single scaled check (typically a check that
+  // earlier passes already merged and made cheap) does not gain enough to pay
+  // for the extra loop copies. Only eliminate scaled checks when the loop has
+  // at least irce-min-scaled-range-checks of them.
+  SmallVector<std::pair<std::optional<InductiveRangeCheck::Range>, bool>, 4>
+      Results;
+  unsigned NumScaled = 0;
   for (InductiveRangeCheck &IRC : RangeChecks) {
-    auto Result =
-        IRC.computeSafeIterationSpace(SE, IndVar, LS.IsSignedPredicate, Opts);
+    bool IsScaled = false;
+    auto Result = IRC.computeSafeIterationSpace(
+        SE, IndVar, LS.IsSignedPredicate, Opts, &IsScaled);
+    if (Result && IsScaled)
+      ++NumScaled;
+    Results.push_back({Result, IsScaled});
+  }
+  bool SkipScaled = NumScaled < Opts.irce_min_scaled_range_checks;
+  if (SkipScaled && NumScaled)
+    LLVM_DEBUG(dbgs() << "irce: skipping " << NumScaled
+                      << " scaled range check(s), fewer than "
+                      << Opts.irce_min_scaled_range_checks << "\n");
+
+  for (auto [IRC, R] : zip(RangeChecks, Results)) {
+    auto &[Result, IsScaled] = R;
+    if (IsScaled && SkipScaled)
+      continue;
     if (Result) {
       auto MaybeSafeIterRange = IntersectRange(SE, SafeIterRange, *Result);
       if (MaybeSafeIterRange) {
