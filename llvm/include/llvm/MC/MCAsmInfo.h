@@ -377,6 +377,15 @@ protected:
   /// .debug_* sections.
   bool DwarfUsesRelocationsAcrossSections = true;
 
+  /// The optional specifier to use for the personality symbol references.
+  /// Darwin-only.
+  uint16_t DwarfPersonalitySymbolSpec = 0;
+
+  /// Non-zero if DWARF personality symbol reference relocations should have a
+  /// constant addend instead of being PC-relative when a symbol specifier is
+  /// used to refer to personality symbols. Darwin-only.
+  int DwarfPersonalitySymbolsAbsOff = 0;
+
   /// True if DWARF FDE symbol reference relocations should be replaced by an
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
@@ -496,9 +505,9 @@ public:
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
 
-  virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
-                                                    unsigned Encoding,
-                                                    MCStreamer &Streamer) const;
+  const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
+                                            unsigned Encoding,
+                                            MCStreamer &Streamer) const;
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const;
