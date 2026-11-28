@@ -1,3 +1,7 @@
+lldb_tablegen(InterpreterOptions.inc -gen-lldb-option-defs
+  SOURCE InterpreterOptions.td
+  TARGET LLDBInterpreterOptionsGen)
+
 lldb_tablegen(InterpreterProperties.inc -gen-lldb-property-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesGen)
@@ -90,6 +94,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
 
 add_dependencies(lldbInterpreter
   lldbInterpreterInterfaces
+  LLDBInterpreterOptionsGen
   LLDBInterpreterPropertiesGen
   LLDBInterpreterPropertiesEnumGen)
 
