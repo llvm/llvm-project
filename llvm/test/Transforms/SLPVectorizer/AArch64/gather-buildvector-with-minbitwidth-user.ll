@@ -5,13 +5,15 @@ define void @h(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h, i
 ; CHECK-LABEL: define void @h(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]], i16 [[C:%.*]], i16 [[D:%.*]], i16 [[E:%.*]], i16 [[F:%.*]], i16 [[G:%.*]], i16 [[H:%.*]], i16 [[I:%.*]], i16 [[J:%.*]], i16 [[K:%.*]], i16 [[L:%.*]], i16 [[M:%.*]], i16 [[N:%.*]], i16 [[O:%.*]], i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV9:%.*]] = zext i16 [[A]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[E]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[I]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[M]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[B]], i64 4
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[H]], i64 6
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x i16> [[TMP16]], i16 [[L]], i64 7
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i16> [[TMP17]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> [[TMP0]], i16 [[E]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[I]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[M]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> poison, i16 [[D]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[G]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[K]], i64 2
@@ -23,21 +25,10 @@ define void @h(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h, i
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i32> poison, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = ashr <8 x i32> [[TMP14]], splat (i32 5)
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i16> poison, i16 [[H]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i16> [[TMP16]], i16 [[L]], i64 1
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i16> [[TMP17]] to <2 x i32>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <8 x i16> [[TMP17]], <8 x i16> <i16 poison, i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0>, <8 x i32> <i32 4, i32 9, i32 10, i32 11, i32 0, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP30:%.*]] = or <8 x i16> [[TMP18]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc <8 x i32> [[TMP15]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP20:%.*]] = or <8 x i16> [[TMP19]], [[TMP12]]
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[CONV9]], i64 0
-; CHECK-NEXT:    [[TMP22:%.*]] = or <4 x i32> [[TMP21]], [[TMP4]]
-; CHECK-NEXT:    [[TMP23:%.*]] = trunc <4 x i32> [[TMP22]] to <4 x i16>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i16> [[TMP23]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i32> [[TMP18]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP25]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP27:%.*]] = or <4 x i32> [[TMP26]], [[TMP21]]
-; CHECK-NEXT:    [[TMP28:%.*]] = trunc <4 x i32> [[TMP27]] to <4 x i16>
-; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i16> [[TMP28]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <8 x i16> [[TMP24]], <8 x i16> [[TMP29]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP31:%.*]] = or <8 x i16> [[TMP30]], [[TMP20]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP31]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void

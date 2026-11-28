@@ -7539,16 +7539,23 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
-  // into smaller vectors and sum the cost of each shuffle.
+  // into smaller vectors and sum the cost of each shuffle. Also handle the
+  // narrowing shuffles, whose result fits into a single 128-bit register.
   if (!Mask.empty() && isa<FixedVectorType>(SrcTy) && LT.second.isVector() &&
-      LT.second.getScalarSizeInBits() * Mask.size() > 128 &&
       SrcTy->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
-      Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
+      ((LT.second.getScalarSizeInBits() * Mask.size() > 128 &&
+        Mask.size() > LT.second.getVectorNumElements()) ||
+       (LT.first > 1 && LT.second.is128BitVector() &&
+        Mask.size() <= LT.second.getVectorNumElements())) &&
+      !Index && !SubTp) {
+    unsigned SrcNumElts = cast<FixedVectorType>(SrcTy)->getNumElements();
     // Check for LD3/LD4 instructions, which are represented in llvm IR as
     // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
     // but we model it with a cost of LT.first so that LD3/LD4 have a higher
     // cost than just the load.
     if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+        LT.second.getScalarSizeInBits() * Mask.size() >= 64 &&
+        all_of(Mask, [&](int M) { return M < static_cast<int>(SrcNumElts); }) &&
         (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3) ||
          ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4)))
       return std::max<InstructionCost>(1, LT.first / 4);
@@ -7558,15 +7565,17 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
     if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
-        (ShuffleVectorInst::isInterleaveMask(
-             Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2) ||
-         ShuffleVectorInst::isInterleaveMask(
-             Mask, 3, SrcTy->getElementCount().getKnownMinValue() * 2)))
+        LT.second.getScalarSizeInBits() * Mask.size() > 128 &&
+        (ShuffleVectorInst::isInterleaveMask(Mask, 4, SrcNumElts * 2) ||
+         ShuffleVectorInst::isInterleaveMask(Mask, 3, SrcNumElts * 2)))
       return LT.first;
 
     unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
+    // The registers of the second operand follow the registers of the first
+    // one, the last register of each operand may be partially used.
+    unsigned NumSrcVecs = divideCeil(SrcNumElts, LTNumElts);
     VectorType *NTp = VectorType::get(SrcTy->getScalarType(),
                                       LT.second.getVectorElementCount());
     InstructionCost Cost;
@@ -7588,7 +7597,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
 
         // Calculate which source from the input this comes from and whether it
         // is new to us.
-        unsigned Source = MaskElt / LTNumElts;
+        unsigned Elt = MaskElt % SrcNumElts;
+        unsigned Source = MaskElt / SrcNumElts * NumSrcVecs + Elt / LTNumElts;
+        unsigned Lane = Elt % LTNumElts;
         if (NumSources == 0) {
           Source1 = Source;
           NumSources = 1;
@@ -7602,11 +7613,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         // Add to the new mask. For the NumSources>2 case these are not correct,
         // but are only used for the modular lane number.
         if (Source == Source1)
-          NMask.push_back(MaskElt % LTNumElts);
+          NMask.push_back(Lane);
         else if (Source == Source2)
-          NMask.push_back(MaskElt % LTNumElts + LTNumElts);
+          NMask.push_back(Lane + LTNumElts);
         else
-          NMask.push_back(MaskElt % LTNumElts);
+          NMask.push_back(Lane);
       }
       // Check if we have already generated this sub-shuffle, which means we
       // will have already generated the output. For example a <16 x i32> splat
@@ -7619,14 +7630,27 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         continue;
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
       // getShuffleCost. If not then cost it using the worst case as the number
-      // of element moves into a new vector.
-      InstructionCost NCost =
-          NumSources <= 2
-              ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
-                                               : TTI::SK_PermuteTwoSrc,
-                               NTp, NTp, CostKind, NMask, 0, nullptr, Args,
-                               CtxI)
-              : LTNumElts;
+      // of element moves into a new vector. The low and the high halves of a
+      // register are costed as the extract, the padded mask is not recognized
+      // as the extract.
+      unsigned NumElts = std::min(LTNumElts, TpNumElts - N * LTNumElts);
+      ArrayRef<int> SubMask = ArrayRef(NMask).take_front(NumElts);
+      int SubIdx;
+      InstructionCost NCost;
+      if (NumElts == LTNumElts / 2 &&
+          ShuffleVectorInst::isExtractSubvectorMask(SubMask, LTNumElts,
+                                                    SubIdx) &&
+          (SubIdx == 0 || SubIdx == static_cast<int>(NumElts))) {
+        auto *SubVecTy = FixedVectorType::get(SrcTy->getScalarType(), NumElts);
+        NCost = getShuffleCost(TTI::SK_ExtractSubvector, SubVecTy, NTp,
+                               CostKind, SubMask, SubIdx, SubVecTy, Args, CtxI);
+      } else if (NumSources <= 2) {
+        NCost = getShuffleCost(
+            NumSources <= 1 ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc,
+            NTp, NTp, CostKind, NMask, 0, nullptr, Args, CtxI);
+      } else {
+        NCost = NumElts;
+      }
       Result.first->second = NCost;
       Cost += NCost;
     }
@@ -7741,7 +7765,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
-      Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
+      Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_Reverse ||
+      Kind == TTI::SK_Splice) {
+    // clang-format off
     static const CostTblEntry ShuffleTbl[] = {
         // Broadcast shuffle kinds can be performed with 'dup'.
         {TTI::SK_Broadcast, MVT::v8i8, 1},
@@ -7775,13 +7801,17 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Transpose, MVT::v4f32, 1},
         {TTI::SK_Transpose, MVT::v2f64, 1},
         // Select shuffle kinds.
-        // TODO: handle vXi8/vXi16.
         {TTI::SK_Select, MVT::v2i32, 1}, // mov.
         {TTI::SK_Select, MVT::v4i32, 2}, // rev+trn (or similar).
         {TTI::SK_Select, MVT::v2i64, 1}, // mov.
         {TTI::SK_Select, MVT::v2f32, 1}, // mov.
         {TTI::SK_Select, MVT::v4f32, 2}, // rev+trn (or similar).
         {TTI::SK_Select, MVT::v2f64, 1}, // mov.
+        {TTI::SK_Select, MVT::v8i8, 2},   // movi + bif
+        {TTI::SK_Select, MVT::v8i16, 8},  // constpool + load + bif
+        {TTI::SK_Select, MVT::v8f16, 8},  // constpool + load + bif
+        {TTI::SK_Select, MVT::v8bf16, 8}, // constpool + load + bif
+        {TTI::SK_Select, MVT::v16i8, 8},  // constpool + load + bif
         // PermuteSingleSrc shuffle kinds.
         {TTI::SK_PermuteSingleSrc, MVT::v2i32, 1}, // mov.
         {TTI::SK_PermuteSingleSrc, MVT::v4i32, 3}, // perfectshuffle worst case.
@@ -7797,6 +7827,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_PermuteSingleSrc, MVT::v8bf16, 8}, // constpool + load + tbl
         {TTI::SK_PermuteSingleSrc, MVT::v8i8, 8},   // constpool + load + tbl
         {TTI::SK_PermuteSingleSrc, MVT::v16i8, 8},  // constpool + load + tbl
+        {TTI::SK_PermuteTwoSrc, MVT::v8i8, 9},      // mov + constpool + load + tbl
+        {TTI::SK_PermuteTwoSrc, MVT::v8i16, 8},     // constpool + load + tbl2
+        {TTI::SK_PermuteTwoSrc, MVT::v8f16, 8},     // constpool + load + tbl2
+        {TTI::SK_PermuteTwoSrc, MVT::v8bf16, 8},    // constpool + load + tbl2
+        {TTI::SK_PermuteTwoSrc, MVT::v16i8, 8},     // constpool + load + tbl2
         // Reverse can be lowered with `rev`.
         {TTI::SK_Reverse, MVT::v2i32, 1}, // REV64
         {TTI::SK_Reverse, MVT::v4i32, 2}, // REV64; EXT
@@ -7864,6 +7899,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Reverse, MVT::nxv4i1, 1},
         {TTI::SK_Reverse, MVT::nxv2i1, 1},
     };
+    // clang-format on
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }

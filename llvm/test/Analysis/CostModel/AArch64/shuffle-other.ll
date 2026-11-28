@@ -496,13 +496,13 @@ define void @vst3(ptr %p) {
 ; CHECK-LABEL: 'vst3'
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v16i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:64 Lat:128 SizeLat:128 for: %v32i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v32i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
 ; CHECK-NEXT:  Cost Model: Found costs of 48 for: %v64i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:32 Lat:64 SizeLat:64 for: %v16i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v16i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 ; CHECK-NEXT:  Cost Model: Found costs of 24 for: %v32i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
 ; CHECK-NEXT:  Cost Model: Found costs of 48 for: %v64i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %v8i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v8i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 ; CHECK-NEXT:  Cost Model: Found costs of 12 for: %v16i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 ; CHECK-NEXT:  Cost Model: Found costs of 24 for: %v32i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
 ; CHECK-NEXT:  Cost Model: Found costs of 48 for: %v64i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
@@ -540,10 +540,10 @@ define void @vst4(ptr %p) {
 ; CHECK-LABEL: 'vst4'
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:64 Lat:128 SizeLat:128 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
 ; CHECK-NEXT:  Cost Model: Found costs of 64 for: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:32 Lat:64 SizeLat:64 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of 32 for: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
 ; CHECK-NEXT:  Cost Model: Found costs of 64 for: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
@@ -597,7 +597,7 @@ define void @narrow_two_source() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %h3 = shufflevector <3 x half> poison, <3 x half> poison, <3 x i32> <i32 4, i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %f3 = shufflevector <3 x float> poison, <3 x float> poison, <3 x i32> <i32 0, i32 4, i32 2>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:6 Lat:12 SizeLat:12 for: %i3 = shufflevector <3 x i32> poison, <3 x i32> poison, <3 x i32> <i32 5, i32 1, i32 0>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:12 Lat:24 SizeLat:24 for: %i6 = shufflevector <6 x i16> poison, <6 x i16> poison, <6 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 8>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %i6 = shufflevector <6 x i16> poison, <6 x i16> poison, <6 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %h2 = shufflevector <2 x half> poison, <2 x half> poison, <2 x i32> <i32 3, i32 1>
@@ -610,12 +610,12 @@ define void @narrow_two_source() {
 
 define void @narrow_two_source_neg() {
 ; CHECK-LABEL: 'narrow_two_source_neg'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:12 Lat:24 SizeLat:24 for: %i6arb = shufflevector <6 x i16> poison, <6 x i16> poison, <6 x i32> <i32 5, i32 0, i32 9, i32 3, i32 11, i32 1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %i7arb = shufflevector <7 x i8> poison, <7 x i8> poison, <7 x i32> <i32 6, i32 0, i32 9, i32 3, i32 11, i32 1, i32 13>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %i6arb = shufflevector <6 x i16> poison, <6 x i16> poison, <6 x i32> <i32 5, i32 0, i32 9, i32 3, i32 11, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %i7arb = shufflevector <7 x i8> poison, <7 x i8> poison, <7 x i32> <i32 6, i32 0, i32 9, i32 3, i32 11, i32 1, i32 13>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2 = shufflevector <2 x i16> poison, <2 x i16> poison, <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %c4 = shufflevector <4 x i8> poison, <4 x i8> poison, <4 x i32> <i32 5, i32 1, i32 6, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %w6arb = shufflevector <6 x i32> poison, <6 x i32> poison, <6 x i32> <i32 5, i32 0, i32 9, i32 3, i32 11, i32 1>
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %l3 = shufflevector <3 x i64> poison, <3 x i64> poison, <3 x i32> <i32 5, i32 1, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %l3 = shufflevector <3 x i64> poison, <3 x i64> poison, <3 x i32> <i32 5, i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %i6arb = shufflevector <6 x i16> poison, <6 x i16> poison, <6 x i32> <i32 5, i32 0, i32 9, i32 3, i32 11, i32 1>
@@ -637,6 +637,23 @@ define void @narrow_two_source_sve_fixed() #1 {
   %w6 = shufflevector <6 x i32> poison, <6 x i32> poison, <6 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 8>
   %w6arb = shufflevector <6 x i32> poison, <6 x i32> poison, <6 x i32> <i32 5, i32 0, i32 9, i32 3, i32 11, i32 1>
   %l3 = shufflevector <3 x i64> poison, <3 x i64> poison, <3 x i32> <i32 5, i32 1, i32 0>
+  ret void
+}
+
+define void @two_source_tbl(<8 x i16> %i16a, <8 x i16> %i16b, <8 x half> %f16a, <8 x half> %f16b, <8 x bfloat> %bf16a, <8 x bfloat> %bf16b, <16 x i8> %i8a, <16 x i8> %i8b, <8 x i8> %d8a, <8 x i8> %d8b) {
+; CHECK-LABEL: 'two_source_tbl'
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %p16 = shufflevector <8 x i16> %i16a, <8 x i16> %i16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %pf16 = shufflevector <8 x half> %f16a, <8 x half> %f16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %pbf16 = shufflevector <8 x bfloat> %bf16a, <8 x bfloat> %bf16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %p8 = shufflevector <16 x i8> %i8a, <16 x i8> %i8b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %pd8 = shufflevector <8 x i8> %d8a, <8 x i8> %d8b, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 7, i32 13, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %p16 = shufflevector <8 x i16> %i16a, <8 x i16> %i16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+  %pf16 = shufflevector <8 x half> %f16a, <8 x half> %f16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+  %pbf16 = shufflevector <8 x bfloat> %bf16a, <8 x bfloat> %bf16b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 13, i32 14>
+  %p8 = shufflevector <16 x i8> %i8a, <16 x i8> %i8b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %pd8 = shufflevector <8 x i8> %d8a, <8 x i8> %d8b, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 7, i32 13, i32 14>
   ret void
 }
 
