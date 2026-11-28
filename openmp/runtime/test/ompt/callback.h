@@ -682,7 +682,8 @@ static void on_ompt_callback_implicit_task(ompt_scope_endpoint_t endpoint,
       // Only check initial task not created by teams construct
       if (team_size == 1 && thread_num == 1 && parallel_data->ptr)
         printf("%s\n", "0: parallel_data initially not null");
-      parallel_data->value = ompt_get_unique_id();
+      if (!parallel_data->value)
+        parallel_data->value = ompt_get_unique_id();
       printf("%" PRIu64 ":" _TOOL_PREFIX
              " ompt_event_initial_task_begin: parallel_id=%" PRIx64
              ", task_id=%" PRIx64 ", actual_parallelism=%" PRIu32
