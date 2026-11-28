@@ -1405,6 +1405,30 @@ func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
 }
 
 //===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za16
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fp8_fmopa_za16(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[8]x[8]xf16> {
+  // CHECK: arm_sme.fp8_fmopa_za16 {{.*}}, {{.*}} : vector<[16]xi8>, vector<[16]xi8> into vector<[8]x[8]xf16>
+  %result = arm_sme.fp8_fmopa_za16 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[8]x[8]xf16>
+  return %result : vector<[8]x[8]xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za32
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fp8_fmopa_za32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xf32> {
+  // CHECK: arm_sme.fp8_fmopa_za32 {{.*}}, {{.*}} : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xf32>
+  %result = arm_sme.fp8_fmopa_za32 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xf32>
+  return %result : vector<[4]x[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
 // arm_sme.copy_tile
 //===----------------------------------------------------------------------===//
 

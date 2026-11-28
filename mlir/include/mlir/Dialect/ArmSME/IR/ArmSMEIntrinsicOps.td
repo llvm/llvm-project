@@ -114,6 +114,19 @@ def LLVM_aarch64_sme_umopa_za32 : ArmSME_IntrMopOverloadedOp<"umopa.za32">;
 def LLVM_aarch64_sme_smops_za32 : ArmSME_IntrMopOverloadedOp<"smops.za32">;
 def LLVM_aarch64_sme_umops_za32 : ArmSME_IntrMopOverloadedOp<"umops.za32">;
 
+class ArmSME_IntrMopFp8Op<string mnemonic>
+    : ArmSME_IntrOp<mnemonic,
+                    /*immArgPositions=*/[0],
+                    /*immArgAttrNames=*/["tile_id"]>,
+      Arguments<(ins Arg<I32Attr, "Virtual tile ID">:$tile_id,
+                 Arg<MOPPredicate, "LHS predicate">:$lhs_predicate,
+                 Arg<MOPPredicate, "RHS predicate">:$rhs_predicate,
+                 Arg<MOPVector, "LHS vector operand">:$lhs_vector,
+                 Arg<MOPVector, "RHS vector operand">:$rhs_vector)>;
+
+def LLVM_aarch64_sme_fp8_fmopa_za16 : ArmSME_IntrMopFp8Op<"fp8.fmopa.za16">;
+def LLVM_aarch64_sme_fp8_fmopa_za32 : ArmSME_IntrMopFp8Op<"fp8.fmopa.za32">;
+
 class ArmSME_IntrLoadStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic,
                     /*immArgPositions=*/[2],

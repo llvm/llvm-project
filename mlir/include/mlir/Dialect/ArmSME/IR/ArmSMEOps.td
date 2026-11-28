@@ -943,7 +943,6 @@ def FMopa2WayOp
 }
 
 // TODO: support:
-// - FMOPA 2-way FP8 to FP16
 // - FMOPA 4-way FP16 to FP32
 // once intrinsic support lands in the backend.
 
@@ -1383,6 +1382,48 @@ def UsMops4WayOp
     | Spec | Features |
     | ---- | -------- |
     | [USMOPS (4-way)](https://developer.arm.com/documentation/ddi0602/2023-09/SME-Instructions/USMOPS--Unsigned-by-signed-integer-sum-of-outer-products-and-subtract-) | +sme (32-bit), +sme-i16i64 (64-bit)|
+  }];
+}
+
+def FP8FmopaZa16Op
+  : OuterProduct2Way<"fp8_fmopa_za16",
+      [ScalableVectorOfRankAndLengthAndType<[1], [16], [I8]>],
+      [nxnxv8f16]> {
+  let summary = "FP8 sum of 2 outer products and accumulate into a FP16 tile";
+
+  let description = [{
+    The `i8` elements are FP8 values whose format (E4M3 or E5M2) is selected
+    through the FPMR register at run time.
+
+    Example:
+    ```mlir
+    %result = arm_sme.fp8_fmopa_za16 $lhs, $rhs : vector<[16]xi8>, vector<[16]xi8> into vector<[8]x[8]xf16>
+    ```
+
+    | Spec | Features |
+    | ---- | -------- |
+    | FMOPA (widening, 2-way, FP8 to FP16) | +sme2, +sme-f8f16 |
+  }];
+}
+
+def FP8FmopaZa32Op
+  : OuterProduct4Way<"fp8_fmopa_za32",
+      [ScalableVectorOfRankAndLengthAndType<[1], [16], [I8]>],
+      [nxnxv4f32]> {
+  let summary = "FP8 sum of 4 outer products and accumulate into a FP32 tile";
+
+  let description = [{
+    The `i8` elements are FP8 values whose format (E4M3 or E5M2) is selected
+    through the FPMR register at run time.
+
+    Example:
+    ```mlir
+    %result = arm_sme.fp8_fmopa_za32 $lhs, $rhs : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xf32>
+    ```
+
+    | Spec | Features |
+    | ---- | -------- |
+    | FMOPA (widening, 4-way, FP8 to FP32) | +sme2, +sme-f8f32 |
   }];
 }
 

@@ -310,3 +310,33 @@ func.func @arm_sme_smopa_4way__bad_tile_type(%vecA: vector<[8]xi16>, %vecB: vect
   %0 = arm_sme.smopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
   return %0 : vector<[4]x[4]xi32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za16
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fp8_fmopa_za16__bad_result_type(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xf32>
+{
+  // expected-error@+1 {{'result' must be vector<[8]x[8]xf16>}}
+  %0 = arm_sme.fp8_fmopa_za16 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za32
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fp8_fmopa_za32__bad_result_type(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[8]x[8]xf16>
+{
+  // expected-error@+1 {{'result' must be vector<[4]x[4]xf32>}}
+  %0 = arm_sme.fp8_fmopa_za32 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[8]x[8]xf16>
+  return %0 : vector<[8]x[8]xf16>
+}
