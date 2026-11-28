@@ -532,6 +532,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
         if (Callee->isDeclaration()) {
           // If this is a function we can constant fold, do it.
+          if (!canConstantFoldCallTo(&CB, Callee, TLI)) {
+            LLVM_DEBUG(dbgs() << "Cannot constant fold function call.\n");
+            return false;
+          }
           if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
             InstResult = C;
             LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
