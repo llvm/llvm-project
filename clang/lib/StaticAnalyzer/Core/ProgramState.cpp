@@ -73,13 +73,6 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
   ConstraintMgr = (*CreateCMgr)(*this, ExprEng);
 }
 
-
-ProgramStateManager::~ProgramStateManager() {
-  for (GDMContextsTy::iterator I=GDMContexts.begin(), E=GDMContexts.end();
-       I!=E; ++I)
-    I->second.second(I->second.first);
-}
-
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
     ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
 

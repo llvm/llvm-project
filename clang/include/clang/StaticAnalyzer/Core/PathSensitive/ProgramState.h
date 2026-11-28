@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
 #include <optional>
 #include <utility>
@@ -510,8 +511,29 @@ private:
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
 
-  typedef llvm::DenseMap<const void *, std::pair<void *, void (*)(void *)>>
-      GDMContextsTy;
+  /// Owns the GDM contexts:
+  /// Maps a GDM key to its context and to the function that destroys it.
+  class GDMContextsTy {
+  public:
+    using GDMKey = void *;
+    using ConstGDMKey = const void *;
+    using DeleterTy = void (*)(GDMKey);
+    using ContextAndDeleter = std::pair<GDMKey, DeleterTy>;
+
+    GDMContextsTy() = default;
+    GDMContextsTy(const GDMContextsTy &) = delete;
+    GDMContextsTy &operator=(const GDMContextsTy &) = delete;
+
+    ~GDMContextsTy() {
+      for (auto [Ctx, Deleter] : llvm::make_second_range(Contexts))
+        Deleter(Ctx);
+    }
+
+    ContextAndDeleter &operator[](GDMKey Key) { return Contexts[Key]; }
+
+  private:
+    llvm::DenseMap<GDMKey, ContextAndDeleter> Contexts;
+  };
   GDMContextsTy GDMContexts;
 
   /// StateSet - FoldingSet containing all the states created for analyzing
@@ -539,8 +561,6 @@ public:
                  ConstraintManagerCreator CreateConstraintManager,
                  llvm::BumpPtrAllocator& alloc,
                  ExprEngine *expreng);
-
-  ~ProgramStateManager();
 
   ProgramStateRef getInitialState(const StackFrame *InitSF);
 
