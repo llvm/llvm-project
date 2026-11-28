@@ -751,7 +751,7 @@ func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32
   memref.store %a, %arg0[%c0] : memref<2xi32>
   // CHECK-NEXT: %[[B:.*]] = memref.load
   %b = memref.load %arg0[%c1] : memref<2xi32>
-  // Keep an intervening operation alive so the query for %b1 caches a range.
+  // Keep an intervening operation alive so the query for %b1 scans the interval.
   // CHECK-NEXT: %[[SUM:.*]] = arith.addi %[[B]], %[[B]]
   %sum = arith.addi %b, %b : i32
   %b1 = memref.load %arg0[%c1] : memref<2xi32>
@@ -764,7 +764,7 @@ func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32
 // -----
 
 // A write disjoint from the first read must still block the second read.
-// Shared write-free ranges must not include resource-specific conclusions.
+// The write index must not include resource-specific conclusions.
 // CHECK-LABEL: @overlapping_reads_disjoint_write
 func.func @overlapping_reads_disjoint_write() -> (i32, i32, i32, i32, i32) {
   // CHECK: %[[A:.*]] = "test.side_effect_op"()
@@ -779,4 +779,25 @@ func.func @overlapping_reads_disjoint_write() -> (i32, i32, i32, i32, i32) {
   %b1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
   // CHECK-NEXT: return %[[A]], %[[B]], %[[SUM]], %[[A]], %[[B1]]
   return %a, %b, %sum, %a1, %b1 : i32, i32, i32, i32, i32
+}
+
+// -----
+
+// A disjoint write must allow both queries to share the following interval.
+// CHECK-LABEL: @overlapping_reads_across_disjoint_write
+func.func @overlapping_reads_across_disjoint_write() -> (i32, i32, i32, i32, i32) {
+  // CHECK: %[[A:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %a = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK: %[[B:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %b = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK: %[[SUM:.*]] = arith.addi %[[B]], %[[B]]
+  %sum = arith.addi %b, %b : i32
+  %b1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  %a1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK: %[[A2:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %a2 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK: return %[[A]], %[[B]], %[[A]], %[[A2]], %[[SUM]]
+  return %a, %b1, %a1, %a2, %sum : i32, i32, i32, i32, i32
 }

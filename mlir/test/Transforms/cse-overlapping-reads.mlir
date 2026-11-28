@@ -1,6 +1,4 @@
 // RUN: mlir-opt %s -cse | FileCheck %s
-// RUN: mlir-opt %s -cse --mlir-disable-threading -debug-only=cse -o /dev/null 2>&1 | FileCheck %s --check-prefix=EFFECTS --implicit-check-not="CSE checking effects:"
-// REQUIRES: asserts
 
 // Reduced from the CLIP input in llvm/llvm-project#243418, with IREE
 // util.global.load adapted to ml_program.global_load. Both have a Read effect

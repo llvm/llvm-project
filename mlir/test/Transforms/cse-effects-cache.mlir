@@ -1,3 +1,4 @@
+// RUN: mlir-opt %S/cse-overlapping-reads.mlir -cse --mlir-disable-threading -debug-only=cse -o /dev/null 2>&1 | FileCheck %S/cse-overlapping-reads.mlir --check-prefix=EFFECTS --implicit-check-not="CSE checking effects:"
 // RUN: mlir-opt %s -cse -allow-unregistered-dialect --mlir-disable-threading -debug-only=cse -o /dev/null 2>&1 | FileCheck %s --implicit-check-not="CSE checking effects:"
 // REQUIRES: asserts
 
@@ -31,4 +32,19 @@ func.func @early_exit(%m: memref<i32>, %arg: i32) -> i32 {
   %b = memref.load %m[] : memref<i32>
   %result = arith.addi %sum, %b : i32
   return %result : i32
+}
+
+// Retain each read's progress past disjoint writes.
+// CHECK-NEXT: CSE checking effects: test.side_effect_op
+// CHECK-NEXT: CSE checking effects: test.side_effect_op
+// CHECK-NEXT: CSE checking effects: test.side_effect_op
+func.func @disjoint_write_progress() -> (i32, i32, i32, i32) {
+  %a = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  %a1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  %a2 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  %a3 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  return %a, %a1, %a2, %a3 : i32, i32, i32, i32
 }
