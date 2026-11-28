@@ -22,3 +22,9 @@ void mixed_parameters(T &&t, auto &&u) {
   (void)t;
   (void)u;
 }
+
+void explicitly_templated_lambda_forwards() {
+  auto forwards = []<typename T>(T &&x) {
+    (void)std::forward<T>(x);
+  };
+}
