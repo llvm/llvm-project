@@ -56,6 +56,7 @@ define float @test2_reassoc(float %reg109, float %reg1111) {
 @fb = external global float
 @fc = external global float
 @ff = external global float
+@fd = external global float
 
 ; If two sums of the same operands in different order are counted with 'fast'
 ; flag and then stored to global variables, we can reuse the same value twice.
@@ -577,4 +578,188 @@ define float @test18(float %A, float %B) {
   %Y = fsub fast float %X, %B
   %Z = fadd fast float %Y, 1.200000e+01
   ret float %Z
+}
+
+define void @test19() {
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[D:%.*]] = load float, ptr @fd, align 4
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[A]], [[C]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[DIV]], [[B]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[D]], [[DIV]]
+; CHECK-NEXT:    store float [[MUL]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[MUL1]], ptr @ff, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %D = load float, ptr @fd
+  %t1 = fmul fast float %A, %B
+  %t2 = fdiv fast float %t1, %C
+  %t3 = fmul fast float %A, %D
+  %t4 = fdiv fast float %t3, %C
+  ; e = (a*b)/c;
+  store float %t2, ptr @fe
+  ; f = (a*d)/c
+  store float %t4, ptr @ff
+  ret void
+}
+
+; when former expressions do not have nnan, reassociated expressions cannot have ninf.
+define void @test19_without_nnan() {
+; CHECK-LABEL: @test19_without_nnan(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[D:%.*]] = load float, ptr @fd, align 4
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc nsz arcp float [[A]], [[C]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz arcp float [[DIV]], [[B]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul reassoc nsz arcp float [[D]], [[DIV]]
+; CHECK-NEXT:    store float [[MUL]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[MUL1]], ptr @ff, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %D = load float, ptr @fd
+  %t1 = fmul reassoc arcp nsz ninf float %A, %B
+  %t2 = fdiv reassoc arcp nsz ninf float %t1, %C
+  %t3 = fmul reassoc arcp nsz ninf float %D, %A
+  %t4 = fdiv reassoc arcp nsz ninf float %t3, %C
+  ; e = (a*b)/c;
+  store float %t2, ptr @fe
+  ; f = (d*a)/c
+  store float %t4, ptr @ff
+  ret void
+}
+
+define void @test20() {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[D:%.*]] = load float, ptr @fd, align 4
+; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[A]], [[D]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[C]], [[B]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[T2]], [[T1]]
+; CHECK-NEXT:    store float [[T1]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[MUL]], ptr @ff, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %D = load float, ptr @fd
+  %t1 = fdiv fast float %A, %D
+  %t2 = fmul fast float %A, %B
+  %t3 = fmul fast float %t2, %C
+  %t4 = fdiv fast float %t3, %D
+  ; e = a/d;
+  store float %t1, ptr @fe
+  ; f = ((a*b)*c)/d
+  store float %t4, ptr @ff
+  ret void
+}
+
+define void @test21() {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[D:%.*]] = load float, ptr @fd, align 4
+; CHECK-NEXT:    [[T1:%.*]] = fmul fast float [[C]], [[A]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[B]], [[D]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[T1]], [[DIV]]
+; CHECK-NEXT:    store float [[MUL]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[DIV]], ptr @ff, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %D = load float, ptr @fd
+  %t1 = fmul fast float %A, %B
+  %t2 = fmul fast float %t1, %C
+  %t3 = fdiv fast float %t2, %D
+  %t4 = fdiv fast float %B, %D
+  ; e = ((a*b)*c)/d;
+  store float %t3, ptr @fe
+  ; f = b/d
+  store float %t4, ptr @ff
+  ret void
+}
+
+define void @test22() {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[A]], 2.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[B]], [[DIV]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[C]], [[DIV]]
+; CHECK-NEXT:    store float [[MUL]], ptr @fd, align 4
+; CHECK-NEXT:    store float [[MUL1]], ptr @fe, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %t1 = fmul fast float %A, %B
+  %t2 = fdiv fast float %t1, 2.0
+  %t3 = fmul fast float %A, %C
+  %t4 = fdiv fast float %t3, 2.0
+  ; d = (a*b)/2.0;
+  store float %t2, ptr @fd
+  ; e = (a*c)/2.0
+  store float %t4, ptr @fe
+  ret void
+}
+
+define void @test23() {
+; CHECK-LABEL: @test23(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[T4:%.*]] = fdiv fast float [[A]], [[B]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T4]], 6.000000e+00
+; CHECK-NEXT:    store float [[T3]], ptr @fc, align 4
+; CHECK-NEXT:    store float [[T4]], ptr @fd, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %t1 = fmul fast float %A, 2.0
+  %t2 = fmul fast float %t1, 3.0
+  %t3 = fdiv fast float %t2, %B
+  %t4 = fdiv fast float %A, %B
+  ; c = ((a*2)*3)/b;
+  store float %t3, ptr @fc
+  ; d = a/b
+  store float %t4, ptr @fd
+  ret void
+}
+
+define void @test24() {
+; CHECK-LABEL: @test24(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[A]], [[A]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[TMP2]], [[B]]
+; CHECK-NEXT:    store float [[DIV]], ptr @fc, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %t1 = fmul fast float %A, %A
+  %t2 = fmul fast float %t1, %A
+  %t3 = fmul fast float %t2, %A
+  %t4 = fmul fast float %t3, 1.0
+  %t5 = fdiv fast float %t4, %B
+  ; c = ((((a*a)*a)*a)*1.0)/b;
+  store float %t5, ptr @fc
+  ret void
 }
