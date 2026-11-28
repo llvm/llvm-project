@@ -31,6 +31,9 @@ getCallConvTarget(const llvm::Triple &triple,
     return CallConvTarget::X86_64;
   if (triple.isAMDGPU())
     return CallConvTarget::AMDGPU;
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI.
+  if (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)
+    return CallConvTarget::AMDGPU;
   if (triple.isAArch64() && !triple.isOSWindows() &&
       triple.getArch() != llvm::Triple::aarch64_32)
     return CallConvTarget::AArch64;

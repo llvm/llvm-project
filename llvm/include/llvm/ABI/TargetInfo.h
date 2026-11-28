@@ -21,6 +21,9 @@
 #include <memory>
 
 namespace llvm {
+
+class DataLayout;
+
 namespace abi {
 
 enum RecordArgABI {
