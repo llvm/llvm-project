@@ -99,3 +99,41 @@ void f() {
 }
 
 } // namespace gh60895
+
+namespace gh235460{
+  template<class... Ts>
+  unsigned long f(unsigned char x, Ts const&... xs) {
+    auto n = sizeof(x);
+    ((n += sizeof(xs)), ...);
+    return n;
+  }
+
+  // The pointee is only written in the pack expansion.
+  template<class... Ts>
+  void pointee(int *p, Ts const&... xs) {
+    int *q = p;
+    ((*q += sizeof(xs)), ...);
+  }
+
+  // Not modified by any instantiation, so it is still diagnosed.
+  template<class... Ts>
+  void not_modified(Ts const&... xs) {
+    int m = 0;
+    // CHECK-MESSAGES:[[@LINE-1]]:5: warning: variable 'm' of type 'int' can be declared 'const'
+    // CHECK-FIXES: int const m = 0;
+    ((void)sizeof(xs), ...);
+    (void)m;
+  }
+
+  void instantiate() {
+    (void)f(0);     // empty pack
+    (void)f(0, 1);  // non-empty pack
+
+    int i = 0;
+    pointee(&i);
+    pointee(&i, 1);
+
+    not_modified();
+    not_modified(1);
+  }
+} // namespace gh235460

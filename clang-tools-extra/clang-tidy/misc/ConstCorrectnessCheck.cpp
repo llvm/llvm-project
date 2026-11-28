@@ -216,6 +216,26 @@ static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
   return false;
 }
 
+/// Find the local variable in the body of the template pattern \p Pattern
+/// from which \p Variable was instantiated. There is no direct link from an
+/// instantiated local variable to its pattern, but instantiated declarations
+/// keep the source location of their pattern.
+///
+/// Returns null if the pattern variable has a dependent type, because the
+/// mutation analysis is too conservative for such variables to be useful.
+static const VarDecl *getPatternVariable(const VarDecl *Variable,
+                                         const Stmt *PatternBody,
+                                         ASTContext &Context) {
+  for (const BoundNodes &Nodes :
+       match(stmt(forEachDescendant(varDecl().bind("var"))), *PatternBody,
+             Context)) {
+    const auto *PatternVar = Nodes.getNodeAs<VarDecl>("var");
+    if (PatternVar->getLocation() == Variable->getLocation())
+      return PatternVar->getType()->isDependentType() ? nullptr : PatternVar;
+  }
+  return nullptr;
+}
+
 static void addConstFixits(const DiagnosticBuilder &Diag,
                            const VarDecl *Variable,
                            const FunctionDecl *Function,
@@ -291,9 +311,44 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
       TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
     return;
 
+  // An instantiation does not contain every use of the variable: e.g. a pack
+  // expansion that modifies it disappears when the pack is empty. The
+  // template pattern contains all uses, so the variable must not be modified
+  // there either. The function declaring the variable is used rather than
+  // 'Function', which can be an enclosing function, e.g. for a variable in a
+  // generic lambda. The lookup traverses the pattern body, so it is done
+  // lazily, only for variables that are not mutated in the instantiation.
+  const FunctionDecl *PatternFunction = nullptr;
+  const Stmt *PatternBody = nullptr;
+  const VarDecl *PatternVariable = nullptr;
+  bool PatternVariableLookedUp = false;
+  const auto GetPatternVariable = [&]() -> const VarDecl * {
+    if (PatternVariableLookedUp)
+      return PatternVariable;
+    PatternVariableLookedUp = true;
+    const auto *DeclaringFunction = dyn_cast_if_present<FunctionDecl>(
+        Variable->getParentFunctionOrMethod());
+    if (!DeclaringFunction || !DeclaringFunction->isTemplateInstantiation())
+      return nullptr;
+    const FunctionDecl *Pattern =
+        DeclaringFunction->getTemplateInstantiationPattern();
+    if (!Pattern)
+      return nullptr;
+    PatternBody = Pattern->getBody(PatternFunction);
+    if (!PatternBody)
+      return nullptr;
+    PatternVariable =
+        getPatternVariable(Variable, PatternBody, *Result.Context);
+    return PatternVariable;
+  };
+
   const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
     if (isMutated(Variable, LocalScope, Function, Result.Context))
+      return;
+    if (const VarDecl *PatternVar = GetPatternVariable();
+        PatternVar &&
+        isMutated(PatternVar, PatternBody, PatternFunction, Result.Context))
       return;
 
     const auto Diag = diag(Variable->getBeginLoc(),
@@ -334,6 +389,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
+    if (const VarDecl *PatternVar = GetPatternVariable()) {
+      registerScope(PatternBody, Result.Context);
+      if (ScopesCache[PatternBody]->isPointeeMutated(PatternVar))
+        return;
+    }
     const auto Diag =
         diag(Variable->getBeginLoc(),
              "pointee of variable %0 of type %1 can be declared 'const'")
