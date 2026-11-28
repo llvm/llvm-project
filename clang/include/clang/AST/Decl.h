@@ -3602,8 +3602,9 @@ public:
 class EnumConstantDecl : public ValueDecl,
                          public Mergeable<EnumConstantDecl>,
                          public APIntStorage {
-  Stmt *Init; // an integer constant expression
+  // Declared first so that it can use the tail padding of APIntStorage.
   bool IsUnsigned;
+  Stmt *Init; // an integer constant expression
 
 protected:
   EnumConstantDecl(const ASTContext &C, DeclContext *DC, SourceLocation L,
