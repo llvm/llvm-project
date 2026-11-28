@@ -20,6 +20,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -280,9 +281,221 @@ inline unsigned getAS(SPIRVTypeInst SpvType) {
           SpvType->getOperand(1).getImm()));
 }
 
+// Inverse of addNumImm, 32-bit words, low word first.
+static APInt decodeNumImm(const MachineInstr &MI) {
+  unsigned NumWords = MI.getNumExplicitOperands() - 2;
+  APInt Val = APInt::getZero(NumWords * 32);
+  for (unsigned I = 0; I < NumWords; ++I)
+    Val.insertBits(static_cast<uint32_t>(MI.getOperand(I + 2).getImm()), I * 32,
+                   32);
+  return Val;
+}
+
+namespace {
+// Derives the LLVM types the registry keys OpType* instructions by.
+struct LLVMTypeRestorer {
+  const MachineRegisterInfo &MRI;
+  const DataLayout &DL;
+  LLVMContext &Ctx;
+  DenseMap<const MachineInstr *, Type *> Types;
+  // Struct types handed out so far, paired with their layout flag.
+  DenseSet<PointerIntPair<Type *, 1, bool>> StructTypes;
+
+  LLVMTypeRestorer(const MachineFunction &MF)
+      : MRI(MF.getRegInfo()), DL(MF.getDataLayout()),
+        Ctx(MF.getFunction().getContext()) {}
+
+  bool hasDecoration(const MachineInstr &MI,
+                     SPIRV::Decoration::Decoration Dec) const {
+    for (const MachineInstr &Use :
+         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+      if ((Use.getOpcode() == SPIRV::OpDecorate &&
+           Use.getOperand(1).getImm() == Dec) ||
+          (Use.getOpcode() == SPIRV::OpMemberDecorate &&
+           Use.getOperand(2).getImm() == Dec))
+        return true;
+    }
+    return false;
+  }
+
+  // Matches the decorations ExplicitLayoutRequired makes the registry emit.
+  bool hasExplicitLayout(const MachineInstr &MI) const {
+    return hasDecoration(MI, SPIRV::Decoration::Offset) ||
+           hasDecoration(MI, SPIRV::Decoration::ArrayStride);
+  }
+
+  // Shaders get no CPacked, so offsets off the natural layout imply packing.
+  bool isPacked(const MachineInstr &MI, ArrayRef<Type *> Elems) const {
+    if (hasDecoration(MI, SPIRV::Decoration::CPacked))
+      return true;
+    StructType *STy = StructType::get(Ctx, Elems);
+    if (!STy->isSized())
+      return false;
+    const StructLayout *SL = DL.getStructLayout(STy);
+    for (const MachineInstr &Use :
+         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+      if (Use.getOpcode() != SPIRV::OpMemberDecorate ||
+          Use.getOperand(2).getImm() != SPIRV::Decoration::Offset)
+        continue;
+      uint64_t Idx = Use.getOperand(1).getImm();
+      if (Idx < Elems.size() &&
+          SL->getElementOffset(Idx) != uint64_t(Use.getOperand(3).getImm()))
+        return true;
+    }
+    return false;
+  }
+
+  Type *getOperandType(const MachineOperand &MO) {
+    const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
+    return Def ? get(*Def) : nullptr;
+  }
+
+  // i8 pointees were opaque pointers, others typed pointer wrappers.
+  Type *getComponentType(const MachineOperand &MO) {
+    Type *Ty = getOperandType(MO);
+    auto *PtrTy = dyn_cast_or_null<TypedPointerType>(Ty);
+    if (!PtrTy)
+      return Ty;
+    Type *ElemTy = PtrTy->getElementType();
+    unsigned AS = PtrTy->getAddressSpace();
+    return ElemTy->isIntegerTy(8) ? PointerType::get(Ctx, AS)
+                                  : getTypedPointerWrapper(ElemTy, AS);
+  }
+
+  std::optional<uint64_t> getArrayLength(const MachineOperand &MO) {
+    const MachineInstr *Def = getImm(MO, &MRI);
+    if (!Def)
+      return std::nullopt;
+    APInt V = Def->getOpcode() == TargetOpcode::G_CONSTANT
+                  ? Def->getOperand(1).getCImm()->getValue()
+                  : decodeNumImm(*Def);
+    // getOpTypeArray encodes AMD runtime arrays as UINT64_MAX.
+    if (V.isMaxValue() && V.getBitWidth() == 64)
+      return 0;
+    if (V.getActiveBits() > 64)
+      return std::nullopt;
+    return V.getZExtValue();
+  }
+
+  Type *create(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case SPIRV::OpTypeVoid:
+      return Type::getVoidTy(Ctx);
+    case SPIRV::OpTypeBool:
+      return Type::getInt1Ty(Ctx);
+    case SPIRV::OpTypeInt: {
+      // The registry only creates unsigned integer types.
+      int64_t Width = MI.getOperand(1).getImm();
+      if (MI.getOperand(2).getImm() || Width < IntegerType::MIN_INT_BITS ||
+          Width > IntegerType::MAX_INT_BITS)
+        return nullptr;
+      return IntegerType::get(Ctx, Width);
+    }
+    case SPIRV::OpTypeFloat: {
+      int64_t Width = MI.getOperand(1).getImm();
+      if (MI.getNumOperands() > 2)
+        return Width == 16 && MI.getOperand(2).getImm() ==
+                                  SPIRV::FPEncoding::BFloat16KHR
+                   ? Type::getBFloatTy(Ctx)
+                   : nullptr;
+      if (Width == 16)
+        return Type::getHalfTy(Ctx);
+      if (Width == 32)
+        return Type::getFloatTy(Ctx);
+      if (Width == 64)
+        return Type::getDoubleTy(Ctx);
+      return nullptr;
+    }
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeVectorIdEXT: {
+      Type *ElemTy = getComponentType(MI.getOperand(1));
+      std::optional<uint64_t> N = MI.getOpcode() == SPIRV::OpTypeVector
+                                      ? MI.getOperand(2).getImm()
+                                      : getArrayLength(MI.getOperand(2));
+      if (!ElemTy || !VectorType::isValidElementType(ElemTy) || !N || !*N ||
+          *N > std::numeric_limits<unsigned>::max())
+        return nullptr;
+      return FixedVectorType::get(ElemTy, *N);
+    }
+    case SPIRV::OpTypeArray:
+    case SPIRV::OpTypeRuntimeArray: {
+      Type *ElemTy = getComponentType(MI.getOperand(1));
+      if (!ElemTy || !ArrayType::isValidElementType(ElemTy))
+        return nullptr;
+      if (MI.getOpcode() == SPIRV::OpTypeRuntimeArray)
+        return ArrayType::get(ElemTy, 0);
+      std::optional<uint64_t> N = getArrayLength(MI.getOperand(2));
+      return N ? ArrayType::get(ElemTy, *N) : nullptr;
+    }
+    case SPIRV::OpTypeStruct: {
+      SmallVector<Type *> Elems;
+      for (const MachineInstr *I = &MI; I; I = I->getNextNode()) {
+        if (I != &MI && I->getOpcode() != SPIRV::OpTypeStructContinuedINTEL)
+          break;
+        for (const MachineOperand &MO : I->explicit_uses()) {
+          Elems.push_back(getComponentType(MO));
+          if (!Elems.back() || !StructType::isValidElementType(Elems.back()))
+            return nullptr;
+        }
+      }
+      bool Packed = isPacked(MI, Elems);
+      Type *STy = StructType::get(Ctx, Elems, Packed);
+      // Distinct OpTypeStructs may share members, keep their keys apart.
+      // Block structs come from StructType::create, never share theirs.
+      if (hasDecoration(MI, SPIRV::Decoration::Block) ||
+          !StructTypes.insert({STy, hasExplicitLayout(MI)}).second)
+        STy = StructType::create(Ctx, Elems, "", Packed);
+      return STy;
+    }
+    case SPIRV::OpTypeFunction: {
+      Type *RetTy = getOperandType(MI.getOperand(1));
+      if (!RetTy || !FunctionType::isValidReturnType(RetTy))
+        return nullptr;
+      SmallVector<Type *> Params;
+      for (const MachineOperand &MO : drop_begin(MI.explicit_uses())) {
+        Params.push_back(getOperandType(MO));
+        if (!Params.back() || !FunctionType::isValidArgumentType(Params.back()))
+          return nullptr;
+      }
+      return FunctionType::get(RetTy, Params, /*isVarArg=*/false);
+    }
+    case SPIRV::OpTypePointer: {
+      Type *ElemTy = getOperandType(MI.getOperand(2));
+      if (!ElemTy || !TypedPointerType::isValidElementType(ElemTy))
+        return nullptr;
+      return TypedPointerType::get(ElemTy, getAS(MI));
+    }
+    default:
+      return nullptr;
+    }
+  }
+
+  // A null entry marks MI in progress, breaking cycles.
+  Type *get(const MachineInstr &MI) {
+    if (auto [It, Inserted] = Types.try_emplace(&MI, nullptr); !Inserted)
+      return It->second;
+    Type *Ty = create(MI);
+    if (Ty)
+      Ty = const_cast<Type *>(unifyPtrType(Ty));
+    Types[&MI] = Ty;
+    return Ty;
+  }
+};
+} // namespace
+
 void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
-  for (const MachineInstr *MI : getTypeDecls(MF))
+  LLVMTypeRestorer Restorer(MF);
+  for (const MachineInstr *MI : getTypeDecls(MF)) {
     assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
+    if (MI->getOpcode() == SPIRV::OpTypeStruct &&
+        Restorer.hasDecoration(*MI, SPIRV::Decoration::Block))
+      BlockDecoratedTypes.insert(MI);
+    const Type *Ty = Restorer.get(*MI);
+    if (!Ty)
+      continue;
+    SPIRVToLLVMType[MI] = Ty;
+    addTypeKey(Ty, Restorer.hasExplicitLayout(*MI), MI, MF);
+  }
 }
 
 SmallVector<std::pair<Register, Register>>
