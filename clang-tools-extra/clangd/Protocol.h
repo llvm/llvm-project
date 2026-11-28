@@ -1751,10 +1751,13 @@ enum class InlayHintKind {
   /// which shows the name of the corresponding parameter.
   Parameter = 2,
 
-  /// A hint before an element of an aggregate braced initializer list,
-  /// indicating what it is initializing.
+  /// A hint naming the data member or array element that something
+  /// corresponds to. Either before an element of an aggregate braced
+  /// initializer list, indicating what it is initializing:
   ///   Pair{^1, ^2};
-  /// Uses designator syntax, e.g. `.first:`.
+  /// or after a structured binding, indicating the member it refers to:
+  ///   auto [a^, b^] = Pair{1, 2};
+  /// Uses designator syntax, e.g. `.first=` or `=.first` respectively.
   /// This is a clangd extension.
   Designator = 3,
 
@@ -1868,7 +1871,6 @@ struct InlayHint {
 };
 llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &, const InlayHint &);
-bool operator<(const InlayHint &, const InlayHint &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, InlayHintKind);
 
 struct ReferenceContext {

@@ -67,6 +67,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Inlay hints
 
+- Structured bindings to data members now show which member each binding
+  refers to, e.g. `auto [n=.name, a=.age] = person;`. The hint is omitted when
+  the binding has the same name as the member. It is controlled by the
+  `InlayHints.Designators` configuration option.
+
 #### Diagnostics
 
 - Query-based custom clang-tidy checks can now be enabled with the

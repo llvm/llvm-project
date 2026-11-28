@@ -1586,10 +1586,7 @@ bool operator==(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) ==
          std::tie(B.position, B.range, B.kind, B.label);
 }
-bool operator<(const InlayHint &A, const InlayHint &B) {
-  return std::tie(A.position, A.range, A.kind, A.label) <
-         std::tie(B.position, B.range, B.kind, B.label);
-}
+
 std::string InlayHint::joinLabels() const {
   return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
                     "");

@@ -43,6 +43,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -630,6 +631,9 @@ public:
             !Type.isNull() && !Type->isDependentType())
           addTypeHint(Binding->getLocation(), Type.getCanonicalType(),
                       /*Prefix=*/": ");
+
+        if (Cfg.InlayHints.Designators)
+          addBindingDesignatorHint(Binding);
       }
       return true;
     }
@@ -673,6 +677,24 @@ public:
     }
 
     return true;
+  }
+
+  // For a binding to a data member (e.g. `auto [n, a] = Person{}`), show the
+  // name of the member it refers to, unless the binding has the same name.
+  void addBindingDesignatorHint(BindingDecl *Binding) {
+    // getBinding() is a MemberExpr for data members, but not for tuple-like or
+    // array bindings, or binding packs.
+    auto *ME = dyn_cast_if_present<MemberExpr>(Binding->getBinding());
+    if (!ME)
+      return;
+    auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    if (!FD || !FD->getIdentifier() || FD->getName() == Binding->getName())
+      return;
+
+    std::string HintText = ("." + FD->getName()).str();
+    addInlayHint(Binding->getLocation(), HintSide::Right,
+                 InlayHintKind::Designator,
+                 /*Prefix=*/"=", HintText, /*Suffix=*/"");
   }
 
   ParmVarDecl *getOnlyParamInstantiation(ParmVarDecl *D) {
@@ -1209,9 +1231,34 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST,
                            HintOptions);
   Visitor.TraverseAST(AST.getASTContext());
 
+  // Display order of hints at the same position and range. The enum order
+  // would put a structured binding's Type hint before its Designator hint.
+  auto DisplayOrder = [](InlayHintKind Kind) {
+    switch (Kind) {
+    case InlayHintKind::Designator:
+      return 0;
+    case InlayHintKind::Type:
+      return 1;
+    case InlayHintKind::Parameter:
+      return 2;
+    case InlayHintKind::BlockEnd:
+      return 3;
+    case InlayHintKind::DefaultArgument:
+      return 4;
+    }
+    llvm_unreachable("Unknown InlayHintKind");
+  };
+
+  auto Cmp = [DisplayOrder](const InlayHint &A, const InlayHint &B) {
+    return std::forward_as_tuple(A.position, A.range, DisplayOrder(A.kind),
+                                 A.label) <
+           std::forward_as_tuple(B.position, B.range, DisplayOrder(B.kind),
+                                 B.label);
+  };
+
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
   // template instantiations.
-  llvm::sort(Results);
+  llvm::sort(Results, Cmp);
   Results.erase(llvm::unique(Results), Results.end());
 
   return Results;
