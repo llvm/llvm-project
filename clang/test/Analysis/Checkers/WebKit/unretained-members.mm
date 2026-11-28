@@ -196,3 +196,22 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
   return nil;
 }
 @end
+
+@interface ExtensionIvars : NSObject
+@property (nonatomic, copy) NSString *synthesized;
+@end
+
+@interface ExtensionIvars () {
+  NSString *_raw;
+  // expected-warning@-1{{Instance variable '_raw' (of 'ExtensionIvars') is a raw pointer to RetainPtr-capable type 'NSString'}}
+  NSString *_synthesized;
+  CFStringRef _cf;
+  // expected-warning@-1{{Instance variable '_cf' (of 'ExtensionIvars') is a RetainPtr-capable type 'CFStringRef'}}
+  dispatch_queue_t _queue;
+  // expected-warning@-1{{Instance variable '_queue' (of 'ExtensionIvars') is a RetainPtr-capable type 'dispatch_queue_t'}}
+}
+@end
+
+@implementation ExtensionIvars
+@synthesize synthesized = _synthesized;
+@end

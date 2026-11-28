@@ -127,3 +127,17 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 @synthesize prop_string4;
 @synthesize prop_string5;
 @end
+
+@interface ExtensionIvarsARC : NSObject
+@end
+
+@interface ExtensionIvarsARC () {
+  NSString *_strong;
+  CFStringRef _cf;
+  // expected-warning@-1{{Instance variable '_cf' (of 'ExtensionIvarsARC') is a RetainPtr-capable type 'CFStringRef'}}
+  dispatch_queue_t _queue;
+}
+@end
+
+@implementation ExtensionIvarsARC
+@end
