@@ -240,6 +240,12 @@ static std::optional<Type> convertArrayType(spirv::ArrayType type,
     return std::nullopt;
 
   auto llvmElementType = converter.convertType(elementType);
+  if (!llvmElementType)
+    return std::nullopt;
+  if (stride != 0 && DataLayout().getTypeAllocSize(llvmElementType) !=
+                         llvm::TypeSize::getFixed(stride))
+    return std::nullopt;
+
   unsigned numElements = type.getNumElements();
   return LLVM::LLVMArrayType::get(llvmElementType, numElements);
 }
@@ -280,6 +286,17 @@ static Type convertStructType(spirv::StructType type,
   SmallVector<Type> elementsVector;
   if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
     return nullptr;
+  // LLVM pads and aligns some vectors more than Vulkan, e.g. vector<3xf32>.
+  if (type.hasOffset()) {
+    DataLayout layout;
+    for (unsigned i = 1, e = type.getNumElements(); i < e; ++i) {
+      uint64_t offset = type.getMemberOffset(i);
+      if (offset - type.getMemberOffset(i - 1) <
+              layout.getTypeAllocSize(elementsVector[i - 1]).getFixedValue() ||
+          offset % layout.getTypeABIAlignment(elementsVector[i]) != 0)
+        return nullptr;
+    }
+  }
   return LLVM::LLVMStructType::getLiteral(
       type.getContext(), elementsVector,
       /*isPacked=*/type.hasDecoration(spirv::Decoration::CPacked));

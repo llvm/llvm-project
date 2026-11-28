@@ -49,3 +49,6 @@ spirv.func @struct_cpacked(!spirv.struct<(i8, i32), CPacked>) "None"
 
 // CHECK-LABEL: @struct_with_natural_offset(!llvm.struct<(i8, i32)>)
 spirv.func @struct_with_natural_offset(!spirv.struct<(i8[0], i32[4])>) "None"
+
+// CHECK-LABEL: @struct_with_vec3_natural_offset(!llvm.struct<(vector<3xf32>, vector<3xf32>)>)
+spirv.func @struct_with_vec3_natural_offset(!spirv.struct<(vector<3xf32>[0], vector<3xf32>[16])>) "None"
