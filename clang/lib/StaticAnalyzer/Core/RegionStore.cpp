@@ -293,7 +293,6 @@ public:
     const auto AddrOf = [](const auto &Item) { return &Item; };
 
     std::vector<const Cluster *> SortedClusters;
-    SortedClusters.reserve(std::distance(begin(), end()));
     append_range(SortedClusters, map_range(*this, AddrOf));
     llvm::sort(SortedClusters, MemSpaceBeforeRegionName);
 
@@ -304,7 +303,6 @@ public:
           << (const void *)BaseRegion << "\", \"items\": [" << NL;
 
       std::vector<const Binding *> SortedBindings;
-      SortedBindings.reserve(std::distance(Bindings.begin(), Bindings.end()));
       append_range(SortedBindings, map_range(Bindings, AddrOf));
       llvm::sort(SortedBindings, DefaultBindingBeforeDirectBindings);
 
