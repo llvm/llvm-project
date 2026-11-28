@@ -766,3 +766,26 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+
+// A shape_cast that splits dim 0 into two dims, followed by another dim: the
+// source layout collapses both split dims back into dim 0.
+gpu.module @test {
+  // CHECK-LABEL: shape_cast_split_leading_dim
+  gpu.func @shape_cast_split_leading_dim(%src: memref<32x64xf32>, %dst: memref<1xf32>) kernel attributes
+      {known_block_size = array<i32: 512, 1, 1>} {
+    // CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 64]>}>
+    // CHECK: vector.shape_cast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [8, 4, 1], sg_data = [1, 1, 64]>}
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<32x64xf32> -> !xegpu.tensor_desc<32x64xf32>
+    %x = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<32x64xf32> -> vector<32x64xf32>
+    %x3 = vector.shape_cast %x : vector<32x64xf32> to vector<8x4x64xf32>
+    %i1 = arith.constant dense<0.0> : vector<8x4xf32>
+    %r1 = vector.multi_reduction <add>, %x3, %i1 [2] : vector<8x4x64xf32> to vector<8x4xf32>
+    %z = arith.constant 0.0 : f32
+    %s = vector.multi_reduction <add>, %r1, %z [0, 1] : vector<8x4xf32> to f32
+    memref.store %s, %dst[%c0] : memref<1xf32>
+    gpu.return
+  }
+}

@@ -911,7 +911,8 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   SmallVector<SmallVector<int64_t>> splitDimGroups;
   if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
     auto srcLayout = resLayout;
-    for (const auto &dimGroup : splitDimGroups)
+    // Collapse from the last group so earlier groups keep their dim indices.
+    for (const auto &dimGroup : llvm::reverse(splitDimGroups))
       srcLayout = srcLayout.collapseDims(dimGroup);
 
     return srcLayout;
