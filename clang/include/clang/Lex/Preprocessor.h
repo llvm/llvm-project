@@ -1541,7 +1541,7 @@ public:
     assert(M->isModuleMapModule());
     if (!BuildingSubmoduleStack.empty()) {
       if (M != BuildingSubmoduleStack.back().M)
-        BuildingSubmoduleStack.back().M->AffectingClangModules.push_back(M);
+        BuildingSubmoduleStack.back().M->addAffectingClangModule(M);
     } else {
       AffectingClangModules.insert(M);
     }

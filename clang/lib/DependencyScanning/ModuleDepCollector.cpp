@@ -745,7 +745,7 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
   if (!M->UseExportAsModuleLinkName)
-    MD.LinkLibraries = M->LinkLibraries;
+    MD.LinkLibraries.assign(M->getLinkLibraries());
 
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
