@@ -253,6 +253,7 @@ def add_mir_check_lines(
     print_fixed_stack,
     first_check_is_next,
     check_indent=None,
+    comment_prefix=";",
 ):
     func_body = str(func_info).splitlines()
     if single_bb:
@@ -276,9 +277,9 @@ def add_mir_check_lines(
     indent = len(first_line) - len(first_line.lstrip(" "))
     # A check comment, indented the appropriate amount
     if check_indent is not None:
-        check = "{}; {}".format(check_indent, prefix)
+        check = "{}{} {}".format(check_indent, comment_prefix, prefix)
     else:
-        check = "{:>{}}; {}".format("", indent, prefix)
+        check = "{:>{}}{} {}".format("", indent, comment_prefix, prefix)
 
     output_lines.append("{}-LABEL: name: {}".format(check, func_name))
 
