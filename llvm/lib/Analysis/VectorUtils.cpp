@@ -1293,7 +1293,8 @@ llvm::SmallVector<int, 16> llvm::createUnaryMask(ArrayRef<int> Mask,
   // corresponding element of operand 0. Undef mask elements are unchanged.
   SmallVector<int, 16> UnaryMask;
   for (int MaskElt : Mask) {
-    assert((MaskElt < NumEltsSigned * 2) && "Expected valid shuffle mask");
+    assert((MaskElt < int64_t(NumEltsSigned) * 2) &&
+           "Expected valid shuffle mask");
     int UnaryElt = MaskElt >= NumEltsSigned ? MaskElt - NumEltsSigned : MaskElt;
     UnaryMask.push_back(UnaryElt);
   }

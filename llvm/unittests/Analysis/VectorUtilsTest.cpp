@@ -19,6 +19,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -183,6 +184,20 @@ TEST_F(BasicTest, isSplat) {
   // FIXME: Constant splat analysis does not allow undef elements.
   Constant *SplatWithUndefC = ConstantVector::get({ScalarC, UndefScalar});
   EXPECT_FALSE(isSplatValue(SplatWithUndefC));
+}
+
+TEST_F(BasicTest, createUnaryMask) {
+  // Check both operands and poison around the signed multiplication boundary.
+  for (int NumElts : {4, (1 << 30) - 1, 1 << 30, (1 << 30) + 1,
+                      std::numeric_limits<int>::max()}) {
+    SCOPED_TRACE(NumElts);
+    auto Mask = createUnaryMask({-1, 0, NumElts - 1, NumElts}, NumElts);
+    EXPECT_EQ(ArrayRef(Mask), ArrayRef({-1, 0, NumElts - 1, 0}));
+  }
+
+  // Check the largest representable mask index as well.
+  auto Mask = createUnaryMask({std::numeric_limits<int>::max()}, 1 << 30);
+  EXPECT_EQ(ArrayRef(Mask), ArrayRef({(1 << 30) - 1}));
 }
 
 TEST_F(BasicTest, narrowShuffleMaskElts) {
