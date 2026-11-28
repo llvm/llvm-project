@@ -394,10 +394,15 @@ static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   }
   NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
       NewCI->getType(), NewCI->getRetAttributes()));
-  for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+  for (unsigned I = 0; I < NewCI->arg_size(); ++I) {
     NewCI->removeParamAttrs(
         I, AttributeFuncs::typeIncompatible(NewCI->getArgOperand(I)->getType(),
                                             NewCI->getParamAttributes(I)));
+    // 'returned' also depends on the return type, which may have changed.
+    if (!NewCI->getArgOperand(I)->getType()->canLosslesslyBitCastTo(
+            NewCI->getType()))
+      NewCI->removeParamAttr(I, Attribute::Returned);
+  }
 
   return copyFlags(Old, NewCI);
 }
