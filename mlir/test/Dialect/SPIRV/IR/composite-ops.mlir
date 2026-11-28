@@ -315,6 +315,38 @@ func.func @copy_object_type_mismatch(%arg0: f32) -> f64 {
 
 // -----
 
+// CHECK-LABEL: func @copy_logical_array
+func.func @copy_logical_array(%arg0: !spirv.array<4 x f32, stride=4>) -> !spirv.array<4 x f32> {
+  // CHECK: spirv.CopyLogical %{{.*}} : !spirv.array<4 x f32, stride=4> to !spirv.array<4 x f32>
+  %0 = spirv.CopyLogical %arg0 : !spirv.array<4 x f32, stride=4> to !spirv.array<4 x f32>
+  return %0 : !spirv.array<4 x f32>
+}
+
+// CHECK-LABEL: func @copy_logical_struct
+func.func @copy_logical_struct(%arg0: !spirv.struct<(f32 [0], !spirv.array<2 x i32, stride=4> [4])>) -> !spirv.struct<(f32, !spirv.array<2 x i32>)> {
+  // CHECK: spirv.CopyLogical %{{.*}} : !spirv.struct<(f32 [0], !spirv.array<2 x i32, stride=4> [4])> to !spirv.struct<(f32, !spirv.array<2 x i32>)>
+  %0 = spirv.CopyLogical %arg0 : !spirv.struct<(f32 [0], !spirv.array<2 x i32, stride=4> [4])> to !spirv.struct<(f32, !spirv.array<2 x i32>)>
+  return %0 : !spirv.struct<(f32, !spirv.array<2 x i32>)>
+}
+
+// -----
+
+func.func @copy_logical_array_size_mismatch(%arg0: !spirv.array<4 x f32>) {
+  // expected-error @+1 {{operand and result types must logically match}}
+  %0 = spirv.CopyLogical %arg0 : !spirv.array<4 x f32> to !spirv.array<3 x f32>
+  return
+}
+
+// -----
+
+func.func @copy_logical_struct_member_mismatch(%arg0: !spirv.struct<(f32, i32)>) {
+  // expected-error @+1 {{operand and result types must logically match}}
+  %0 = spirv.CopyLogical %arg0 : !spirv.struct<(f32, i32)> to !spirv.struct<(f32, f32)>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.VectorExtractDynamic
 //===----------------------------------------------------------------------===//

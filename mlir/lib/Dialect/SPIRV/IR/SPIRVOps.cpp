@@ -575,6 +575,35 @@ void spirv::CompositeInsertOp::print(OpAsmPrinter &printer) {
           << getComposite().getType();
 }
 
+static bool areTypesLogicallyMatching(Type lhs, Type rhs) {
+  if (auto lhsArr = dyn_cast<spirv::ArrayType>(lhs)) {
+    auto rhsArr = dyn_cast<spirv::ArrayType>(rhs);
+    return rhsArr && lhsArr.getNumElements() == rhsArr.getNumElements() &&
+           (lhsArr.getElementType() == rhsArr.getElementType() ||
+            areTypesLogicallyMatching(lhsArr.getElementType(),
+                                      rhsArr.getElementType()));
+  }
+  if (auto lhsStruct = dyn_cast<spirv::StructType>(lhs)) {
+    auto rhsStruct = dyn_cast<spirv::StructType>(rhs);
+    if (!rhsStruct || lhsStruct.getNumElements() != rhsStruct.getNumElements())
+      return false;
+    return llvm::all_of(
+        llvm::zip(lhsStruct.getElementTypes(), rhsStruct.getElementTypes()),
+        [](auto pair) {
+          auto [l, r] = pair;
+          return l == r || areTypesLogicallyMatching(l, r);
+        });
+  }
+  return false;
+}
+
+LogicalResult spirv::CopyLogicalOp::verify() {
+  if (!areTypesLogicallyMatching(getOperand().getType(), getType()))
+    return emitOpError("operand and result types must logically match, got ")
+           << getOperand().getType() << " and " << getType();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.Constant
 //===----------------------------------------------------------------------===//

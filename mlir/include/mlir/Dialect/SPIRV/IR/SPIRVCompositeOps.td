@@ -210,6 +210,29 @@ def SPIRV_CopyObjectOp : SPIRV_Op<"CopyObject", [
 
 // -----
 
+def SPIRV_CopyLogicalOp : SPIRV_Op<"CopyLogical", [Pure]> {
+  let summary = "Make a logically identical copy of Operand.";
+
+  let description = [{
+    Result Type and Operand must be logically matching struct or array types.
+
+    ```mlir
+    %1 = spirv.CopyLogical %0 : !spirv.array<4 x f32, stride=4> to !spirv.array<4 x f32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>, MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>, Capability<[]>
+  ];
+
+  let arguments = (ins AnyTypeOf<[SPIRV_AnyStruct, SPIRV_AnyArray]>:$operand);
+  let results = (outs AnyTypeOf<[SPIRV_AnyStruct, SPIRV_AnyArray]>:$result);
+  let assemblyFormat = "$operand attr-dict `:` type($operand) `to` type($result)";
+}
+
+// -----
+
 def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
     Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
