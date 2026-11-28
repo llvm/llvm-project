@@ -202,6 +202,7 @@ private:
   Value *optimizePow(CallInst *CI, IRBuilderBase &B);
   Value *replacePowWithExp(CallInst *Pow, IRBuilderBase &B);
   Value *replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B);
+  Value *replacePowWithCbrt(CallInst *Pow, IRBuilderBase &B);
   Value *optimizeExp2(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B, Intrinsic::ID IID);
   Value *optimizeLog(CallInst *CI, IRBuilderBase &B);
