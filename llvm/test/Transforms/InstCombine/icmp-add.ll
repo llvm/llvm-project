@@ -3112,6 +3112,18 @@ define i1 @uge_add_C2_pow2_C_neg(i8 %x) {
   ret i1 %c
 }
 
+define i1 @sext_add_ult(i16 noundef %x) {
+; CHECK-LABEL: @sext_add_ult(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[X:%.*]], 128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[TMP1]], 256
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = sext i16 %x to i128
+  %add = add i128 %conv, 128
+  %cmp = icmp ult i128 %add, 256
+  ret i1 %cmp
+}
+
 declare void @llvm.assume(i1)
 
 ; Change an unsigned predicate to signed in icmp (add x, C1), C2
