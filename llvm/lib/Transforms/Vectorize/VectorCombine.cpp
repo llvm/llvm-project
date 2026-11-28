@@ -1105,9 +1105,10 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (!DestTy || !SrcTy)
     return false;
 
-  unsigned DestEltSize = DestTy->getScalarSizeInBits();
-  unsigned SrcEltSize = SrcTy->getScalarSizeInBits();
-  if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
+  unsigned DestEltSize = DL->getTypeSizeInBits(DestTy->getScalarType());
+  unsigned SrcEltSize = DL->getTypeSizeInBits(SrcTy->getScalarType());
+  unsigned SrcSize = DL->getTypeSizeInBits(SrcTy);
+  if (SrcSize % DestEltSize != 0)
     return false;
 
   bool IsUnary = isa<UndefValue>(V1);
@@ -1142,7 +1143,7 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
 
   // Bitcast the shuffle src - keep its original width but using the destination
   // scalar type.
-  unsigned NumSrcElts = SrcTy->getPrimitiveSizeInBits() / DestEltSize;
+  unsigned NumSrcElts = SrcSize / DestEltSize;
   auto *NewShuffleTy =
       FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
   auto *OldShuffleTy =
@@ -1173,6 +1174,8 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
 
   // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
   ++NumShufOfBitcast;
+  // FIXME: Peeking through bitcasts can create an invalid bitcast, e.g. from a
+  // pointer to an integer.
   Value *CastV0 = Builder.CreateBitCast(peekThroughBitcasts(V0), NewShuffleTy);
   Value *CastV1 = Builder.CreateBitCast(peekThroughBitcasts(V1), NewShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
