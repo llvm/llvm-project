@@ -36,8 +36,15 @@ public:
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+
+  bool mayUseStackFrame(const MachineInstr &MI) const override;
+
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
 
 private:
   void emitInterruptEpilogueStub(MachineFunction &MF,

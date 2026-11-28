@@ -471,6 +471,12 @@ public:
     return true;
   }
 
+  /// Return true if \p MI may require the function's stack frame to be active
+  /// (for instance, if expanding \p MI during frame finalization may allocate
+  /// or access an emergency spill slot) even when \p MI does not explicitly
+  /// reference the stack pointer, callee-saved registers, or frame indices.
+  virtual bool mayUseStackFrame(const MachineInstr &MI) const { return false; }
+
   /// Returns the StackID that scalable vectors should be associated with.
   virtual TargetStackID::Value getStackIDForScalableVectors() const {
     return TargetStackID::Default;
