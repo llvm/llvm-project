@@ -1895,7 +1895,8 @@ SDValue SystemZTargetLowering::LowerAsmOutputForConstraint(
     Chain = Glue.getValue(1);
   } else
     Glue = DAG.getCopyFromReg(Chain, DL, SystemZ::CC, MVT::i32);
-  return getCCResult(DAG, Glue);
+  // The CC value is computed as i32, so convert it to the output type.
+  return DAG.getZExtOrTrunc(getCCResult(DAG, Glue), DL, OpInfo.ConstraintVT);
 }
 
 void SystemZTargetLowering::LowerAsmOperandForConstraint(

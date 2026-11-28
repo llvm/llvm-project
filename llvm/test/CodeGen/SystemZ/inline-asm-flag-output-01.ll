@@ -773,3 +773,63 @@ while.body:
 while.end:
   ret void
 }
+
+; Check a case where the cc is used as a 64-bit integer.
+define i64 @test_i64(ptr %a) {
+; CHECK-LABEL: test_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    alsi 0(%r2), -1
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r2, %r0, 60, 191, 36
+; CHECK-NEXT:    br %r14
+  %cc = tail call i64 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr elementtype(i32) %a, ptr elementtype(i32) %a)
+  %tmp = icmp ult i64 %cc, 4
+  tail call void @llvm.assume(i1 %tmp)
+  ret i64 %cc
+}
+
+; Check (cc == 2) with a 64-bit cc used for branching.
+define void @test_i64_eq_2(ptr %a) {
+; CHECK-LABEL: test_i64_eq_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    alsi 0(%r2), -1
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    jgh dummy@PLT
+; CHECK-NEXT:  .LBB31_1: # %exit
+; CHECK-NEXT:    br %r14
+entry:
+  %cc = tail call i64 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr elementtype(i32) %a, ptr elementtype(i32) %a)
+  %tmp = icmp ult i64 %cc, 4
+  tail call void @llvm.assume(i1 %tmp)
+  %cmp = icmp eq i64 %cc, 2
+  br i1 %cmp, label %branch, label %exit
+branch:
+  tail call void @dummy()
+  br label %exit
+exit:
+  ret void
+}
+
+; Check a 64-bit cc stored to memory.
+define void @test_i64_store(ptr %a, ptr %b) {
+; CHECK-LABEL: test_i64_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    alsi 0(%r2), -1
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r0, %r0, 60, 191, 36
+; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    br %r14
+  %cc = tail call i64 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr elementtype(i32) %a, ptr elementtype(i32) %a)
+  %tmp = icmp ult i64 %cc, 4
+  tail call void @llvm.assume(i1 %tmp)
+  store i64 %cc, ptr %b
+  ret void
+}
