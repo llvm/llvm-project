@@ -192,3 +192,24 @@ entry:
 ; ELF64: blr
   ret i16 32768
 }
+
+; A zeroext i33 return is widened to i64 before the return value is assigned,
+; so the zeroext flag must still be honored when materializing the constant.
+define zeroext i33 @ret21() nounwind {
+entry:
+; ELF64-LABEL: ret21
+; ELF64: li {{[0-9]+}}, 1
+; ELF64: sldi {{[0-9]+}}, {{[0-9]+}}, 32
+; ELF64: oris {{[0-9]+}}, {{[0-9]+}}, 65535
+; ELF64: ori {{[0-9]+}}, {{[0-9]+}}, 65535
+; ELF64: blr
+  ret i33 -1
+}
+
+define signext i33 @ret22() nounwind {
+entry:
+; ELF64-LABEL: ret22
+; ELF64: li {{[0-9]+}}, -1
+; ELF64: blr
+  ret i33 -1
+}
