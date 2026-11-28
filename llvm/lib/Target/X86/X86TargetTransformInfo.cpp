@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include <optional>
 
 using namespace llvm;
@@ -71,6 +72,122 @@ using namespace llvm;
 
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
+
+/// Return true if \p Cmp is a scalar icmp that CodeGenPrepare will fold into
+/// a u{add,sub}-with-overflow intrinsic together with a sibling add/sub (read
+/// from the carry/borrow flag of that op). CGP only ever forms the unsigned
+/// variants: see CodeGenPrepare::combineToU{Add,Sub}WithOverflow. This
+/// mirrors that matching logic, conservatively: it only recognizes the
+/// same-block case CGP always folds, not the cross-block IV-increment case
+/// that additionally requires a dominator tree and loop info.
+static bool isICmpFoldedToOverflowIntrinsic(const Instruction *I,
+                                            const TargetLowering *TLI,
+                                            const DataLayout &DL) {
+  const auto *Cmp = dyn_cast_or_null<ICmpInst>(I);
+  if (!Cmp)
+    return false;
+  Type *OpTy = Cmp->getOperand(0)->getType();
+  // CGP only folds scalar integer compares.
+  if (!OpTy->isIntegerTy())
+    return false;
+  EVT VT = TLI->getValueType(DL, OpTy);
+
+  // CGP's optimizeCmp sinks Cmp into each non-PHI user block that it doesn't
+  // already dominate (sinkCmpExpression) before ever trying to fold it into
+  // an overflow intrinsic, and bails out of the fold attempt for this visit
+  // if it did. Match that: if Cmp has a non-PHI user outside its own block,
+  // the fold won't apply to this instance of the compare.
+  if (any_of(Cmp->users(), [Cmp](const User *U) {
+        return !isa<PHINode>(U) &&
+               cast<Instruction>(U)->getParent() != Cmp->getParent();
+      }))
+    return false;
+
+  using namespace PatternMatch;
+
+  // UADDO patterns: match the various canonical "overflow on add" idioms.
+  {
+    Value *A, *B;
+    BinaryOperator *Add = nullptr;
+    bool EdgeCase = false;
+    if (!match(const_cast<Instruction *>(I),
+               m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add)))) {
+      // (icmp eq X, -1) with user (add X, 1) and (icmp ne X, 0) with user
+      // (add X, -1) are the edge cases handled by CGP.
+      Value *CA = Cmp->getOperand(0), *CB = Cmp->getOperand(1);
+      if (!isa<Constant>(CA)) {
+        ICmpInst::Predicate P = Cmp->getPredicate();
+        Value *Needle = nullptr;
+        if (P == ICmpInst::ICMP_EQ && match(CB, m_AllOnes()))
+          Needle = ConstantInt::get(CB->getType(), 1);
+        else if (P == ICmpInst::ICMP_NE && match(CB, m_ZeroInt()))
+          Needle = Constant::getAllOnesValue(CB->getType());
+        if (Needle) {
+          for (User *U : CA->users()) {
+            if (match(U, m_Add(m_Specific(CA), m_Specific(Needle)))) {
+              Add = cast<BinaryOperator>(U);
+              EdgeCase = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (Add) {
+      if (Add->getParent() == Cmp->getParent() &&
+          TLI->shouldFormOverflowOp(ISD::UADDO, VT,
+                                    Add->hasNUsesOrMore(EdgeCase ? 1 : 2)))
+        return true;
+    }
+  }
+
+  // USUBO pattern (see CodeGenPrepare::combineToUSubWithOverflow).
+  {
+    Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+    if (isa<Constant>(A) && isa<Constant>(B))
+      return false;
+    ICmpInst::Predicate Pred = Cmp->getPredicate();
+    if (Pred == ICmpInst::ICMP_UGT) {
+      std::swap(A, B);
+      Pred = ICmpInst::ICMP_ULT;
+    }
+    if (Pred == ICmpInst::ICMP_EQ && match(B, m_ZeroInt())) {
+      B = ConstantInt::get(B->getType(), 1);
+      Pred = ICmpInst::ICMP_ULT;
+    }
+    if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt())) {
+      std::swap(A, B);
+      Pred = ICmpInst::ICMP_ULT;
+    }
+    if (Pred != ICmpInst::ICMP_ULT)
+      return false;
+
+    // Like CGP, stop at the first user that matches the sub/negated-add
+    // pattern: a later user is not considered even if this one turns out not
+    // to qualify.
+    Value *CmpVariableOperand = isa<Constant>(A) ? B : A;
+    BinaryOperator *Sub = nullptr;
+    for (User *U : CmpVariableOperand->users()) {
+      // A - B, A u< B --> usubo(A, B)
+      if (match(U, m_Sub(m_Specific(A), m_Specific(B)))) {
+        Sub = cast<BinaryOperator>(U);
+        break;
+      }
+      // A + (-C), A u< C (canonicalized form of (sub A, C))
+      const APInt *CmpC, *AddC;
+      if (match(U, m_Add(m_Specific(A), m_APInt(AddC))) &&
+          match(B, m_APInt(CmpC)) && *AddC == -(*CmpC)) {
+        Sub = cast<BinaryOperator>(U);
+        break;
+      }
+    }
+    if (!Sub)
+      return false;
+    if (Sub->getParent() != Cmp->getParent())
+      return false;
+    return TLI->shouldFormOverflowOp(ISD::USUBO, VT, Sub->hasNUsesOrMore(1));
+  }
+}
 
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) const {
@@ -3867,6 +3984,15 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
   if (!(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy()))
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
+
+  // Scalar integer compares that CodeGenPrepare will fold into a
+  // u{add,sub}-with-overflow intrinsic emit no instruction of their own (the
+  // result is read from the carry/borrow flag of the arithmetic op). Report
+  // them as free so passes like SLP don't mis-vectorise code that would
+  // otherwise be lowered to a tight scalar sub+cmov sequence.
+  if (Opcode == Instruction::ICmp && !ValTy->isVectorTy() &&
+      isICmpFoldedToOverflowIntrinsic(I, TLI, DL))
+    return TTI::TCC_Free;
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
