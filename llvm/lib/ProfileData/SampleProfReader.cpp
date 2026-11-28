@@ -411,7 +411,20 @@ std::error_code SampleProfileReaderText::readImpl() {
         return sampleprof_error::malformed;
       }
       DepthMetadata = 0;
-      SampleContext FContext(FName, CSNameTable);
+      SampleContext FContext;
+      if (FName.starts_with("[")) {
+        CSNameTable.emplace_back();
+        SampleContextFrameVector &CtxVec = CSNameTable.back();
+        SampleContext::createCtxVectorFromStr(FName, CtxVec);
+        if (NameSaver) {
+          for (auto &Frame : CtxVec)
+            if (Frame.Func.isStringRef() && !Frame.Func.empty())
+              Frame.Func = FunctionId(NameSaver->save(Frame.Func.stringRef()));
+        }
+        FContext.setContext(CtxVec);
+      } else {
+        FContext = SampleContext(internString(FName));
+      }
       if (FContext.hasContext())
         ++CSProfileCount;
       FunctionSamples &FProfile = Profiles.create(FContext);
@@ -466,9 +479,10 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
       switch (LineTy) {
       case LineType::CallSiteProfile: {
+        FunctionId CalleeName(internString(FName));
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
-            LineLocation(LineOffset, Discriminator))[FunctionId(FName)];
-        FSamples.setFunction(FunctionId(FName));
+            LineLocation(LineOffset, Discriminator))[CalleeName];
+        FSamples.setFunction(CalleeName);
         mergeSampleProfErrors(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
         DepthMetadata = 0;
@@ -476,19 +490,30 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
 
       case LineType::VirtualCallTypeProfile: {
-        mergeSampleProfErrors(
-            Result, InlineStack.back()->addCallsiteVTableTypeProfAt(
-                        LineLocation(LineOffset, Discriminator), TypeCountMap));
+        LineLocation Loc(LineOffset, Discriminator);
+        if (NameSaver) {
+          auto &TypeCounts = InlineStack.back()->getTypeSamplesAt(Loc);
+          TypeCounts.reserve(TypeCounts.size() + TypeCountMap.size());
+          for (const auto &[Type, Count] : TypeCountMap)
+            mergeSampleProfErrors(
+                Result, InlineStack.back()->addTypeSamplesAt(
+                            Loc, FunctionId(NameSaver->save(Type)), Count));
+        } else {
+          mergeSampleProfErrors(Result,
+                                InlineStack.back()->addCallsiteVTableTypeProfAt(
+                                    Loc, TypeCountMap));
+        }
         break;
       }
 
       case LineType::BodyProfile: {
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
-          mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(
-                                            LineOffset, Discriminator,
-                                            FunctionId(name_count.first),
-                                            name_count.second));
+          mergeSampleProfErrors(Result,
+                                FProfile.addCalledTargetSamples(
+                                    LineOffset, Discriminator,
+                                    FunctionId(internString(name_count.first)),
+                                    name_count.second));
         }
         mergeSampleProfErrors(
             Result,
@@ -1491,13 +1516,14 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
     auto Name(readString());
     if (std::error_code EC = Name.getError())
       return EC;
+    StringRef InternedName = internString(*Name);
     if (UseMD5) {
-      FunctionId FID(*Name);
+      FunctionId FID(InternedName);
       if (!ProfileIsCS)
         MD5SampleContextTable.emplace_back(FID.getHashCode());
       TableVec.emplace_back(FID);
     } else
-      TableVec.push_back(FunctionId(*Name));
+      TableVec.push_back(FunctionId(InternedName));
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
@@ -2107,11 +2133,18 @@ std::error_code SampleProfileReaderGCC::readNameTable() {
   if (!GcovBuffer.readInt(Size))
     return sampleprof_error::truncated;
 
+  if (NameSaver)
+    InternedNames.reserve(Size);
+  else
+    Names.reserve(Size);
   for (uint32_t I = 0; I < Size; ++I) {
     StringRef Str;
     if (!GcovBuffer.readString(Str))
       return sampleprof_error::truncated;
-    Names.push_back(std::string(Str));
+    if (NameSaver)
+      InternedNames.push_back(NameSaver->save(Str));
+    else
+      Names.push_back(std::string(Str));
   }
 
   return sampleprof_error::success;
@@ -2145,7 +2178,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
   if (!GcovBuffer.readInt(NameIdx))
     return sampleprof_error::truncated;
 
-  StringRef Name(Names[NameIdx]);
+  StringRef Name = getName(NameIdx);
 
   uint32_t NumPosCounts;
   if (!GcovBuffer.readInt(NumPosCounts))
@@ -2226,7 +2259,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
       uint64_t TargetIdx;
       if (!GcovBuffer.readInt64(TargetIdx))
         return sampleprof_error::truncated;
-      StringRef TargetName(Names[TargetIdx]);
+      StringRef TargetName = getName(TargetIdx);
 
       uint64_t TargetCount;
       if (!GcovBuffer.readInt64(TargetCount))
@@ -2347,11 +2380,12 @@ setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(StringRef Filename, LLVMContext &C,
                             vfs::FileSystem &FS, FSDiscriminatorPass P,
-                            StringRef RemapFilename) {
+                            StringRef RemapFilename,
+                            UniqueStringSaver *NameSaver) {
   auto BufferOrError = setupMemoryBuffer(Filename, FS);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
-  return create(BufferOrError.get(), C, FS, P, RemapFilename);
+  return create(BufferOrError.get(), C, FS, P, RemapFilename, NameSaver);
 }
 
 /// Create a sample profile remapper from the given input, to remap the
@@ -2418,7 +2452,8 @@ SampleProfileReaderItaniumRemapper::create(std::unique_ptr<MemoryBuffer> &B,
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
                             vfs::FileSystem &FS, FSDiscriminatorPass P,
-                            StringRef RemapFilename) {
+                            StringRef RemapFilename,
+                            UniqueStringSaver *NameSaver) {
   std::unique_ptr<SampleProfileReader> Reader;
   if (SampleProfileReaderRawBinary::hasFormat(*B))
     Reader.reset(new SampleProfileReaderRawBinary(std::move(B), C));
@@ -2430,6 +2465,8 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
     Reader.reset(new SampleProfileReaderText(std::move(B), C));
   else
     return sampleprof_error::unrecognized_format;
+
+  Reader->NameSaver = NameSaver;
 
   if (!RemapFilename.empty()) {
     auto ReaderOrErr = SampleProfileReaderItaniumRemapper::create(

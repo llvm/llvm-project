@@ -766,6 +766,14 @@ public:
     State = CState;
   }
 
+  /// Update the backing storage of the context frames while preserving the
+  /// existing context state and attributes.
+  void setContextFrames(SampleContextFrames Context) {
+    assert(hasContext() && !Context.empty());
+    FullContext = Context;
+    Func = Context.back().Func;
+  }
+
   bool operator==(const SampleContext &That) const {
     return State == That.State && Func == That.Func &&
            FullContext == That.FullContext;

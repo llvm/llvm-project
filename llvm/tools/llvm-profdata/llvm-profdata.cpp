@@ -41,6 +41,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -1702,31 +1703,31 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
                                 size_t OutputSizeLimit) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
-  SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
   std::optional<bool> ProfileIsProbeBased;
   std::optional<bool> ProfileIsCS;
+
+  // Intern symbol names and context frame arrays into a shared allocator so
+  // each reader can be destroyed immediately after its profiles are merged.
+  BumpPtrAllocator Alloc;
+  UniqueStringSaver NameSaver(Alloc);
+
   for (const auto &Input : Inputs) {
     auto FS = vfs::getRealFileSystem();
-    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
-                                                   FSDiscriminatorPassOption);
+    auto ReaderOrErr = SampleProfileReader::create(
+        Input.Filename, Context, *FS, FSDiscriminatorPassOption,
+        /*RemapFilename=*/"", &NameSaver);
     if (std::error_code EC = ReaderOrErr.getError()) {
       if (Error E = warnOrErrorGivenError(FailMode, EC, Input.Filename))
         return E;
       continue;
     }
 
-    // We need to keep the readers around until after all the files are
-    // read so that we do not lose the function names stored in each
-    // reader's memory. The function names are needed to write out the
-    // merged profile map.
-    Readers.push_back(std::move(ReaderOrErr.get()));
-    const auto Reader = Readers.back().get();
+    auto Reader = std::move(ReaderOrErr.get());
     if (std::error_code EC = Reader->read()) {
       if (Error E = warnOrErrorGivenError(FailMode, EC, Input.Filename))
         return E;
-      Readers.pop_back();
       continue;
     }
 
@@ -1746,20 +1747,44 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
     if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
       return makeError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
-    for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
-         I != E; ++I) {
+
+    for (auto &[Hash, SrcSamples] : Profiles) {
       sampleprof_error Result = sampleprof_error::success;
-      FunctionSamples Remapped =
-          Remapper ? remapSamples(I->second, *Remapper, Result)
-                   : FunctionSamples();
-      FunctionSamples &Samples = Remapper ? Remapped : I->second;
-      SampleContext FContext = Samples.getContext();
-      mergeSampleProfErrors(Result,
-                            ProfileMap[FContext].merge(Samples, Input.Weight));
+      if (Remapper) {
+        FunctionSamples Remapped = remapSamples(SrcSamples, *Remapper, Result);
+        SampleContext FContext = Remapped.getContext();
+        mergeSampleProfErrors(
+            Result, ProfileMap[FContext].merge(Remapped, Input.Weight));
+        if (Result != sampleprof_error::success) {
+          std::error_code EC = make_error_code(Result);
+          handleMergeWriterError(errorCodeToError(EC), Input.Filename,
+                                 FContext.toString());
+        }
+        continue;
+      }
+
+      auto [It, Inserted] = ProfileMap.try_emplace(
+          Hash, SrcSamples.getContext(), FunctionSamples());
+      if (Inserted && SrcSamples.getContext().hasContext()) {
+        SampleContextFrames OldFrames =
+            SrcSamples.getContext().getContextFrames();
+        static_assert(std::is_trivially_destructible_v<SampleContextFrame>,
+                      "SampleContextFrame must be trivially destructible");
+        auto *NewFrames = Alloc.Allocate<SampleContextFrame>(OldFrames.size());
+        std::uninitialized_copy(OldFrames.begin(), OldFrames.end(), NewFrames);
+        SrcSamples.getContext().setContextFrames(
+            SampleContextFrames(NewFrames, OldFrames.size()));
+      }
+      if (Inserted && Input.Weight == 1) {
+        It->second = std::move(SrcSamples);
+      } else {
+        mergeSampleProfErrors(Result,
+                              It->second.merge(SrcSamples, Input.Weight));
+      }
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename,
-                               FContext.toString());
+                               It->second.getContext().toString());
       }
     }
 
