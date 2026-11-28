@@ -271,8 +271,8 @@ define i1 @masked_or_allzeroes_notoptimised_logical(i32 %A) {
 
 define i1 @nomask_lhs(i32 %in) {
 ; CHECK-LABEL: @nomask_lhs(
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[IN:%.*]], 1
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[IN:%.*]] to i1
+; CHECK-NEXT:    [[TST2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %tst1 = icmp eq i32 %in, 0
@@ -284,8 +284,8 @@ define i1 @nomask_lhs(i32 %in) {
 
 define i1 @nomask_lhs_logical(i32 %in) {
 ; CHECK-LABEL: @nomask_lhs_logical(
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[IN:%.*]], 1
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[IN:%.*]] to i1
+; CHECK-NEXT:    [[TST2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %tst1 = icmp eq i32 %in, 0
@@ -297,8 +297,8 @@ define i1 @nomask_lhs_logical(i32 %in) {
 
 define i1 @nomask_rhs(i32 %in) {
 ; CHECK-LABEL: @nomask_rhs(
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[IN:%.*]], 1
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[IN:%.*]] to i1
+; CHECK-NEXT:    [[TST1:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[TST1]]
 ;
   %masked = and i32 %in, 1
@@ -310,8 +310,8 @@ define i1 @nomask_rhs(i32 %in) {
 
 define i1 @nomask_rhs_logical(i32 %in) {
 ; CHECK-LABEL: @nomask_rhs_logical(
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[IN:%.*]], 1
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[IN:%.*]] to i1
+; CHECK-NEXT:    [[TST1:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[TST1]]
 ;
   %masked = and i32 %in, 1
