@@ -35,15 +35,16 @@ void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
   const auto StrLitWithNul =
       ignoringParenImpCasts(stringLiteral(containsNul()).bind("truncated"));
 
-  // Match string constructor.
-  const auto StringConstructorExpr = expr(anyOf(
-      cxxConstructExpr(argumentCountIs(1),
-                       hasDeclaration(cxxMethodDecl(hasName("basic_string")))),
-      // If present, the second argument is the alloc object which must not
-      // be present explicitly.
-      cxxConstructExpr(argumentCountIs(2),
-                       hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-                       hasArgument(1, cxxDefaultArgExpr()))));
+  // Match string and string-view constructors.
+  const auto StringConstructorExpr = expr(
+      anyOf(cxxConstructExpr(argumentCountIs(1),
+                             hasDeclaration(cxxMethodDecl(hasAnyName(
+                                 "basic_string", "basic_string_view")))),
+            // The allocator is a class type, unlike a length or end pointer.
+            cxxConstructExpr(
+                argumentCountIs(2),
+                hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
+                hasArgument(1, hasType(hasCanonicalType(recordType()))))));
 
   // Detect passing a suspicious string literal to a string constructor.
   // example: std::string str = "abc\0def";
@@ -61,7 +62,7 @@ void StringLiteralWithEmbeddedNulCheck::check(
   if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("strlit")) {
     for (size_t Offset = 0, Length = SL->getLength(); Offset < Length;
          ++Offset) {
-      // Find a sequence of character like "\0x12".
+      // Find a sequence of characters like "\0x12".
       if (Offset + 3 < Length && SL->getCodeUnit(Offset) == '\0' &&
           SL->getCodeUnit(Offset + 1) == 'x' &&
           isDigit(SL->getCodeUnit(Offset + 2)) &&
