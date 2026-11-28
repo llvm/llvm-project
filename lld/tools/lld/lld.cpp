@@ -42,6 +42,10 @@
 #include <cstdlib>
 #include <optional>
 
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
+
 using namespace lld;
 using namespace llvm;
 using namespace llvm::sys;
@@ -74,6 +78,10 @@ LLD_HAS_DRIVER(wasm)
 
 int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   sys::Process::UseANSIEscapeCodes(true);
+
+#if defined(__GLIBC__)
+  mallopt(M_TOP_PAD, 64 << 20);
+#endif
 
   if (::getenv("FORCE_LLD_DIAGNOSTICS_CRASH")) {
     llvm::errs()
