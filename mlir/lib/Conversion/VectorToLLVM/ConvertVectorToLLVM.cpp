@@ -744,7 +744,7 @@ static Value createFPReductionComparisonOpLowering(
 
   if (accumulator) {
     result = VectorToScalarMapper<LLVMRedIntrinOp>::Type::create(
-        rewriter, loc, result, accumulator);
+        rewriter, loc, result, accumulator, fmf);
   }
 
   return result;
