@@ -1,16 +1,5 @@
 // RUN: %clangxx -frtti -fsanitize=null,vptr -fno-sanitize-memory-param-retval -g %s -O3 -o %t -mllvm -enable-tail-merge=false
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rT
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t mT
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t fT
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t cT
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rU
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t mU
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t fU
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t cU
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rS
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rV
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t oV
-// RUN: %env_ubsan_opts=halt_on_error=1 %run %t zN
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rT mT fT cT rU mU fU cU rS rV oV zN
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-MEMBER --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t fS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cS 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --allow-unused-prefixes --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
@@ -19,19 +8,11 @@
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cV 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --allow-unused-prefixes --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t oU 2>&1 | FileCheck %s --check-prefix=CHECK-OFFSET --allow-unused-prefixes --check-prefix=CHECK-%os-OFFSET --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t nN 2>&1 | FileCheck %s --check-prefix=CHECK-NULL-MEMFUN --strict-whitespace
 // RUN: %env_ubsan_opts=print_stacktrace=1 %run %t dT 2>&1 | FileCheck %s --check-prefix=CHECK-DYNAMIC --allow-unused-prefixes --check-prefix=CHECK-%os-DYNAMIC --strict-whitespace
 
 // RUN: echo -e "vptr_check:S\nvptr_check:T\nvptr_check:U" > %t.supp
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mS
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t fS
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t cS
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mV
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t fV
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t cV
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t oU
-// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t dT
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mS fS cS mV fV cV oU dT
 
 // RUN: echo "vptr_check:S" > %t.loc-supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
@@ -91,7 +72,6 @@ S::~S() {
 
 int main(int argc, char **argv) {
   assert(argc > 1);
-  fprintf(stderr, "Test case: %s\n", argv[1]);
   T t;
   (void)t.a;
   (void)t.b;
@@ -116,30 +96,33 @@ int main(int argc, char **argv) {
   // will not be able to describe the vptr in detail.
   sink1 = new T;
   sink2 = new U;
-  switch (argv[1][1]) {
-  case '0':
-    p = reinterpret_cast<T*>(Buffer);
-    break;
-  case 'S':
-    // Make sure p points to the memory chunk of sufficient size to prevent ASan
-    // reports about out-of-bounds access.
-    p = reinterpret_cast<T*>(new(TStorage) S);
-    break;
-  case 'T':
-    p = new T;
-    break;
-  case 'U':
-    p = new U;
-    break;
-  case 'V':
-    p = reinterpret_cast<T*>(new U);
-    break;
-  case 'N':
-    p = 0;
-    break;
-  }
+  for (int i = 1; i < argc; ++i) {
+    fprintf(stderr, "Test case: %s\n", argv[i]);
+    switch (argv[i][1]) {
+    case '0':
+      p = reinterpret_cast<T *>(Buffer);
+      break;
+    case 'S':
+      // Make sure p points to the memory chunk of sufficient size to prevent ASan
+      // reports about out-of-bounds access.
+      p = reinterpret_cast<T *>(new (TStorage) S);
+      break;
+    case 'T':
+      p = new T;
+      break;
+    case 'U':
+      p = new U;
+      break;
+    case 'V':
+      p = reinterpret_cast<T *>(new U);
+      break;
+    case 'N':
+      p = 0;
+      break;
+    }
 
-  access_p(p, argv[1][0]);
+    access_p(p, argv[i][0]);
+  }
   return 0;
 }
 
