@@ -20,7 +20,7 @@ define i8 @cmpxchg_i8_zero(ptr %p, i8 %cmp) nounwind {
 ; RV32IA-NEXT:    and a5, a4, a3
 ; RV32IA-NEXT:    bne a5, a1, .LBB0_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
-; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    xor a5, a5, a4
 ; RV32IA-NEXT:    sc.w.rl a5, a5, (a2)
 ; RV32IA-NEXT:    bnez a5, .LBB0_1
 ; RV32IA-NEXT:  .LBB0_3:
@@ -40,7 +40,7 @@ define i8 @cmpxchg_i8_zero(ptr %p, i8 %cmp) nounwind {
 ; RV64IA-NEXT:    and a5, a4, a3
 ; RV64IA-NEXT:    bne a5, a1, .LBB0_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
-; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    xor a5, a5, a4
 ; RV64IA-NEXT:    sc.w.rl a5, a5, (a2)
 ; RV64IA-NEXT:    bnez a5, .LBB0_1
 ; RV64IA-NEXT:  .LBB0_3:
@@ -65,7 +65,7 @@ define i1 @cmpxchg_i8_zero_success(ptr %p, i8 %cmp) nounwind {
 ; RV32IA-NEXT:    and a4, a1, a3
 ; RV32IA-NEXT:    bne a4, a0, .LBB1_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
-; RV32IA-NEXT:    xor a4, a1, a4
+; RV32IA-NEXT:    xor a4, a4, a1
 ; RV32IA-NEXT:    sc.w a4, a4, (a2)
 ; RV32IA-NEXT:    bnez a4, .LBB1_1
 ; RV32IA-NEXT:  .LBB1_3:
@@ -87,7 +87,7 @@ define i1 @cmpxchg_i8_zero_success(ptr %p, i8 %cmp) nounwind {
 ; RV64IA-NEXT:    and a4, a1, a3
 ; RV64IA-NEXT:    bne a4, a0, .LBB1_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
-; RV64IA-NEXT:    xor a4, a1, a4
+; RV64IA-NEXT:    xor a4, a4, a1
 ; RV64IA-NEXT:    sc.w a4, a4, (a2)
 ; RV64IA-NEXT:    bnez a4, .LBB1_1
 ; RV64IA-NEXT:  .LBB1_3:
@@ -115,7 +115,7 @@ define i16 @cmpxchg_i16_zero(ptr %p, i16 %cmp) nounwind {
 ; RV32IA-NEXT:    and a5, a4, a2
 ; RV32IA-NEXT:    bne a5, a1, .LBB2_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB2_1 Depth=1
-; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    xor a5, a5, a4
 ; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB2_1
 ; RV32IA-NEXT:  .LBB2_3:
@@ -136,7 +136,7 @@ define i16 @cmpxchg_i16_zero(ptr %p, i16 %cmp) nounwind {
 ; RV64IA-NEXT:    and a5, a4, a2
 ; RV64IA-NEXT:    bne a5, a1, .LBB2_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB2_1 Depth=1
-; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    xor a5, a5, a4
 ; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB2_1
 ; RV64IA-NEXT:  .LBB2_3:

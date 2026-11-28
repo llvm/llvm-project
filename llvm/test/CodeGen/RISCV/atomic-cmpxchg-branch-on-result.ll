@@ -115,9 +115,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    bne a5, a1, .LBB2_1
 ; RV32IA-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV32IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV32IA-NEXT:    xor a5, a4, a2
-; RV32IA-NEXT:    and a5, a5, a3
-; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    xor a5, a5, a2
+; RV32IA-NEXT:    xor a5, a5, a4
 ; RV32IA-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV32IA-NEXT:    bnez a5, .LBB2_3
 ; RV32IA-NEXT:  # %bb.5: # %do_cmpxchg
@@ -145,9 +144,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:    bne a5, a1, .LBB2_1
 ; RV32IA-ZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV32IA-ZACAS-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV32IA-ZACAS-NEXT:    xor a5, a4, a2
-; RV32IA-ZACAS-NEXT:    and a5, a5, a3
-; RV32IA-ZACAS-NEXT:    xor a5, a4, a5
+; RV32IA-ZACAS-NEXT:    xor a5, a5, a2
+; RV32IA-ZACAS-NEXT:    xor a5, a5, a4
 ; RV32IA-ZACAS-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV32IA-ZACAS-NEXT:    bnez a5, .LBB2_3
 ; RV32IA-ZACAS-NEXT:  # %bb.5: # %do_cmpxchg
@@ -175,9 +173,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    bne a5, a1, .LBB2_1
 ; RV64IA-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV64IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV64IA-NEXT:    xor a5, a4, a2
-; RV64IA-NEXT:    and a5, a5, a3
-; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    xor a5, a5, a2
+; RV64IA-NEXT:    xor a5, a5, a4
 ; RV64IA-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB2_3
 ; RV64IA-NEXT:  # %bb.5: # %do_cmpxchg
@@ -205,9 +202,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:    bne a5, a1, .LBB2_1
 ; RV64IA-ZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV64IA-ZACAS-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV64IA-ZACAS-NEXT:    xor a5, a4, a2
-; RV64IA-ZACAS-NEXT:    and a5, a5, a3
-; RV64IA-ZACAS-NEXT:    xor a5, a4, a5
+; RV64IA-ZACAS-NEXT:    xor a5, a5, a2
+; RV64IA-ZACAS-NEXT:    xor a5, a5, a4
 ; RV64IA-ZACAS-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV64IA-ZACAS-NEXT:    bnez a5, .LBB2_3
 ; RV64IA-ZACAS-NEXT:  # %bb.5: # %do_cmpxchg
@@ -256,9 +252,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    bne a5, a1, .LBB3_5
 ; RV32IA-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV32IA-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV32IA-NEXT:    xor a5, a4, a2
-; RV32IA-NEXT:    and a5, a5, a3
-; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    xor a5, a5, a2
+; RV32IA-NEXT:    xor a5, a5, a4
 ; RV32IA-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV32IA-NEXT:    bnez a5, .LBB3_3
 ; RV32IA-NEXT:  .LBB3_5: # %do_cmpxchg
@@ -289,9 +284,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:    bne a5, a1, .LBB3_5
 ; RV32IA-ZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV32IA-ZACAS-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV32IA-ZACAS-NEXT:    xor a5, a4, a2
-; RV32IA-ZACAS-NEXT:    and a5, a5, a3
-; RV32IA-ZACAS-NEXT:    xor a5, a4, a5
+; RV32IA-ZACAS-NEXT:    xor a5, a5, a2
+; RV32IA-ZACAS-NEXT:    xor a5, a5, a4
 ; RV32IA-ZACAS-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV32IA-ZACAS-NEXT:    bnez a5, .LBB3_3
 ; RV32IA-ZACAS-NEXT:  .LBB3_5: # %do_cmpxchg
@@ -322,9 +316,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    bne a5, a1, .LBB3_5
 ; RV64IA-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV64IA-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV64IA-NEXT:    xor a5, a4, a2
-; RV64IA-NEXT:    and a5, a5, a3
-; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    xor a5, a5, a2
+; RV64IA-NEXT:    xor a5, a5, a4
 ; RV64IA-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB3_3
 ; RV64IA-NEXT:  .LBB3_5: # %do_cmpxchg
@@ -355,9 +348,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:    bne a5, a1, .LBB3_5
 ; RV64IA-ZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; RV64IA-ZACAS-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV64IA-ZACAS-NEXT:    xor a5, a4, a2
-; RV64IA-ZACAS-NEXT:    and a5, a5, a3
-; RV64IA-ZACAS-NEXT:    xor a5, a4, a5
+; RV64IA-ZACAS-NEXT:    xor a5, a5, a2
+; RV64IA-ZACAS-NEXT:    xor a5, a5, a4
 ; RV64IA-ZACAS-NEXT:    sc.w.rl a5, a5, (a0)
 ; RV64IA-ZACAS-NEXT:    bnez a5, .LBB3_3
 ; RV64IA-ZACAS-NEXT:  .LBB3_5: # %do_cmpxchg

@@ -19,9 +19,8 @@ define ptr @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %va
 ; CHECK-NEXT:    bne a6, a1, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    xor a6, a4, a2
-; CHECK-NEXT:    and a6, a6, a3
-; CHECK-NEXT:    xor a6, a4, a6
+; CHECK-NEXT:    xor a6, a6, a2
+; CHECK-NEXT:    xor a6, a6, a4
 ; CHECK-NEXT:    sc.w.rl a6, a6, (a5)
 ; CHECK-NEXT:    bnez a6, .LBB0_3
 ; CHECK-NEXT:  .LBB0_5: # %do_cmpxchg
