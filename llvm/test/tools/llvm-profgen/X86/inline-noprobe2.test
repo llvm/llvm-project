@@ -28,16 +28,16 @@
 ;CHECK-RAW-PROFILE-NOT: 7f7448e889e4
 ;CHECK-RAW-PROFILE-NOT: 7f7448e88826
 
-;CHECK: partition_pivot_first:3022:5
+;CHECK: partition_pivot_first:3061:5
 ;CHECK:  0: 5
 ;CHECK:  1: 5
 ;CHECK:  2: 5
 ;CHECK:  3: 5
-;CHECK:  3.1: 83
+;CHECK:  3.1: 85
 ;CHECK:  4: 82
 ;CHECK:  4.1: 26
 ;CHECK:  4.2: 25
-;CHECK:  4.3: 26
+;CHECK:  4.3: 27
 ;CHECK:  5: 6
 ;CHECK:  6: 6
 ;CHECK:  65516: 5
@@ -49,7 +49,7 @@
 ;CHECK:   1: 6
 ;CHECK:   2: 6
 ;CHECK:   3: 6
-;CHECK: main:1362:0
+;CHECK: main:1377:0
 ;CHECK:  0: 0
 ;CHECK:  3: 0
 ;CHECK:  4.1: 0
@@ -65,18 +65,18 @@
 ;CHECK:  11: 0
 ;CHECK:  14: 0
 ;CHECK:  65499: 0
-;CHECK: partition_pivot_last:1210:7
-;CHECK:  1: 6
-;CHECK:  2: 6
+;CHECK: partition_pivot_last:1234:7
+;CHECK:  1: 7
+;CHECK:  2: 7
 ;CHECK:  3: 6
 
-;w/o duplication factor :  3.1: 18
-;w/o duplication factor :  3.3: 18
+;w/o duplication factor :  3.1: 19
+;w/o duplication factor :  3.3: 19
 ;w/o duplication factor :  4: 19
 ;w/o duplication factor :  5: 9
 
-;CHECK:  3.1: 36
-;CHECK:  3.3: 36
+;CHECK:  3.1: 38
+;CHECK:  3.3: 38
 ;CHECK:  4: 38
 ;CHECK:  5: 18
 ;CHECK:  6: 5
@@ -95,13 +95,13 @@
 ;CHECK:   1: 5
 ;CHECK:   2: 5
 ;CHECK:   3: 5
-;CHECK: quick_sort:903:25
-;CHECK:  1: 24
+;CHECK: quick_sort:937:25
+;CHECK:  1: 25
 ;CHECK:  2: 12 partition_pivot_last:7 partition_pivot_first:5
 ;CHECK:  3: 12 quick_sort:12
 ;CHECK:  4: 12 quick_sort:12
-;CHECK:  6: 24
-;CHECK:  65507: 12
+;CHECK:  6: 25
+;CHECK:  65507: 13
 
 
 

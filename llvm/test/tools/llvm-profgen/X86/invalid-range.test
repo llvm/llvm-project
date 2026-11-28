@@ -8,8 +8,9 @@
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CS
 
 
-; NOCS: 4
+; NOCS: 5
 ; NOCS-NEXT: 201760-20177f:7
+; NOCS-NEXT: 20179e-2017bb:2
 ; NOCS-NEXT: 20179e-2017bf:5
 ; NOCS-NEXT: 2017c4-2017cf:6
 ; NOCS-NEXT: 2017c4-2017d8:1
@@ -32,7 +33,8 @@
 ; CS-NEXT:   2017cf->20179e:6
 ; CS-NEXT:   2017d8->2017e3:1
 ; CS-NEXT: [0x2017f4]
-; CS-NEXT:   1
+; CS-NEXT:   2
+; CS-NEXT:   20179e-2017bb:2
 ; CS-NEXT:   2017c4-2017cf:1
 ; CS-NEXT:   2
 ; CS-NEXT:   2017bf->201760:1

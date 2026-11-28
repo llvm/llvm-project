@@ -3,12 +3,12 @@
 ; RUN: llvm-profgen --format=text --ignore-stack-samples --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --mark-all-context-preinlined
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-MARK-PREINLINED
 
-; CHECK:     main:88:0
+; CHECK:     main:89:0
 ; CHECK-NEXT: 1: 0
-; CHECK-NEXT: 2: foo:88
+; CHECK-NEXT: 2: foo:89
 ; CHECK-NEXT:  1: 0
 ; CHECK-NEXT:  2: 15
-; CHECK-NEXT:  3: 15
+; CHECK-NEXT:  3: 16
 ; CHECK-NEXT:  4: 14
 ; CHECK-NEXT:  5: 1
 ; CHECK-NEXT:  6: 15
@@ -21,12 +21,12 @@
 ; CHECK-NEXT:  !CFGChecksum: 563088904013236
 ; CHECK-NEXT: !CFGChecksum: 281479271677951
 
-; CHECK-MARK-PREINLINED:     main:88:0
+; CHECK-MARK-PREINLINED:     main:89:0
 ; CHECK-MARK-PREINLINED-NEXT: 1: 0
-; CHECK-MARK-PREINLINED-NEXT: 2: foo:88
+; CHECK-MARK-PREINLINED-NEXT: 2: foo:89
 ; CHECK-MARK-PREINLINED-NEXT:  1: 0
 ; CHECK-MARK-PREINLINED-NEXT:  2: 15
-; CHECK-MARK-PREINLINED-NEXT:  3: 15
+; CHECK-MARK-PREINLINED-NEXT:  3: 16
 ; CHECK-MARK-PREINLINED-NEXT:  4: 14
 ; CHECK-MARK-PREINLINED-NEXT:  5: 1
 ; CHECK-MARK-PREINLINED-NEXT:  6: 15

@@ -11,6 +11,7 @@
 #include "MissingFrameInferrer.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
@@ -22,7 +23,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <optional>
+#include <utility>
 
 #define DEBUG_TYPE "load-binary"
 
@@ -94,12 +97,11 @@ static constexpr StringRef CanonicalSuffixes[] = {
     ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
 static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
-static const Target *getTarget(const ObjectFile *Obj) {
-  Triple TheTriple = Obj->makeTriple();
+static const Target *getTarget(const ObjectFile *Obj, Triple &ObjectTriple) {
   std::string Error;
   std::string ArchName;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, ObjectTriple, Error);
   if (!TheTarget)
     exitWithError(Error, Obj->getFileName());
   return TheTarget;
@@ -197,11 +199,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 
 ProfiledBinary::ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
                                const StringRef ExeBinPath,
-                               const StringRef DebugBinPath)
+                               const StringRef DebugBinPath,
+                               bool EnableRangeEndAnalysis)
     : LibraryOptions(LibraryOptions), Path(ExeBinPath),
       DebugBinaryPath(DebugBinPath), SymbolizerOpts(getSymbolizerOpts()),
       ProEpilogTracker(this),
       Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
+      EnableRangeEndAnalysis(EnableRangeEndAnalysis),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
@@ -593,6 +597,32 @@ void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
     FuncRange->IsFuncEntry = true;
 }
 
+// Return the sorted MC opcode names for additional range ends on this target.
+static ArrayRef<StringRef> getRangeStopNames(const Triple &ObjectTriple) {
+  // TODO: Replace these tables with queries to a new or extended MC interface
+  // for classifying control-flow effects.
+
+  // Keep both tables sorted by instruction name for binary search.
+  static constexpr StringRef AArch64Stops[] = {
+      "CFLTEQWi", "CFLTEQWr", "CFLTEQXi", "CFLTEQXr", "CFLTGEWr", "CFLTGEXr",
+      "CFLTGTWi", "CFLTGTWr", "CFLTGTXi", "CFLTGTXr", "CFLTHIWi", "CFLTHIWr",
+      "CFLTHIXi", "CFLTHIXr", "CFLTHSWr", "CFLTHSXr", "CFLTLOWi", "CFLTLOXi",
+      "CFLTLTWi", "CFLTLTXi", "CFLTNEWi", "CFLTNEWr", "CFLTNEXi", "CFLTNEXr",
+      "DCPS1",    "DCPS2",    "DCPS3",    "FLTcc",    "HLT",      "HVC",
+      "SMC",      "SVC",      "TENTER",   "TEXIT",    "TFLTNZ",   "TFLTZ"};
+  static constexpr StringRef X86Stops[] = {
+      "BOUNDS16rm", "BOUNDS32rm", "ENCLU",    "ERETS",   "ERETU",     "GETSEC",
+      "HLT",        "INT",        "INT3",     "INTO",    "JMPABS64i", "RSM",
+      "SEAMCALL",   "SEAMRET",    "SKINIT",   "SYSCALL", "SYSENTER",  "SYSEXIT",
+      "SYSEXIT64",  "SYSRET",     "SYSRET64", "TDCALL",  "UIRET",     "VMCALL",
+      "VMLAUNCH",   "VMMCALL",    "VMRESUME", "VMRUN32", "VMRUN64",   "XABORT"};
+  if (ObjectTriple.isAArch64())
+    return AArch64Stops;
+  if (ObjectTriple.isX86())
+    return X86Stops;
+  return {};
+}
+
 bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                                         SectionSymbolsTy &Symbols,
                                         const SectionRef &Section) {
@@ -668,6 +698,18 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
+      } else if (EnableRangeEndAnalysis) {
+        bool IsRangeStop = MCDesc.isTrap() || MCDesc.isBarrier();
+        if (!IsRangeStop && MCDesc.hasUnmodeledSideEffects()) {
+          // Transfers such as SVC have unmodeled side effects but lack
+          // branch/call/return flags. Use hasUnmodeledSideEffects() to limit
+          // name lookups.
+          StringRef Name = MII->getName(Inst.getOpcode());
+          IsRangeStop = llvm::binary_search(RangeStopNames, Name);
+        }
+
+        if (IsRangeStop && findFuncRange(Address))
+          RangeStopAddressSet.insert(Address);
       }
 
       if (MCDesc.isIndirectBranch()) {
@@ -742,8 +784,17 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 }
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
-  const Target *TheTarget = getTarget(Obj);
+  Triple ObjectTriple = Obj->makeTriple();
+  const Target *TheTarget = getTarget(Obj, ObjectTriple);
   StringRef FileName = Obj->getFileName();
+
+  // Match stop opcodes to the architecture of the MC decoder.
+  // TODO: Remove the AArch64/X86 restriction once MC provides the required
+  // control transfer classification.
+  if (EnableRangeEndAnalysis) {
+    RangeStopNames = getRangeStopNames(ObjectTriple);
+    EnableRangeEndAnalysis = !RangeStopNames.empty();
+  }
 
   MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
@@ -862,6 +913,13 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
         exitWithError("disassembling error", FileName);
     }
   }
+
+  // Binary search and sequential traversal through CodeAddressVec require
+  // increasing addresses. Instructions are collected in section-header order,
+  // which an object file need not keep sorted, so establish the invariant once
+  // after decoding every text section.
+  if (!llvm::is_sorted(CodeAddressVec))
+    llvm::sort(CodeAddressVec);
 
   if (!AddrsWithInvalidInstruction.empty()) {
     if (ShowDetailedWarning) {
@@ -1304,6 +1362,71 @@ void ProfiledBinary::inferMissingFrames(
     const SmallVectorImpl<uint64_t> &Context,
     SmallVectorImpl<uint64_t> &NewContext) {
   MissingContextInferrer->inferMissingFrames(Context, NewContext);
+}
+
+void ProfiledBinary::buildRangeEnds() {
+  assert(EnableRangeEndAnalysis && "static range-end analysis was not enabled");
+  assert(llvm::is_sorted(CodeAddressVec) &&
+         "code addresses must be sorted after disassembly");
+
+  // Walk instructions and function ranges backwards at the same time, so that
+  // classifying every instruction costs one merge step instead of a search.
+  auto FuncIt = StartAddrToFuncRangeMap.rbegin();
+  const FuncRange *NextRange = nullptr;
+  for (size_t I = CodeAddressVec.size(); I != 0; --I) {
+    uint64_t Current = CodeAddressVec[I - 1];
+
+    // Advance to the last function range that starts at or before Current, then
+    // keep it only if Current is inside that range.
+    while (FuncIt != StartAddrToFuncRangeMap.rend() && Current < FuncIt->first)
+      ++FuncIt;
+    const FuncRange *CurrentRange = nullptr;
+    if (FuncIt != StartAddrToFuncRangeMap.rend() &&
+        Current < FuncIt->second.EndAddress)
+      CurrentRange = &FuncIt->second;
+
+    // Instructions outside known functions are not indexed: findRangeEnd
+    // returns the instruction's own address without extending the range.
+    if (CurrentRange) {
+      // NextRange is null at the last instruction or when the next
+      // instruction is outside a known function.
+      // A function can span several adjacent ranges. A new function entry
+      // ends the preceding range even when both functions share a name.
+      bool EndsRange = !NextRange || NextRange->Func != CurrentRange->Func ||
+                       (NextRange != CurrentRange && NextRange->IsFuncEntry) ||
+                       CodeAddressVec[I] - Current != getInstSize(Current);
+      if (EndsRange || addressIsTransfer(Current) ||
+          RangeStopAddressSet.count(Current))
+        RangeEnds.push_back(Current);
+    }
+    NextRange = CurrentRange;
+  }
+
+  // The traversal is backwards, so restore increasing order for binary search.
+  std::reverse(RangeEnds.begin(), RangeEnds.end());
+}
+
+uint64_t ProfiledBinary::findRangeEnd(uint64_t Address) {
+  // Function ranges come from debug info and, for binaries with pseudo probes,
+  // from symbols. If no range covers Address, infer only that instruction.
+  if (!findFuncRange(Address))
+    return Address;
+
+  return findCoveredRangeEnd(Address);
+}
+
+uint64_t ProfiledBinary::findCoveredRangeEnd(uint64_t Address) {
+  // Index only range ends to keep storage proportional to their count.
+  // A query in a known function guarantees that the built index is nonempty.
+  if (RangeEnds.empty())
+    buildRangeEnds();
+
+  // The greatest covered address always ends a range, and every covered address
+  // is at or below it, so the search finds an end.
+  auto End = llvm::lower_bound(RangeEnds, Address);
+  assert(End != RangeEnds.end() &&
+         "a covered instruction must have a range end at or above it");
+  return *End;
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,

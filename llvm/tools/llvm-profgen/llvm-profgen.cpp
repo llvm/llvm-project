@@ -190,8 +190,11 @@ int main(int argc, const char *argv[]) {
   validateCommandLine();
 
   // Load symbols and disassemble the code of a given binary.
+  bool EnableRangeEndAnalysis =
+      !ShowDisassemblyOnly && (PerfScriptFilename.getNumOccurrences() ||
+                               PerfDataFilename.getNumOccurrences());
   std::unique_ptr<ProfiledBinary> Binary = std::make_unique<ProfiledBinary>(
-      LibraryOptions, BinaryPath, DebugBinPath);
+      LibraryOptions, BinaryPath, DebugBinPath, EnableRangeEndAnalysis);
   Binary->load(TargetTriple);
 
   if (ShowDisassemblyOnly)

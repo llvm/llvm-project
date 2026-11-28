@@ -208,6 +208,7 @@ struct MMapEvent {
 
 class ProfiledBinary {
   const cl::LibraryOptionsContext &LibraryOptions;
+
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
@@ -288,6 +289,11 @@ class ProfiledBinary {
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
+  // Addresses that end an inferred executable range: instructions that may
+  // transfer control or halt execution, and the last instructions before a code
+  // gap or a function boundary. Sorted in increasing order and built on demand
+  // by inference and comparison queries for instructions in known functions.
+  std::vector<uint64_t> RangeEnds;
   // A set of call instruction addresses. Used by virtual unwinding.
   DenseSet<uint64_t> CallAddressSet;
   // A set of return instruction addresses. Used by virtual unwinding.
@@ -300,6 +306,13 @@ class ProfiledBinary {
   DenseSet<uint64_t> IndirectBranchAddressSet;
   // A set of branch target addresses (destinations of branches/calls).
   DenseSet<uint64_t> BranchTargetAddressSet;
+  // Traps, barriers, and named stops in known functions that end inferred
+  // ranges. Kept separate from the unwinder's call, return, and branch
+  // classifications.
+  DenseSet<uint64_t> RangeStopAddressSet;
+
+  // Sorted MC opcode names for additional range ends on the decoder's target.
+  ArrayRef<StringRef> RangeStopNames;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -343,6 +356,9 @@ class ProfiledBinary {
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
   bool UseFSDiscriminator = false;
+
+  // Whether to collect and use static range ends for this binary.
+  bool EnableRangeEndAnalysis;
 
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
@@ -426,14 +442,20 @@ class ProfiledBinary {
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                           SectionSymbolsTy &Symbols,
                           const object::SectionRef &Section);
+
+  /// Build RangeEnds for instructions covered by known functions.
+  void buildRangeEnds();
+
   /// Symbolize a given instruction pointer and return a full call context.
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
 
 public:
+  // EnableRangeEndAnalysis requests range-end analysis on AArch64 and X86.
   ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
-                 const StringRef ExeBinPath, const StringRef DebugBinPath);
+                 const StringRef ExeBinPath, const StringRef DebugBinPath,
+                 bool EnableRangeEndAnalysis);
   ~ProfiledBinary();
 
   /// Decode the interesting parts of the binary and build internal data
@@ -518,6 +540,19 @@ public:
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);
   }
+
+  bool isRangeEndAnalysisEnabled() const { return EnableRangeEndAnalysis; }
+
+  // Return the inclusive end of the range starting at Address, which must be a
+  // decoded instruction. Stop at the first instruction that may transfer
+  // control or halt execution, or at the last instruction before a code gap or
+  // function boundary. If no function range covers Address, return Address
+  // itself. Requires static range-end analysis to be enabled.
+  uint64_t findRangeEnd(uint64_t Address);
+
+  // Find the first range end at or after Address, an instruction in a known
+  // function. Requires static range-end analysis to be enabled.
+  uint64_t findCoveredRangeEnd(uint64_t Address);
 
   bool rangeCrossUncondBranch(uint64_t Start, uint64_t End) {
     if (Start >= End)

@@ -9,6 +9,7 @@
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
@@ -308,13 +309,30 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   UnwindState State(Sample, Binary);
 
   NumTotalBranches += State.LBRStack.size();
+
+  // Infer the leaf range starting at the newest LBR target, using the sampled
+  // stack to supply its caller context.
+  if (Binary->isRangeEndAnalysisEnabled()) {
+    uint64_t LeafStart = State.getCurrentLBRTarget();
+    if (LeafStart != ExternalAddr) {
+      auto SavedIP = State.InstPtr;
+      uint64_t LeafEnd = Binary->findRangeEnd(LeafStart);
+      if (LeafEnd != SavedIP.Address)
+        State.InstPtr.update(LeafEnd);
+      unwindLinear(State, Repeat);
+      // With pseudo probes, unwindLinear leaves the IP at LeafEnd. Restore
+      // the IP to the newest LBR target before unwinding recorded branches.
+      State.InstPtr = SavedIP;
+    }
+  }
+
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
   // unwind the sample stack as we walk through LBR entries.
   while (State.hasNextLBR()) {
     State.checkStateConsistency();
 
-    // Do not attempt linear unwind for the leaf range as it's incomplete.
+    // Only unwind ranges bounded by two recorded branches here.
     if (!State.IsLastLBR()) {
       // Unwind implicit calls/returns from inlining, along the linear path,
       // break into smaller sub section each with its own calling context.
@@ -1142,6 +1160,9 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
                                              uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndAddress = 0;
+  if (Binary->isRangeEndAnalysisEnabled() && !Sample->LBRStack.empty() &&
+      Sample->LBRStack.front().Target != ExternalAddr)
+    EndAddress = Binary->findRangeEnd(Sample->LBRStack.front().Target);
   for (const LBREntry &LBR : Sample->LBRStack) {
     uint64_t SourceAddress = LBR.Source;
     uint64_t TargetAddress = LBR.Target;
@@ -1153,8 +1174,8 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
       Counter.recordBranchCount(SourceAddress, TargetAddress, Repeat);
     }
 
-    // If this not the first LBR, update the range count between TO of current
-    // LBR and FROM of next LBR.
+    // Update the range count between TO of the current LBR and FROM of the
+    // previous (newer) LBR. The first LBR can use an inferred end.
     uint64_t StartAddress = TargetAddress;
     if (Binary->addressIsCode(StartAddress) &&
         Binary->addressIsCode(EndAddress) &&
@@ -1398,24 +1419,21 @@ void PerfScriptReader::warnTruncatedStack() {
 }
 
 void PerfScriptReader::warnInvalidRange() {
+  const bool CheckRanges = Binary->isRangeEndAnalysisEnabled();
   DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> Ranges;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     uint64_t Count = Item.second;
-    uint64_t EndAddress = 0;
+    std::optional<uint64_t> EndAddress;
     for (const LBREntry &LBR : Sample->LBRStack) {
       uint64_t SourceAddress = LBR.Source;
       uint64_t StartAddress = LBR.Target;
-      if (EndAddress != 0)
-        Ranges[{StartAddress, EndAddress}] += Count;
+      if (EndAddress &&
+          (*EndAddress != 0 || (CheckRanges && StartAddress == 0)))
+        Ranges[{StartAddress, *EndAddress}] += Count;
       EndAddress = SourceAddress;
     }
-  }
-
-  if (Ranges.empty()) {
-    WithColor::warning() << "No samples in perf script!\n";
-    return;
   }
 
   auto WarnInvalidRange = [&](uint64_t StartAddress, uint64_t EndAddress,
@@ -1436,29 +1454,50 @@ void PerfScriptReader::warnInvalidRange() {
       "profile and binary mismatch.";
   const char *BogusRangeMsg = "Range start is after or too far from range end.";
 
+  bool HasWarningRanges = false;
   uint64_t TotalRangeNum = 0;
+  uint64_t NumShorterRanges = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
   uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
 
-  for (auto &I : Ranges) {
+  for (const auto &I : Ranges) {
     uint64_t StartAddress = I.first.first;
     uint64_t EndAddress = I.first.second;
-    TotalRangeNum += I.second;
 
-    if (!Binary->addressIsCode(StartAddress) &&
-        !Binary->addressIsCode(EndAddress))
+    // Percentage warnings count ranges with a nonzero recorded end.
+    if (EndAddress != 0) {
+      HasWarningRanges = true;
+      TotalRangeNum += I.second;
+    }
+
+    bool StartIsCode = Binary->addressIsCode(StartAddress);
+    if (!StartIsCode && !Binary->addressIsCode(EndAddress))
       continue;
 
-    if (!Binary->addressIsCode(StartAddress) ||
-        !Binary->addressIsTransfer(EndAddress)) {
+    bool EndsAtTransfer = StartIsCode && Binary->addressIsTransfer(EndAddress);
+    const FuncRange *FRange = Binary->findFuncRange(StartAddress);
+    bool HasCodeRange = StartIsCode && FRange &&
+                        (EndsAtTransfer || Binary->addressIsCode(EndAddress));
+    // Sum sample weights for ranges that end before their inferred end.
+    // If the recorded range ends on a branch, call, or return, inference
+    // reaches a static end at that instruction or earlier.
+    if (CheckRanges && !EndsAtTransfer && HasCodeRange &&
+        StartAddress <= EndAddress && StartAddress != ExternalAddr &&
+        EndAddress != ExternalAddr &&
+        Binary->findCoveredRangeEnd(StartAddress) > EndAddress)
+      NumShorterRanges += I.second;
+
+    if (EndAddress == 0)
+      continue;
+
+    if (!EndsAtTransfer) {
       InstNotBoundary += I.second;
       WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
     }
 
-    auto *FRange = Binary->findFuncRange(StartAddress);
     if (!FRange) {
       UnmatchedRange += I.second;
       WarnInvalidRange(StartAddress, EndAddress, DanglingRangeMsg);
@@ -1473,14 +1512,15 @@ void PerfScriptReader::warnInvalidRange() {
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
     }
 
-    if (Binary->addressIsCode(StartAddress) &&
-        Binary->addressIsCode(EndAddress) &&
+    if (HasCodeRange &&
         !isValidFallThroughRange(StartAddress, EndAddress, Binary)) {
       BogusRange += I.second;
       WarnInvalidRange(StartAddress, EndAddress, BogusRangeMsg);
     }
   }
 
+  if (!HasWarningRanges)
+    WithColor::warning() << "No samples in perf script!\n";
   emitWarningSummary(
       InstNotBoundary, TotalRangeNum,
       "of samples are from ranges that are not on instruction boundary.");
@@ -1497,6 +1537,9 @@ void PerfScriptReader::warnInvalidRange() {
       BogusRange, TotalRangeNum,
       "of samples are from ranges that have range start after or too far from "
       "range end acrossing the unconditinal jmp.");
+  if (NumShorterRanges)
+    errs() << "LBR ranges shorter than the inferred range: " << NumShorterRanges
+           << '\n';
 }
 
 void PerfScriptReader::warnIfBranchTargetMismatch() {

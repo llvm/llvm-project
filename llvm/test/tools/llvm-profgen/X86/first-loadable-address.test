@@ -10,7 +10,8 @@
 ## as an unset value and overwritten by the following executable PT_LOAD.
 ## With the default 4K page size, the text segment file offset is 0x1000, so the
 ## mmap event uses that offset rather than zero.
-# CHECK:      0
+# CHECK:      1
+# CHECK-NEXT: 11000-11000:1
 # CHECK-NEXT: 1
 # CHECK-NEXT: 11008->11000:1
 
