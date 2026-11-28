@@ -306,19 +306,20 @@ uptr internal_wcsnlen(const wchar_t *s, uptr maxlen) {
 bool mem_is_zero(const char *beg, uptr size) {
   CHECK_LE(size, 1ULL << FIRST_32_SECOND_64(30, 40));  // Sanity check.
   const char *end = beg + size;
-  uptr *aligned_beg = (uptr *)RoundUpTo((uptr)beg, sizeof(uptr));
-  uptr *aligned_end = (uptr *)RoundDownTo((uptr)end, sizeof(uptr));
   uptr all = 0;
-  // Prologue.
-  for (const char *mem = beg; mem < (char*)aligned_beg && mem < end; mem++)
-    all |= *mem;
-  // Aligned loop.
-  for (; aligned_beg < aligned_end; aligned_beg++)
-    all |= *aligned_beg;
-  // Epilogue.
-  if ((char *)aligned_end >= beg) {
-    for (const char *mem = (char *)aligned_end; mem < end; mem++) all |= *mem;
+  if (size < sizeof(uptr)) {
+    for (const char* mem = beg; mem < end; mem++) all |= *mem;
+    return all == 0;
   }
+  // Load the first and the last word of the range, which may be unaligned. They
+  // cover the bytes before the first aligned word and after the last one, and
+  // may overlap the aligned words or each other.
+  typedef ALIGNED(1) uptr UnalignedWord;
+  all =
+      *(const UnalignedWord*)beg | *(const UnalignedWord*)(end - sizeof(uptr));
+  const uptr* aligned_beg = (const uptr*)RoundUpTo((uptr)beg, sizeof(uptr));
+  const uptr* aligned_end = (const uptr*)RoundDownTo((uptr)end, sizeof(uptr));
+  for (; aligned_beg < aligned_end; aligned_beg++) all |= *aligned_beg;
   return all == 0;
 }
 
