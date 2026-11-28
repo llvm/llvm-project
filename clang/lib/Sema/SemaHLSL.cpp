@@ -5798,6 +5798,17 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
   return false;
 }
 
+bool SemaHLSL::IsVulkanTypedResourceElementCompatible(QualType QT) {
+  if (!IsTypedResourceElementCompatible(QT))
+    return false;
+
+  // Vulkan permits only 32-bit floats and 32-/64-bit integers as image
+  // Sampled Types (VUID-StandaloneSpirv-OpTypeImage-04656).
+  QualType EltTy = getElementTypeOf(QT, /*IncludeMatrix=*/false);
+  uint64_t Size = getASTContext().getTypeSize(EltTy);
+  return Size == 32 || (Size == 64 && EltTy->isIntegerType());
+}
+
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
   if (T1.isNull() || T2.isNull())
     return false;

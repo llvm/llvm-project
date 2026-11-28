@@ -17,7 +17,7 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -x hlsl -fsyntax-only \
 // RUN:   -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN:   -DTEXTURE=Texture2D -DGRAD_TYPE=float2 -DCOORD_TYPE=float2 \
-// RUN:   -verify=expected %s
+// RUN:   -verify=vk,expected %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -30,16 +30,20 @@
 //
 // Check prefixes:
 //   sm66               shader model 6.6 diagnostics
+//   vk                 Vulkan diagnostics
 //
 // Sampling textures with an integer element type was introduced in shader model
 // 6.7, so the `sm66` diagnostics are only expected in the shader model 6.6 runs.
 // The Vulkan target has no shader model and does not restrict integer sampling.
 // Comparison sampling requires a floating point element type at every shader
-// model, so those diagnostics use the `expected` prefix.
+// model, so those diagnostics use the `expected` prefix. Vulkan rejects
+// resources with 16-bit elements.
 
 TEXTURE<int4> TexVec;
 TEXTURE<uint> Tex;
+#ifndef __SPIRV__
 TEXTURE<int16_t> TexShort;
+#endif
 SamplerState Samp;
 SamplerComparisonState SampCmp;
 
@@ -68,9 +72,11 @@ void main(COORD_TYPE uv) {
   // sm66-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<vector<int, 4>>::Sample' requested here}}
   TexVec.Sample(Samp, uv);
 
+#ifndef __SPIRV__
   // sm66-error@* {{'SampleLevel' on resources containing 'short' requires shader model 6.7 or newer; the target shader model is 6.6}}
   // sm66-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<short>::SampleLevel' requested here}}
   TexShort.SampleLevel(Samp, uv, 0.0f);
+#endif
 
   // Comparison sampling rejects integer element types at every shader model.
   // expected-error@* {{'SampleCmp' and 'SampleCmpLevelZero' require resource to contain a floating point type}}

@@ -369,6 +369,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
   case UTT_IsTypedResourceElementCompatible:
+  case UTT_IsVulkanTypedResourceElementCompatible:
   case UTT_IsConstantBufferElementCompatible:
     // Fall-through
 
@@ -1148,11 +1149,14 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isHLSLIntangibleType();
 
   case UTT_IsTypedResourceElementCompatible:
+  case UTT_IsVulkanTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
     if (T->isIncompleteType())
       return false;
 
+    if (UTT == UTT_IsVulkanTypedResourceElementCompatible)
+      return Self.HLSL().IsVulkanTypedResourceElementCompatible(T);
     return Self.HLSL().IsTypedResourceElementCompatible(T);
 
   case UTT_IsConstantBufferElementCompatible:

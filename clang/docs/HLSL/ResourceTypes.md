@@ -48,8 +48,17 @@ IR. These types are target specific and differ between DXIL and SPIR-V
 generation, providing the necessary information for the targets to generate
 binding metadata for their respective target runtimes.
 
+## Vulkan Element Types
+
+Textures and typed buffers lower to SPIR-V images on Vulkan. The
+scalar element type, or vector component type, of an image must
+be a 32-bit floating-point type or a 32-bit or 64-bit integer type
+([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]).
+Clang rejects other element types when targeting SPIR-V. `StructuredBuffer`
+and `ByteAddressBuffer` do not lower to images and are not affected.
+
 [constantbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl#constant-buffers
 [rasterizerorderedtexture2d]: https://learn.microsoft.com/en-us/windows/win32/direct3d11/rasterizer-order-views
 [rwbyteaddressbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-rwbyteaddressbuffer
 [texture3d]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-texture3d
-
+[vulkan-image-sampled-type]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#VUID-StandaloneSpirv-OpTypeImage-04656
