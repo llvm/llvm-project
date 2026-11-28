@@ -318,8 +318,10 @@ class BitstreamCursor : SimpleBitstreamCursor {
     explicit Block(unsigned PCS) : PrevCodeSize(PCS) {}
   };
 
-  /// This tracks the codesize of parent blocks.
-  SmallVector<Block, 8> BlockScope;
+  /// This tracks the codesize of parent blocks. Clang's AST files nest blocks
+  /// at most two levels deep, LLVM IR bitcode three. Some clients (e.g. clang's
+  /// ModuleFile) embed many cursors, so keep the inline storage small.
+  SmallVector<Block, 2> BlockScope;
 
   BitstreamBlockInfo *BlockInfo = nullptr;
 
