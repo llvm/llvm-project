@@ -110,6 +110,15 @@ function(libomp_get_ldflags ldflags)
     libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   else()
     libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+    # Mach-O has no version script, so every symbol with default visibility is
+    # exported. Keep the C++ symbols of the runtime out of the export table, as
+    # exports_so.txt does on ELF. The template instantiations among them are
+    # weak definitions, which dyld coalesces across all loaded images: when a
+    # process holds two copies of libomp, calls inside one copy would otherwise
+    # be bound to the other copy.
+    if(APPLE)
+      libomp_append(ldflags_local "-Wl,-unexported_symbol,__Z*")
+    endif()
   endif()
   libomp_append(ldflags_local -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
   libomp_append(ldflags_local -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
