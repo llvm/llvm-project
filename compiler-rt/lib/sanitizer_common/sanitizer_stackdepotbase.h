@@ -31,6 +31,10 @@ class StackDepotBase {
   static constexpr int kTabSize = 1 << kTabSizeLog;  // Hash table size.
   static constexpr u32 kUnlockMask = (1ull << kIdSizeLog) - 1;
   static constexpr u32 kLockMask = ~kUnlockMask;
+  // Skipping the walk in `UnlockAfterFork` needs fork() to give the child each
+  // thread's stores in order, which was checked for Linux only. Go does not
+  // call the fork hooks.
+  static constexpr bool kCountLockers = SANITIZER_LINUX && !SANITIZER_GO;
 
  public:
   typedef typename Node::args_type args_type;
@@ -66,9 +70,17 @@ class StackDepotBase {
   u32 find(u32 s, args_type args, hash_type hash) const;
   static u32 lock(atomic_uint32_t *p);
   static void unlock(atomic_uint32_t *p, u32 s);
-  atomic_uint32_t tab[kTabSize];  // Hash table of Node's.
 
-  atomic_uint32_t n_uniq_ids;
+  // The two counters are written on every insertion. Keep them far from
+  // `nodes`, which every lookup reads: on x86_64 even the next cache line slows
+  // lookups down.
+  alignas(SANITIZER_CACHE_LINE_SIZE) atomic_uint32_t n_uniq_ids;
+  // Number of `Put` calls that hold a bucket lock or wait for one. It goes up
+  // before the lock is taken and down after it is released, so a forked child
+  // that reads zero has no locked bucket. In a child it can stay above zero.
+  atomic_uint32_t n_lockers;
+
+  atomic_uint32_t tab[kTabSize];  // Hash table of Node's.
 
   TwoLevelMap<Node, kNodesSize1, kNodesSize2> nodes;
 
@@ -93,9 +105,10 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::lock(atomic_uint32_t *p) {
   // Uses the pointer lsb as mutex.
   for (int i = 0;; i++) {
     u32 cmp = atomic_load(p, memory_order_relaxed);
+    // Release, so that the lock bit is not visible before `n_lockers` is.
     if ((cmp & kLockMask) == 0 &&
         atomic_compare_exchange_weak(p, &cmp, cmp | kLockMask,
-                                     memory_order_acquire))
+                                     memory_order_acq_rel))
       return cmp;
     if (i < 10)
       proc_yield(10);
@@ -120,7 +133,7 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
     return 0;
   hash_type h = Node::hash(args);
   atomic_uint32_t *p = &tab[h % kTabSize];
-  u32 v = atomic_load(p, memory_order_consume);
+  u32 v = atomic_load(p, memory_order_acquire);
   u32 s = v & kUnlockMask;
   // First, try to find the existing stack.
   u32 node = find(s, args, h);
@@ -128,11 +141,15 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
     return node;
 
   // If failed, lock, retry and insert new.
+  if (kCountLockers)  // Ordered by the release in `lock`.
+    atomic_fetch_add(&n_lockers, 1, memory_order_relaxed);
   u32 s2 = lock(p);
   if (s2 != s) {
     node = find(s2, args, h);
     if (node) {
       unlock(p, s2);
+      if (kCountLockers)
+        atomic_fetch_sub(&n_lockers, 1, memory_order_release);
       return node;
     }
   }
@@ -143,6 +160,8 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   new_node.store(s, args, h);
   new_node.link = s2;
   unlock(p, s);
+  if (kCountLockers)
+    atomic_fetch_sub(&n_lockers, 1, memory_order_release);
   if (inserted) *inserted = true;
   return s;
 }
@@ -182,6 +201,12 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAfterFork(
   if (!fork_child)
     return;
 
+  // Walking the table is slow, and no bucket is locked unless a `Put` was
+  // inserting during the fork. Do not reset the count: if a signal handler that
+  // interrupted `Put` has forked, that call is still going to decrement it.
+  if (kCountLockers && !atomic_load(&n_lockers, memory_order_acquire))
+    return;
+
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uint32_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
@@ -194,7 +219,7 @@ template <class Node, int kReservedBits, int kTabSizeLog>
 void StackDepotBase<Node, kReservedBits, kTabSizeLog>::PrintAll() {
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uint32_t *p = &tab[i];
-    u32 s = atomic_load(p, memory_order_consume) & kUnlockMask;
+    u32 s = atomic_load(p, memory_order_acquire) & kUnlockMask;
     for (; s;) {
       const Node &node = nodes[s];
       Printf("Stack for id %u:\n", s);

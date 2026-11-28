@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
 
@@ -122,6 +123,104 @@ TEST_F(StackDepotTest, PrintNoLock) {
     CHECK_EQ(idx2id[i], StackDepotPut(s));
   }
 }
+
+// All values share bucket 0. While `hold` is set, store() does not return, so
+// that a test knows that a thread holds the lock of that bucket.
+struct OneBucketNode {
+  using args_type = u32;
+  using hash_type = u32;
+  using handle_type = void;
+  using Depot = StackDepotBase<OneBucketNode, 1, 4>;
+
+  u32 value;
+  u32 link;
+
+  static hash_type hash(u32) { return 0; }
+  static bool is_valid(u32 v) { return v; }
+  static uptr allocated() { return 0; }
+  bool eq(hash_type, u32 v) const { return v == value; }
+  u32 load(u32) const { return value; }
+  void store(u32, u32 v, hash_type) {
+    value = v;
+    in_store = true;
+    while (hold) std::this_thread::yield();
+  }
+
+  static std::atomic<bool> hold;
+  static std::atomic<bool> in_store;
+
+  // The node type is a friend of the depot.
+  static bool IsLocked(const Depot& depot, uptr bucket);
+  static void Lock(Depot& depot, uptr bucket);
+  static u32 Lockers(const Depot& depot);
+};
+
+std::atomic<bool> OneBucketNode::hold;
+std::atomic<bool> OneBucketNode::in_store;
+
+bool OneBucketNode::IsLocked(const Depot& depot, uptr bucket) {
+  return atomic_load_relaxed(&depot.tab[bucket]) & Depot::kLockMask;
+}
+
+void OneBucketNode::Lock(Depot& depot, uptr bucket) {
+  Depot::lock(&depot.tab[bucket]);
+}
+
+u32 OneBucketNode::Lockers(const Depot& depot) {
+  return atomic_load_relaxed(&depot.n_lockers);
+}
+
+// These tests call the fork hooks as a child would, without forking.
+class StackDepotBaseForkTest : public testing::Test {
+ protected:
+  void TearDown() override { depot.TestOnlyUnmap(); }
+
+  std::thread PutAndHoldLock(u32 value) {
+    OneBucketNode::in_store = false;
+    OneBucketNode::hold = true;
+    std::thread thread([value] { depot.Put(value); });
+    while (!OneBucketNode::in_store) std::this_thread::yield();
+    return thread;
+  }
+
+  void RunForkHooksOfChild() {
+    depot.LockBeforeFork();
+    depot.UnlockAfterFork(/*fork_child=*/true);
+  }
+
+  static OneBucketNode::Depot depot;
+};
+
+OneBucketNode::Depot StackDepotBaseForkTest::depot;
+
+TEST_F(StackDepotBaseForkTest, UnlocksBucketOfInsertionInProgress) {
+  std::thread thread = PutAndHoldLock(1);
+  EXPECT_TRUE(OneBucketNode::IsLocked(depot, 0));
+  RunForkHooksOfChild();
+  EXPECT_FALSE(OneBucketNode::IsLocked(depot, 0));
+  // The interrupted Put may go on in the child (fork from a signal handler).
+  OneBucketNode::hold = false;
+  thread.join();
+  EXPECT_EQ(0u, OneBucketNode::Lockers(depot));
+}
+
+#if SANITIZER_LINUX
+TEST_F(StackDepotBaseForkTest, SkipsTableIfNoInsertionInProgress) {
+  // The second thread waits for the lock and then finds the value, so both ways
+  // out of the locked part of Put are taken.
+  std::thread inserts = PutAndHoldLock(1);
+  std::thread finds([] { depot.Put(1); });
+  while (OneBucketNode::Lockers(depot) != 2) std::this_thread::yield();
+  OneBucketNode::hold = false;
+  inserts.join();
+  finds.join();
+  EXPECT_EQ(1u, depot.GetStats().n_uniq_ids);
+  // A lock that no Put has taken shows whether the table is walked.
+  OneBucketNode::Lock(depot, 1);
+  RunForkHooksOfChild();
+  EXPECT_TRUE(OneBucketNode::IsLocked(depot, 1));
+}
+#endif  // SANITIZER_LINUX
 
 static struct StackDepotBenchmarkParams {
   int UniqueStacksPerThread;
