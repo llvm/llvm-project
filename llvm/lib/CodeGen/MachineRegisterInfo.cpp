@@ -113,8 +113,17 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
     } else if (RegCB != ConstrainingRegCB)
       return false;
   }
-  if (ConstrainingRegTy.isValid())
+  if (ConstrainingRegTy.isValid()) {
+    // RegTy and ConstrainingRegTy can be "equal" here while having different
+    // LLT::Kind, e.g. an untyped ANY_SCALAR vs a typed INTEGER/FLOAT of the
+    // same size (LLT::operator== treats these as equal). Don't lose the more
+    // specific type by blindly copying over ConstrainingRegTy in that case.
+    if (RegTy.isValid() &&
+        RegTy.isAnyScalar() != ConstrainingRegTy.isAnyScalar() &&
+        ConstrainingRegTy.isAnyScalar())
+      return true;
     setType(Reg, ConstrainingRegTy);
+  }
   return true;
 }
 
