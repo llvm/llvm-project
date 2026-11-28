@@ -1945,11 +1945,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
     ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
   }
 
-  if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, PrintingPolicy,
-                                 /*Qualified=*/false);
-
-  if (This && IsMemberCall) {
+  if (IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
       Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
@@ -1963,17 +1959,23 @@ void CallStackFrame::describe(raw_ostream &Out) const {
       OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
-    } else {
+    } else if (This) {
       APValue Val;
       This->moveInto(Val);
       Val.printPretty(
           Out, Info.Ctx,
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
+    } else if (const auto *CE = dyn_cast_if_present<clang::CallExpr>(CallExpr);
+               CE && ExplicitInstanceParam) {
+      // A by-value explicit object parameter has no object lvalue; the object
+      // is the first argument of the call.
+      CE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
+                                 /*Indentation=*/0);
+      Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, PrintingPolicy,
-                                 /*Qualified=*/false);
   }
+  Callee->getNameForDiagnostic(Out, PrintingPolicy, /*Qualified=*/false);
 
   Out << '(';
 
@@ -9239,8 +9241,10 @@ public:
     Stmt *Body = FD->getBody(Definition);
 
     // Treat the object argument as `this` when evaluating defaulted
-    // special menmber functions
-    if (FD->hasCXXExplicitFunctionObjectParameter())
+    // special member functions. EvaluateArgs only records the object in
+    // ObjectArg for an explicit object parameter of reference type.
+    if (FD->hasCXXExplicitFunctionObjectParameter() &&
+        FD->getParamDecl(0)->getType()->isReferenceType())
       This = &ObjectArg;
 
     if (!CheckConstexprFunction(Info, Loc, FD, Definition, Body) ||

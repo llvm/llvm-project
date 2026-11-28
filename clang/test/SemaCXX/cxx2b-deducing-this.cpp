@@ -1443,6 +1443,27 @@ namespace ConstexprBacktrace {
   }
   static_assert(test2()); // expected-error {{not an integral constant expression}} \
                           // expected-note {{in call to}}
+
+  // GH245413
+  struct ByValue {
+    int a = 0;
+    constexpr operator int(this ByValue self) { return 1 / self.a; } // expected-note {{division by zero}}
+    constexpr int foo(this ByValue self) { return 1 / self.a; } // expected-note 3 {{division by zero}}
+    constexpr int ref(this const ByValue &self) { return 1 / self.a; } // expected-note {{division by zero}}
+    constexpr int ok(this ByValue self, int b) { return b + self.a; }
+  };
+  constexpr ByValue bv;
+  constexpr int conv = bv; // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{in call to 'bv.operator int()'}}
+  constexpr int call = bv.foo(); // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{in call to 'bv.foo()'}}
+  constexpr int arrow = (&bv)->foo(); // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{in call to '*(&bv).foo()'}}
+  constexpr int temp = ByValue().foo(); // expected-error {{must be initialized by a constant expression}} \
+                                        // expected-note {{in call to 'ByValue().foo()'}}
+  constexpr int byref = (&bv)->ref(); // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{in call to 'bv.ref()'}}
+  static_assert(bv.ok(2) == 2);
 }
 
 namespace GH176639 {

@@ -1324,6 +1324,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when classifying a dependent call whose callee has already
   been substituted to a value of non-callable type. (#GH218323)
 
+- Fixed a crash when diagnosing a constant evaluation failure in a member
+  function with a by-value explicit object parameter. (#GH245413)
+
 - Fixed an issue where Clang would allow invoking consteval functions outside
   of a manifestly constant evaluated context. (#GH183415, #GH169139)
 
