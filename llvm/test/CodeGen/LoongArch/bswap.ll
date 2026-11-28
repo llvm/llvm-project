@@ -5,6 +5,11 @@
 ; RUN:   | FileCheck %s --check-prefix=LA32S
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=LA64
+; RUN: llc --mtriple=loongarch64 -mcpu=loongarch64 --verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefix=LA64
+; RUN: llc --mtriple=loongarch64 -mcpu=loongarch64 -mattr=-f,-d \
+; RUN:   -target-abi=lp64s --verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefix=LA64
 
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)
@@ -12,6 +17,7 @@ declare i48 @llvm.bswap.i48(i48)
 declare i64 @llvm.bswap.i64(i64)
 declare i80 @llvm.bswap.i80(i80)
 declare i128 @llvm.bswap.i128(i128)
+declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define i16 @test_bswap_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_bswap_i16:
@@ -304,4 +310,178 @@ define i128 @test_bswap_i128(i128 %a) nounwind {
 ; LA64-NEXT:    ret
   %tmp = call i128 @llvm.bswap.i128(i128 %a)
   ret i128 %tmp
+}
+
+define signext i32 @rot_bswap32(i32 signext %x) {
+; LA32R-LABEL: rot_bswap32:
+; LA32R:       # %bb.0:
+; LA32R-NEXT:    lu12i.w $a1, 15
+; LA32R-NEXT:    ori $a1, $a1, 3840
+; LA32R-NEXT:    and $a2, $a0, $a1
+; LA32R-NEXT:    slli.w $a2, $a2, 8
+; LA32R-NEXT:    slli.w $a3, $a0, 24
+; LA32R-NEXT:    or $a2, $a3, $a2
+; LA32R-NEXT:    srli.w $a3, $a0, 8
+; LA32R-NEXT:    and $a1, $a3, $a1
+; LA32R-NEXT:    srli.w $a0, $a0, 24
+; LA32R-NEXT:    or $a0, $a1, $a0
+; LA32R-NEXT:    slli.w $a0, $a0, 16
+; LA32R-NEXT:    srli.w $a1, $a2, 16
+; LA32R-NEXT:    or $a0, $a0, $a1
+; LA32R-NEXT:    ret
+;
+; LA32S-LABEL: rot_bswap32:
+; LA32S:       # %bb.0:
+; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    ret
+;
+; LA64-LABEL: rot_bswap32:
+; LA64:       # %bb.0:
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    ret
+  %b = call i32 @llvm.bswap.i32(i32 %x)
+  %r = call i32 @llvm.fshl.i32(i32 %b, i32 %b, i32 16)
+  ret i32 %r
+}
+
+define signext i32 @masked32(i32 signext %x) {
+; LA32R-LABEL: masked32:
+; LA32R:       # %bb.0:
+; LA32R-NEXT:    slli.w $a1, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, -4081
+; LA32R-NEXT:    ori $a2, $a2, 3840
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    srli.w $a0, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, 4080
+; LA32R-NEXT:    ori $a2, $a2, 255
+; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    or $a0, $a1, $a0
+; LA32R-NEXT:    ret
+;
+; LA32S-LABEL: masked32:
+; LA32S:       # %bb.0:
+; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    ret
+;
+; LA64-LABEL: masked32:
+; LA64:       # %bb.0:
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    ret
+  %hi = shl i32 %x, 8
+  %him = and i32 %hi, -16711936
+  %lo = lshr i32 %x, 8
+  %lom = and i32 %lo, 16711935
+  %r = or i32 %him, %lom
+  ret i32 %r
+}
+
+define signext i32 @masked32_commuted(i32 signext %x) {
+; LA32R-LABEL: masked32_commuted:
+; LA32R:       # %bb.0:
+; LA32R-NEXT:    srli.w $a1, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, 4080
+; LA32R-NEXT:    ori $a2, $a2, 255
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    slli.w $a0, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, -4081
+; LA32R-NEXT:    ori $a2, $a2, 3840
+; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    or $a0, $a1, $a0
+; LA32R-NEXT:    ret
+;
+; LA32S-LABEL: masked32_commuted:
+; LA32S:       # %bb.0:
+; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    ret
+;
+; LA64-LABEL: masked32_commuted:
+; LA64:       # %bb.0:
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    ret
+  %lo = lshr i32 %x, 8
+  %lom = and i32 %lo, 16711935
+  %hi = shl i32 %x, 8
+  %him = and i32 %hi, -16711936
+  %r = or i32 %lom, %him
+  ret i32 %r
+}
+
+define i64 @masked32_sext(i32 %x) {
+; LA32R-LABEL: masked32_sext:
+; LA32R:       # %bb.0:
+; LA32R-NEXT:    srli.w $a1, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, 4080
+; LA32R-NEXT:    ori $a2, $a2, 255
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    slli.w $a2, $a0, 8
+; LA32R-NEXT:    lu12i.w $a0, -4081
+; LA32R-NEXT:    ori $a0, $a0, 3840
+; LA32R-NEXT:    and $a0, $a2, $a0
+; LA32R-NEXT:    or $a0, $a1, $a0
+; LA32R-NEXT:    srai.w $a1, $a2, 31
+; LA32R-NEXT:    ret
+;
+; LA32S-LABEL: masked32_sext:
+; LA32S:       # %bb.0:
+; LA32S-NEXT:    slli.w $a1, $a0, 8
+; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    srai.w $a1, $a1, 31
+; LA32S-NEXT:    ret
+;
+; LA64-LABEL: masked32_sext:
+; LA64:       # %bb.0:
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    ret
+  %lo = lshr i32 %x, 8
+  %lom = and i32 %lo, 16711935
+  %hi = shl i32 %x, 8
+  %him = and i32 %hi, -16711936
+  %r = or i32 %lom, %him
+  %wide = sext i32 %r to i64
+  ret i64 %wide
+}
+
+define i64 @masked32_zext(i32 %x) {
+; LA32R-LABEL: masked32_zext:
+; LA32R:       # %bb.0:
+; LA32R-NEXT:    srli.w $a1, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, 4080
+; LA32R-NEXT:    ori $a2, $a2, 255
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    slli.w $a0, $a0, 8
+; LA32R-NEXT:    lu12i.w $a2, -4081
+; LA32R-NEXT:    ori $a2, $a2, 3840
+; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    or $a0, $a1, $a0
+; LA32R-NEXT:    move $a1, $zero
+; LA32R-NEXT:    ret
+;
+; LA32S-LABEL: masked32_zext:
+; LA32S:       # %bb.0:
+; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    rotri.w $a0, $a0, 16
+; LA32S-NEXT:    move $a1, $zero
+; LA32S-NEXT:    ret
+;
+; LA64-LABEL: masked32_zext:
+; LA64:       # %bb.0:
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ret
+  %lo = lshr i32 %x, 8
+  %lom = and i32 %lo, 16711935
+  %hi = shl i32 %x, 8
+  %him = and i32 %hi, -16711936
+  %r = or i32 %lom, %him
+  %wide = zext i32 %r to i64
+  ret i64 %wide
 }

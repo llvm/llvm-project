@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -7442,8 +7443,24 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.has32S())
     return SDValue();
 
-  if (DCI.isBeforeLegalizeOps())
+  if (DCI.isBeforeLegalizeOps()) {
+    if (!Subtarget.is64Bit() || ValTy != MVT::i32)
+      return SDValue();
+
+    // Match the two masked byte shifts before i32 is promoted to i64.
+    using namespace SDPatternMatch;
+    SDValue X, Y;
+    if (sd_match(N, m_Or(m_And(m_Srl(m_Value(X), m_SpecificInt(8)),
+                               m_SpecificInt(0x00ff00ff)),
+                         m_And(m_Shl(m_Value(Y), m_SpecificInt(8)),
+                               m_SpecificInt(0xff00ff00)))) &&
+        X == Y) {
+      SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, MVT::i32, X);
+      return DAG.getNode(ISD::ROTR, DL, MVT::i32, BSwap,
+                         DAG.getConstant(16, DL, MVT::i32));
+    }
     return SDValue();
+  }
 
   if (ValBits != 32 && ValBits != 64)
     return SDValue();
