@@ -835,6 +835,73 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
+/// Return true if the caller of CS is a single-block Function consisting of
+/// CS and a return of its result only, ignoring debug intrinsics.
+static bool isForwardingWrapper(const CallBase &CS) {
+  const Function *Caller = CS.getCaller();
+  if (!hasSingleElement(*Caller))
+    return false;
+  for (const Instruction &I : Caller->front()) {
+    if (&I == &CS || isa<DbgInfoIntrinsic>(I))
+      continue;
+    const auto *Ret = dyn_cast<ReturnInst>(&I);
+    if (!Ret ||
+        Ret->getReturnValue() != (CS.getType()->isVoidTy() ? nullptr : &CS))
+      return false;
+  }
+  return true;
+}
+
+CallBase *
+FunctionSpecializer::getUniqueCall(Function *F, const SpecSig &Sig,
+                                   DenseMap<SpecSig, CallBase *> &UniqueCalls) {
+  auto [It, Inserted] = UniqueCalls.try_emplace(Sig, nullptr);
+  if (!Inserted)
+    return It->second;
+
+  constexpr unsigned MaxArgLookups = 4096;
+  unsigned ArgLookups = 0;
+  CallBase *UniqueCall = nullptr;
+
+  // Include live calls skipped by discovery and calls with unknown arguments.
+  // Only a known unequal argument rules out a possible user.
+  for (Use &U : F->uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) || CB->getCalledFunction() != F)
+      return nullptr;
+
+    // Ignore dead calls. SCCP may not have lattice values for their operands.
+    if (!Solver.isBlockExecutable(CB->getParent()))
+      continue;
+
+    bool Mismatch = false;
+    for (const ArgInfo &A : Sig.Args) {
+      // Give up conservatively on budget exhaustion.
+      if (++ArgLookups > MaxArgLookups)
+        return nullptr;
+      Constant *C =
+          getCandidateConstant(CB->getArgOperand(A.Formal->getArgNo()));
+      if (C && C != A.Actual) {
+        Mismatch = true;
+        break;
+      }
+    }
+
+    if (Mismatch)
+      continue;
+
+    // Conservatively assume any other call, including a recursive one, could
+    // match the specialization.
+    if (UniqueCall || CB->getFunction() == F)
+      return nullptr;
+
+    UniqueCall = CB;
+  }
+
+  It->second = UniqueCall;
+  return UniqueCall;
+}
+
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
@@ -842,6 +909,9 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
   // entry in the all specialisation array. Used to ensure uniqueness of
   // specialisations.
   DenseMap<SpecSig, unsigned> UniqueSpecs;
+
+  // Cache of possible unique call sites, including failed uniqueness checks.
+  DenseMap<SpecSig, CallBase *> UniqueCalls;
 
   // Get a list of interesting arguments.
   SmallVector<Argument *> Args;
@@ -913,6 +983,23 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       unsigned CodeSizeSavings = getCostValue(CodeSize);
       unsigned SpecSize = FuncSize - CodeSizeSavings;
 
+      // Consider a small inline-hinted specialization with a unique forwarding
+      // wrapper profitable through inlining, provided the call's attributes
+      // permit inlining.
+      auto IsInlineWrapperCandidate = [&]() -> bool {
+        if (!F->hasFnAttribute(Attribute::InlineHint) ||
+            SpecSize >= Opts.funcspec_min_function_size ||
+            !isForwardingWrapper(CS) || getUniqueCall(F, S, UniqueCalls) != &CS)
+          return false;
+
+        if (auto Decision = getAttributeBasedInliningDecision(
+                CS, F, GetTTI(*CS.getCaller()), GetTLI);
+            Decision && !Decision->isSuccess())
+          return false;
+
+        return true;
+      };
+
       auto IsProfitable = [&]() -> bool {
         // No check required.
         if (Opts.funcspec_force)
@@ -946,10 +1033,14 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << LatencySavings << " ("
                    << (LatencySavings * 100 / FuncSize) << "%)}\n");
 
-        // Minimum latency savings.
+        // Require minimum latency savings unless this is an inline-wrapper
+        // candidate.
         if (static_cast<uint64_t>(LatencySavings) * 100 <
-            static_cast<uint64_t>(Opts.funcspec_min_latency_savings) * FuncSize)
+                static_cast<uint64_t>(Opts.funcspec_min_latency_savings) *
+                    FuncSize &&
+            !IsInlineWrapperCandidate())
           return false;
+
         // Maximum codesize growth.
         if ((FunctionGrowth[F] + SpecSize) / FuncSize >
             Opts.funcspec_max_codesize_growth)

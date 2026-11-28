@@ -320,6 +320,11 @@ private:
   /// have a constant value. Return that constant.
   Constant *getCandidateConstant(Value *V);
 
+  /// Return the sole possible direct call site to \p F matching \p Sig, or
+  /// nullptr if uniqueness cannot be established.
+  CallBase *getUniqueCall(Function *F, const SpecSig &Sig,
+                          DenseMap<SpecSig, CallBase *> &UniqueCalls);
+
   /// @brief Find and update calls to \p F, which match a specialization
   /// @param F Orginal function
   /// @param Begin Start of a range of possibly matching specialisations
