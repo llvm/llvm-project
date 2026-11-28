@@ -110,7 +110,9 @@ static void BuildInstOrderMap(MachineBasicBlock::iterator Start,
   for (MachineInstr &I : make_range(Start, Start->getParent()->end())) {
     if (isCodeMotionBarrier(I))
       break;
-    M[&I] = i++;
+    // A debug instruction gets the order of the next instruction, so that the
+    // order of every other instruction does not depend on debug instructions.
+    M[&I] = I.isDebugInstr() ? i : i++;
   }
 }
 
