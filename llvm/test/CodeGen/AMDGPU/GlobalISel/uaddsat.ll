@@ -1790,8 +1790,8 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 define amdgpu_ps <16 x i32> @s_uaddsat_v16i32(<16 x i32> inreg %lhs, <16 x i32> inreg %rhs) {
 ; GFX6-LABEL: s_uaddsat_v16i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_not_b32 s32, s0
-; GFX6-NEXT:    s_min_u32 s16, s32, s16
+; GFX6-NEXT:    s_not_b32 s33, s0
+; GFX6-NEXT:    s_min_u32 s16, s33, s16
 ; GFX6-NEXT:    s_add_i32 s0, s0, s16
 ; GFX6-NEXT:    s_not_b32 s16, s1
 ; GFX6-NEXT:    s_min_u32 s16, s16, s17
@@ -1858,22 +1858,22 @@ define amdgpu_ps <16 x i32> @s_uaddsat_v16i32(<16 x i32> inreg %lhs, <16 x i32> 
 ; GFX8-NEXT:    v_mov_b32_e32 v13, s29
 ; GFX8-NEXT:    v_mov_b32_e32 v14, s30
 ; GFX8-NEXT:    v_mov_b32_e32 v15, s31
-; GFX8-NEXT:    v_add_u32_e64 v0, s[32:33], s0, v0 clamp
-; GFX8-NEXT:    v_add_u32_e64 v1, s[16:17], s1, v1 clamp
-; GFX8-NEXT:    v_add_u32_e64 v2, s[16:17], s2, v2 clamp
-; GFX8-NEXT:    v_add_u32_e64 v3, s[2:3], s3, v3 clamp
-; GFX8-NEXT:    v_add_u32_e64 v4, s[2:3], s4, v4 clamp
-; GFX8-NEXT:    v_add_u32_e64 v5, s[2:3], s5, v5 clamp
-; GFX8-NEXT:    v_add_u32_e64 v6, s[2:3], s6, v6 clamp
-; GFX8-NEXT:    v_add_u32_e64 v7, s[2:3], s7, v7 clamp
-; GFX8-NEXT:    v_add_u32_e64 v8, s[2:3], s8, v8 clamp
-; GFX8-NEXT:    v_add_u32_e64 v9, s[2:3], s9, v9 clamp
-; GFX8-NEXT:    v_add_u32_e64 v10, s[2:3], s10, v10 clamp
-; GFX8-NEXT:    v_add_u32_e64 v11, s[2:3], s11, v11 clamp
-; GFX8-NEXT:    v_add_u32_e64 v12, s[2:3], s12, v12 clamp
-; GFX8-NEXT:    v_add_u32_e64 v13, s[2:3], s13, v13 clamp
-; GFX8-NEXT:    v_add_u32_e64 v14, s[2:3], s14, v14 clamp
-; GFX8-NEXT:    v_add_u32_e64 v15, s[2:3], s15, v15 clamp
+; GFX8-NEXT:    v_add_u32_e64 v0, s[34:35], s0, v0 clamp
+; GFX8-NEXT:    v_add_u32_e64 v1, s[0:1], s1, v1 clamp
+; GFX8-NEXT:    v_add_u32_e64 v2, s[0:1], s2, v2 clamp
+; GFX8-NEXT:    v_add_u32_e64 v3, s[0:1], s3, v3 clamp
+; GFX8-NEXT:    v_add_u32_e64 v4, s[0:1], s4, v4 clamp
+; GFX8-NEXT:    v_add_u32_e64 v5, s[0:1], s5, v5 clamp
+; GFX8-NEXT:    v_add_u32_e64 v6, s[0:1], s6, v6 clamp
+; GFX8-NEXT:    v_add_u32_e64 v7, s[0:1], s7, v7 clamp
+; GFX8-NEXT:    v_add_u32_e64 v8, s[0:1], s8, v8 clamp
+; GFX8-NEXT:    v_add_u32_e64 v9, s[0:1], s9, v9 clamp
+; GFX8-NEXT:    v_add_u32_e64 v10, s[0:1], s10, v10 clamp
+; GFX8-NEXT:    v_add_u32_e64 v11, s[0:1], s11, v11 clamp
+; GFX8-NEXT:    v_add_u32_e64 v12, s[0:1], s12, v12 clamp
+; GFX8-NEXT:    v_add_u32_e64 v13, s[0:1], s13, v13 clamp
+; GFX8-NEXT:    v_add_u32_e64 v14, s[0:1], s14, v14 clamp
+; GFX8-NEXT:    v_add_u32_e64 v15, s[0:1], s15, v15 clamp
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v2

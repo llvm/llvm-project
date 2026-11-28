@@ -819,10 +819,17 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // alignment requirement. If the SRSRC that we found is clobbering with
   // the scratch wave offset, which may be in a fixed SGPR or a free SGPR
   // chosen by SITargetLowering::allocateSystemSGPRs, COPY the scratch
-  // wave offset to a free SGPR.
+  // wave offset to a free SGPR. The wave offset is also copied if it lives
+  // in the SP or FP, which are written before it is read.
+  Register StackPtrReg = requiresStackPointerReference(MF)
+                             ? MFI->getStackPtrOffsetReg()
+                             : Register();
+  Register FramePtrReg = hasFP(MF) ? MFI->getFrameOffsetReg() : Register();
   Register ScratchWaveOffsetReg;
   if (PreloadedScratchWaveOffsetReg &&
-      TRI->isSubRegisterEq(ScratchRsrcReg, PreloadedScratchWaveOffsetReg)) {
+      (TRI->isSubRegisterEq(ScratchRsrcReg, PreloadedScratchWaveOffsetReg) ||
+       PreloadedScratchWaveOffsetReg == StackPtrReg ||
+       PreloadedScratchWaveOffsetReg == FramePtrReg)) {
     ArrayRef<MCPhysReg> AllSGPRs = TRI->getAllSGPR32(MF);
     unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
     AllSGPRs = AllSGPRs.slice(
@@ -830,7 +837,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     Register GITPtrLoReg = MFI->getGITPtrLoReg(MF);
     for (MCPhysReg Reg : AllSGPRs) {
       if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg) &&
-          !TRI->isSubRegisterEq(ScratchRsrcReg, Reg) && GITPtrLoReg != Reg) {
+          !TRI->isSubRegisterEq(ScratchRsrcReg, Reg) && GITPtrLoReg != Reg &&
+          Reg != StackPtrReg && Reg != FramePtrReg) {
         ScratchWaveOffsetReg = Reg;
         BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchWaveOffsetReg)
             .addReg(PreloadedScratchWaveOffsetReg, RegState::Kill);

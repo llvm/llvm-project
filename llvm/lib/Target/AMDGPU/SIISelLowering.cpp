@@ -3482,8 +3482,6 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
     }
   }
 
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
   // For entry functions we have to set up the stack pointer if we use it,
   // whereas non-entry functions get this "for free". This means there is no
   // intrinsic advantage to using S32 over S34 in cases where we do not have
@@ -3495,9 +3493,14 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // Try to use s32 as the SP, but move it if it would interfere with input
   // arguments. This won't work with calls though.
   //
+  // Check the entry block's live-ins rather than MRI live-ins, since
+  // GlobalISel only records incoming shader arguments there, and the scratch
+  // wave offset is read by the prologue before SP is set up.
+  //
   // FIXME: Move SP to avoid any possible inputs, or find a way to spill input
   // registers.
-  if (!MRI.isLiveIn(AMDGPU::SGPR32)) {
+  const MachineBasicBlock &EntryMBB = MF.front();
+  if (!EntryMBB.isLiveIn(AMDGPU::SGPR32)) {
     Info.setStackPtrOffsetReg(AMDGPU::SGPR32);
   } else {
     assert(AMDGPU::isShader(MF.getFunction().getCallingConv()));
@@ -3506,7 +3509,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
       report_fatal_error("call in graphics shader with too many input SGPRs");
 
     for (unsigned Reg : AMDGPU::SGPR_32RegClass) {
-      if (!MRI.isLiveIn(Reg)) {
+      if (!EntryMBB.isLiveIn(Reg)) {
         Info.setStackPtrOffsetReg(Reg);
         break;
       }
