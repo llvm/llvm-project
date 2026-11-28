@@ -2469,14 +2469,29 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
       Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
       continue;
     } else {
-      uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
+      TypeSize ElementSize = GTI.getSequentialElementStride(*DL);
 
-      // If this is a scalar constant or a splat vector of constants,
-      // handle it quickly.
+      // If Idx is a scalar constant or a splat vector of constants,
+      // handle it quickly. With a scalable stride, a non-negative constant
+      // Idx folds into a single G_VSCALE. Negative multipliers are left as
+      // a G_MUL, since targets lower negative G_VSCALE immediates poorly.
+      std::optional<APInt> VScaleMul;
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
-        if (std::optional<int64_t> Val = CI->getValue().trySExtValue()) {
-          Offset += ElementSize * *Val;
-          continue;
+        if (ElementSize.isScalable()) {
+          unsigned IdxBits = OffsetTy.getScalarSizeInBits();
+          APInt Mul = APInt(IdxBits, ElementSize.getKnownMinValue(),
+                            /*isSigned=*/false, /*implicitTrunc=*/true) *
+                      CI->getValue().sextOrTrunc(IdxBits);
+          // G_VSCALE cannot have a zero immediate.
+          if (Mul.isZero())
+            continue;
+          if (Mul.isNonNegative())
+            VScaleMul = Mul;
+        } else {
+          if (std::optional<int64_t> Val = CI->getValue().trySExtValue()) {
+            Offset += ElementSize.getFixedValue() * *Val;
+            continue;
+          }
         }
       }
 
@@ -2487,6 +2502,19 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
                                    PtrAddFlagsWithConst(Offset))
                       .getReg(0);
         Offset = 0;
+      }
+
+      if (VScaleMul) {
+        Register OffsetReg =
+            MIRBuilder.buildVScale(OffsetTy.getScalarType(), *VScaleMul)
+                .getReg(0);
+        if (OffsetTy.isVector())
+          OffsetReg =
+              MIRBuilder.buildSplatBuildVector(OffsetTy, OffsetReg).getReg(0);
+
+        BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, OffsetReg, PtrAddFlags)
+                      .getReg(0);
+        continue;
       }
 
       Register IdxReg = getOrCreateVReg(*Idx);
@@ -2503,11 +2531,27 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
       }
 
       // N = N + Idx * ElementSize;
-      // Avoid doing it for ElementSize of 1.
+      // Avoid doing it for a fixed ElementSize of 1.
+      // A scalable ElementSize is vscale * KnownMinValue, so it is
+      // materialized with G_VSCALE (splatted for vector GEPs) and
+      // always multiplied.
       Register GepOffsetReg;
-      if (ElementSize != 1) {
-        auto ElementSizeMIB = MIRBuilder.buildConstant(
-            getLLTForType(*OffsetIRTy, *DL), ElementSize);
+      if (ElementSize != TypeSize::getFixed(1)) {
+        Register ElementSizeReg;
+        if (ElementSize.isScalable()) {
+          ElementSizeReg = MIRBuilder
+                               .buildVScale(OffsetTy.getScalarType(),
+                                            ElementSize.getKnownMinValue())
+                               .getReg(0);
+          if (OffsetTy.isVector())
+            ElementSizeReg =
+                MIRBuilder.buildSplatBuildVector(OffsetTy, ElementSizeReg)
+                    .getReg(0);
+        } else {
+          ElementSizeReg =
+              MIRBuilder.buildConstant(OffsetTy, ElementSize.getFixedValue())
+                  .getReg(0);
+        }
 
         // The multiplication is NUW if the GEP is NUW and NSW if the GEP is
         // NUSW.
@@ -2516,7 +2560,7 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
           ScaleFlags |= MachineInstr::MIFlag::NoSWrap;
 
         GepOffsetReg =
-            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB, ScaleFlags)
+            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeReg, ScaleFlags)
                 .getReg(0);
       } else {
         GepOffsetReg = IdxReg;
