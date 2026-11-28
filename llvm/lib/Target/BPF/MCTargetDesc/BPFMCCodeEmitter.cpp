@@ -103,7 +103,10 @@ unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   const MCExpr *Expr = MO.getExpr();
 
-  assert(Expr->getKind() == MCExpr::SymbolRef);
+  // LD_imm64 may carry a symbol plus an addend. Keep the complete MCExpr
+  // in the fixup so the relocation machinery can preserve that addend.
+  assert(MI.getOpcode() == BPF::LD_imm64 ||
+         Expr->getKind() == MCExpr::SymbolRef);
 
   if (MI.getOpcode() == BPF::JAL)
     // func call name
