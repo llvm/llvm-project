@@ -397,13 +397,6 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
   });
 }
 
-static bool isNoexcept(const FunctionDecl *FD) {
-  const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>())
-    return true;
-  return false;
-}
-
 /// Checks if the given expression is a reference to a function with
 /// 'noreturn' attribute.
 static bool isReferenceToNoReturn(const Expr *E) {
@@ -3391,7 +3384,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Check for throw out of non-throwing function.
   if (!Diags.isIgnored(diag::warn_throw_in_noexcept_func, D->getBeginLoc()))
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-      if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
+      if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() &&
+          FD->isNothrow())
         checkThrowInNonThrowingFunc(S, FD, AC);
 
   // If none of the previous checks caused a CFG build, trigger one here

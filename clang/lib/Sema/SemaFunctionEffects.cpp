@@ -120,11 +120,6 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
   return FD->hasBody();
 }
 
-static bool isNoexcept(const FunctionDecl *FD) {
-  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
-  return FPT && (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>());
-}
-
 // This list is probably incomplete.
 // FIXME: Investigate:
 // __builtin_eh_return?
@@ -632,7 +627,7 @@ private:
 
         bool IsNoexcept = false;
         if (auto *FD = D->getAsFunction()) {
-          IsNoexcept = isNoexcept(FD);
+          IsNoexcept = FD->isNothrow();
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
             auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
@@ -1068,7 +1063,7 @@ private:
           // terminates. Ignore it for the purposes of effect analysis.
           // If not C++, `noreturn` alone is sufficient.
           if (FD->isNoReturn() &&
-              (!Outer.S.getLangOpts().CPlusPlus || isNoexcept(FD)))
+              (!Outer.S.getLangOpts().CPlusPlus || FD->isNothrow()))
             return;
         }
       }
