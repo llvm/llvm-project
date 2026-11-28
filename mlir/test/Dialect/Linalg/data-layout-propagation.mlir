@@ -1542,7 +1542,9 @@ func.func @nopush_extract_through_generic_nodimexpr2(%arg0: tensor<128x?x128xf32
 
 // -----
 
-func.func @push_redcutionextract_through_generic_withoutsused_2(%arg0: tensor<128x128xf32>, %arg1: tensor<?xbf16>, %arg2: index) -> tensor<?xbf16> {
+// A partial slice along a reduction dim must not be pushed down: the padded
+// elements would be folded into the reduction and poison every result.
+func.func @nopush_extract_through_generic_partial_reduction_dim(%arg0: tensor<128x128xf32>, %arg1: tensor<?xbf16>, %arg2: index) -> tensor<?xbf16> {
   %extracted_slice = tensor.extract_slice %arg0[%arg2, %arg2] [%arg2, %arg2] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
   %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>], iterator_types = ["parallel", "reduction"]} ins(%extracted_slice : tensor<?x?xf32>) outs(%arg1 : tensor<?xbf16>) {
   ^bb0(%in: f32, %out: bf16):
@@ -1553,25 +1555,46 @@ func.func @push_redcutionextract_through_generic_withoutsused_2(%arg0: tensor<12
   return %0 : tensor<?xbf16>
 }
 
-// CHECK-LABEL: func.func @push_redcutionextract_through_generic_withoutsused_2
+// CHECK-LABEL: func.func @nopush_extract_through_generic_partial_reduction_dim
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK-NOT:     tensor.pad
+// CHECK-NOT:     ub.poison
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[ARG0]]
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:    ins(%[[EXTRACT]]
+// CHECK-SAME:    outs(%[[ARG1]]
+// CHECK:         return %[[GENERIC]]
+
+// -----
+
+// A partial slice along a parallel dim of a reduction generic can still be
+// pushed down, since the padded rows are sliced away afterwards.
+func.func @push_extract_through_generic_partial_parallel_dim_with_reduction(%arg0: tensor<128x128xf32>, %arg1: tensor<64xbf16>, %arg2: index) -> tensor<64xbf16> {
+  %extracted_slice = tensor.extract_slice %arg0[%arg2, 0] [64, 128] [1, 1] : tensor<128x128xf32> to tensor<64x128xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>], iterator_types = ["parallel", "reduction"]} ins(%extracted_slice : tensor<64x128xf32>) outs(%arg1 : tensor<64xbf16>) {
+  ^bb0(%in: f32, %out: bf16):
+    %1 = arith.truncf %in : f32 to bf16
+    %2 = arith.addf %1, %out : bf16
+    linalg.yield %2 : bf16
+  } -> tensor<64xbf16>
+  return %0 : tensor<64xbf16>
+}
+
+// CHECK-LABEL: func.func @push_extract_through_generic_partial_parallel_dim_with_reduction
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]
-// CHECK:         %[[POISON_BF16:.+]] = ub.poison : bf16
-// CHECK:         %[[POISON_F32:.+]] = ub.poison : f32
-// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], %[[ARG2]]] [%[[ARG2]], %[[ARG2]]] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
-// CHECK:         %[[PADDED:.+]] = tensor.pad %[[EXTRACT]]
-// CHECK:           tensor.yield %[[POISON_F32]] : f32
-// CHECK:         } : tensor<?x?xf32> to tensor<?x?xf32>
-// CHECK:         %[[APPLY2:.+]] = affine.apply #map()[%[[ARG2]]]
-// CHECK:         %[[PADDED1:.+]] = tensor.pad %[[ARG1]] low[%[[ARG2]]] high[%[[APPLY2]]]
-// CHECK:           tensor.yield %[[POISON_BF16]] : bf16
-// CHECK:         } : tensor<?xbf16> to tensor<?xbf16>
+// CHECK:         %[[POISON:.+]] = ub.poison : bf16
+// CHECK:         %[[HIGH:.+]] = affine.apply #{{.*}}()[%[[ARG2]]]
+// CHECK:         %[[PADDED:.+]] = tensor.pad %[[ARG1]] low[%[[ARG2]]] high[%[[HIGH]]]
+// CHECK:           tensor.yield %[[POISON]] : bf16
+// CHECK:         } : tensor<64xbf16> to tensor<?xbf16>
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK-SAME:    ins(%[[PADDED]]
-// CHECK-SAME:    outs(%[[PADDED1]]
-// CHECK:         %[[EXTRACT1:.+]] = tensor.extract_slice %[[GENERIC]][%[[ARG2]]] [%[[ARG2]]] [1] : tensor<?xbf16> to tensor<?xbf16>
-// CHECK:         return %[[EXTRACT1]]
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<128x128xf32>)
+// CHECK-SAME:    outs(%[[PADDED]] : tensor<?xbf16>)
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]][%[[ARG2]]] [64] [1] : tensor<?xbf16> to tensor<64xbf16>
+// CHECK:         return %[[EXTRACT]]
 
 
 // -----

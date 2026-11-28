@@ -1398,8 +1398,7 @@ getSliceOperands(GenericOp genericOp) {
 }
 
 // Return a map of dims that have partial slices on them so that other operands
-// can use this information. Also return a bool mentioning if a reduction dim
-// has a non full slice as that can be used to fold the original extract slice.
+// can use this information.
 static FailureOr<llvm::DenseMap<int64_t, SliceDimInfo>>
 getPartialSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand) {
   tensor::ExtractSliceOp producerSliceOp =
@@ -1518,13 +1517,19 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
 
   auto partialSliceDimMap = *maybePartialSliceDimMap;
 
+  // Pushing the slice down pads the other operands back to the full extent of
+  // the sliced dims, so the new generic iterates over the padded (poison)
+  // elements too. That is fine for parallel dims, whose extra results are
+  // sliced away afterwards, but a reduction would fold the padding into every
+  // result.
   SmallVector<utils::IteratorType> iterators =
       genericOp.getIteratorTypesArray();
-  bool hasPartialReductionDimSlice =
-      llvm::any_of(partialSliceDimMap, [&](const auto &slice) {
-        int64_t sliceDim = slice.first;
-        return iterators[sliceDim] == utils::IteratorType::reduction;
-      });
+  if (llvm::any_of(partialSliceDimMap, [&](const auto &slice) {
+        return iterators[slice.first] == utils::IteratorType::reduction;
+      }))
+    return rewriter.notifyMatchFailure(
+        genericOp, "propagation of a partial slice along a reduction dim is "
+                   "unsupported.");
 
   // Store the padding information as (dimPos, lowPad, highPad, PaddedShape).
   Location loc = genericOp->getLoc();
@@ -1539,7 +1544,7 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
   MLIRContext *ctx = genericOp.getContext();
   SmallVector<Value> paddedInputs;
   for (auto [idx, operand] : llvm::enumerate(genericOp.getDpsInputOperands())) {
-    if (idx == OperandIndex && !hasPartialReductionDimSlice) {
+    if (idx == OperandIndex) {
       paddedInputs.push_back(producerSliceOp.getSource());
       continue;
     }
