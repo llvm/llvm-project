@@ -1,8 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
-! Additional expression-checking gaps collected during review of PR #228176.
+! Check direct HOST calls and HOST-side kernel launch expressions.
 
-! TODO: This documents bad behavior: an ordinary host subroutine calls a
-! device-only function without a host-code diagnostic.
 module host_direct_audit
 contains
   attributes(device) integer function d()
@@ -10,12 +8,11 @@ contains
   end function
   subroutine caller(i)
     integer :: i
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from host code
     i = d()
   end subroutine
 end module
 
-! TODO: This documents bad behavior: a host kernel launch configuration calls
-! a device-only function without a host-code diagnostic.
 module host_launch_audit
 contains
   attributes(global) subroutine kernel()
@@ -24,6 +21,7 @@ contains
     d = 1
   end function
   subroutine caller()
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from host code
     call kernel<<<d(),1>>>()
   end subroutine
 end module

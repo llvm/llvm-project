@@ -23,6 +23,7 @@ struct ExecutableConstruct;
 struct ActionStmt;
 struct IfConstruct;
 struct CUFKernelDoConstruct;
+struct MainProgram;
 struct SubroutineSubprogram;
 struct FunctionSubprogram;
 struct SeparateModuleSubprogram;
@@ -35,6 +36,7 @@ class SemanticsContext;
 class CUDAChecker : public virtual BaseChecker {
 public:
   explicit CUDAChecker(SemanticsContext &c) : context_{c} {}
+  void Enter(const parser::MainProgram &);
   void Enter(const parser::SubroutineSubprogram &);
   void Enter(const parser::FunctionSubprogram &);
   void Enter(const parser::SeparateModuleSubprogram &);

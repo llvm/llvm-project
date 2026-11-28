@@ -1,0 +1,40 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+
+module host_openmp_calls
+  !$omp declare target(device_value)
+contains
+  attributes(device) pure integer function device_value(n)
+    integer, value :: n
+    device_value = n + 1
+  end function
+
+  subroutine target_caller(a, n)
+    integer :: a(4), n, i
+    !$omp target map(tofrom:a)
+    do i = 1, 4
+      a(i) = device_value(i)
+    end do
+    !$omp end target
+    !$omp target teams distribute parallel do map(tofrom:a)
+    do i = 1, 4
+      a(i) = device_value(i)
+    end do
+    !$omp end target teams distribute parallel do
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    !$omp target if(device_value(n) > 0) map(tofrom:a)
+      a(1) = device_value(1)
+    !$omp end target
+    !$omp target data map(tofrom:a)
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      n = device_value(1)
+    !$omp end target data
+    !$omp parallel do
+    do i = 1, 4
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      a(i) = device_value(i)
+    end do
+    !$omp end parallel do
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+  end subroutine
+end module
