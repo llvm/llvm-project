@@ -253,3 +253,15 @@ body: |
     %3:_(<6 x s16>) = G_CONCAT_VECTORS %1, %2
     $vgpr0_vgpr1_vgpr2 = COPY %3
 ...
+---
+name: concat_vectors_v64s32_v32s32
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: concat_vectors_v64s32_v32s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[DEF]](<32 x s32>), [[DEF]](<32 x s32>)
+    ; CHECK-NEXT: S_NOP 0, implicit [[CONCAT_VECTORS]](<64 x s32>)
+    %0:_(<32 x s32>) = G_IMPLICIT_DEF
+    %1:_(<64 x s32>) = G_CONCAT_VECTORS %0, %0
+    S_NOP 0, implicit %1
+...

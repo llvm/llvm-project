@@ -2156,6 +2156,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // FIXME: Clamp maximum size
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)))
+      // As with G_MERGE_VALUES/G_UNMERGE_VALUES above, a concatenation
+      // that's wider than the largest register class is fine to leave as
+      // one instruction provided it's built from already-legal,
+      // maximally-sized vector pieces.
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT BigTy = Query.Types[0];
+        const LLT LitTy = Query.Types[1];
+        return isRegisterType(ST, LitTy) &&
+               BigTy.getElementType() == LitTy.getElementType() &&
+               BigTy.getSizeInBits() > MaxRegisterSize &&
+               BigTy.getNumElements() % LitTy.getNumElements() == 0;
+      })
       .clampMaxNumElements(0, S32, 32)
       .clampMaxNumElements(1, S16, 2) // TODO: Make 4?
       .clampMaxNumElements(0, S16, 64);
