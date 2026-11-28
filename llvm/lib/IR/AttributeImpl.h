@@ -22,6 +22,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/ConstantRangeList.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -320,17 +321,12 @@ public:
 /// \class
 /// This class represents a set of attributes that apply to the function,
 /// return type, and parameters.
-class AttributeListImpl final
+class alignas(AttributeSet) AttributeListImpl final
     : public FoldingSetNode,
       public AttributeListImplBase,
       private TrailingObjects<AttributeListImpl, AttributeSet> {
   friend class AttributeList;
   friend TrailingObjects;
-
-private:
-  unsigned NumAttrSets; ///< Number of entries in this set.
-  /// Union of enum attributes available at any index.
-  AttributeBitSet AvailableSomewhereAttrs;
 
 public:
   AttributeListImpl(ArrayRef<AttributeSet> Sets);
@@ -359,6 +355,11 @@ public:
 
 static_assert(std::is_trivially_destructible<AttributeListImpl>::value,
               "AttributeListImpl should be trivially destructible");
+static_assert(sizeof(AttributeListImpl) ==
+                  alignTo(sizeof(FoldingSetNode),
+                          alignof(AttributeListImplBase)) +
+                      sizeof(AttributeListImplBase),
+              "the attribute sets must directly follow AttributeListImplBase");
 
 } // end namespace llvm
 
