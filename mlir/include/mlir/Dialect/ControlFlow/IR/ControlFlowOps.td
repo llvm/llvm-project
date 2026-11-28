@@ -62,6 +62,36 @@ def AssertOp : CF_Op<"assert",
 }
 
 //===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CF_Op<"assume"> {
+  let summary = "Assumption operation";
+  let description = [{
+    Assumption operation with a single boolean. This allows analyses to assume
+    the operand is `true` and has no effect at runtime. Unlike the `assert`
+    operation, this does not abort program execution if the operand happens to
+    be `false`. Is is under responsibility of the user to only assume values
+    known to be `true`, the behavior of the program is undefined otherwise.
+
+    Example:
+
+    ```mlir
+    // Assumes %v is even, i.e. the remainder of its division by 2 is 0.
+    %c0 = arith.constant 0 : i32
+    %c2 = arith.constant 2 : i32
+    %rem = arith.remsi %v, %c2 : i32
+    %b = arith.cmpi eq %rem, %c0 : I32
+    cf.assume %b
+    ```
+  }];
+
+  let arguments = (ins I1:$arg);
+
+  let assemblyFormat = "$arg attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
 
