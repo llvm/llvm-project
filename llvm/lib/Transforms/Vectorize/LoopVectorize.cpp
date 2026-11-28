@@ -5729,8 +5729,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   TTI.getUnrollingPreferences(OrigLoop, SE, UP, ORE);
   bool UnrollVectorizedLoop = UP.UnrollVectorizedLoop;
 
-  // Forget the original loop and block dispositions.
-  SE.forgetLoop(OrigLoop);
+  // Forget the loop nest and block dispositions, as executing the plan may
+  // modify exits or remove blocks belonging to enclosing loops.
+  SE.forgetTopmostLoop(OrigLoop);
   SE.forgetBlockAndLoopDispositions();
 
   //===------------------------------------------------===//
