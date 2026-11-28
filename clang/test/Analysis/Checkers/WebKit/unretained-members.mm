@@ -38,14 +38,14 @@ namespace members {
   template<class T, class S, class R>
   struct FooTmpl {
     T* a;
-// expected-warning@-1{{Member variable 'a' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
     S b;
-// expected-warning@-1{{Member variable 'b' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
     R c;
-// expected-warning@-1{{Member variable 'c' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
   };
 
   void forceTmplToInstantiate(FooTmpl<SomeObj, CFMutableArrayRef, dispatch_queue_t>) {}
+  // expected-warning@-1{{Member variable 'a' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
+  // expected-warning@-2{{Member variable 'b' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
+  // expected-warning@-3{{Member variable 'c' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
 
   struct [[clang::suppress]] FooSuppressed {
   private:
@@ -69,10 +69,10 @@ namespace unions {
   template<class T>
   union FooTempl {
     T* a;
-    // expected-warning@-1{{Member variable 'a' (of 'unions::FooTempl<SomeObj>') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
   };
 
   void forceTmplToInstantiate(FooTempl<SomeObj>) {}
+  // expected-warning@-1{{Member variable 'a' (of 'unions::FooTempl<SomeObj>') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 namespace ptr_to_ptr_to_retained {
@@ -89,13 +89,13 @@ namespace ptr_to_ptr_to_retained {
   template <typename T, typename S, typename R>
   struct TemplateList {
     T** elements1;
-    // expected-warning@-1{{Member variable 'elements1' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type 'SomeObj'}}
     S* elements2;
-    // expected-warning@-1{{Member variable 'elements2' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type '__CFArray'}}
     R* elements3;
-    // expected-warning@-1{{Member variable 'elements3' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type 'NSObject'}}
   };
   TemplateList<SomeObj, CFMutableArrayRef, dispatch_queue_t> list;
+  // expected-warning@-1{{Member variable 'elements1' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  // expected-warning@-2{{Member variable 'elements2' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type '__CFArray'}}
+  // expected-warning@-3{{Member variable 'elements3' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type 'NSObject'}}
 
   struct SafeList {
     RetainPtr<SomeObj>* elements1;
