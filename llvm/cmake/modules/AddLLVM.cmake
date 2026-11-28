@@ -430,26 +430,6 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     set(LLVM_LINKER_DETECTED NO CACHE INTERNAL "")
     message(STATUS "Linker detection: unknown")
   endif()
-
-  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    include(CheckLinkerFlag)
-    # Linkers that support Darwin allow a setting to internalize all symbol exports,
-    # aiding in reducing binary size and often is applicable for executables.
-    check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
-
-    if (NOT LLVM_USE_LINKER)
-      # Apple's linker complains about duplicate libraries, which CMake likes to do
-      # to support ELF platforms. To silence that warning, we can use
-      # -no_warn_duplicate_libraries, but only in versions of the linker that
-      # support that flag.
-      check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
-    else()
-      set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
-    endif()
-
-  else()
-    set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
-  endif()
 endif()
 
 function(add_link_opts target_name)
@@ -494,10 +474,6 @@ function(add_link_opts target_name)
         target_link_options(${target_name} PRIVATE "LINKER:-bnogc")
       endif()
     endif()
-  endif()
-
-  if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
-    target_link_options(${target_name} PRIVATE "LINKER:-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
