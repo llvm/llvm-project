@@ -21,18 +21,6 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_variable
 #include "InterpreterOptions.inc"
 
-// The frame-only options (--no-args, --no-locals, --no-recognized-args and
-// --show-globals) come first, see InterpreterOptions.td.
-static constexpr auto g_num_frame_options = 4;
-static_assert(g_variable_options[0].short_option == 'a' &&
-                  g_variable_options[1].short_option == 'l' &&
-                  g_variable_options[2].short_option == 't' &&
-                  g_variable_options[3].short_option == 'g',
-              "frame-only options must come first");
-static const auto g_variable_options_noframe =
-    llvm::ArrayRef<OptionDefinition>(g_variable_options)
-        .drop_front(g_num_frame_options);
-
 static Status ValidateNamedSummary(const char *str, void *) {
   if (!str || !str[0])
     return Status::FromErrorStringWithFormat(
@@ -64,9 +52,7 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
                                     llvm::StringRef option_arg,
                                     ExecutionContext *execution_context) {
   Status error;
-  llvm::ArrayRef<OptionDefinition> variable_options =
-      include_frame_options ? g_variable_options : g_variable_options_noframe;
-  const int short_option = variable_options[option_idx].short_option;
+  const int short_option = GetDefinitions()[option_idx].short_option;
   switch (short_option) {
   case 'r':
     use_regex = true;
@@ -122,6 +108,12 @@ void OptionGroupVariable::OptionParsingStarting(
 llvm::ArrayRef<OptionDefinition> OptionGroupVariable::GetDefinitions() {
   // Show the "--no-args", "--no-recognized-args", "--no-locals" and
   // "--show-globals" options if we are showing frame specific options
-  return include_frame_options ? g_variable_options
-                               : g_variable_options_noframe;
+  static constexpr auto num_frame_options = 4;
+  static_assert(g_variable_options[0].short_option == 'a' &&
+                    g_variable_options[1].short_option == 'l' &&
+                    g_variable_options[2].short_option == 't' &&
+                    g_variable_options[3].short_option == 'g',
+                "frame-only options must come first");
+  llvm::ArrayRef<OptionDefinition> result(g_variable_options);
+  return include_frame_options ? result : result.drop_front(num_frame_options);
 }
