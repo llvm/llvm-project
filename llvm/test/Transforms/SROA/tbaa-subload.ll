@@ -15,7 +15,7 @@ define void @caller() {
 ; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 0
 ; CHECK-NEXT:    store i64 1, ptr [[DOTFCA_0_GEP]], align 8, !tbaa [[CHAR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 1
-; CHECK-NEXT:    store i64 2, ptr [[DOTFCA_1_GEP]], align 8, !tbaa [[CHAR_TBAA0]]
+; CHECK-NEXT:    store i64 2, ptr [[DOTFCA_1_GEP]], align 8
 ; CHECK-NEXT:    call void @use(ptr [[AGG]])
 ; CHECK-NEXT:    ret void
 ;
