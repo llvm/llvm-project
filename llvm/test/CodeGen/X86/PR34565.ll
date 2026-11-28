@@ -8,7 +8,7 @@
 
 @main.buf = private unnamed_addr constant [10 x i64] [i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9], align 8
 
-define i32 @main() #0 !dbg !5 {
+define i32 @main(i64 %x) #0 !dbg !5 {
 entry:
   br label %while.body
 
@@ -16,11 +16,9 @@ while.body:                                       ; preds = %while.body, %entry
   %a.010 = phi i32 [ 0, %entry ], [ %add.a.0, %while.body ]
   %b.09 = phi i32 [ 10, %entry ], [ %b.0.add, %while.body ]
   %add = add i32 %a.010, %b.09
-  %call = tail call i32 @rand()
-  %conv = sext i32 %call to i64
   %arrayidx = getelementptr inbounds [10 x i64], ptr @main.buf, i32 0, i32 %add
   %0 = load i64, ptr %arrayidx, align 8
-  %cmp1 = icmp ult i64 %0, %conv
+  %cmp1 = icmp ult i64 %0, %x
   %b.0.add = select i1 %cmp1, i32 %b.09, i32 %add
   %add.a.0 = select i1 %cmp1, i32 %add, i32 %a.010
   tail call void @llvm.dbg.value(metadata i32 %add.a.0, metadata !10, metadata !DIExpression()), !dbg !13
@@ -33,8 +31,6 @@ while.body:                                       ; preds = %while.body, %entry
 while.end:                                        ; preds = %while.body
   ret i32 0
 }
-
-declare i32 @rand()
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

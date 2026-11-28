@@ -1039,5 +1039,269 @@ exit:
   ret void
 }
 
+declare void @foo()
+
+define i32 @test_call_in_loop() nounwind #0 {
+; CHECK-LABEL: test_call_in_loop:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $1, %ebx
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:  .LBB16_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovgl %ebp, %ebx
+; CHECK-NEXT:    addl $1, %ebp
+; CHECK-NEXT:    cmpl $1024, %ebp # imm = 0x400
+; CHECK-NEXT:    jne .LBB16_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; CHECK-FORCEALL-LABEL: test_call_in_loop:
+; CHECK-FORCEALL:       # %bb.0: # %entry
+; CHECK-FORCEALL-NEXT:    pushq %rbp
+; CHECK-FORCEALL-NEXT:    pushq %rbx
+; CHECK-FORCEALL-NEXT:    pushq %rax
+; CHECK-FORCEALL-NEXT:    movl $1, %ebp
+; CHECK-FORCEALL-NEXT:    xorl %ebx, %ebx
+; CHECK-FORCEALL-NEXT:  .LBB16_1: # %loop
+; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-FORCEALL-NEXT:    callq foo@PLT
+; CHECK-FORCEALL-NEXT:    movl %ebp, %ecx
+; CHECK-FORCEALL-NEXT:    imull %ebp, %ecx
+; CHECK-FORCEALL-NEXT:    imull %ebp, %ecx
+; CHECK-FORCEALL-NEXT:    movl %ebx, %eax
+; CHECK-FORCEALL-NEXT:    testl %ecx, %ecx
+; CHECK-FORCEALL-NEXT:    jg .LBB16_3
+; CHECK-FORCEALL-NEXT:  # %bb.2: # %loop
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB16_1 Depth=1
+; CHECK-FORCEALL-NEXT:    movl %ebp, %eax
+; CHECK-FORCEALL-NEXT:  .LBB16_3: # %loop
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB16_1 Depth=1
+; CHECK-FORCEALL-NEXT:    addl $1, %ebx
+; CHECK-FORCEALL-NEXT:    movl %eax, %ebp
+; CHECK-FORCEALL-NEXT:    cmpl $1024, %ebx # imm = 0x400
+; CHECK-FORCEALL-NEXT:    jne .LBB16_1
+; CHECK-FORCEALL-NEXT:  # %bb.4: # %exit
+; CHECK-FORCEALL-NEXT:    addq $8, %rsp
+; CHECK-FORCEALL-NEXT:    popq %rbx
+; CHECK-FORCEALL-NEXT:    popq %rbp
+; CHECK-FORCEALL-NEXT:    retq
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %acc = phi i32 [ 1, %entry ], [ %acc.next, %loop ]
+  call void @foo()
+  %m1 = mul i32 %acc, %acc
+  %m2 = mul i32 %m1, %acc
+  %cmp = icmp sgt i32 %m2, 0
+  %acc.next = select i1 %cmp, i32 %i, i32 %acc
+  %i.next = add nuw nsw i32 %i, 1
+  %exitcond = icmp eq i32 %i.next, 1024
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 %acc.next
+}
+
+define i32 @test_call_in_latch() nounwind #0 {
+; CHECK-LABEL: test_call_in_latch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $1, %ebx
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:  .LBB17_1: # %loop.header
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovgl %ebp, %ebx
+; CHECK-NEXT:    cmpl $1023, %ebp # imm = 0x3FF
+; CHECK-NEXT:    je .LBB17_3
+; CHECK-NEXT:  # %bb.2: # %loop.latch
+; CHECK-NEXT:    # in Loop: Header=BB17_1 Depth=1
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    addl $1, %ebp
+; CHECK-NEXT:    jmp .LBB17_1
+; CHECK-NEXT:  .LBB17_3: # %exit
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; CHECK-FORCEALL-LABEL: test_call_in_latch:
+; CHECK-FORCEALL:       # %bb.0: # %entry
+; CHECK-FORCEALL-NEXT:    pushq %rbp
+; CHECK-FORCEALL-NEXT:    pushq %rbx
+; CHECK-FORCEALL-NEXT:    pushq %rax
+; CHECK-FORCEALL-NEXT:    movl $1, %eax
+; CHECK-FORCEALL-NEXT:    xorl %ebp, %ebp
+; CHECK-FORCEALL-NEXT:  .LBB17_1: # %loop.header
+; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-FORCEALL-NEXT:    movl %eax, %ecx
+; CHECK-FORCEALL-NEXT:    imull %eax, %ecx
+; CHECK-FORCEALL-NEXT:    imull %eax, %ecx
+; CHECK-FORCEALL-NEXT:    movl %ebp, %ebx
+; CHECK-FORCEALL-NEXT:    testl %ecx, %ecx
+; CHECK-FORCEALL-NEXT:    jg .LBB17_3
+; CHECK-FORCEALL-NEXT:  # %bb.2: # %loop.header
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB17_1 Depth=1
+; CHECK-FORCEALL-NEXT:    movl %eax, %ebx
+; CHECK-FORCEALL-NEXT:  .LBB17_3: # %loop.header
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB17_1 Depth=1
+; CHECK-FORCEALL-NEXT:    cmpl $1023, %ebp # imm = 0x3FF
+; CHECK-FORCEALL-NEXT:    je .LBB17_5
+; CHECK-FORCEALL-NEXT:  # %bb.4: # %loop.latch
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB17_1 Depth=1
+; CHECK-FORCEALL-NEXT:    callq foo@PLT
+; CHECK-FORCEALL-NEXT:    addl $1, %ebp
+; CHECK-FORCEALL-NEXT:    movl %ebx, %eax
+; CHECK-FORCEALL-NEXT:    jmp .LBB17_1
+; CHECK-FORCEALL-NEXT:  .LBB17_5: # %exit
+; CHECK-FORCEALL-NEXT:    movl %ebx, %eax
+; CHECK-FORCEALL-NEXT:    addq $8, %rsp
+; CHECK-FORCEALL-NEXT:    popq %rbx
+; CHECK-FORCEALL-NEXT:    popq %rbp
+; CHECK-FORCEALL-NEXT:    retq
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop.latch ]
+  %acc = phi i32 [ 1, %entry ], [ %acc.next, %loop.latch ]
+  %m1 = mul i32 %acc, %acc
+  %m2 = mul i32 %m1, %acc
+  %cmp = icmp sgt i32 %m2, 0
+  %acc.next = select i1 %cmp, i32 %i, i32 %acc
+  %i.next = add nuw nsw i32 %i, 1
+  %exitcond = icmp eq i32 %i.next, 1024
+  br i1 %exitcond, label %exit, label %loop.latch
+
+loop.latch:
+  call void @foo()
+  br label %loop.header
+
+exit:
+  ret i32 %acc.next
+}
+
+define i32 @test_call_in_cond_block() nounwind #0 {
+; CHECK-LABEL: test_call_in_cond_block:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:  .LBB18_1: # %loop.header
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    imull %eax, %ecx
+; CHECK-NEXT:    imull %eax, %ecx
+; CHECK-NEXT:    movl %ebp, %ebx
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    jg .LBB18_3
+; CHECK-NEXT:  # %bb.2: # %loop.header
+; CHECK-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-NEXT:    movl %eax, %ebx
+; CHECK-NEXT:  .LBB18_3: # %loop.header
+; CHECK-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    je .LBB18_5
+; CHECK-NEXT:  # %bb.4: # %call.bb
+; CHECK-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:  .LBB18_5: # %loop.latch
+; CHECK-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-NEXT:    addl $1, %ebp
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    cmpl $1024, %ebp # imm = 0x400
+; CHECK-NEXT:    jne .LBB18_1
+; CHECK-NEXT:  # %bb.6: # %exit
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; CHECK-FORCEALL-LABEL: test_call_in_cond_block:
+; CHECK-FORCEALL:       # %bb.0: # %entry
+; CHECK-FORCEALL-NEXT:    pushq %rbp
+; CHECK-FORCEALL-NEXT:    pushq %rbx
+; CHECK-FORCEALL-NEXT:    pushq %rax
+; CHECK-FORCEALL-NEXT:    movl $1, %eax
+; CHECK-FORCEALL-NEXT:    xorl %ebp, %ebp
+; CHECK-FORCEALL-NEXT:  .LBB18_1: # %loop.header
+; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-FORCEALL-NEXT:    movl %eax, %ecx
+; CHECK-FORCEALL-NEXT:    imull %eax, %ecx
+; CHECK-FORCEALL-NEXT:    imull %eax, %ecx
+; CHECK-FORCEALL-NEXT:    movl %ebp, %ebx
+; CHECK-FORCEALL-NEXT:    testl %ecx, %ecx
+; CHECK-FORCEALL-NEXT:    jg .LBB18_3
+; CHECK-FORCEALL-NEXT:  # %bb.2: # %loop.header
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-FORCEALL-NEXT:    movl %eax, %ebx
+; CHECK-FORCEALL-NEXT:  .LBB18_3: # %loop.header
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-FORCEALL-NEXT:    testb $1, %bpl
+; CHECK-FORCEALL-NEXT:    je .LBB18_5
+; CHECK-FORCEALL-NEXT:  # %bb.4: # %call.bb
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-FORCEALL-NEXT:    callq foo@PLT
+; CHECK-FORCEALL-NEXT:  .LBB18_5: # %loop.latch
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB18_1 Depth=1
+; CHECK-FORCEALL-NEXT:    addl $1, %ebp
+; CHECK-FORCEALL-NEXT:    movl %ebx, %eax
+; CHECK-FORCEALL-NEXT:    cmpl $1024, %ebp # imm = 0x400
+; CHECK-FORCEALL-NEXT:    jne .LBB18_1
+; CHECK-FORCEALL-NEXT:  # %bb.6: # %exit
+; CHECK-FORCEALL-NEXT:    movl %ebx, %eax
+; CHECK-FORCEALL-NEXT:    addq $8, %rsp
+; CHECK-FORCEALL-NEXT:    popq %rbx
+; CHECK-FORCEALL-NEXT:    popq %rbp
+; CHECK-FORCEALL-NEXT:    retq
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop.latch ]
+  %acc = phi i32 [ 1, %entry ], [ %acc.next, %loop.latch ]
+  %m1 = mul i32 %acc, %acc
+  %m2 = mul i32 %m1, %acc
+  %cmp = icmp sgt i32 %m2, 0
+  %acc.next = select i1 %cmp, i32 %i, i32 %acc
+  %do.call = trunc i32 %i to i1
+  br i1 %do.call, label %call.bb, label %loop.latch
+
+call.bb:
+  call void @foo()
+  br label %loop.latch
+
+loop.latch:
+  %i.next = add nuw nsw i32 %i, 1
+  %exitcond = icmp eq i32 %i.next, 1024
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret i32 %acc.next
+}
+
 attributes #0 = {"target-cpu"="x86-64" "tune-cpu"="x86-64"}
 !0 = !{}
