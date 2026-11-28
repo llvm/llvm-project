@@ -4007,5 +4007,4 @@ TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
   EXPECT_EQ(written, 6);
   ASSERT_STREQ_LEN(written, buff, "   (nu");
 }
-
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE && !LIBC_TARGET_ARCH_IS_GPU
