@@ -96,6 +96,17 @@ Each header provides its own registration function (for example
 to match, e.g. `mlirCreateGPUGpuNVVMAttachTarget` is now
 `mlirCreateGPUNVVMGpuNVVMAttachTarget`.
 
+The C API and the Python bindings are split the same way. `MLIRCAPIGPU` and
+`mlir-c/Dialect/GPU.h` only provide the target-independent passes. The
+target-specific passes are in `MLIRCAPIGPU<Target>Passes` (for example
+`MLIRCAPIGPUNVVMPasses`), declared in `mlir-c/Dialect/GPU/<Target>Passes.h`.
+In Python, `mlir.dialects.gpu.passes` only registers the target-independent
+passes. The passes of a target are registered by importing
+`mlir.dialects.gpu.passes.<target>` (`nvvm`, `rocdl`, `spirv` or `xevm`).
+Python packages that do not embed all of `MLIRPythonSources` have to add the
+corresponding `MLIRPythonSources.Dialects.gpu.passes.<target>` source group to
+get them; `MLIRPythonSources.Dialects.gpu` no longer embeds any GPU target.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

@@ -162,7 +162,9 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/GPUOps.td
-  SOURCES_GLOB dialects/gpu/*.py
+  SOURCES
+    dialects/gpu/__init__.py
+    dialects/gpu/passes/__init__.py
   DIALECT_NAME gpu
   GEN_ENUM_BINDINGS)
 
@@ -746,6 +748,73 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
     GPUPasses.cpp
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIGPU
+)
+
+# The target-specific GPU passes are separate opt-in modules, imported as
+# `mlir.dialects.gpu.passes.<target>`. They are not children of the `gpu`
+# dialect bindings so that users of those do not embed every GPU target.
+declare_mlir_python_sources(MLIRPythonSources.Dialects.gpu.passes.nvvm
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/gpu/passes/nvvm.py)
+
+declare_mlir_python_extension(MLIRPythonExtension.GPUNVVMPasses
+  MODULE_NAME _mlirGPUNVVMPasses
+  ADD_TO_PARENT MLIRPythonSources.Dialects.gpu.passes.nvvm
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    GPUNVVMPasses.cpp
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIGPUNVVMPasses
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Dialects.gpu.passes.rocdl
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/gpu/passes/rocdl.py)
+
+declare_mlir_python_extension(MLIRPythonExtension.GPUROCDLPasses
+  MODULE_NAME _mlirGPUROCDLPasses
+  ADD_TO_PARENT MLIRPythonSources.Dialects.gpu.passes.rocdl
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    GPUROCDLPasses.cpp
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIGPUROCDLPasses
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Dialects.gpu.passes.spirv
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/gpu/passes/spirv.py)
+
+declare_mlir_python_extension(MLIRPythonExtension.GPUSPIRVPasses
+  MODULE_NAME _mlirGPUSPIRVPasses
+  ADD_TO_PARENT MLIRPythonSources.Dialects.gpu.passes.spirv
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    GPUSPIRVPasses.cpp
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIGPUSPIRVPasses
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Dialects.gpu.passes.xevm
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/gpu/passes/xevm.py)
+
+declare_mlir_python_extension(MLIRPythonExtension.GPUXeVMPasses
+  MODULE_NAME _mlirGPUXeVMPasses
+  ADD_TO_PARENT MLIRPythonSources.Dialects.gpu.passes.xevm
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    GPUXeVMPasses.cpp
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIGPUXeVMPasses
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses

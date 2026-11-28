@@ -17,10 +17,6 @@
 NB_MODULE(_mlirGPUPasses, m) {
   m.doc() = "MLIR GPU Dialect Passes";
 
-  // Register all GPU passes on load.
+  // Register all target-independent GPU passes on load.
   mlirRegisterGPUPasses();
-  mlirRegisterGPUNVVMPasses();
-  mlirRegisterGPUROCDLPasses();
-  mlirRegisterGPUSPIRVPasses();
-  mlirRegisterGPUXeVMPasses();
 }
