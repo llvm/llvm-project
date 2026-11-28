@@ -1,0 +1,65 @@
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -pedantic -verify -fsyntax-only
+
+// A C-style or functional cast to a reference type that binds the reference to
+// the operand cannot convert between address spaces that do not overlap, as
+// the corresponding pointer cast cannot. A cast that makes a temporary, or
+// uses a conversion function, is unaffected.
+
+typedef __local int &LocalRef;
+
+struct S {
+  int x;
+};
+
+struct Base {
+  int x;
+};
+
+struct Derived : Base {};
+
+struct Conv {
+  operator __local int &();
+};
+
+void casts(__global int &g, __constant int &c, __global S &gs, __global Base &gb, __global Derived &gd, Conv conv) {
+  (void)(__local int &)g;      // expected-error {{C-style cast from '__global int' to '__local int &' converts between mismatching address spaces}}
+  (void)LocalRef(g);           // expected-error {{functional-style cast from '__global int' to 'LocalRef' (aka '__local int &') converts between mismatching address spaces}}
+  (void)(int &)c;              // expected-error {{C-style cast from '__constant int' to '__generic int &' converts between mismatching address spaces}}
+  (void)(__local int &&)g;     // expected-error {{C-style cast from '__global int' to '__local int &&' converts between mismatching address spaces}}
+  (void)(__local S &)gs;       // expected-error {{C-style cast from '__global S' to '__local S &' converts between mismatching address spaces}}
+  (void)(__local Base &)gd;    // expected-error {{C-style cast from '__global Derived' to '__local Base &' converts between mismatching address spaces}}
+  (void)(__local Derived &)gb; // expected-error {{C-style cast from '__global Base' to '__local Derived &' converts between mismatching address spaces}}
+  (__local int &)g = 1;        // expected-error {{C-style cast from '__global int' to '__local int &' converts between mismatching address spaces}}
+
+  // addrspace_cast takes pointers only.
+  (void)addrspace_cast<__local int &>(g); // expected-error {{addrspace_cast from '__global int' to '__local int &' is not allowed}}
+
+  // The address spaces overlap, the cast makes a temporary, or it uses a
+  // conversion function.
+  (void)(int &)g;
+  (void)(__global float &)g;
+  (void)(const __global int &)g;
+  (void)(float &&)c;
+  (void)(__local int &)conv;
+}
+
+// The reference check is for C-style and functional casts only, so
+// addrspace_cast to a reference does not complete the class, and fails in the
+// immediate context.
+template <class T> struct Box { typename T::missing value; };
+template <class T>
+auto choose(T &x, int) -> decltype(addrspace_cast<__local int &>(x));
+template <class T> int choose(T &, long);
+int use(__global Box<int> &x) { return ::choose(x, 0); }
+
+// A downcast needs an lvalue, or an xvalue for an rvalue reference. Otherwise
+// the cast calls the conversion function.
+struct ConvDerived;
+struct ConvBase {
+  operator __local ConvDerived &();
+};
+struct ConvDerived : ConvBase {
+  int value;
+};
+__global ConvBase &&get();
+int conversion() { return ((__local ConvDerived &)get()).value; }

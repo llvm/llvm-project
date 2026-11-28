@@ -2669,9 +2669,36 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
   // non-OpenCL mode too, we fast-path above because no other languages
   // define overlapping address spaces currently.
   auto SrcType = SrcExpr.get()->getType();
-  // FIXME: Should this be generalized to references? The reference parameter
-  // however becomes a reference pointee type here and therefore rejected.
-  // Perhaps this is the right behavior though according to C++.
+  // A C-style cast to a reference, including the functional form `T(x)`, can
+  // bind the reference to the operand directly. In that case, it is basically
+  // the same as casting a pointer to another address space, so we apply the
+  // same overlap check here. This only happens when the two types are related,
+  // i.e. the same type, a base class, or a derived class in a downcast. Other
+  // casts to a reference, e.g. the ones that create a temporary, call a
+  // conversion function, or reinterpret the operand, are handled elsewhere.
+  if (const auto *DestRefType = DestType->getAs<ReferenceType>()) {
+    QualType DestPointeeType = DestRefType->getPointeeType();
+    if (!CStyle || !SrcExpr.get()->isGLValue() ||
+        DestPointeeType.isAddressSpaceOverlapping(SrcType,
+                                                  Self.getASTContext()))
+      return TC_NotApplicable;
+    // Compare the types without qualifiers, because the check above already
+    // looked at the address spaces.
+    QualType Src = Self.Context.getUnqualifiedArrayType(SrcType);
+    QualType Dest = Self.Context.getUnqualifiedArrayType(DestPointeeType);
+    SourceLocation Loc = SrcExpr.get()->getBeginLoc();
+    // As in static_cast, a downcast needs an lvalue operand or an rvalue
+    // reference type.
+    bool CanDowncast =
+        SrcExpr.get()->isLValue() || DestType->isRValueReferenceType();
+    if (Self.CompareReferenceRelationship(Loc, Dest, Src) ==
+            Sema::Ref_Incompatible &&
+        (!CanDowncast || Self.CompareReferenceRelationship(Loc, Src, Dest) ==
+                             Sema::Ref_Incompatible))
+      return TC_NotApplicable;
+    msg = diag::err_bad_cxx_cast_addr_space_mismatch;
+    return TC_Failed;
+  }
   auto SrcPtrType = SrcType->getAs<PointerType>();
   if (!SrcPtrType)
     return TC_NotApplicable;
