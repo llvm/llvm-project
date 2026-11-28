@@ -420,8 +420,8 @@ A question mark represents an uninitialized value.
 
 ```{eval-rst}
 .. productionlist::
-   SimpleValue4: "{" [`ValueList`] "}"
-   ValueList: `ValueListNE`
+   SimpleValue4: "{" `ValueList` "}"
+   ValueList: [`ValueListNE`]
    ValueListNE: `Value` ("," `Value`)*
 ```
 
