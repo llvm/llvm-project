@@ -11415,6 +11415,58 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::CTPOP, dl, VT, Op);
 }
 
+SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
+                                         SelectionDAG &DAG) const {
+  // pseudocode :
+  // v = v & ~(v >> 8)
+  // v = (f32)v
+  // v = bitcast<i32>(v)
+  // v = v >> 23
+  // v = 32 - 1 - (v - 127)
+  // v = min(v, 32)
+
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Op = Node->getOperand(0);
+
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i32)
+    return SDValue();
+
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
+  const fltSemantics &Sem = FloatVT.getScalarType().getFltSemantics();
+  unsigned BitWidth = SVT.getSizeInBits();
+  unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
+  unsigned ExponentBias = APFloat::semanticsMaxExponent(Sem);
+
+  // We don't want the fp conversion to round up our int, so clear some bits
+  // while keeping 8 MSB untouched.
+  // v = v & ~(v >> 8)
+  SDValue ShiftOp =
+      DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getShiftAmountConstant(8, VT, dl));
+  SDValue Tmp = DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNOT(dl, ShiftOp, VT));
+
+  // Converting int to fp gives us the highest set bit pos in exponent
+  SDValue Float = DAG.getNode(ISD::SINT_TO_FP, dl, FloatVT, Tmp);
+  SDValue Int = DAG.getBitcast(VT, Float);
+
+  // Shift off Mantissa bits
+  SDValue ShiftExp =
+      DAG.getNode(ISD::SRL, dl, VT, Int,
+                  DAG.getShiftAmountConstant(MantissaBits - 1, VT, dl));
+
+  // Undo the bias and subtract it from BitWidth to get the clz, saturate to 0
+  // if the sign bit of float was set
+  // 32 - 1 - (v - 127)
+  SDValue UndoBias = DAG.getNode(
+      ISD::USUBSAT, dl, VT,
+      DAG.getConstant(BitWidth - 1 + ExponentBias, dl, VT), ShiftExp);
+
+  // In case our int was 0 to begin with, we need to clamp to 32
+  return DAG.getNode(ISD::SMIN, dl, VT, UndoBias,
+                     DAG.getConstant(BitWidth, dl, VT));
+}
+
 SDValue TargetLowering::expandCTLS(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   EVT VT = Node->getValueType(0);
