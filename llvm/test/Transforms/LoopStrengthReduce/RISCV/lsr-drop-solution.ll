@@ -4,6 +4,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
+; Complete baseline accounting retains the cheaper modeled LSR solution.
 define ptr @foo(ptr %a0, ptr %a1, i64 %a2) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
@@ -15,19 +16,22 @@ define ptr @foo(ptr %a0, ptr %a1, i64 %a2) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: # %if.then
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    sub a5, a2, a4
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    add a3, a0, a2
+; CHECK-NEXT:    sub a6, a3, a4
 ; CHECK-NEXT:  .LBB0_3: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vse8.v v8, (a3)
-; CHECK-NEXT:    add a3, a3, a4
-; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    bltu a3, a5, .LBB0_3
+; CHECK-NEXT:    add a3, a1, a5
+; CHECK-NEXT:    vle8.v v8, (a3)
+; CHECK-NEXT:    add a7, a0, a5
+; CHECK-NEXT:    add a5, a5, a4
+; CHECK-NEXT:    add a3, a0, a5
+; CHECK-NEXT:    vse8.v v8, (a7)
+; CHECK-NEXT:    bltu a3, a6, .LBB0_3
 ; CHECK-NEXT:  # %bb.4: # %do.end
-; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    sub a2, a2, a5
 ; CHECK-NEXT:    vsetvli a2, a2, e8, m8, ta, ma
+; CHECK-NEXT:    add a1, a1, a5
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vse8.v v8, (a3)

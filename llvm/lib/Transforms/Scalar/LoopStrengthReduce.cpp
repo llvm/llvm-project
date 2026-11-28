@@ -2171,8 +2171,7 @@ class LSRInstance {
   /// SmallDenseSet.
   SetVector<int64_t, SmallVector<int64_t, 8>, SmallSet<int64_t, 8>> Factors;
 
-  /// The cost of the current SCEV, the best solution by LSR will be dropped if
-  /// the solution is not profitable.
+  /// The cost of the initial formulae over the complete set of fixups.
   Cost BaselineCost;
 
   /// Interesting use types, to facilitate truncation reuse.
@@ -2243,6 +2242,10 @@ class LSRInstance {
   bool IsFixupExecutedEachIncrement(const LSRFixup &LF) const;
 
   void CollectLoopInvariantFixupsAndFormulae();
+
+  /// Price the initial formulae after collecting all uses and fixups, so the
+  /// baseline and candidate solutions cover the same uses and offsets.
+  void CalculateBaselineCost();
 
   void GenerateReassociations(LSRUse &LU, unsigned LUIdx, Formula Base,
                               unsigned Depth = 0);
@@ -3616,11 +3619,6 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
   CondBrInst *ExitBranch = nullptr;
   bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &TLI);
 
-  // For calculating baseline cost
-  SmallPtrSet<const SCEV *, 16> Regs;
-  DenseSet<const SCEV *> VisitedRegs;
-  DenseSet<size_t> VisitedLSRUse;
-
   for (const IVStrideUse &U : IU) {
     Instruction *UserInst = U.getUser();
     // Skip IV users that are part of profitable IV Chains.
@@ -3721,15 +3719,6 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
     LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
 
-    // Create SCEV as Formula for calculating baseline cost
-    if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
-      Formula F;
-      F.initialMatch(S, L, SE);
-      BaselineCost.RateFormula(F, Regs, VisitedRegs, LU,
-                               HardwareLoopProfitable);
-      VisitedLSRUse.insert(LUIdx);
-    }
-
     // If this is the first use of this LSRUse, give it a formula.
     if (LU.Formulae.empty()) {
       InsertInitialFormula(S, LU, LUIdx);
@@ -3738,6 +3727,17 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
   }
 
   LLVM_DEBUG(print_fixups(dbgs()));
+}
+
+void LSRInstance::CalculateBaselineCost() {
+  SmallPtrSet<const SCEV *, 16> Regs;
+  const DenseSet<const SCEV *> VisitedRegs;
+  for (const LSRUse &LU : Uses) {
+    assert(LU.Formulae.size() == 1 &&
+           "Baseline must be priced before generating reuse formulae");
+    BaselineCost.RateFormula(LU.Formulae.front(), Regs, VisitedRegs, LU,
+                             HardwareLoopProfitable);
+  }
 }
 
 /// Insert a formula for the given expression into the given use, separating out
@@ -6416,6 +6416,8 @@ LSRInstance::LSRInstance(const ScalarOptions &Opts, Loop *L, IVUsers &IU,
 
   if (Uses.empty())
     return;
+
+  CalculateBaselineCost();
 
   LLVM_DEBUG(dbgs() << "LSR found " << Uses.size() << " uses:\n";
              print_uses(dbgs()));

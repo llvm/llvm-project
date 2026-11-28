@@ -120,13 +120,14 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_25
 ; CHECK-NEXT:  ; %bb.1: ; %.preheader5
 ; CHECK-NEXT:    v_mul_lo_u32 v44, v41, 14
+; CHECK-NEXT:    v_mov_b32_e32 v0, v42
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v44
 ; CHECK-NEXT:  .LBB0_2: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, s5, v44
-; CHECK-NEXT:    s_add_i32 s5, s5, 1
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s5, v42
-; CHECK-NEXT:    ds_write_b8 v0, v45 offset:15364
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; CHECK-NEXT:    ds_write_b8 v1, v45 offset:15364
+; CHECK-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_2
@@ -276,10 +277,10 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v57
 ; CHECK-NEXT:    s_branch .LBB0_7
-; CHECK-NEXT:  .LBB0_16: ; %Flow30
+; CHECK-NEXT:  .LBB0_16: ; %Flow32
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s68
-; CHECK-NEXT:  .LBB0_17: ; %Flow31
+; CHECK-NEXT:  .LBB0_17: ; %Flow33
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
 ; CHECK-NEXT:    s_mov_b32 s55, exec_lo
@@ -326,11 +327,11 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v56
 ; CHECK-NEXT:    s_branch .LBB0_19
-; CHECK-NEXT:  .LBB0_22: ; %Flow28
+; CHECK-NEXT:  .LBB0_22: ; %Flow30
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_inst_prefetch 0x2
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s68
-; CHECK-NEXT:  .LBB0_23: ; %Flow29
+; CHECK-NEXT:  .LBB0_23: ; %Flow31
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
 ; CHECK-NEXT:  ; %bb.24: ; in Loop: Header=BB0_5 Depth=1
@@ -341,7 +342,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_or_b32 s54, s4, s54
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s54
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_5
-; CHECK-NEXT:  .LBB0_25: ; %Flow36
+; CHECK-NEXT:  .LBB0_25: ; %Flow38
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s52
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
