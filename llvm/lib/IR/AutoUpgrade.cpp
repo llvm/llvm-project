@@ -1037,6 +1037,22 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     }
     if (Name.consume_front("sve.")) {
       // 'aarch64.sve.*'.
+
+      // 'aarch64.sve.whilewr.[bhsd]' || 'aarch64.sve.whilerw.[bhsd]'
+      auto [Opcode, Suffix] = Name.split('.');
+      Intrinsic::ID WhileID =
+          StringSwitch<Intrinsic::ID>(Opcode)
+              .Case("whilerw", Intrinsic::aarch64_sve_whilerw)
+              .Case("whilewr", Intrinsic::aarch64_sve_whilewr)
+              .Default(Intrinsic::not_intrinsic);
+      if (WhileID != Intrinsic::not_intrinsic && Suffix.size() > 2 &&
+          Suffix[1] == '.' && StringRef("bhsd").contains(Suffix[0])) {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), WhileID,
+            {F->getReturnType(), F->getArg(0)->getType()});
+        return true;
+      }
+
       if (Name.consume_front("bf")) {
         if (Name == "mmla") {
           Type *Tys[] = {F->getReturnType(),

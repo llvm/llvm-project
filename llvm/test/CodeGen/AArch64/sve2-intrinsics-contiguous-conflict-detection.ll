@@ -12,7 +12,7 @@ define <vscale x 16 x i1> @whilerw_i8(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.b, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(ptr %a, ptr %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.nxv16i1.p0(ptr %a, ptr %b)
   ret <vscale x 16 x i1> %out
 }
 
@@ -21,7 +21,7 @@ define <vscale x 8 x i1> @whilerw_i16(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(ptr %a, ptr %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.nxv8i1.p0(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
@@ -30,7 +30,7 @@ define <vscale x 4 x i1> @whilerw_i32(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(ptr %a, ptr %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.nxv4i1.p0(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
@@ -39,43 +39,7 @@ define <vscale x 2 x i1> @whilerw_i64(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(ptr %a, ptr %b)
-  ret <vscale x 2 x i1> %out
-}
-
-define <vscale x 8 x i1> @whilerw_bfloat(ptr %a, ptr %b) {
-; CHECK-LABEL: whilerw_bfloat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilerw p0.h, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
-  ret <vscale x 8 x i1> %out
-}
-
-define <vscale x 8 x i1> @whilerw_half(ptr %a, ptr %b) {
-; CHECK-LABEL: whilerw_half:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilerw p0.h, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(ptr %a, ptr %b)
-  ret <vscale x 8 x i1> %out
-}
-
-define <vscale x 4 x i1> @whilerw_float(ptr %a, ptr %b) {
-; CHECK-LABEL: whilerw_float:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilerw p0.s, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(ptr %a, ptr %b)
-  ret <vscale x 4 x i1> %out
-}
-
-define <vscale x 2 x i1> @whilerw_double(ptr %a, ptr %b) {
-; CHECK-LABEL: whilerw_double:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilerw p0.d, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(ptr %a, ptr %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.nxv2i1.p0(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
@@ -88,7 +52,7 @@ define <vscale x 16 x i1> @whilewr_i8(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(ptr %a, ptr %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.nxv16i1.p0(ptr %a, ptr %b)
   ret <vscale x 16 x i1> %out
 }
 
@@ -97,7 +61,7 @@ define <vscale x 8 x i1> @whilewr_i16(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(ptr %a, ptr %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.nxv8i1.p0(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
@@ -106,7 +70,7 @@ define <vscale x 4 x i1> @whilewr_i32(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(ptr %a, ptr %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.nxv4i1.p0(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
@@ -115,62 +79,16 @@ define <vscale x 2 x i1> @whilewr_i64(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(ptr %a, ptr %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.nxv2i1.p0(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilewr_bfloat(ptr %a, ptr %b) {
-; CHECK-LABEL: whilewr_bfloat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilewr p0.h, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
-  ret <vscale x 8 x i1> %out
-}
+declare <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.nxv16i1.p0(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.nxv8i1.p0(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.nxv4i1.p0(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.nxv2i1.p0(ptr %a, ptr %b)
 
-define <vscale x 8 x i1> @whilewr_half(ptr %a, ptr %b) {
-; CHECK-LABEL: whilewr_half:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilewr p0.h, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(ptr %a, ptr %b)
-  ret <vscale x 8 x i1> %out
-}
-
-define <vscale x 4 x i1> @whilewr_float(ptr %a, ptr %b) {
-; CHECK-LABEL: whilewr_float:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilewr p0.s, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(ptr %a, ptr %b)
-  ret <vscale x 4 x i1> %out
-}
-
-define <vscale x 2 x i1> @whilewr_double(ptr %a, ptr %b) {
-; CHECK-LABEL: whilewr_double:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilewr p0.d, x0, x1
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(ptr %a, ptr %b)
-  ret <vscale x 2 x i1> %out
-}
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(ptr %a, ptr %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(ptr %a, ptr %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(ptr %a, ptr %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(ptr %a, ptr %b)
-
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(ptr %a, ptr %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(ptr %a, ptr %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(ptr %a, ptr %b)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(ptr %a, ptr %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(ptr %a, ptr %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(ptr %a, ptr %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(ptr %a, ptr %b)
-
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(ptr %a, ptr %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(ptr %a, ptr %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(ptr %a, ptr %b)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.nxv16i1.p0(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.nxv8i1.p0(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.nxv4i1.p0(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.nxv2i1.p0(ptr %a, ptr %b)
