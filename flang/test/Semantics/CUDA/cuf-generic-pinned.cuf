@@ -1,0 +1,46 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/actual.cuf -o - | FileCheck %s --check-prefix=ACTUAL
+! RUN: bbc -fcuda -gpu=managed -emit-hlfir %t/actual.cuf -o - | FileCheck %s --check-prefix=ACTUAL
+! RUN: bbc -fcuda -gpu=unified -emit-hlfir %t/actual.cuf -o - | FileCheck %s --check-prefix=ACTUAL
+! RUN: bbc -fcuda -emit-hlfir %t/dummy.cuf -o - | FileCheck %s --check-prefix=DUMMY
+
+!--- actual.cuf
+! Explicitly pinned storage stays host storage in every memory mode.
+subroutine pinned_actual(a)
+  integer, allocatable, pinned :: a(:)
+  interface choose
+    subroutine host_specific(x)
+      integer :: x(:)
+    end subroutine
+    subroutine managed_specific(x)
+      integer, managed :: x(:)
+    end subroutine
+    subroutine unified_specific(x)
+      integer, unified :: x(:)
+    end subroutine
+    subroutine device_specific(x)
+      integer, device :: x(:)
+    end subroutine
+  end interface
+  ! ACTUAL-LABEL: func.func @_QPpinned_actual
+  ! ACTUAL: fir.call @_QPhost_specific
+  ! ACTUAL: fir.call @_QPhost_specific
+  call choose(a)
+  call host_specific(a)
+end subroutine
+
+!--- dummy.cuf
+! PINNED dummies also accept ordinary host allocations.
+subroutine pinned_dummy(a)
+  integer, allocatable :: a(:)
+  interface choose
+    subroutine pinned_specific(x)
+      integer, allocatable, pinned :: x(:)
+    end subroutine
+  end interface
+  ! DUMMY-LABEL: func.func @_QPpinned_dummy
+  ! DUMMY: fir.call @_QPpinned_specific
+  ! DUMMY: fir.call @_QPpinned_specific
+  call choose(a)
+  call pinned_specific(a)
+end subroutine

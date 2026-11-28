@@ -1,0 +1,67 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir -module %t %t/interfaces.cuf -o /dev/null
+! RUN: bbc -fcuda -I %t -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: bbc -fcuda -I %t -emit-hlfir %t/both.cuf -o - | FileCheck %s --check-prefix=BOTH
+
+! A separate MODULE PROCEDURE body inherits the CUDA subprogram attributes of
+! its interface (F2023 15.6.2.5p3), so it may run on the device and can load
+! DEVICE storage to pass it by value through a generic.
+
+!--- interfaces.cuf
+module inherited_value
+  use cudadevice, only: on_device
+  interface
+    attributes(device) module subroutine device_caller(a, b, m)
+      integer, device :: a
+      integer :: b
+      integer, managed :: m
+    end subroutine
+    attributes(host,device) module subroutine both_caller(a, b)
+      integer, device :: a
+      integer :: b
+    end subroutine
+  end interface
+  interface choose
+    attributes(device) integer function specific(x)
+      integer, value :: x
+    end function
+  end interface
+  interface operator(.foo.)
+    procedure :: specific
+  end interface
+  interface choose_managed
+    integer function host_ignored(x)
+      integer, intent(in) :: x
+      !dir$ ignore_tkr(m) x
+    end function
+    attributes(device) integer function device_reference(x)
+      integer, device, intent(in) :: x
+    end function
+  end interface
+end module
+
+!--- device.cuf
+submodule(inherited_value) device_impl
+contains
+  module procedure device_caller
+    ! DEVICE-LABEL: func.func @_QMinherited_valuePdevice_caller
+    ! DEVICE: fir.call @_QPspecific
+    ! DEVICE: fir.call @_QPspecific
+    ! DEVICE: fir.call @_QPdevice_reference
+    b = choose(a)
+    b = .foo.a
+    b = choose_managed(m)
+  end procedure
+end submodule
+
+!--- both.cuf
+submodule(inherited_value) both_impl
+contains
+  module procedure both_caller
+    if (on_device()) then
+      ! BOTH-LABEL: func.func @_QMinherited_valuePboth_caller
+      ! BOTH: fir.call @_QPspecific
+      b = choose(a)
+    end if
+  end procedure
+end submodule
