@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -258,7 +259,6 @@ public:
                              : 0);
       }
     };
-    SmallVector<FieldInfo, 20> Fields;
     auto GatherSizesAndAlignments = [](const FieldDecl *FD) {
       FieldInfo RetVal;
       RetVal.Field = FD;
@@ -271,8 +271,8 @@ public:
         RetVal.Align = std::max(Ctx.toCharUnitsFromBits(Max), RetVal.Align);
       return RetVal;
     };
-    std::transform(RD->field_begin(), RD->field_end(),
-                   std::back_inserter(Fields), GatherSizesAndAlignments);
+    SmallVector<FieldInfo, 20> Fields =
+        llvm::map_to_vector<20>(RD->fields(), GatherSizesAndAlignments);
     llvm::sort(Fields);
     // This lets us skip over vptrs and non-virtual bases,
     // so that we can just worry about the fields in our object.

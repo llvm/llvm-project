@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 using namespace clang;
@@ -174,10 +175,12 @@ static bool isInMIGCall(CheckerContext &C) {
     return true;
 
   // See if there's an annotated method in the superclass.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    for (const auto *OMD: MD->overridden_methods())
-      if (OMD->hasAttr<MIGServerRoutineAttr>())
-        return true;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    auto IsMIGServerRoutine = [](const CXXMethodDecl *OMD) {
+      return OMD->hasAttr<MIGServerRoutineAttr>();
+    };
+    return llvm::any_of(MD->overridden_methods(), IsMIGServerRoutine);
+  }
 
   return false;
 }

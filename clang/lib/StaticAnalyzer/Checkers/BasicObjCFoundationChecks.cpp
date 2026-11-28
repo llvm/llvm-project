@@ -952,12 +952,10 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
   }
 
   // Keep looking for a block edge.
-  for (const ExplodedNode *N : N->preds()) {
-    if (alreadyExecutedAtLeastOneLoopIteration(N, FCS))
-      return true;
-  }
-
-  return false;
+  auto HasExecutedIteration = [&](const ExplodedNode *Pred) {
+    return alreadyExecutedAtLeastOneLoopIteration(Pred, FCS);
+  };
+  return llvm::any_of(N->preds(), HasExecutedIteration);
 }
 
 void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
