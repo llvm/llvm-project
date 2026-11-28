@@ -829,6 +829,7 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
+  Instruction *foldICmpByOp0(ICmpInst &Cmp);
   Instruction *foldICmpCommutative(CmpPredicate Pred, Value *Op0, Value *Op1,
                                    ICmpInst &CtxI);
 
