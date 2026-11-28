@@ -501,7 +501,8 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ShuffleOp, gpu::SubgroupIdOp, gpu::SubgroupSizeOp,
                         gpu::ThreadIdOp, gpu::PrintfOp>();
 
-    populateGpuToLLVMSPVConversionPatterns(converter, patterns);
+    populateGpuToLLVMSPVConversionPatterns(
+        converter, patterns, encodeWorkgroupAttributionsAsArguments);
     populateGpuMemorySpaceAttributeConversions(converter);
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/2,
                                                 LLVM::cconv::CConv::SPIR_FUNC,
@@ -529,7 +530,8 @@ gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
 } // namespace
 
 void populateGpuToLLVMSPVConversionPatterns(
-    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns,
+    bool encodeWorkgroupAttributionsAsArguments) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,
@@ -554,8 +556,7 @@ void populateGpuToLLVMSPVConversionPatterns(
           privateAddressSpace, localAddressSpace,
           /*kernelAttributeName=*/{}, kernelBlockSizeAttributeName,
           /*kernelClusterSizeAttributeName=*/{}, LLVM::CConv::SPIR_KERNEL,
-          LLVM::CConv::SPIR_FUNC,
-          /*encodeWorkgroupAttributionsAsArguments=*/true});
+          LLVM::CConv::SPIR_FUNC, encodeWorkgroupAttributionsAsArguments});
 }
 
 void populateGpuMemorySpaceAttributeConversions(TypeConverter &typeConverter) {
