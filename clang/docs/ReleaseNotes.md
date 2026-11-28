@@ -1621,6 +1621,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `cooperative_groups.h` include them. The `-nogpuinc` option disables this
   path together with the other CUDA include paths.
 
+- Fixed kernel launches failing with `use of undeclared identifier
+  cudaConfigureCall` when compiling with `-nocudalib`: the detected CUDA SDK
+  version is now passed to the device compilation even when libdevice is not
+  linked. (#GH244194)
+
 #### AIX Support
 
 #### NetBSD Support

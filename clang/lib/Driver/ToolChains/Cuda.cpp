@@ -928,6 +928,13 @@ void CudaToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-target-abi", "shortptr"});
 
+  // The kernel launch API depends on the CUDA version, even without libdevice.
+  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
+  if (!UsesLLVMOffloading && CudaInstallationVersion != CudaVersion::UNKNOWN)
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(Twine("-target-sdk-version=") +
+                                 CudaVersionToString(CudaInstallationVersion)));
+
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return;
@@ -947,13 +954,6 @@ void CudaToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
-
-  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
-
-  if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
-    CC1Args.push_back(
-        DriverArgs.MakeArgString(Twine("-target-sdk-version=") +
-                                 CudaVersionToString(CudaInstallationVersion)));
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     if (CudaInstallationVersion < CudaVersion::CUDA_92) {
