@@ -98,7 +98,7 @@ body:             |
 
     %7:gr32 = nofpexcept CVTTSS2SIrr %1, implicit $mxcsr, debug-instr-number 1
     %8:gr8 = COPY %7.sub_8bit
-    DBG_INSTR_REF !6, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !17
+    DBG_INSTR_REF !6, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !17
     TEST8rr %8, %8, implicit-def $eflags
     JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.2
