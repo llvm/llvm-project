@@ -122,6 +122,75 @@ define float @fdiv_fneg_fpmath(float %x, float %y) {
   ret float %w
 }
 
+; ninf on the fneg can only be kept if the fmul/fdiv has it too:
+; -(inf * nan) is nan, but fmul ninf inf, -nan is poison.
+
+define float @fmul_fneg_ninf(float %x, float %y) {
+; CHECK-LABEL: @fmul_fneg_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul float [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, %y
+  %r = fneg ninf float %m
+  ret float %r
+}
+
+define float @fmul_ninf_fneg_ninf(float %x, float %y) {
+; CHECK-LABEL: @fmul_ninf_fneg_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf float [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf float [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul ninf float %x, %y
+  %r = fneg ninf float %m
+  ret float %r
+}
+
+define float @fmul_fneg_nnan_ninf(float %x, float %y) {
+; CHECK-LABEL: @fmul_fneg_nnan_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan float [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, %y
+  %r = fneg nnan ninf float %m
+  ret float %r
+}
+
+define float @fdiv_fneg_ninf(float %x, float %y) {
+; CHECK-LABEL: @fdiv_fneg_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, %y
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+define float @fdiv_ninf_fneg_ninf(float %x, float %y) {
+; CHECK-LABEL: @fdiv_ninf_fneg_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv ninf float %x, %y
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+define float @fdiv_fneg_nnan_ninf(float %x, float %y) {
+; CHECK-LABEL: @fdiv_fneg_nnan_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, %y
+  %r = fneg nnan ninf float %d
+  ret float %r
+}
+
 ; -(X / C) --> X / (-C)
 
 define float @fdiv_op1_constant_fsub(float %x) {
