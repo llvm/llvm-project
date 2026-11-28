@@ -85,6 +85,73 @@ entry:
   ret void
 }
 
+; TODO: Only update origins for active lanes with non-zero shadow; here the
+;       mask is all zero so no memory or origin should be touched.
+define void @Store_ZeroMask(ptr %p, <4 x i64> %v) sanitize_memory {
+; CHECK-LABEL: @Store_ZeroMask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP0]], ptr align 1 [[TMP3]], <4 x i1> zeroinitializer)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+; ADDR-LABEL: @Store_ZeroMask(
+; ADDR-NEXT:  entry:
+; ADDR-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ADDR-NEXT:    call void @llvm.donothing()
+; ADDR-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ADDR-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ADDR-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP0]], ptr align 1 [[TMP4]], <4 x i1> zeroinitializer)
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; ADDR:       5:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
+; ADDR-NEXT:    unreachable
+; ADDR:       6:
+; ADDR-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> zeroinitializer)
+; ADDR-NEXT:    ret void
+;
+; ORIGINS-LABEL: @Store_ZeroMask(
+; ORIGINS-NEXT:  entry:
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
+; ORIGINS-NEXT:    call void @llvm.donothing()
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -4
+; ORIGINS-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ORIGINS-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP0]], ptr align 1 [[TMP4]], <4 x i1> zeroinitializer)
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP7]], align 4
+; ORIGINS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 4
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP8]], align 4
+; ORIGINS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 8
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP9]], align 4
+; ORIGINS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP7]], i64 12
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP10]], align 4
+; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 16
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP11]], align 4
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP7]], i64 20
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP12]], align 4
+; ORIGINS-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP7]], i64 24
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP13]], align 4
+; ORIGINS-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP7]], i64 28
+; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP14]], align 4
+; ORIGINS-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> zeroinitializer)
+; ORIGINS-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.masked.store.v4i64.p0(<4 x i64> %v, ptr align 1 %p, <4 x i1> zeroinitializer)
+  ret void
+}
+
 define <4 x double> @Load(ptr %p, <4 x double> %v, <4 x i1> %mask) sanitize_memory {
 ; CHECK-LABEL: @Load(
 ; CHECK-NEXT:  entry:

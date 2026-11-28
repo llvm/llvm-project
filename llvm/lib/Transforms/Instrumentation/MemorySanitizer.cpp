@@ -4488,6 +4488,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!MS.TrackOrigins)
       return;
 
+    // TODO: Only update origins for active lanes with non-zero shadow;
+    //       masked-off lanes may be unmapped/out-of-bounds or hold distinct
+    //       origins (including when the mask is all zero).
     auto &DL = F.getDataLayout();
     paintOrigin(IRB, getOrigin(V), OriginPtr,
                 DL.getTypeStoreSize(Shadow->getType()),
