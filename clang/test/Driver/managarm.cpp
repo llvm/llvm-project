@@ -3,7 +3,9 @@
 // RUN: %clang -### %s --target=x86_64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-X86-64 %s
 // CHECK-X86-64:      "-cc1"
+// CHECK-X86-64-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-X86-64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-X86-64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-X86-64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-X86-64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/x86_64-managarm-mlibc/c++/10"
 // CHECK-X86-64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/c++/10/backward"
@@ -28,7 +30,9 @@
 // RUN: %clang -### %s --target=x86_64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-X86-64-LIBS %s
 // CHECK-X86-64-LIBS:      "-cc1"
+// CHECK-X86-64-LIBS-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-X86-64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
 // CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-X86-64-LIBS-SAME: "-internal-externc-isystem"
@@ -52,7 +56,9 @@
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-X86-64-STATIC %s
 // CHECK-X86-64-STATIC:      "-cc1"
 // CHECK-X86-64-STATIC-SAME: "-static-define"
+// CHECK-X86-64-STATIC-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-X86-64-STATIC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-X86-64-STATIC-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-X86-64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-X86-64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/x86_64-managarm-mlibc/c++/10"
 // CHECK-X86-64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-managarm-mlibc/10/../../../../include/c++/10/backward"
@@ -91,7 +97,9 @@
 // RUN: %clang -### %s --target=aarch64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-AARCH64 %s
 // CHECK-AARCH64:      "-cc1"
+// CHECK-AARCH64-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-AARCH64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-AARCH64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/aarch64-managarm-mlibc/c++/10"
 // CHECK-AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/c++/10/backward"
@@ -117,7 +125,9 @@
 // RUN: %clang -### %s --target=aarch64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-LIBS %s
 // CHECK-AARCH64-LIBS:      "-cc1"
+// CHECK-AARCH64-LIBS-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-AARCH64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
 // CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-AARCH64-LIBS-SAME: "-internal-externc-isystem"
@@ -142,7 +152,9 @@
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-STATIC %s
 // CHECK-AARCH64-STATIC:      "-cc1"
 // CHECK-AARCH64-STATIC-SAME: "-static-define"
+// CHECK-AARCH64-STATIC-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-AARCH64-STATIC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-AARCH64-STATIC-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-AARCH64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-AARCH64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/aarch64-managarm-mlibc/c++/10"
 // CHECK-AARCH64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/aarch64-managarm-mlibc/10/../../../../include/c++/10/backward"
@@ -183,7 +195,9 @@
 // RUN: %clang -### %s --target=riscv64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-RISCV64 %s
 // CHECK-RISCV64:      "-cc1"
+// CHECK-RISCV64-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-RISCV64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-RISCV64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-RISCV64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-RISCV64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/riscv64-managarm-mlibc/c++/10"
 // CHECK-RISCV64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/c++/10/backward"
@@ -207,7 +221,9 @@
 // RUN: %clang -### %s --target=riscv64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-RISCV64-LIBS %s
 // CHECK-RISCV64-LIBS:      "-cc1"
+// CHECK-RISCV64-LIBS-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-RISCV64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
 // CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-RISCV64-LIBS-SAME: "-internal-externc-isystem"
@@ -230,7 +246,9 @@
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-RISCV64-STATIC %s
 // CHECK-RISCV64-STATIC:      "-cc1"
 // CHECK-RISCV64-STATIC-SAME: "-static-define"
+// CHECK-RISCV64-STATIC-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-RISCV64-STATIC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-RISCV64-STATIC-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
 // CHECK-RISCV64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/c++/10"
 // CHECK-RISCV64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/riscv64-managarm-mlibc/c++/10"
 // CHECK-RISCV64-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/riscv64-managarm-mlibc/10/../../../../include/c++/10/backward"

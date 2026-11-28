@@ -1167,6 +1167,24 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   // Add C++ include arguments, if needed.
   if (types::isCXX(Inputs[0].getType())) {
+
+    // We provide our own <meta> header since its contents are very
+    // compiler-specific: libstdc++'s version relies heavily on how 
+    // GCC has chosen to implement most meta functions, i.e. GCC simply
+    // treats them as builtins, which we don't want to do.
+    // 
+    // To make sure we always use our <meta> header irrespective of what
+    // STL we're using, we place it in a separate directory that is added
+    // first to the header search paths.
+    //
+    // Skip this if if either -nostdinc or -nobuiltininc is passed.
+    if (!Args.hasArg(options::OPT_nostdinc, options::OPT_nobuiltininc)) {
+      SmallString<128> ResourceDirInclude(D.ResourceDir);
+      llvm::sys::path::append(ResourceDirInclude, "include", "cxx");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(ResourceDirInclude));
+    }
+
     bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
     forAllAssociatedToolChains(
         C, JA, getToolChain(),
