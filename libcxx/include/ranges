@@ -428,6 +428,13 @@ namespace std::ranges {
       enable_borrowed_range<V>;                                            // C++23
 
   namespace views { inline constexpr unspecified stride = unspecified; }   // C++23
+
+  // [range.cartesian], cartesian product view
+  template<input_range First, forward_range... Vs>
+    requires (view<First> && ... && view<Vs>)
+  class cartesian_product_view;                                                   // C++23
+
+  namespace views { inline constexpr unspecified cartesian_product = unspecified; } // C++23
 }
 
 namespace std {
@@ -513,6 +520,7 @@ namespace std {
 #    include <__ranges/adjacent_transform_view.h>
 #    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
+#    include <__ranges/cartesian_product_view.h>
 #    include <__ranges/chunk_by_view.h>
 #    include <__ranges/enumerate_view.h>
 #    include <__ranges/from_range.h>

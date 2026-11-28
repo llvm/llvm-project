@@ -9,6 +9,7 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <ranges>
@@ -28,6 +29,9 @@ struct BufferView : std::ranges::view_base {
 
   template <std::size_t N>
   constexpr BufferView(T (&b)[N]) : buffer_(b), size_(N) {}
+
+  template <std::size_t N>
+  constexpr BufferView(std::array<T, N>& a) : buffer_(a.data()), size_(N) {}
 
   constexpr BufferView(T* b, std::size_t s) : buffer_(b), size_(s) {}
 };

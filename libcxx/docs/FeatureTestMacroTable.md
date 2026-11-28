@@ -195,6 +195,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges`                                     | `202406L`       |
 | `__cpp_lib_ranges_as_const`                            | *unimplemented* |
 | `__cpp_lib_ranges_as_rvalue`                           | `202207L`       |
+| `__cpp_lib_ranges_cartesian_product`                   | `202207L`       |
 | `__cpp_lib_ranges_chunk`                               | *unimplemented* |
 | `__cpp_lib_ranges_chunk_by`                            | `202202L`       |
 | `__cpp_lib_ranges_contains`                            | `202207L`       |
