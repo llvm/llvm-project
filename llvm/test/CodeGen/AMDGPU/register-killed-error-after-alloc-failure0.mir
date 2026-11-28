@@ -14,13 +14,10 @@
 # ERR: error: <unknown>:0:0: ran out of registers during register allocation
 
 # GREEDY: SI_SPILL_V256_SAVE undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-# GREEDY-NEXT: SI_SPILL_V512_SAVE killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
-# GREEDY-NEXT: SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3
-
-# GREEDY: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = SI_SPILL_V512_RESTORE
-# GREEDY: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_V256_RESTORE
-# GREEDY:  S_NOP 0, implicit killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
-# GREEDY: S_NOP 0, implicit killed renamable $vgpr20_vgpr21
+# GREEDY-NEXT: S_NOP 0, implicit-def renamable $vgpr20_vgpr21
+# GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_V256_RESTORE
+# GREEDY-NEXT: S_NOP 0, implicit killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
+# GREEDY-NEXT: S_NOP 0, implicit killed renamable $vgpr20_vgpr21
 
 
 # BASIC: SI_SPILL_V512_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15

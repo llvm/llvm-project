@@ -92,7 +92,6 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    andq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
 ; CHECK-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
 ; CHECK-NEXT:    subq %r13, %rcx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; CHECK-NEXT:    jmp .LBB0_4
