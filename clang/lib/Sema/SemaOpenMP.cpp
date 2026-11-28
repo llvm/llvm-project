@@ -16963,8 +16963,17 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation FactorLoc;
   if (Expr *FactorVal = PartialClause->getFactor();
       FactorVal && !FactorVal->containsErrors()) {
-    Factor = FactorVal->getIntegerConstantExpr(Context)->getLimitedValue();
     FactorLoc = FactorVal->getExprLoc();
+    if (std::optional<llvm::APSInt> ICE =
+            FactorVal->getIntegerConstantExpr(Context)) {
+      Factor = ICE->getLimitedValue();
+    } else if (Expr::EvalResult EvalRes;
+               FactorVal->EvaluateAsInt(EvalRes, Context) &&
+               EvalRes.Val.isInt()) {
+      Factor = EvalRes.Val.getInt().getLimitedValue();
+    } else {
+      Factor = llvm::omp::DefaultPartialUnrollFactor;
+    }
   } else {
     // TODO: Use a better profitability model.
     Factor = llvm::omp::DefaultPartialUnrollFactor;
