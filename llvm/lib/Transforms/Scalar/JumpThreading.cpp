@@ -25,6 +25,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -35,6 +36,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -220,9 +222,6 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
 PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  // Jump Threading has no sense for the targets with divergent CF
-  if (TTI.hasBranchDivergence(&F))
-    return PreservedAnalyses::all();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
@@ -309,6 +308,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   bool Changed;
   do {
     Changed = false;
+    // The uniformity info is computed at most once per iteration.
+    Uniformity = nullptr;
     for (auto &BB : *F) {
       if (Unreachable.count(&BB))
         continue;
@@ -1031,6 +1032,10 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
     return true;
   }
 
+  // On targets with branch divergence only uniform branches are threaded.
+  if (!isUniformTerminator(BB))
+    return ConstantFolded;
+
   Instruction *CondInst = dyn_cast<Instruction>(Condition);
 
   // All the rest of our checks depend on the condition being an instruction.
@@ -1332,6 +1337,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // If the loaded value isn't available in any predecessor, it isn't partially
   // redundant.
   if (AvailablePreds.empty()) return false;
+
+  // Not done on targets with branch divergence: GVN handles most of these
+  // loads, and the PHI could be divergent.
+  if (getUniformityInfo())
+    return false;
 
   // Okay, the loaded value is available in at least one (and maybe all!)
   // predecessors.  If the value is unavailable in more than one unique
@@ -2206,6 +2216,10 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   if (PredBB->isEHPad())
     return false;
 
+  // PredBB is duplicated together with its conditional branch.
+  if (!isUniformTerminator(PredBB))
+    return false;
+
   // Find a predecessor that we can thread.  For simplicity, we only consider a
   // successor edge out of BB to which we thread exactly one incoming edge into
   // PredBB.
@@ -2279,6 +2293,12 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << PredBBCost
                       << " for PredBB, " << BBCost << "for BB\n");
+    return false;
+  }
+
+  if (splitsDivergentJoin(PredBB, PredPredBB)) {
+    LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
+                      << "' - it would split a divergent join\n");
     return false;
   }
 
@@ -2392,6 +2412,12 @@ bool JumpThreadingPass::tryThreadEdge(
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
+    return false;
+  }
+
+  if (splitsDivergentJoin(BB, PredBBs)) {
+    LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
+                      << "' - it would split a divergent join\n");
     return false;
   }
 
@@ -2544,6 +2570,81 @@ bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   return hasValidBranchWeightMD(*TI);
 }
 
+UniformityInfo *JumpThreadingPass::getUniformityInfo() {
+  if (!TTI->hasBranchDivergence(F))
+    return nullptr;
+  // Computed at most once per iteration. Blocks created since are treated as
+  // divergent; the other blocks keep their uniformity.
+  if (!Uniformity) {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<UniformityInfoAnalysis>();
+    PA.abandon<CycleAnalysis>();
+    FAM->invalidate(*F, PA);
+    UniformityDT = &DTU->getDomTree();
+    Uniformity = &FAM->getResult<UniformityInfoAnalysis>(*F);
+    UniformityNumBlocks = F->getMaxBlockNumber();
+  }
+  return Uniformity;
+}
+
+bool JumpThreadingPass::isUniformTerminator(const BasicBlock *BB) {
+  const Instruction *Term = BB->getTerminator();
+  if (Term->getNumSuccessors() < 2)
+    return true;
+  UniformityInfo *UI = getUniformityInfo();
+  return !UI || (BB->getNumber() < UniformityNumBlocks &&
+                 UI->isUniformTerminator(Term));
+}
+
+bool JumpThreadingPass::isUniformAtUse(const Use &U) {
+  UniformityInfo *UI = getUniformityInfo();
+  const BasicBlock *BB = cast<Instruction>(U.getUser())->getParent();
+  return !UI ||
+         (BB->getNumber() < UniformityNumBlocks && UI->isUniformAtUse(U));
+}
+
+bool JumpThreadingPass::splitsDivergentJoin(BasicBlock *BB,
+                                            ArrayRef<BasicBlock *> PredBBs) {
+  if (!getUniformityInfo())
+    return false;
+  // Nothing is split if PredBBs are all the predecessors.
+  SmallPtrSet<BasicBlock *, 4> PredBBSet(PredBBs.begin(), PredBBs.end());
+  SmallVector<BasicBlock *, 4> OtherPreds;
+  for (BasicBlock *Pred : predecessors(BB))
+    if (!PredBBSet.contains(Pred))
+      OtherPreds.push_back(Pred);
+  if (OtherPreds.empty())
+    return false;
+
+  // Only branches below the immediate dominator can reconverge at BB. The
+  // dominator tree is from the start of the iteration.
+  const DomTreeNode *Node = UniformityDT->getNode(BB);
+  if (!Node || !Node->getIDom())
+    return true;
+  BasicBlock *IDom = Node->getIDom()->getBlock();
+
+  // Collect the blocks that reach BB through Preds, stopping at IDom and at
+  // blocks created in this iteration.
+  auto CollectReaching = [&](ArrayRef<BasicBlock *> Preds,
+                             SmallPtrSetImpl<BasicBlock *> &Reaching) {
+    SmallVector<BasicBlock *, 8> Worklist(Preds);
+    while (!Worklist.empty()) {
+      BasicBlock *B = Worklist.pop_back_val();
+      if (B != BB && B->getNumber() < UniformityNumBlocks &&
+          Reaching.insert(B).second && B != IDom)
+        append_range(Worklist, predecessors(B));
+    }
+  };
+  SmallPtrSet<BasicBlock *, 16> ReachingPreds, ReachingOthers;
+  CollectReaching(PredBBs, ReachingPreds);
+  CollectReaching(OtherPreds, ReachingOthers);
+
+  // A divergent branch that reaches BB through both would be split.
+  return any_of(ReachingPreds, [&](BasicBlock *B) {
+    return ReachingOthers.contains(B) && !isUniformTerminator(B);
+  });
+}
+
 /// Update the block frequency of BB and branch weight and the metadata on the
 /// edge BB->SuccBB. This is done by scaling the weight of BB->SuccBB by 1 -
 /// Freq(PredBB->BB) / Freq(BB->SuccBB).
@@ -2650,6 +2751,11 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
 bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     BasicBlock *BB, const SmallVectorImpl<BasicBlock *> &PredBBs) {
   assert(!PredBBs.empty() && "Can't handle an empty set");
+
+  // Not done on targets with branch divergence: it only removes an
+  // unconditional branch.
+  if (getUniformityInfo())
+    return false;
 
   // If BB is a loop header, then duplicating this block outside the loop would
   // cause us to transform this into an irreducible loop, don't do this.
@@ -3034,6 +3140,9 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
 
     if (!SI)
       continue;
+    // The select becomes a branch on its condition, which must be uniform.
+    if (!isUniformAtUse(SI->getOperandUse(0)))
+      continue;
     // Expand the select.
     Value *Cond = SI->getCondition();
     if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI)) {
@@ -3261,6 +3370,7 @@ typename AnalysisT::Result *JumpThreadingPass::runExternalAnalysis() {
   PA.preserve<BlockFrequencyAnalysis>();
   // Report everything except explicitly preserved as invalid.
   FAM->invalidate(*F, PA);
+  Uniformity = nullptr;
   // Update DT/PDT.
   DTU->flush();
   // Make sure DT/PDT are valid before running "external" analysis.

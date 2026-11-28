@@ -3,7 +3,7 @@
 ; RUN: opt < %s -mtriple=x86_64 -passes=jump-threading -S | FileCheck %s -check-prefixes=CHECK,UNIFORM
 
 ; Here we assure that for the target with no branch divergence usual Jump Threading optimization performed
-; For target with branch divergence - no optimization, so the IR is unchanged.
+; For target with branch divergence - the branch on %A is divergent and is not threaded, so the IR is unchanged.
 
 declare i32 @f1()
 declare i32 @f2()
