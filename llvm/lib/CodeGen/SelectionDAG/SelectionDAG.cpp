@@ -13575,12 +13575,17 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
 /// ReplaceAllUsesOfValueWith - Replace any uses of From with To, leaving
 /// uses of other values produced by From.getNode() alone.  The Deleted
 /// vector is handled the same way as for ReplaceAllUsesWith.
-void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
+void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To) {
+  replaceAllUsesOfValueWith(From, To, nullptr);
+}
+
+void SelectionDAG::replaceAllUsesOfValueWith(SDValue From, SDValue To,
+                                             SDNode *SkipUser) {
   // Handle the really simple, really trivial case efficiently.
   if (From == To) return;
 
   // Handle the simple, trivial, case efficiently.
-  if (From.getNode()->getNumValues() == 1) {
+  if (!SkipUser && From.getNode()->getNumValues() == 1) {
     ReplaceAllUsesWith(From, To);
     return;
   }
@@ -13596,6 +13601,10 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
     SDNode *User = UI->getUser();
+    if (User == SkipUser) {
+      ++UI;
+      continue;
+    }
     bool UserRemovedFromCSEMaps = false;
 
     // A user can appear in a use list multiple times, and when this
@@ -13967,8 +13976,9 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
 
   SDValue TokenFactor = getNode(ISD::TokenFactor, SDLoc(OldChain), MVT::Other,
                                 OldChain, NewMemOpChain);
-  ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
-  UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewMemOpChain);
+  // Leave the TokenFactor's own operand unchanged. Temporarily making it
+  // self-referential can collide with an existing node during recursive CSE.
+  replaceAllUsesOfValueWith(OldChain, TokenFactor, TokenFactor.getNode());
   return TokenFactor;
 }
 

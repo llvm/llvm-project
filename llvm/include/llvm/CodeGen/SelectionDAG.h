@@ -2803,6 +2803,9 @@ private:
 #ifndef NDEBUG
   void verifyNode(SDNode *N) const;
 #endif
+  // Replace uses of From, excluding uses in SkipUser.
+  void replaceAllUsesOfValueWith(SDValue From, SDValue To, SDNode *SkipUser);
+
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

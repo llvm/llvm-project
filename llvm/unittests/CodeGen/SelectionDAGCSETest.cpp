@@ -113,4 +113,50 @@ TEST_F(SelectionDAGCSETest, PseudoProbeNode) {
             DAG->getPseudoProbeNode(Loc, getChain(), 1234, 5, 8).getNode());
 }
 
+TEST_F(SelectionDAGCSETest, EquivalentMemoryOrdering) {
+  SDValue Ptr = DAG->CreateStackTemporary(MVT::i64);
+  SDValue OldLoad =
+      DAG->getLoad(MVT::i64, Loc, getChain(), Ptr, MachinePointerInfo());
+  SDValue NewLoad =
+      DAG->getLoad(MVT::i32, Loc, getChain(), Ptr, MachinePointerInfo());
+  SDValue OtherLoad = DAG->getLoad(MVT::i16, Loc, OldLoad.getValue(1), Ptr,
+                                   MachinePointerInfo());
+  DAG->setRoot(OldLoad.getValue(1));
+
+  SDValue TF = DAG->makeEquivalentMemoryOrdering(OldLoad.getValue(1),
+                                                 NewLoad.getValue(1));
+  EXPECT_EQ(TF.getOpcode(), ISD::TokenFactor);
+  EXPECT_EQ(TF.getOperand(0), OldLoad.getValue(1));
+  EXPECT_EQ(TF.getOperand(1), NewLoad.getValue(1));
+  EXPECT_EQ(OtherLoad.getOperand(0), TF);
+  EXPECT_EQ(DAG->getRoot(), TF);
+
+  SDValue LaterLoad = DAG->getLoad(MVT::i8, Loc, OldLoad.getValue(1), Ptr,
+                                   MachinePointerInfo());
+  EXPECT_EQ(DAG->makeEquivalentMemoryOrdering(OldLoad.getValue(1),
+                                              NewLoad.getValue(1)),
+            TF);
+  EXPECT_EQ(OtherLoad.getOperand(0), TF);
+  EXPECT_EQ(LaterLoad.getOperand(0), TF);
+}
+
+TEST_F(SelectionDAGCSETest, RepeatedEquivalentMemoryOrdering) {
+  SDValue Ptr = DAG->CreateStackTemporary(MVT::i64);
+  SDValue OldLoad =
+      DAG->getLoad(MVT::i64, Loc, getChain(), Ptr, MachinePointerInfo());
+  SDValue NewLoad =
+      DAG->getLoad(MVT::i32, Loc, getChain(), Ptr, MachinePointerInfo());
+  SDValue OldChain = OldLoad.getValue(1);
+  SDValue NewChain = NewLoad.getValue(1);
+  SDValue TF =
+      DAG->getNode(ISD::TokenFactor, Loc, MVT::Other, OldChain, NewChain);
+  SDValue Root = DAG->getNode(ISD::TokenFactor, Loc, MVT::Other, TF, NewChain);
+  DAG->setRoot(Root);
+
+  EXPECT_EQ(DAG->makeEquivalentMemoryOrdering(OldChain, NewChain), TF);
+  EXPECT_EQ(TF.getOperand(0), OldChain);
+  EXPECT_EQ(TF.getOperand(1), NewChain);
+  EXPECT_EQ(DAG->getRoot(), Root);
+}
+
 } // namespace llvm
