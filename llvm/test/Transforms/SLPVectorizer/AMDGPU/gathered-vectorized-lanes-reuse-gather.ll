@@ -9,7 +9,7 @@
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        reuse_first_gather
-; COST:        - Cost:            '-5'
+; COST:        - Cost:            '-4'
 ; COST:        - TreeSize:        '8'
 
 define void @reuse_first_gather(ptr addrspace(1) noalias %a, float %x, float %y, ptr addrspace(1) noalias %out) {
@@ -44,7 +44,7 @@ define void @reuse_first_gather(ptr addrspace(1) noalias %a, float %x, float %y,
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        reuse_second_gather
-; COST:        - Cost:            '-5'
+; COST:        - Cost:            '-4'
 ; COST:        - TreeSize:        '8'
 
 define void @reuse_second_gather(ptr addrspace(1) noalias %a, float %x, float %y, ptr addrspace(1) noalias %out) {
@@ -54,7 +54,7 @@ define void @reuse_second_gather(ptr addrspace(1) noalias %a, float %x, float %y
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[X]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP1]], <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP3]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub <2 x float> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr addrspace(1) [[OUT]], align 4
