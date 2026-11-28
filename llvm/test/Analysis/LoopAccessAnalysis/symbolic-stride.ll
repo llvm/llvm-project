@@ -200,8 +200,8 @@ define void @single_stride_castexpr(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + %dst))
-; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:          (Low: {%dst,+,804}<%outer.header> High: {(804 + %dst),+,804}<%outer.header>)
+; CHECK-NEXT:            Member: {{\{\{}}%dst,+,804}<%outer.header>,+,4}<%inner.loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (804 + %src))
 ; CHECK-NEXT:            Member: {%src,+,4}<nuw><%inner.loop>
@@ -212,8 +212,8 @@ define void @single_stride_castexpr(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
-; CHECK-NEXT:        {((4 * %iv.1) + %dst),+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
-; CHECK-NEXT:        --> {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:        {{\{\{}}%dst,+,(804 * (sext i32 %offset to i64))<nsw>}<%outer.header>,+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
+; CHECK-NEXT:        --> {{\{\{}}%dst,+,804}<%outer.header>,+,4}<%inner.loop>
 ; CHECK-NEXT:    outer.header:
 ; CHECK-NEXT:      Report: loop is not the innermost loop
 ; CHECK-NEXT:      Dependences:
@@ -262,8 +262,8 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + (-4 * (zext i32 %offset to i64))<nsw> + %dst))
-; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:          (Low: {%dst,+,800}<%outer.header> High: {(804 + (-4 * (zext i32 %offset to i64))<nsw> + %dst),+,800}<%outer.header>)
+; CHECK-NEXT:            Member: {{\{\{}}%dst,+,800}<%outer.header>,+,4}<%inner.loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %src) High: (808 + (-4 * (zext i32 %offset to i64))<nsw> + %src))
 ; CHECK-NEXT:            Member: {(4 + %src),+,4}<%inner.loop>
@@ -277,8 +277,8 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:        {((4 * (zext i32 %offset to i64))<nuw><nsw> + %src),+,4}<%inner.loop>
 ; CHECK-NEXT:        --> {(4 + %src),+,4}<%inner.loop>
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
-; CHECK-NEXT:        {((4 * %iv.1) + %dst),+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
-; CHECK-NEXT:        --> {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:        {{\{\{}}%dst,+,(4 * (sext i32 %offset to i64) * (201 + (-1 * (zext i32 %offset to i64))<nsw>)<nsw>)}<%outer.header>,+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
+; CHECK-NEXT:        --> {{\{\{}}%dst,+,800}<%outer.header>,+,4}<%inner.loop>
 ; CHECK-NEXT:    outer.header:
 ; CHECK-NEXT:      Report: loop is not the innermost loop
 ; CHECK-NEXT:      Dependences:
