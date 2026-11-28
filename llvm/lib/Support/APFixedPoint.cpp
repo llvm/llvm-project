@@ -34,9 +34,14 @@ uint32_t FixedPointSemantics::toOpaqueInt() const {
 }
 
 FixedPointSemantics FixedPointSemantics::getFromOpaqueInt(uint32_t I) {
-  FixedPointSemantics F(0, 0, false, false, false);
-  std::memcpy(&F, &I, sizeof(F));
-  return F;
+  unsigned Width = I & maskTrailingOnes<unsigned>(WidthBitWidth);
+  int LsbWeight = SignExtend32<LsbWeightBitWidth>(
+      (I >> WidthBitWidth) & maskTrailingOnes<unsigned>(LsbWeightBitWidth));
+  unsigned Shift = WidthBitWidth + LsbWeightBitWidth;
+  return FixedPointSemantics(Width, Lsb{LsbWeight},
+                             /*IsSigned=*/(I >> Shift) & 1,
+                             /*IsSaturated=*/(I >> (Shift + 1)) & 1,
+                             /*HasUnsignedPadding=*/(I >> (Shift + 2)) & 1);
 }
 
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
