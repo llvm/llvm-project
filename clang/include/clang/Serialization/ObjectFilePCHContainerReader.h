@@ -17,8 +17,9 @@ namespace clang {
 class ObjectFilePCHContainerReader : public PCHContainerReader {
   ArrayRef<StringRef> getFormats() const override;
 
-  /// Returns the serialized AST inside the PCH container Buffer.
-  StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
+  /// Returns a buffer with the serialized AST inside the PCH container Buffer.
+  std::unique_ptr<llvm::MemoryBuffer>
+  ExtractPCH(std::unique_ptr<llvm::MemoryBuffer> Buffer) const override;
 };
 } // namespace clang
 

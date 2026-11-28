@@ -5443,7 +5443,7 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
   });
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
-  Stream = BitstreamCursor(PCHContainerRdr.ExtractPCH(*F.Buffer));
+  Stream = BitstreamCursor(F.Buffer->getBuffer());
   F.SizeInBits = F.Buffer->getBufferSize() * 8;
 
   // Sniff for the signature.
@@ -5977,7 +5977,9 @@ std::string ASTReader::getOriginalSourceFile(
   }
 
   // Initialize the stream
-  BitstreamCursor Stream(PCHContainerRdr.ExtractPCH(**Buffer));
+  std::unique_ptr<llvm::MemoryBuffer> ASTBuffer =
+      PCHContainerRdr.ExtractPCH(std::move(*Buffer));
+  BitstreamCursor Stream(ASTBuffer->getBuffer());
 
   // Sniff for the signature.
   if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
@@ -6128,12 +6130,12 @@ bool ASTReader::readASTFileControlBlock(
                                  /*IsText=*/false);
     if (!BufferOrErr)
       return true;
-    OwnedBuffer = std::move(*BufferOrErr);
+    OwnedBuffer = PCHContainerRdr.ExtractPCH(std::move(*BufferOrErr));
     Buffer = OwnedBuffer.get();
   }
 
   // Initialize the stream
-  StringRef Bytes = PCHContainerRdr.ExtractPCH(*Buffer);
+  StringRef Bytes = Buffer->getBuffer();
   BitstreamCursor Stream(Bytes);
 
   // Sniff for the signature.

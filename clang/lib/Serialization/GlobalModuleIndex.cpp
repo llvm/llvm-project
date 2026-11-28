@@ -527,8 +527,12 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
     return llvm::createStringError(Buffer.getError(),
                                    "failed getting buffer for module file");
 
+  // Extract the AST file from the container.
+  std::unique_ptr<llvm::MemoryBuffer> ASTBuffer =
+      PCHContainerRdr.ExtractPCH(std::move(*Buffer));
+
   // Initialize the input stream
-  llvm::BitstreamCursor InStream(PCHContainerRdr.ExtractPCH(**Buffer));
+  llvm::BitstreamCursor InStream(ASTBuffer->getBuffer());
 
   // Sniff for the signature.
   for (unsigned char C : {'C', 'P', 'C', 'H'})

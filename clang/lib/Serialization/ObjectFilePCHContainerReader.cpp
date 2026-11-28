@@ -9,16 +9,39 @@
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
+
+namespace {
+/// A buffer exposing a sub-range of an owned buffer.
+class SubMemoryBuffer : public llvm::MemoryBuffer {
+  std::unique_ptr<llvm::MemoryBuffer> Underlying;
+
+public:
+  SubMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Underlying,
+                  StringRef Range)
+      : Underlying(std::move(Underlying)) {
+    init(Range.begin(), Range.end(), /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override {
+    return Underlying->getBufferIdentifier();
+  }
+
+  BufferKind getBufferKind() const override {
+    return Underlying->getBufferKind();
+  }
+};
+} // namespace
 
 ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
   static StringRef Formats[] = {"obj", "raw"};
   return Formats;
 }
 
-StringRef
-ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
+/// Returns the serialized AST inside the PCH container Buffer.
+static StringRef extractPCH(llvm::MemoryBufferRef Buffer) {
   StringRef PCH;
   auto OFOrErr = llvm::object::ObjectFile::createObjectFile(Buffer);
   if (OFOrErr) {
@@ -53,4 +76,15 @@ ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
       EIB.log(llvm::errs());
   });
   return PCH;
+}
+
+std::unique_ptr<llvm::MemoryBuffer> ObjectFilePCHContainerReader::ExtractPCH(
+    std::unique_ptr<llvm::MemoryBuffer> Buffer) const {
+  StringRef Extracted = extractPCH(*Buffer);
+  // As a fallback, the buffer is treated as a raw AST (see extractPCH()). Use
+  // it as-is, there's no container to unwrap.
+  if (Extracted.begin() == Buffer->getBufferStart() &&
+      Extracted.end() == Buffer->getBufferEnd())
+    return Buffer;
+  return std::make_unique<SubMemoryBuffer>(std::move(Buffer), Extracted);
 }

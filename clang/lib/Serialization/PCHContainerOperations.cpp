@@ -12,6 +12,7 @@
 
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/AST/ASTConsumer.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -60,9 +61,9 @@ ArrayRef<llvm::StringRef> RawPCHContainerReader::getFormats() const {
   return ArrayRef(Raw);
 }
 
-StringRef
-RawPCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
-  return Buffer.getBuffer();
+std::unique_ptr<llvm::MemoryBuffer> RawPCHContainerReader::ExtractPCH(
+    std::unique_ptr<llvm::MemoryBuffer> Buffer) const {
+  return Buffer;
 }
 
 PCHContainerOperations::PCHContainerOperations() {
