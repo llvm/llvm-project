@@ -146,7 +146,7 @@ def replace_symbol(matchobj):
 
 with open(args.output, "w", newline="\n") as f:
     if args.no_lbr:
-        print("no_lbr", file=f)
+        print("no_brstack", file=f)
     for etype, expr in exprs:
         if etype == "FDATA":
             issym1, anchor1, offsym1, issym2, anchor2, offsym2, execnt, mispred = expr

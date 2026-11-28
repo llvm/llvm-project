@@ -1056,9 +1056,14 @@ ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
 }
 
 ErrorOr<bool> DataReader::maybeParseNoBRStackFlag() {
-  if (!ParsingBuf.consume_front("no_lbr"))
+  if (ParsingBuf.consume_front("no_brstack"))
+    Col += 10;
+  // Keep accepting no_lbr in .fdata headers. This is to be deprecated in the
+  // future, with only no_brstack being supported.
+  else if (ParsingBuf.consume_front("no_lbr"))
+    Col += 6;
+  else
     return false;
-  Col += 6;
 
   if (ParsingBuf.size() > 0 && ParsingBuf[0] == ' ')
     ParsingBuf = ParsingBuf.drop_front(1);
@@ -1071,7 +1076,7 @@ ErrorOr<bool> DataReader::maybeParseNoBRStackFlag() {
   }
 
   if (!checkAndConsumeNewLine()) {
-    reportError("malformed no_lbr line");
+    reportError("malformed no_brstack line");
     return make_error_code(llvm::errc::io_error);
   }
   return true;
@@ -1164,7 +1169,7 @@ std::error_code DataReader::parseInSymbolsMode() {
     StringRef Name = NameOrErr.get();
     if (Name.empty())
       continue;
-    // Use branch entry data rather since basic samples only apply in no_lbr
+    // Use branch entry data rather since basic samples only apply in no_brstack
     // mode.
     FuncBranchData &FBD = NamesToBranches.try_emplace(Name, Name).first->second;
     FBD.EntryData.emplace_back(Location(0),

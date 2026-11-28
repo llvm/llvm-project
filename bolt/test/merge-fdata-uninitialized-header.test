@@ -14,7 +14,7 @@ header:
   profile-version: 1
   binary-name:     'a.out'
   binary-build-id: '<unknown>'
-  profile-flags:   [ lbr ]
+  profile-flags:   [ brstack ]
   profile-origin:  branch profile reader
   profile-events:  ''
   dfs-order:       false
@@ -31,7 +31,7 @@ header:
   profile-version: 1
   binary-name:     'a.out'
   binary-build-id: '<unknown>'
-  profile-flags:   [ lbr ]
+  profile-flags:   [ brstack ]
   profile-origin:  branch profile reader
   profile-events:  ''
   dfs-order:       false

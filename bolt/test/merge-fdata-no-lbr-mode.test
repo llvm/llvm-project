@@ -1,5 +1,5 @@
 ## Check that merge-fdata tool correctly processes fdata files with header
-## string produced by non-brstack mode (no_lbr)
+## string produced by basic-sample mode (no_brstack).
 
 # REQUIRES: system-linux
 
@@ -7,12 +7,12 @@
 # RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
 # RUN: FileCheck %s --input-file %t/merged.fdata
 
-# CHECK: no_lbr
+# CHECK: no_brstack
 # CHECK: 1 main 0 2
 
 #--- a.fdata
-no_lbr
+no_brstack
 1 main 0 1
 #--- b.fdata
-no_lbr
+no_brstack
 1 main 0 1

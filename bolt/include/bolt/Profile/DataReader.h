@@ -333,18 +333,17 @@ protected:
   /// offset d.
   std::error_code parse();
 
-  /// When no_lbr is the first line of the file, activate non-brstack mode. In
-  /// this mode we read the addresses where samples were recorded directly
-  /// instead of brstack entries. The line format is almost the same, except for
-  /// a missing <to> triple and a missing mispredictions field:
+  /// A no_brstack or legacy no_lbr header selects basic-sample mode.
+  /// In this mode we read sampled instruction addresses directly. Each entry
+  /// omits the destination triple and misprediction count.
   ///
-  /// no_lbr
+  /// no_brstack
   /// <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
   /// ...
   ///
   /// Example:
   ///
-  /// no_lbr                           # First line of fdata file
+  /// no_brstack                           # First line of fdata file
   ///  1 BZ2_compressBlock 466c 3
   ///  1 BZ2_hbMakeCodeLengths 29c 1
   ///

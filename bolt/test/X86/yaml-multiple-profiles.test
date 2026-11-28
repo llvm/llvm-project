@@ -27,7 +27,7 @@ header:
   profile-version: 1
   binary-name:     'yaml-multiple-profiles.test.tmp.exe'
   binary-build-id: '<unknown>'
-  profile-flags:   [ lbr ]
+  profile-flags:   [ brstack ]
   profile-origin:  branch profile reader
   profile-events:  ''
   dfs-order:       false

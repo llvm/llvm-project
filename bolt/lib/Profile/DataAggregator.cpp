@@ -2576,7 +2576,7 @@ std::error_code DataAggregator::writeFdataFile(StringRef OutputFilename) const {
   if (BAT)
     OutFile << "boltedcollection\n";
   if (opts::BasicAggregation) {
-    OutFile << "no_lbr";
+    OutFile << "no_brstack";
     for (const StringMapEntry<EmptyStringSetTag> &Entry : EventNames)
       OutFile << " " << Entry.getKey();
     OutFile << "\n";

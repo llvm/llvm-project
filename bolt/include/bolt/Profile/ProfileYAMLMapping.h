@@ -230,7 +230,12 @@ LLVM_YAML_STRONG_TYPEDEF(uint16_t, PROFILE_PF)
 
 template <> struct ScalarBitSetTraits<PROFILE_PF> {
   static void bitset(IO &io, PROFILE_PF &value) {
-    io.bitSetCase(value, "lbr", BinaryFunction::PF_BRANCH);
+    io.bitSetCase(value, "brstack", BinaryFunction::PF_BRANCH);
+    // Enable "lbr" to be read and parsed in the same way as "brstack" but do
+    // not allow it to be written out. This should be removed when "lbr" is
+    // deprecated and BOLT uses architecture independant terminology.
+    if (!io.outputting())
+      io.bitSetCase(value, "lbr", BinaryFunction::PF_BRANCH);
     io.bitSetCase(value, "sample", BinaryFunction::PF_BASIC);
     io.bitSetCase(value, "memevent", BinaryFunction::PF_MEMEVENT);
   }
