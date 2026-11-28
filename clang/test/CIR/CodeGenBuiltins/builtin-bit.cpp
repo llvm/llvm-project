@@ -995,3 +995,76 @@ unsigned long long test_builtin_rotateright64(unsigned long long x,
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
 // OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i64 %[[AMOUNT]], 64
 // OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshr.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[CANON_AMOUNT]])
+
+typedef unsigned int v4u __attribute__((ext_vector_type(4)));
+typedef int v4i __attribute__((ext_vector_type(4)));
+
+unsigned test_elementwise_ctzg(unsigned x) {
+  return __builtin_elementwise_ctzg(x);
+}
+
+// CIR-LABEL: @_Z21test_elementwise_ctzgj
+// CIR:         %{{.+}} = cir.ctz %{{.+}} poison_zero : !u32i
+
+// LLVM-LABEL: @_Z21test_elementwise_ctzgj
+// LLVM:         %{{.+}} = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
+
+// OGCG-LABEL: @_Z21test_elementwise_ctzgj
+// OGCG:         %{{.+}} = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
+
+int test_elementwise_ctzg_signed_fallback(int x, int fallback) {
+  return __builtin_elementwise_ctzg(x, fallback);
+}
+
+// CIR-LABEL: @_Z37test_elementwise_ctzg_signed_fallbackii
+// CIR:         %[[U:.+]] = cir.cast integral %{{.+}} : !s32i -> !u32i
+// CIR:         %[[CTZ:.+]] = cir.ctz %[[U]] poison_zero : !u32i
+// CIR:         %[[RES:.+]] = cir.cast integral %[[CTZ]] : !u32i -> !s32i
+// CIR:         %[[CMP:.+]] = cir.cmp eq %{{.+}}, %{{.+}} : !s32i
+// CIR:         %{{.+}} = cir.select if %[[CMP]] then %{{.+}} else %[[RES]] : (!cir.bool, !s32i, !s32i) -> !s32i
+
+// LLVM-LABEL: @_Z37test_elementwise_ctzg_signed_fallbackii
+// LLVM:         %[[CTZ:.+]] = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
+// LLVM:         %[[ISZERO:.+]] = icmp eq i32 %{{.+}}, 0
+// LLVM:         %{{.+}} = select i1 %[[ISZERO]], i32 %{{.+}}, i32 %[[CTZ]]
+
+// OGCG-LABEL: @_Z37test_elementwise_ctzg_signed_fallbackii
+// OGCG:         %[[CTZ:.+]] = call i32 @llvm.cttz.i32(i32 %{{.+}}, i1 true)
+// OGCG:         %[[ISZERO:.+]] = icmp eq i32 %{{.+}}, 0
+// OGCG:         %{{.+}} = select i1 %[[ISZERO]], i32 %{{.+}}, i32 %[[CTZ]]
+
+v4u test_elementwise_ctzg_vec(v4u x) {
+  return __builtin_elementwise_ctzg(x);
+}
+
+// CIR-LABEL: @_Z25test_elementwise_ctzg_vecDv4_j
+// CIR:         %{{.+}} = cir.ctz %{{.+}} poison_zero : !cir.vector<4 x !u32i>
+
+// LLVM-LABEL: @_Z25test_elementwise_ctzg_vecDv4_j
+// LLVM:         %{{.+}} = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %{{.+}}, i1 true)
+
+// OGCG-LABEL: @_Z25test_elementwise_ctzg_vecDv4_j
+// OGCG:         %{{.+}} = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %{{.+}}, i1 true)
+
+v4i test_elementwise_clzg_vec_fallback(v4i x, v4i fallback) {
+  return __builtin_elementwise_clzg(x, fallback);
+}
+
+// CIR-LABEL: @_Z34test_elementwise_clzg_vec_fallbackDv4_iS_
+// CIR:         %[[U:.+]] = cir.cast integral %{{.+}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !u32i>
+// CIR:         %[[CLZ:.+]] = cir.clz %[[U]] poison_zero : !cir.vector<4 x !u32i>
+// CIR:         %[[RES:.+]] = cir.cast integral %[[CLZ]] : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR:         %[[CMP:.+]] = cir.vec.cmp(eq, %{{.+}}, %{{.+}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR:         %{{.+}} = cir.vec.ternary(%[[CMP]], %{{.+}}, %[[RES]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM-LABEL: @_Z34test_elementwise_clzg_vec_fallbackDv4_iS_
+// LLVM:         %[[CLZ:.+]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.+}}, i1 true)
+// LLVM:         %[[ISZERO:.+]] = icmp eq <4 x i32> %{{.+}}, zeroinitializer
+// LLVM:         %[[SEXT:.+]] = sext <4 x i1> %[[ISZERO]] to <4 x i32>
+// LLVM:         %[[COND:.+]] = icmp ne <4 x i32> %[[SEXT]], zeroinitializer
+// LLVM:         %{{.+}} = select <4 x i1> %[[COND]], <4 x i32> %{{.+}}, <4 x i32> %[[CLZ]]
+
+// OGCG-LABEL: @_Z34test_elementwise_clzg_vec_fallbackDv4_iS_
+// OGCG:         %[[CLZ:.+]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.+}}, i1 true)
+// OGCG:         %[[ISZERO:.+]] = icmp eq <4 x i32> %{{.+}}, zeroinitializer
+// OGCG:         %{{.+}} = select <4 x i1> %[[ISZERO]], <4 x i32> %{{.+}}, <4 x i32> %[[CLZ]]
