@@ -2106,10 +2106,14 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX2-NEXT:    [[TMP97:%.*]] = icmp ne <4 x i32> [[TMP79]], zeroinitializer
 ; AVX2-NEXT:    [[TMP98:%.*]] = icmp ne <4 x i32> [[TMP87]], zeroinitializer
 ; AVX2-NEXT:    [[TMP99:%.*]] = icmp ne <4 x i32> [[TMP95]], zeroinitializer
-; AVX2-NEXT:    [[TMP100]] = or <4 x i1> [[VEC_PHI]], [[TMP96]]
-; AVX2-NEXT:    [[TMP101]] = or <4 x i1> [[VEC_PHI1]], [[TMP97]]
-; AVX2-NEXT:    [[TMP102]] = or <4 x i1> [[VEC_PHI2]], [[TMP98]]
-; AVX2-NEXT:    [[TMP103]] = or <4 x i1> [[VEC_PHI3]], [[TMP99]]
+; AVX2-NEXT:    [[TMP138:%.*]] = freeze <4 x i1> [[TMP96]]
+; AVX2-NEXT:    [[TMP139:%.*]] = freeze <4 x i1> [[TMP97]]
+; AVX2-NEXT:    [[TMP140:%.*]] = freeze <4 x i1> [[TMP98]]
+; AVX2-NEXT:    [[TMP141:%.*]] = freeze <4 x i1> [[TMP99]]
+; AVX2-NEXT:    [[TMP100]] = or <4 x i1> [[VEC_PHI]], [[TMP138]]
+; AVX2-NEXT:    [[TMP101]] = or <4 x i1> [[VEC_PHI1]], [[TMP139]]
+; AVX2-NEXT:    [[TMP102]] = or <4 x i1> [[VEC_PHI2]], [[TMP140]]
+; AVX2-NEXT:    [[TMP103]] = or <4 x i1> [[VEC_PHI3]], [[TMP141]]
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; AVX2-NEXT:    [[TMP104:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; AVX2-NEXT:    br i1 [[TMP104]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP39:![0-9]+]]
@@ -2158,7 +2162,8 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX2-NEXT:    [[TMP130:%.*]] = insertelement <4 x i32> [[TMP129]], i32 [[TMP126]], i64 2
 ; AVX2-NEXT:    [[TMP131:%.*]] = insertelement <4 x i32> [[TMP130]], i32 [[TMP127]], i64 3
 ; AVX2-NEXT:    [[TMP132:%.*]] = icmp ne <4 x i32> [[TMP131]], zeroinitializer
-; AVX2-NEXT:    [[TMP133]] = or <4 x i1> [[VEC_PHI7]], [[TMP132]]
+; AVX2-NEXT:    [[TMP137:%.*]] = freeze <4 x i1> [[TMP132]]
+; AVX2-NEXT:    [[TMP133]] = or <4 x i1> [[VEC_PHI7]], [[TMP137]]
 ; AVX2-NEXT:    [[INDEX_NEXT8]] = add nuw i32 [[INDEX6]], 4
 ; AVX2-NEXT:    [[TMP134:%.*]] = icmp eq i32 [[INDEX_NEXT8]], 100
 ; AVX2-NEXT:    br i1 [[TMP134]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP40:![0-9]+]]
@@ -2206,10 +2211,14 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp ne <8 x i32> [[WIDE_MASKED_GATHER10]], zeroinitializer
 ; AVX512-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i32> [[WIDE_MASKED_GATHER11]], zeroinitializer
 ; AVX512-NEXT:    [[TMP10:%.*]] = icmp ne <8 x i32> [[WIDE_MASKED_GATHER12]], zeroinitializer
-; AVX512-NEXT:    [[TMP11]] = or <8 x i1> [[VEC_PHI]], [[TMP7]]
-; AVX512-NEXT:    [[TMP12]] = or <8 x i1> [[VEC_PHI1]], [[TMP8]]
-; AVX512-NEXT:    [[TMP13]] = or <8 x i1> [[VEC_PHI2]], [[TMP9]]
-; AVX512-NEXT:    [[TMP14]] = or <8 x i1> [[VEC_PHI3]], [[TMP10]]
+; AVX512-NEXT:    [[TMP41:%.*]] = freeze <8 x i1> [[TMP7]]
+; AVX512-NEXT:    [[TMP42:%.*]] = freeze <8 x i1> [[TMP8]]
+; AVX512-NEXT:    [[TMP43:%.*]] = freeze <8 x i1> [[TMP9]]
+; AVX512-NEXT:    [[TMP44:%.*]] = freeze <8 x i1> [[TMP10]]
+; AVX512-NEXT:    [[TMP11]] = or <8 x i1> [[VEC_PHI]], [[TMP41]]
+; AVX512-NEXT:    [[TMP12]] = or <8 x i1> [[VEC_PHI1]], [[TMP42]]
+; AVX512-NEXT:    [[TMP13]] = or <8 x i1> [[VEC_PHI2]], [[TMP43]]
+; AVX512-NEXT:    [[TMP14]] = or <8 x i1> [[VEC_PHI3]], [[TMP44]]
 ; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; AVX512-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; AVX512-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP50:![0-9]+]]
@@ -2252,7 +2261,8 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX512-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP28]], i64 2
 ; AVX512-NEXT:    [[TMP34:%.*]] = insertelement <4 x i32> [[TMP33]], i32 [[TMP30]], i64 3
 ; AVX512-NEXT:    [[TMP35:%.*]] = icmp ne <4 x i32> [[TMP34]], zeroinitializer
-; AVX512-NEXT:    [[TMP36]] = or <4 x i1> [[VEC_PHI16]], [[TMP35]]
+; AVX512-NEXT:    [[TMP40:%.*]] = freeze <4 x i1> [[TMP35]]
+; AVX512-NEXT:    [[TMP36]] = or <4 x i1> [[VEC_PHI16]], [[TMP40]]
 ; AVX512-NEXT:    [[INDEX_NEXT19]] = add nuw i32 [[INDEX15]], 4
 ; AVX512-NEXT:    [[TMP37:%.*]] = icmp eq i32 [[INDEX_NEXT19]], 100
 ; AVX512-NEXT:    br i1 [[TMP37]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP52:![0-9]+]]
