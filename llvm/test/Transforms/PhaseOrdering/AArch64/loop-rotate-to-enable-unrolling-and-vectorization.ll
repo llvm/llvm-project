@@ -182,7 +182,7 @@ define i32 @rotate_needed_to_vectorize_early_exit_iv(i64 %sat, i32 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_INTERIM]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <16 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i64> [[VEC_IND]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <16 x i64> [[TMP5]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw <16 x i64> splat (i64 -1), [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <16 x i64> [[TMP7]], [[BROADCAST_SPLAT]]
@@ -204,7 +204,9 @@ define i32 @rotate_needed_to_vectorize_early_exit_iv(i64 %sat, i32 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> [[TMP9]], i1 false)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x i64> [[TMP5]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[DOTNEG:%.*]] = xor i64 [[TMP15]], -1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[DOTNEG]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[EXIT_SPLIT_LOOP_EXIT:.*]]
 ; CHECK:       [[LOOP_HEADER:.*]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT:%.*]] to i32
@@ -219,7 +221,7 @@ define i32 @rotate_needed_to_vectorize_early_exit_iv(i64 %sat, i32 %n) {
 ; CHECK-NEXT:    [[FOUND:%.*]] = icmp eq i64 [[TMP14]], -1
 ; CHECK-NEXT:    br i1 [[FOUND]], label %[[EXIT_SPLIT_LOOP_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_SPLIT_LOOP_EXIT]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[TMP12]], %[[VECTOR_EARLY_EXIT]] ], [ [[INDVARS_IV_NEXT]], %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ], [ [[INDVARS_IV_NEXT]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[INDVARS_LE:%.*]] = trunc i64 [[INDVARS_IV_NEXT_LCSSA]] to i32
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
