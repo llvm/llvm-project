@@ -26,7 +26,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_cselect_b32_fi_after_scc_producer
     ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -40,7 +40,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_cselect_b32_fi_after_scc_producer
     ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -97,7 +97,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_addc_u32_fi_after_and_scc_producer
     ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -111,7 +111,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_addc_u32_fi_after_and_scc_producer
     ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -162,7 +162,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_cselect_b32_zero_offset_fi_after_scc_producer
     ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -173,7 +173,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_cselect_b32_zero_offset_fi_after_scc_producer
     ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -217,7 +217,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_and_b32_fi_after_scc_producer_scc_not_live_in
     ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -229,7 +229,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_and_b32_fi_after_scc_producer_scc_not_live_in
     ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -273,7 +273,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
     ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -284,7 +284,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
     ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -325,7 +325,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_and_b32_zero_offset_fi_no_scc_producer
     ; FLATSCRW64: liveins: $sgpr6
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
@@ -334,7 +334,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_and_b32_zero_offset_fi_no_scc_producer
     ; FLATSCRW32: liveins: $sgpr6
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
@@ -372,7 +372,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_mov_b32_fi_scc_live_across
     ; FLATSCRW64: liveins: $sgpr6, $sgpr7
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -384,7 +384,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_mov_b32_fi_scc_live_across
     ; FLATSCRW32: liveins: $sgpr6, $sgpr7
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -429,7 +429,7 @@ body:             |
     ; FLATSCRW64-LABEL: name: s_and_b32_fi_defines_scc_live_after
     ; FLATSCRW64: liveins: $sgpr6, $sgpr7
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 64
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
@@ -441,7 +441,7 @@ body:             |
     ; FLATSCRW32-LABEL: name: s_and_b32_fi_defines_scc_live_after
     ; FLATSCRW32: liveins: $sgpr6, $sgpr7
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 0, $sgpr32, 4, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
