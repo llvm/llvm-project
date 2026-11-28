@@ -43,6 +43,10 @@
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
+#if SANITIZER_INTERCEPT_C11_THREADS
+#include <threads.h>
+#endif
+
 #if SANITIZER_LINUX
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
@@ -1230,6 +1234,124 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif // SANITIZER_APPLE
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+static timespec OneSecondFromNowUtc() {
+  timespec deadline{};
+  timespec_get(&deadline, TIME_UTC);
+  deadline.tv_sec += 1;
+  return deadline;
+}
+
+TEST(TestRtsanInterceptors, MtxLockDiesWhenRealtime) {
+  mtx_t mutex;
+  ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
+
+  auto Func = [&]() { mtx_lock(&mutex); };
+  ExpectRealtimeDeath(Func, "mtx_lock");
+  ExpectNonRealtimeSurvival(Func);
+
+  mtx_unlock(&mutex);
+  mtx_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, MtxTimedlockDiesWhenRealtime) {
+  mtx_t mutex;
+  ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_timed));
+  const timespec deadline = OneSecondFromNowUtc();
+
+  auto Func = [&]() { mtx_timedlock(&mutex, &deadline); };
+  ExpectRealtimeDeath(Func, "mtx_timedlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  mtx_unlock(&mutex);
+  mtx_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, MtxUnlockDiesWhenRealtime) {
+  mtx_t mutex;
+  ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
+  ASSERT_EQ(thrd_success, mtx_lock(&mutex));
+
+  auto Func = [&]() { mtx_unlock(&mutex); };
+  ExpectRealtimeDeath(Func, "mtx_unlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  mtx_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, CndInitDiesWhenRealtime) {
+  cnd_t cond;
+  auto Func = [&cond]() { cnd_init(&cond); };
+  ExpectRealtimeDeath(Func, "cnd_init");
+  ExpectNonRealtimeSurvival(Func);
+
+  cnd_destroy(&cond);
+}
+
+TEST(TestRtsanInterceptors, CndDestroyDiesWhenRealtime) {
+  cnd_t cond;
+  ASSERT_EQ(thrd_success, cnd_init(&cond));
+
+  auto Func = [&cond]() { cnd_destroy(&cond); };
+  ExpectRealtimeDeath(Func, "cnd_destroy");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, CndSignalDiesWhenRealtime) {
+  cnd_t cond;
+  ASSERT_EQ(thrd_success, cnd_init(&cond));
+
+  auto Func = [&cond]() { cnd_signal(&cond); };
+  ExpectRealtimeDeath(Func, "cnd_signal");
+  ExpectNonRealtimeSurvival(Func);
+
+  cnd_destroy(&cond);
+}
+
+TEST(TestRtsanInterceptors, CndBroadcastDiesWhenRealtime) {
+  cnd_t cond;
+  ASSERT_EQ(thrd_success, cnd_init(&cond));
+
+  auto Func = [&cond]() { cnd_broadcast(&cond); };
+  ExpectRealtimeDeath(Func, "cnd_broadcast");
+  ExpectNonRealtimeSurvival(Func);
+
+  cnd_destroy(&cond);
+}
+
+TEST(TestRtsanInterceptors, CndWaitDiesWhenRealtime) {
+  cnd_t cond;
+  mtx_t mutex;
+  ASSERT_EQ(thrd_success, cnd_init(&cond));
+  ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
+  ASSERT_EQ(thrd_success, mtx_lock(&mutex));
+
+  auto Func = [&]() { cnd_wait(&cond, &mutex); };
+  ExpectRealtimeDeath(Func, "cnd_wait");
+
+  mtx_unlock(&mutex);
+  cnd_destroy(&cond);
+  mtx_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, CndTimedwaitDiesWhenRealtime) {
+  cnd_t cond;
+  mtx_t mutex;
+  ASSERT_EQ(thrd_success, cnd_init(&cond));
+  ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
+  ASSERT_EQ(thrd_success, mtx_lock(&mutex));
+  const timespec deadline{0, 0};
+
+  auto Func = [&]() { cnd_timedwait(&cond, &mutex, &deadline); };
+  ExpectRealtimeDeath(Func, "cnd_timedwait");
+  ExpectNonRealtimeSurvival(Func);
+
+  mtx_unlock(&mutex);
+  cnd_destroy(&cond);
+  mtx_destroy(&mutex);
+}
+#endif // SANITIZER_INTERCEPT_C11_THREADS
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {

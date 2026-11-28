@@ -815,6 +815,74 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   return REAL(pthread_rwlock_wrlock)(lock);
 }
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+// C11 threads.
+INTERCEPTOR(int, mtx_lock, void *mutex) {
+  __rtsan_notify_intercepted_call("mtx_lock");
+  return REAL(mtx_lock)(mutex);
+}
+
+INTERCEPTOR(int, mtx_timedlock, void *mutex, const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("mtx_timedlock");
+  return REAL(mtx_timedlock)(mutex, abstime);
+}
+
+INTERCEPTOR(int, mtx_unlock, void *mutex) {
+  __rtsan_notify_intercepted_call("mtx_unlock");
+  return REAL(mtx_unlock)(mutex);
+}
+
+INTERCEPTOR(int, cnd_init, void *cond) {
+  __rtsan_notify_intercepted_call("cnd_init");
+  return REAL(cnd_init)(cond);
+}
+
+INTERCEPTOR(int, cnd_signal, void *cond) {
+  __rtsan_notify_intercepted_call("cnd_signal");
+  return REAL(cnd_signal)(cond);
+}
+
+INTERCEPTOR(int, cnd_broadcast, void *cond) {
+  __rtsan_notify_intercepted_call("cnd_broadcast");
+  return REAL(cnd_broadcast)(cond);
+}
+
+INTERCEPTOR(int, cnd_wait, void *cond, void *mutex) {
+  __rtsan_notify_intercepted_call("cnd_wait");
+  return REAL(cnd_wait)(cond, mutex);
+}
+
+INTERCEPTOR(int, cnd_timedwait, void *cond, void *mutex,
+            const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("cnd_timedwait");
+  return REAL(cnd_timedwait)(cond, mutex, abstime);
+}
+
+INTERCEPTOR(void, cnd_destroy, void *cond) {
+  __rtsan_notify_intercepted_call("cnd_destroy");
+  return REAL(cnd_destroy)(cond);
+}
+#define RTSAN_MAYBE_INTERCEPT_MTX_LOCK INTERCEPT_FUNCTION(mtx_lock)
+#define RTSAN_MAYBE_INTERCEPT_MTX_TIMEDLOCK INTERCEPT_FUNCTION(mtx_timedlock)
+#define RTSAN_MAYBE_INTERCEPT_MTX_UNLOCK INTERCEPT_FUNCTION(mtx_unlock)
+#define RTSAN_MAYBE_INTERCEPT_CND_INIT INTERCEPT_FUNCTION(cnd_init)
+#define RTSAN_MAYBE_INTERCEPT_CND_SIGNAL INTERCEPT_FUNCTION(cnd_signal)
+#define RTSAN_MAYBE_INTERCEPT_CND_BROADCAST INTERCEPT_FUNCTION(cnd_broadcast)
+#define RTSAN_MAYBE_INTERCEPT_CND_WAIT INTERCEPT_FUNCTION(cnd_wait)
+#define RTSAN_MAYBE_INTERCEPT_CND_TIMEDWAIT INTERCEPT_FUNCTION(cnd_timedwait)
+#define RTSAN_MAYBE_INTERCEPT_CND_DESTROY INTERCEPT_FUNCTION(cnd_destroy)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MTX_LOCK
+#define RTSAN_MAYBE_INTERCEPT_MTX_TIMEDLOCK
+#define RTSAN_MAYBE_INTERCEPT_MTX_UNLOCK
+#define RTSAN_MAYBE_INTERCEPT_CND_INIT
+#define RTSAN_MAYBE_INTERCEPT_CND_SIGNAL
+#define RTSAN_MAYBE_INTERCEPT_CND_BROADCAST
+#define RTSAN_MAYBE_INTERCEPT_CND_WAIT
+#define RTSAN_MAYBE_INTERCEPT_CND_TIMEDWAIT
+#define RTSAN_MAYBE_INTERCEPT_CND_DESTROY
+#endif // SANITIZER_INTERCEPT_C11_THREADS
+
 // Sleeping
 
 INTERCEPTOR(unsigned int, sleep, unsigned int s) {
@@ -1683,6 +1751,16 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_rwlock_rdlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
   INTERCEPT_FUNCTION(pthread_rwlock_wrlock);
+
+  RTSAN_MAYBE_INTERCEPT_MTX_LOCK;
+  RTSAN_MAYBE_INTERCEPT_MTX_TIMEDLOCK;
+  RTSAN_MAYBE_INTERCEPT_MTX_UNLOCK;
+  RTSAN_MAYBE_INTERCEPT_CND_INIT;
+  RTSAN_MAYBE_INTERCEPT_CND_SIGNAL;
+  RTSAN_MAYBE_INTERCEPT_CND_BROADCAST;
+  RTSAN_MAYBE_INTERCEPT_CND_WAIT;
+  RTSAN_MAYBE_INTERCEPT_CND_TIMEDWAIT;
+  RTSAN_MAYBE_INTERCEPT_CND_DESTROY;
 
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
