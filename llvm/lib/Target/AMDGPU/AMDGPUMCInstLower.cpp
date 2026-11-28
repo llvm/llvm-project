@@ -499,7 +499,11 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       AddMove(AMDGPU::EXEC_LO, MCOperand::createImm(0));
     }
 
-    MCInstLowering.lower(MI, Insts.emplace_back());
+    MCInst &Inst = Insts.emplace_back();
+    MCInstLowering.lower(MI, Inst);
+    if (Opc == AMDGPU::S_PREFETCH_INST_PC_REL &&
+        MF->getInfo<SIMachineFunctionInfo>()->hasICachePrefetch())
+      lowerICachePrefetch(Inst);
     if (IsReplay)
       AddMove(AMDGPU::EXEC_LO, MCOperand::createReg(SavedExec));
 

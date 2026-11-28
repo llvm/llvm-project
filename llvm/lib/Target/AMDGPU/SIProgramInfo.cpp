@@ -217,17 +217,26 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
 
   for (const MachineBasicBlock &MBB : MF) {
     CodeSize = alignTo(CodeSize, MBB.getAlignment());
-
-    for (const MachineInstr &MI : MBB) {
-      // TODO: CodeSize should account for multiple functions.
-
-      if (MI.isMetaInstruction())
-        continue;
-
-      CodeSize += TII->getInstSizeInBytes(MI);
-    }
+    CodeSize += getMachineBasicBlockCodeSize(MBB, *TII);
   }
 
   CodeSizeInBytes = CodeSize;
+  return CodeSize;
+}
+
+uint64_t
+SIProgramInfo::getMachineBasicBlockCodeSize(const MachineBasicBlock &MBB,
+                                            const SIInstrInfo &TII) {
+  uint64_t CodeSize = 0;
+
+  for (const MachineInstr &MI : MBB) {
+    // TODO: CodeSize should account for multiple functions.
+
+    if (MI.isMetaInstruction())
+      continue;
+
+    CodeSize += TII.getInstSizeInBytes(MI);
+  }
+
   return CodeSize;
 }

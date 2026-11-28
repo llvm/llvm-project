@@ -535,6 +535,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
+  initializeAMDGPUInsertICachePrefetchLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
   initializeSIInsertAsyncBarrierArriveWorkaroundLegacyPass(*PR);
@@ -1877,6 +1878,9 @@ void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(CLOpts.enable_delay_alu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
 
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&AMDGPUInsertICachePrefetchID);
+
   addPass(&BranchRelaxationPassID);
 }
 
@@ -2637,6 +2641,9 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   if (isPassEnabled(CLOpts.enable_delay_alu, CodeGenOptLevel::Less)) {
     addMachineFunctionPass(AMDGPUInsertDelayAluPass(), PMW);
   }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(AMDGPUInsertICachePrefetchPass(), PMW);
 
   addMachineFunctionPass(BranchRelaxationPass(), PMW);
 }

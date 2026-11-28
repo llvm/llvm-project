@@ -196,6 +196,28 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
 
+  if (MFI.hasICachePrefetch()) {
+    PrefetchBeginSym = createTempSymbol("pref_func_begin");
+    PrefetchEndSym = createTempSymbol("pref_func_end");
+    PrefetchLinesSym = createTempSymbol("pref_lines");
+    OutStreamer->emitLabel(PrefetchBeginSym);
+
+    // Emitted code size in cache lines, clamped to the instruction cache.
+    MCContext &Ctx = OutContext;
+    const MCExpr *LineSize =
+        MCConstantExpr::create(STM.getInstCacheLineSize(), Ctx);
+    const MCExpr *CodeSize = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(PrefetchEndSym, Ctx),
+        MCSymbolRefExpr::create(PrefetchBeginSym, Ctx), Ctx);
+    const MCExpr *CodeLines = MCBinaryExpr::createDiv(
+        AMDGPUMCExpr::createAlignTo(CodeSize, LineSize, Ctx), LineSize, Ctx);
+    const MCExpr *ICacheLines = MCConstantExpr::create(
+        STM.getInstCacheSize() / STM.getInstCacheLineSize(), Ctx);
+    OutStreamer->emitAssignment(
+        PrefetchLinesSym,
+        AMDGPUMCExpr::createMin({CodeLines, ICacheLines}, Ctx));
+  }
+
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
     reportFatalUsageError(
@@ -221,6 +243,61 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+}
+
+void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
+  if (PrefetchEndSym)
+    OutStreamer->emitLabel(PrefetchEndSym);
+  PrefetchBeginSym = nullptr;
+  PrefetchEndSym = nullptr;
+  PrefetchLinesSym = nullptr;
+}
+
+void AMDGPUAsmPrinter::lowerICachePrefetch(MCInst &Inst) {
+  constexpr unsigned OffsetIdx = 0;
+  constexpr unsigned SdataIdx = 2;
+
+  const auto CreateConst = [&](int64_t V) {
+    return MCConstantExpr::create(V, OutContext);
+  };
+  const int64_t LineSize =
+      MF->getSubtarget<GCNSubtarget>().getInstCacheLineSize();
+  const int64_t TargetLine = Inst.getOperand(OffsetIdx).getImm();
+  const MCExpr *NumPrefetchableLines =
+      MCSymbolRefExpr::create(PrefetchLinesSym, OutContext);
+
+  // Targets beyond the prefetchable code are clamped to its last line, where
+  // they prefetch a single line:
+  //   pref_target = PrefetchBegin + min(TargetLine * LineSize,
+  //                                     (NumPrefetchableLines - 1) * LineSize)
+  const MCExpr *LastLineOffset = MCBinaryExpr::createSub(
+      MCBinaryExpr::createMul(NumPrefetchableLines, CreateConst(LineSize),
+                              OutContext),
+      CreateConst(LineSize), OutContext);
+  const MCExpr *TargetOffset = AMDGPUMCExpr::createMin(
+      {CreateConst(TargetLine * LineSize), LastLineOffset}, OutContext);
+  MCSymbol *TargetSym = createTempSymbol("pref_target");
+  OutStreamer->emitAssignment(
+      TargetSym, MCBinaryExpr::createAdd(
+                     MCSymbolRefExpr::create(PrefetchBeginSym, OutContext),
+                     TargetOffset, OutContext));
+
+  // sdata is the number of lines to prefetch after the target line, limited to
+  // the end of the prefetchable code and the maximum prefetch length:
+  //   min(max(NumPrefetchableLines - (TargetLine + 1), 0),
+  //       MaxInstPrefetchLines - 1)
+  const MCExpr *LinesAfterTarget = AMDGPUMCExpr::createMax(
+      {MCBinaryExpr::createSub(NumPrefetchableLines,
+                               CreateConst(TargetLine + 1), OutContext),
+       CreateConst(0)},
+      OutContext);
+  const MCExpr *SdataExpr = AMDGPUMCExpr::createMin(
+      {LinesAfterTarget, CreateConst(AMDGPU::MaxInstPrefetchLines - 1)},
+      OutContext);
+
+  Inst.getOperand(OffsetIdx) =
+      MCOperand::createExpr(MCSymbolRefExpr::create(TargetSym, OutContext));
+  Inst.getOperand(SdataIdx) = MCOperand::createExpr(SdataExpr);
 }
 
 /// Set bits in a kernel descriptor MCExpr field:
@@ -252,15 +329,24 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
   // right after the function code, so (Lfunc_end - func_sym) gives the
   // exact function code size in bytes.
+  //
+  // When explicit ICache prefetch is enabled, INST_PREF_SIZE is limited to the
+  // initial cache-line prefix, which also enables scalar prefetch for the first
+  // WGP wave.
   if (STM.hasInstPrefSize()) {
+    uint32_t Mask, Shift, Width, CacheLineSize;
+    STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+
     const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
         MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
-
-    uint32_t Mask, Shift, Width, CacheLineSize;
-    STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
     const MCExpr *InstPrefSize =
         AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+    if (MFI.hasICachePrefetch())
+      InstPrefSize = AMDGPUMCExpr::createMin(
+          {MCConstantExpr::create(MFI.getICachePrefetchLines(), Ctx),
+           InstPrefSize},
+          Ctx);
     KD.compute_pgm_rsrc3 =
         setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
   }

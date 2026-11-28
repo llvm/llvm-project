@@ -766,6 +766,7 @@ public:
   bool isSMRDOffset8() const;
   bool isSMEMOffset() const;
   bool isSMRDLiteralOffset() const;
+  bool isPrefetchSdata() const;
   bool isDPP8() const;
   bool isDPPCtrl() const;
   bool isBLGP() const;
@@ -9432,6 +9433,12 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
   // 32-bit literals are only supported on CI and we only want to use them
   // when the offset is > 8-bits.
   return isImmLiteral() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
+}
+
+bool AMDGPUOperand::isPrefetchSdata() const {
+  // Immediate range is checked later by validator. Expressions are resolved by
+  // fixup_si_prefetch_sdata.
+  return isImmLiteral() || isExpr();
 }
 
 //===----------------------------------------------------------------------===//

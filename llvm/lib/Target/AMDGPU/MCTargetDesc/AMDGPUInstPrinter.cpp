@@ -165,6 +165,17 @@ void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
   printU32ImmOperand(MI, OpNo, STI, O);
 }
 
+void AMDGPUInstPrinter::printPrefetchSdata(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+  O << Op.getImm();
+}
+
 void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm();

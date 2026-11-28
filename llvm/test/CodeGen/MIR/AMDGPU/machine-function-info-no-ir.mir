@@ -58,6 +58,7 @@
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: iCachePrefetchLines: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
@@ -171,6 +172,7 @@ body:             |
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: iCachePrefetchLines: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
@@ -256,6 +258,7 @@ body:             |
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: iCachePrefetchLines: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
@@ -342,6 +345,7 @@ body:             |
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: iCachePrefetchLines: 0
 # FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:

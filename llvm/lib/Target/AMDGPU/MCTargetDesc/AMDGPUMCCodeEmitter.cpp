@@ -76,6 +76,10 @@ public:
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
 
+  void getPrefetchSdataEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
+
   void getSDWASrcEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
@@ -542,6 +546,19 @@ void AMDGPUMCCodeEmitter::getSMEMOffsetPCRelEncoding(
   }
 
   getSMEMOffsetEncoding(MI, OpNo, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::getPrefetchSdataEncoding(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  int64_t Val;
+  if (MO.isExpr() && !MO.getExpr()->evaluateAsAbsolute(Val)) {
+    addFixup(Fixups, 0, MO.getExpr(), AMDGPU::fixup_si_prefetch_sdata);
+    Op = APInt::getZero(96);
+    return;
+  }
+  getMachineOpValue(MI, MO, Op, Fixups, STI);
 }
 
 void AMDGPUMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,

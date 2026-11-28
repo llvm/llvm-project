@@ -19,6 +19,8 @@ enum Fixups {
   /// 24-bit PC-relative byte offset for s_prefetch_inst_pc_rel.
   /// The value is relative to the next instruction (PC + 8).
   fixup_si_smem_pcrel,
+  /// 5-bit sdata field of SMEM prefetch instructions.
+  fixup_si_prefetch_sdata,
 
   // Marker
   LastTargetFixupKind,
