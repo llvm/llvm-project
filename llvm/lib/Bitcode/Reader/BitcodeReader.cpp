@@ -8028,6 +8028,13 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   std::vector<FunctionSummary::ConstVCall> PendingTypeTestAssumeConstVCalls,
       PendingTypeCheckedLoadConstVCalls;
   std::vector<FunctionSummary::ParamAccess> PendingParamAccesses;
+  std::optional<FunctionSummary::CallTypeIdInfo> PendingCallTypeIds;
+  auto TakePendingCallTypeIds = [&](FunctionSummary &FS) {
+    if (!PendingCallTypeIds)
+      return;
+    FS.setCallTypeIdInfo(std::move(*PendingCallTypeIds));
+    PendingCallTypeIds.reset();
+  };
 
   std::vector<CallsiteInfo> PendingCallsites;
   std::vector<AllocInfo> PendingAllocs;
@@ -8164,6 +8171,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadConstVCalls),
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
+      TakePendingCallTypeIds(*FS);
       FS->setModulePath(getThisModule()->first());
       FS->setOriginalName(GUID);
       // Set CurrentPrevailingFS only if prevailing, so subsequent MemProf
@@ -8315,6 +8323,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadConstVCalls),
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
+      TakePendingCallTypeIds(*FS);
       LastSeenSummary = FS.get();
       if (MemProfAfterFunctionSummary)
         CurrentPrevailingFS = FS.get();
@@ -8389,6 +8398,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_TYPE_TESTS:
       assert(PendingTypeTests.empty());
       llvm::append_range(PendingTypeTests, Record);
+      break;
+
+    // FS_CALL_TYPE_IDS: [call_type_id, flags, n x indirect_call_type_id]
+    case bitc::FS_CALL_TYPE_IDS:
+      if (Record.size() < 2 || (Record[1] & ~uint64_t(1)) || PendingCallTypeIds)
+        return error("invalid call type ID record");
+      PendingCallTypeIds.emplace();
+      PendingCallTypeIds->CallTypeId = Record[0];
+      PendingCallTypeIds->HasCallWithoutTypeId = Record[1] & 1;
+      llvm::append_range(PendingCallTypeIds->IndirectCallTypeIds,
+                         drop_begin(Record, 2));
       break;
 
     case bitc::FS_TYPE_TEST_ASSUME_VCALLS:

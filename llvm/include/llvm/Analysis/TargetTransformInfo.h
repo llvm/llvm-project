@@ -1999,6 +1999,17 @@ public:
                                       const Function *Callee,
                                       ArrayRef<Type *> Types) const;
 
+  /// \returns The call type ID (a 64-bit hash) of a function or an indirect
+  /// call with the function type \p FTy and the calling convention \p CC, or
+  /// std::nullopt if the target does not use call type IDs. An indirect call
+  /// can reach a function only if both have the same call type ID, so two
+  /// signatures must get the same ID if the ABI lets a call with one of them
+  /// reach a function with the other. The ThinLTO module summary records the
+  /// IDs, so that the thin link can find the functions that an indirect call
+  /// can reach.
+  LLVM_ABI std::optional<uint64_t> getCallTypeId(FunctionType *FTy,
+                                                 CallingConv::ID CC) const;
+
   /// The type of load/store indexing.
   enum MemIndexedMode {
     MIM_Unindexed, ///< No indexing.

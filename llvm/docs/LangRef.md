@@ -9462,7 +9462,7 @@ call matches the frame function.
 %0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
 call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
 
-!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0,
 flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
 ```
 
@@ -10161,7 +10161,7 @@ Each `Summary` format will depend on whether the global value is a
 If the global value is a function, the `Summary` entry will look like:
 
 ```text
-function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2[, FuncFlags]?[, Calls]?[, TypeIdInfo]?[, Params]?[, Refs]?
+function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2[, FuncFlags]?[, Calls]?[, TypeIdInfo]?[, CallTypeIdInfo]?[, Params]?[, Refs]?
 ```
 
 The `module` field includes the summary entry id for the module containing
@@ -10172,7 +10172,8 @@ to a local definition (the latter two are populated during the thin link).
 The `insts` field contains the number of IR instructions in the function.
 Finally, there are several optional fields: {ref}`FuncFlags<funcflags_summary>`,
 {ref}`Calls<calls_summary>`, {ref}`TypeIdInfo<typeidinfo_summary>`,
-{ref}`Params<params_summary>`, {ref}`Refs<refs_summary>`.
+{ref}`CallTypeIdInfo<calltypeidinfo_summary>`, {ref}`Params<params_summary>`,
+{ref}`Refs<refs_summary>`.
 
 (variable_summary)=
 
@@ -10388,6 +10389,32 @@ typeCheckedLoadConstVCalls: (ConstVCall[, ConstVCall]*)
 
 Where each ConstVCall has the format described for
 `TypeTestAssumeConstVCalls`.
+
+(calltypeidinfo_summary)=
+
+#### CallTypeIdInfo
+
+The optional `CallTypeIdInfo` field describes the function and its calls with an
+unknown callee with call type IDs, so that the thin link can find the functions
+that an indirect call can reach. It looks like:
+
+```text
+callTypeIdInfo: (callTypeId: 3430040695729964317[, indirectCallTypeIds: (5970146889962867861[, 3430040695729964317]*)]?[, hasCallWithoutTypeId: 1]?)
+```
+
+A call type ID is a 64-bit hash that the target computes from a function type
+and a calling convention. An indirect call can reach a function only if both
+have the same call type ID. Only the summaries of targets that use call type IDs
+have this field. Without it, the function can have any call type ID, and so can
+each of its calls with an unknown callee.
+
+`callTypeId` is the call type ID of the function. It is 0 if no indirect call
+can reach the function: the calling convention of the function does not permit
+calls, or the function has local linkage and its address is not taken.
+`indirectCallTypeIds` lists the distinct call type IDs of the indirect calls in
+the function. `hasCallWithoutTypeId` is set if the function has a call with an
+unknown callee that has no call type ID, for example a call to inline assembly
+or to a constant address.
 
 (typeid_summary)=
 

@@ -29,6 +29,7 @@
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -300,15 +301,40 @@ static bool mustBeUnreachableFunction(const Function &F) {
   return isa<UnreachableInst>(F.getEntryBlock().getTerminator());
 }
 
+/// Returns true if a call to \p Callee, which is not a known function, has a
+/// call type ID. Inline assembly has none. A constant has one only if it
+/// stands for a function: an ifunc or an alias of one, or a
+/// dso_local_equivalent or no_cfi value. A call to another constant, for
+/// example to an absolute address, runs code that no summary describes.
+static bool hasCallTypeId(const Value *Callee) {
+  if (isa<InlineAsm>(Callee))
+    return false;
+  if (!isa<Constant>(Callee))
+    return true;
+  if (const auto *GA = dyn_cast<GlobalAlias>(Callee))
+    Callee = GA->getAliaseeObject();
+  return isa_and_nonnull<GlobalIFunc, DSOLocalEquivalent, NoCFIValue>(Callee);
+}
+
 static void computeFunctionSummary(
     const AnalysisOptions &Opts, ModuleSummaryIndex &Index, const Module &M,
     const Function &F, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     DominatorTree &DT, bool HasLocalsInUsedOrAsm,
     DenseSet<GlobalValue::GUID> &CantBePromoted, bool IsThinLTO,
-    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
+    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback,
+    const TargetTransformInfo *TTI) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
   assert(F.hasName());
+
+  // The call type ID of F, if the target uses call type IDs.
+  std::optional<uint64_t> FuncCallTypeId;
+  if (TTI) {
+    FuncCallTypeId =
+        TTI->getCallTypeId(F.getFunctionType(), F.getCallingConv());
+  }
+  SetVector<uint64_t, std::vector<uint64_t>> IndirectCallTypeIds;
+  bool HasCallWithoutTypeId = false;
 
   unsigned NumInsts = 0;
   // Map from callee ValueId to profile count. Used to accumulate profile
@@ -467,6 +493,18 @@ static void computeFunctionSummary(
         if (auto *GI = dyn_cast_if_present<GlobalIFunc>(CalledValue))
           if (GI->hasLocalLinkage())
             HasLocalIFuncCallOrRef = true;
+        // Record the call type ID of the call if the target uses them.
+        if (FuncCallTypeId) {
+          std::optional<uint64_t> Id;
+          if (hasCallTypeId(CalledValue)) {
+            Id =
+                TTI->getCallTypeId(CB->getFunctionType(), CB->getCallingConv());
+          }
+          if (Id)
+            IndirectCallTypeIds.insert(*Id);
+          else
+            HasCallWithoutTypeId = true;
+        }
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
@@ -731,6 +769,18 @@ static void computeFunctionSummary(
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
       std::move(Callsites), std::move(Allocs));
+  if (FuncCallTypeId) {
+    FunctionSummary::CallTypeIdInfo CallTypeIds;
+    // An indirect call can reach F only if F can be called and its address
+    // can be taken. Any module can take the address of a function with
+    // non-local linkage.
+    if (isCallableCC(F.getCallingConv()) &&
+        (!F.hasLocalLinkage() || F.hasAddressTaken()))
+      CallTypeIds.CallTypeId = *FuncCallTypeId;
+    CallTypeIds.IndirectCallTypeIds = IndirectCallTypeIds.takeVector();
+    CallTypeIds.HasCallWithoutTypeId = HasCallWithoutTypeId;
+    FuncSummary->setCallTypeIdInfo(std::move(CallTypeIds));
+  }
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
   Index.addGlobalValueSummary(F, std::move(FuncSummary));
@@ -940,7 +990,9 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI,
-    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
+    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback,
+    std::function<const TargetTransformInfo *(const Function &F)>
+        GetTTICallback) {
   assert(PSI);
   const AnalysisOptions &Opts = getAnalysisOptions(M);
   bool EnableSplitLTOUnit = false;
@@ -1069,7 +1121,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
     computeFunctionSummary(Opts, Index, M, F, BFI, PSI, DT,
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
-                           CantBePromoted, IsThinLTO, GetSSICallback);
+                           CantBePromoted, IsThinLTO, GetSSICallback,
+                           GetTTICallback ? GetTTICallback(F) : nullptr);
   }
 
   // Compute summaries for all variables defined in module, and save in the
@@ -1173,6 +1226,9 @@ ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
         return NeedSSI ? &FAM.getResult<StackSafetyAnalysis>(
                              const_cast<Function &>(F))
                        : nullptr;
+      },
+      [&FAM](const Function &F) -> const TargetTransformInfo * {
+        return &FAM.getResult<TargetIRAnalysis>(const_cast<Function &>(F));
       });
 }
 
@@ -1183,6 +1239,7 @@ INITIALIZE_PASS_BEGIN(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StackSafetyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                     "Module Summary Analysis", false, true)
 
@@ -1209,6 +1266,9 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
                               const_cast<Function &>(F))
                               .getResult()
                        : nullptr;
+      },
+      [this](const Function &F) -> const TargetTransformInfo * {
+        return &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
       }));
   return false;
 }
@@ -1223,6 +1283,7 @@ void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<BlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.addRequired<StackSafetyInfoWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
 }
 
 char ImmutableModuleSummaryIndexWrapperPass::ID = 0;

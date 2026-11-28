@@ -1129,6 +1129,11 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
+  virtual std::optional<uint64_t> getCallTypeId(FunctionType *FTy,
+                                                CallingConv::ID CC) const {
+    return std::nullopt;
+  }
+
   virtual bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }

@@ -10617,8 +10617,8 @@ bool LLParser::parseGVEntry(unsigned ID) {
 /// FunctionSummary
 ///   ::= 'function' ':' '(' 'module' ':' ModuleReference ',' GVFlags
 ///         ',' 'insts' ':' UInt32 [',' OptionalFFlags]? [',' OptionalCalls]?
-///         [',' OptionalTypeIdInfo]? [',' OptionalParamAccesses]?
-///         [',' OptionalRefs]? ')'
+///         [',' OptionalTypeIdInfo]? [',' OptionalCallTypeIdInfo]?
+///         [',' OptionalParamAccesses]? [',' OptionalRefs]? ')'
 bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
                                     unsigned ID) {
   LocTy Loc = Lex.getLoc();
@@ -10634,6 +10634,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
   unsigned InstCount;
   SmallVector<FunctionSummary::EdgeTy, 0> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
+  std::optional<FunctionSummary::CallTypeIdInfo> CallTypeIdInfo;
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   SmallVector<ValueInfo, 0> Refs;
   std::vector<CallsiteInfo> Callsites;
@@ -10662,6 +10663,10 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       break;
     case lltok::kw_typeIdInfo:
       if (parseOptionalTypeIdInfo(TypeIdInfo))
+        return true;
+      break;
+    case lltok::kw_callTypeIdInfo:
+      if (parseOptionalCallTypeIdInfo(CallTypeIdInfo.emplace()))
         return true;
       break;
     case lltok::kw_refs:
@@ -10697,6 +10702,8 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       std::move(TypeIdInfo.TypeCheckedLoadConstVCalls),
       std::move(ParamAccesses), std::move(Callsites), std::move(Allocs));
 
+  if (CallTypeIdInfo)
+    FS->setCallTypeIdInfo(std::move(*CallTypeIdInfo));
   FS->setModulePath(ModulePath);
 
   return addGlobalValueToIndex(Name, GUID,
@@ -11343,6 +11350,59 @@ bool LLParser::parseOptionalTypeIdInfo(
     return true;
 
   return false;
+}
+
+/// OptionalCallTypeIdInfo
+///   := 'callTypeIdInfo' ':' '(' CallTypeIdField [',' CallTypeIdField]* ')'
+/// CallTypeIdField
+///   := 'callTypeId' ':' UInt64
+///   := 'indirectCallTypeIds' ':' '(' UInt64 [',' UInt64]* ')'
+///   := 'hasCallWithoutTypeId' ':' Flag
+bool LLParser::parseOptionalCallTypeIdInfo(
+    FunctionSummary::CallTypeIdInfo &CallTypeIdInfo) {
+  assert(Lex.getKind() == lltok::kw_callTypeIdInfo);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' in callTypeIdInfo"))
+    return true;
+
+  do {
+    switch (Lex.getKind()) {
+    case lltok::kw_callTypeId:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':' here") ||
+          parseUInt64(CallTypeIdInfo.CallTypeId))
+        return true;
+      break;
+    case lltok::kw_indirectCallTypeIds:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':' here") ||
+          parseToken(lltok::lparen, "expected '(' here"))
+        return true;
+      do {
+        uint64_t Id;
+        if (parseUInt64(Id))
+          return true;
+        CallTypeIdInfo.IndirectCallTypeIds.push_back(Id);
+      } while (EatIfPresent(lltok::comma));
+      if (parseToken(lltok::rparen, "expected ')' here"))
+        return true;
+      break;
+    case lltok::kw_hasCallWithoutTypeId: {
+      Lex.Lex();
+      unsigned Flag = 0;
+      if (parseToken(lltok::colon, "expected ':' here") || parseFlag(Flag))
+        return true;
+      CallTypeIdInfo.HasCallWithoutTypeId = Flag;
+      break;
+    }
+    default:
+      return error(Lex.getLoc(), "invalid callTypeIdInfo field");
+    }
+  } while (EatIfPresent(lltok::comma));
+
+  return parseToken(lltok::rparen, "expected ')' in callTypeIdInfo");
 }
 
 /// TypeTests
