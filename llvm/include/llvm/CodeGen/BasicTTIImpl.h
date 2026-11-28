@@ -2585,6 +2585,21 @@ public:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
                                      cast<VectorType>(ICA.getArgTypes()[0]),
                                      CostKind, {}, 0, cast<VectorType>(RetTy));
+    case Intrinsic::vector_shuffle: {
+      // Scalarize: extract each index, variable-index extract each source
+      // element, insert results.
+      auto *VecTy = dyn_cast<FixedVectorType>(RetTy);
+      if (!VecTy)
+        return InstructionCost::getInvalid();
+      InstructionCost ExtractCost = thisT()->getVectorInstrCost(
+          Instruction::ExtractElement, VecTy, CostKind, -1, nullptr, nullptr);
+      return VecTy->getNumElements() * ExtractCost +
+             getScalarizationOverhead(VecTy, /*Insert=*/true,
+                                      /*Extract=*/false, CostKind) +
+             getScalarizationOverhead(cast<VectorType>(ICA.getArgTypes()[1]),
+                                      /*Insert=*/false, /*Extract=*/true,
+                                      CostKind);
+    }
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
