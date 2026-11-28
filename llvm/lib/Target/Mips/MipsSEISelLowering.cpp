@@ -817,7 +817,6 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
     bool IsLittleEndian = !Subtarget.isLittle();
 
     SDValue IfSet, IfClr, Cond;
-    bool IsConstantMask = false;
     APInt Mask, InvMask;
 
     // If Op0Op0 is an appropriate mask, try to find it's inverse in either
@@ -834,8 +833,6 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) &&
                Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op0;
-
-      IsConstantMask = true;
     }
 
     // If IfClr is not yet set, and Op0Op1 is an appropriate mask, try the same
@@ -851,9 +848,12 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       else if (isVSplat(Op1Op1, InvMask, IsLittleEndian) &&
                Mask.getBitWidth() == InvMask.getBitWidth() && Mask == ~InvMask)
         IfClr = Op1Op0;
-
-      IsConstantMask = true;
     }
+
+    // Only treat the mask as constant if its inverse was found above. A
+    // constant splat without a matching inverse may still match below as a
+    // non-constant mask, and Mask must not be used to fold that case.
+    bool IsConstantMask = IfClr.getNode() != nullptr;
 
     // If IfClr is not yet set, try looking for a non-constant match.
     // IfClr will be set if we find a valid match amongst the eight
