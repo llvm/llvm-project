@@ -15,10 +15,8 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -riscv-uleb128-reloc=0 %s -o %t0.relax
 # RUN: llvm-readobj -r -x .alloc_w %t0.relax | FileCheck %s --check-prefixes=CHECK0,RELAX0
 
-# RUN: not llvm-mc -filetype=obj -triple=riscv64 -mattr=-relax --defsym ERR=1 %s -o /dev/null 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=ERR
-# RUN: not llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax --defsym ERR=1 %s -o /dev/null 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=ERR
+# RUN: llvm-mc --verify -filetype=obj -triple=riscv64 -mattr=-relax --defsym ERR=1 %s -o /dev/null
+# RUN: llvm-mc --verify -filetype=obj -triple=riscv64 -mattr=+relax --defsym ERR=1 %s -o /dev/null
 
 # CHECK0:      Relocations [
 # CHECK0-NEXT:   .rela.alloc_w {
@@ -60,22 +58,17 @@ w2:
 .uleb128 -(w2-w1)   # 0x01fffffffffffffffff8
 
 .ifdef ERR
-# ERR: :[[#@LINE+1]]:16: error: .uleb128 expression is not absolute
 .uleb128 extern-w   # extern is undefined
-# ERR: :[[#@LINE+1]]:11: error: .uleb128 expression is not absolute
-.uleb128 w-extern
-# ERR: :[[#@LINE+1]]:11: error: .uleb128 expression is not absolute
+# expected-error@-1:16 {{.uleb128 expression is not absolute}}
+.uleb128 w-extern # expected-error:11 {{.uleb128 expression is not absolute}}
 .uleb128 x-w        # x is later defined in another section
+# expected-error@-1:11 {{.uleb128 expression is not absolute}}
 
 .section .alloc_x,"aw",@progbits; x:
-# ERR: :[[#@LINE+1]]:11: error: .uleb128 expression is not absolute
-.uleb128 y-x
+.uleb128 y-x # expected-error:11 {{.uleb128 expression is not absolute}}
 .section .alloc_y,"aw",@progbits; y:
-# ERR: :[[#@LINE+1]]:11: error: .uleb128 expression is not absolute
-.uleb128 x-y
+.uleb128 x-y # expected-error:11 {{.uleb128 expression is not absolute}}
 
-# ERR: :[[#@LINE+1]]:10: error: .uleb128 expression is not absolute
-.uleb128 extern
-# ERR: :[[#@LINE+1]]:10: error: .uleb128 expression is not absolute
-.uleb128 y
+.uleb128 extern # expected-error:10 {{.uleb128 expression is not absolute}}
+.uleb128 y # expected-error:10 {{.uleb128 expression is not absolute}}
 .endif

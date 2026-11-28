@@ -9,26 +9,19 @@
 # RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zcd,+d -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
-# RUN: not llvm-mc -triple riscv32 -mattr=+c \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
-# RUN: not llvm-mc -triple riscv32 -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+c -M no-aliases -show-encoding < %s
+# RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
 
 # CHECK-ASM-AND-OBJ: c.fldsp  fs0, 504(sp)
 # CHECK-ASM: encoding: [0x7e,0x34]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
-c.fldsp  fs0, 504(sp)
+c.fldsp  fs0, 504(sp) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 # CHECK-ASM-AND-OBJ: c.fsdsp  fa7, 504(sp)
 # CHECK-ASM: encoding: [0xc6,0xbf]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
-c.fsdsp  fa7, 504(sp)
+c.fsdsp  fa7, 504(sp) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.fld  fa3, 248(a5)
 # CHECK-ASM: encoding: [0xf4,0x3f]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
-c.fld  fa3, 248(a5)
+c.fld  fa3, 248(a5) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 # CHECK-ASM-AND-OBJ: c.fsd  fa2, 248(a1)
 # CHECK-ASM: encoding: [0xf0,0xbd]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
-c.fsd  fa2, 248(a1)
+c.fsd  fa2, 248(a1) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}

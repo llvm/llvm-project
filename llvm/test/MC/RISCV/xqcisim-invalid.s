@@ -1,125 +1,140 @@
 # Xqcisim - Simulaton Hint Instructions
-# RUN: not llvm-mc -triple riscv32 -mattr=+xqcisim < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-xqcisim < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
+# RUN: llvm-mc --verify=plus -triple riscv32 -mattr=+xqcisim < %s
+# RUN: llvm-mc --verify=minus -triple riscv32 -mattr=-xqcisim < %s
 
-# CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be an integer in the range [0, 1023]
 qc.psyscalli 1024
+# plus-error@-1:14 {{immediate must be an integer in the range [0, 1023]}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.psyscalli
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: unexpected extra operand for instruction
 qc.psyscalli 23, x0
+# plus-error@-1:18 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.psyscalli       1023
+qc.psyscalli       1023 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:11: error: immediate must be an integer in the range [0, 255]
 qc.pputci 256
+# plus-error@-1:11 {{immediate must be an integer in the range [0, 255]}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pputci
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:16: error: unexpected extra operand for instruction
 qc.pputci 200, x8
+# plus-error@-1:16 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.pputci  255
+qc.pputci  255 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: unexpected extra operand for instruction
 qc.c.ptrace x0
+# plus-error@-1:13 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: unexpected extra operand for instruction
 qc.c.ptrace 1
+# plus-error@-1:13 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.c.ptrace
+qc.c.ptrace # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:14: error: unexpected extra operand for instruction
 qc.pcoredump 12
+# plus-error@-1:14 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:14: error: unexpected extra operand for instruction
 qc.pcoredump x4
+# plus-error@-1:14 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.pcoredump
+qc.pcoredump # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:11: error: unexpected extra operand for instruction
 qc.ppregs x1
+# plus-error@-1:11 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:11: error: unexpected extra operand for instruction
 qc.ppregs 23
+# plus-error@-1:11 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.ppregs
+qc.ppregs # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:15: error: unexpected extra operand for instruction
 qc.ppreg x10, x2
+# plus-error@-1:15 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.ppreg
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.ppreg 23
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.ppreg   a0
+qc.ppreg   a0 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:14: error: unexpected extra operand for instruction
 qc.pputc x7, x3
+# plus-error@-1:14 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pputc
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pputc 34
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.pputc   t2
+qc.pputc   t2 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:15: error: unexpected extra operand for instruction
 qc.pputs x15, x18
+# plus-error@-1:15 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pputs
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pputs 45
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.pputs   a5
+qc.pputs   a5 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:15: error: unexpected extra operand for instruction
 qc.pexit x26, x23
+# plus-error@-1:15 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pexit
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pexit 78
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.pexit   s10
+qc.pexit   s10 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
 
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: unexpected extra operand for instruction
 qc.psyscall x11, x5
+# plus-error@-1:18 {{unexpected extra operand for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.psyscall
+# plus-error@-1:1 {{too few operands for instruction}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: register must be a GPR
 qc.psyscall 98
+# plus-error@-1:13 {{register must be a GPR}}
+# minus-error@-2 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
-qc.psyscall        a1
+qc.psyscall        a1 # minus-error:1 {{instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)}}
