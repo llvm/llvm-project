@@ -91,3 +91,96 @@ entry:
     %0 = xor <2 x i64> %a, splat (i64 17179869188)
     ret <2 x i64> %0
 }
+
+define <2 x i64> @vbitrev_b(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 1
+; CHECK-NEXT:    vsll.b $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <16 x i8>
+  %1 = and <16 x i8> %0, splat (i8 7)
+  %2 = shl nuw <16 x i8> splat (i8 1), %1
+  %3 = bitcast <16 x i8> %2 to <2 x i64>
+  %4 = xor <2 x i64> %a, %3
+  ret <2 x i64> %4
+}
+
+define <2 x i64> @vbitrev_b_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_b_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 1
+; CHECK-NEXT:    vsll.b $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <16 x i8>
+  %1 = shl <16 x i8> splat (i8 1), %0
+  %2 = bitcast <16 x i8> %1 to <2 x i64>
+  %3 = xor <2 x i64> %2, %a
+  ret <2 x i64> %3
+}
+
+define <2 x i64> @vbitrev_h(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.h $vr2, 1
+; CHECK-NEXT:    vsll.h $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <8 x i16>
+  %1 = and <8 x i16> %0, splat (i16 15)
+  %2 = shl nuw <8 x i16> splat (i16 1), %1
+  %3 = bitcast <8 x i16> %2 to <2 x i64>
+  %4 = xor <2 x i64> %a, %3
+  ret <2 x i64> %4
+}
+
+define <2 x i64> @vbitrev_h_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_h_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.h $vr2, 1
+; CHECK-NEXT:    vsll.h $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <8 x i16>
+  %1 = shl <8 x i16> splat (i16 1), %0
+  %2 = bitcast <8 x i16> %1 to <2 x i64>
+  %3 = xor <2 x i64> %2, %a
+  ret <2 x i64> %3
+}
+
+define <2 x i64> @vbitrev_w(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.w $vr2, 1
+; CHECK-NEXT:    vsll.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <4 x i32>
+  %1 = and <4 x i32> %0, splat (i32 31)
+  %2 = shl nuw <4 x i32> splat (i32 1), %1
+  %3 = bitcast <4 x i32> %2 to <2 x i64>
+  %4 = xor <2 x i64> %a, %3
+  ret <2 x i64> %4
+}
+
+define <2 x i64> @vbitrev_w_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: vbitrev_w_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.w $vr2, 1
+; CHECK-NEXT:    vsll.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <2 x i64> %b to <4 x i32>
+  %1 = shl <4 x i32> splat (i32 1), %0
+  %2 = bitcast <4 x i32> %1 to <2 x i64>
+  %3 = xor <2 x i64> %2, %a
+  ret <2 x i64> %3
+}
