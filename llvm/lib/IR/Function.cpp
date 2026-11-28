@@ -435,6 +435,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");
+  AddAttributeIfSet("hw-shadow-stack");
   AddAttributeIfSet("ptrauth-returns");
   AddAttributeIfSet("ptrauth-auth-traps");
   AddAttributeIfSet("ptrauth-indirect-gotos");

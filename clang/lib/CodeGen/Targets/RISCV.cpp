@@ -1128,13 +1128,17 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
+      return;
+
+    // Also covers functions without a FunctionDecl, such as IFUNC resolvers.
+    setBranchProtectionFnAttributes(
+        TargetInfo::BranchProtectionInfo(CGM.getLangOpts()), *Fn);
+
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD) return;
-
-    auto *Fn = cast<llvm::Function>(GV);
-
-    if (CGM.getCodeGenOpts().CFProtectionReturn)
-      Fn->addFnAttr("hw-shadow-stack");
+    if (!FD)
+      return;
 
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)

@@ -108,6 +108,9 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
+
   bool hasBitIntType() const override { return true; }
 
   size_t getMaxBitIntWidth() const override {

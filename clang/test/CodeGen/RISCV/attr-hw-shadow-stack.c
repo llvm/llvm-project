@@ -6,4 +6,5 @@
 int foo(int *a) { return *a; }
 
 // CHECK: attributes {{.*}}"hw-shadow-stack"{{.*}}
-// NOSHADOWSTACK-NOT: attributes {{.*}}"hw-shadow-stack"{{.*}}
+// CHECK: !{i32 8, !"hw-shadow-stack", i32 1}
+// NOSHADOWSTACK-NOT: "hw-shadow-stack"

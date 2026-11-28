@@ -262,6 +262,7 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
   AddRemoveAttributeAsSet(BPI.BranchProtectionPAuthLR,
                           "branch-protection-pauth-lr");
   AddRemoveAttributeAsSet(BPI.GuardedControlStack, "guarded-control-stack");
+  AddRemoveAttributeAsSet(BPI.HWShadowStack, "hw-shadow-stack");
 }
 
 void TargetCodeGenInfo::initBranchProtectionFnAttributes(
@@ -282,6 +283,8 @@ void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     FuncAttrs.addAttribute("branch-protection-pauth-lr");
   if (BPI.GuardedControlStack)
     FuncAttrs.addAttribute("guarded-control-stack");
+  if (BPI.HWShadowStack)
+    FuncAttrs.addAttribute("hw-shadow-stack");
 }
 
 void TargetCodeGenInfo::setPointerAuthFnAttributes(

@@ -1699,6 +1699,9 @@ void CodeGenModule::Release() {
     }
   }
 
+  if (LangOpts.HWShadowStack)
+    getModule().addModuleFlag(llvm::Module::Min, "hw-shadow-stack", 1);
+
   if (CodeGenOpts.FunctionReturnThunks)
     getModule().addModuleFlag(llvm::Module::Override, "function_return_thunk_extern", 1);
 
