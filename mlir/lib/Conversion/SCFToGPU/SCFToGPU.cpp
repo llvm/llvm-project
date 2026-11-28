@@ -339,18 +339,22 @@ static Value deriveStaticUpperBound(Value upperBound,
   }
 
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
-    if (auto lhs = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
-                       .getDefiningOp<arith::ConstantIndexOp>())
-      if (auto rhs = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
-                         .getDefiningOp<arith::ConstantIndexOp>()) {
-        // Assumptions about the upper bound of minimum computations no longer
-        // work if multiplied by mixed signs, so abort in this case.
-        if ((lhs.value() < 0) != (rhs.value() < 0))
-          return {};
+    // Either factor may have no derivable bound (e.g. an outer parallel IV).
+    Value lhsBound = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter);
+    if (!lhsBound)
+      return {};
+    Value rhsBound = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter);
+    if (!rhsBound)
+      return {};
+    auto lhs = cast<arith::ConstantIndexOp>(lhsBound.getDefiningOp());
+    auto rhs = cast<arith::ConstantIndexOp>(rhsBound.getDefiningOp());
+    // Assumptions about the upper bound of minimum computations no longer
+    // work if multiplied by mixed signs, so abort in this case.
+    if ((lhs.value() < 0) != (rhs.value() < 0))
+      return {};
 
-        return arith::ConstantIndexOp::create(rewriter, multiplyOp.getLoc(),
-                                              lhs.value() * rhs.value());
-      }
+    return arith::ConstantIndexOp::create(rewriter, multiplyOp.getLoc(),
+                                          lhs.value() * rhs.value());
   }
 
   return {};
