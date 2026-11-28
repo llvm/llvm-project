@@ -179,3 +179,7 @@ set(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH "" CACHE STRING
 
 add_subdirectory(OffloadAPI)
 add_subdirectory(Conformance)
+
+if(BUILD_LIBOMPTARGET AND LIBOMPTARGET_OMPT_SUPPORT)
+  add_subdirectory(OMPT)
+endif()
