@@ -2306,6 +2306,15 @@ protected:
   UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
 
 public:
+  using BreakpointUpdateGuard = std::shared_ptr<void>;
+
+  /// Interrupt the inferior and return a guard that lets it resume when the
+  /// last reference is released. Use it to send multiple breakpoint update
+  /// requests during one interruption. Release the last reference on the thread
+  //  that acquired the guard.
+  /// Returns an empty guard if batching is unnecessary or unsupported.
+  virtual BreakpointUpdateGuard HoldForBreakpointUpdates() { return {}; }
+
   /// Performs `action` on `site`. If `forbid_delay` is true, the action is
   /// performed immediately, otherwise the method will delay the breakpoint if
   /// it is correct to do so.

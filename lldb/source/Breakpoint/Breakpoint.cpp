@@ -369,6 +369,10 @@ void Breakpoint::SetEnabled(bool enable) {
     return;
 
   m_options.SetEnabled(enable);
+  ProcessSP process = m_target.GetProcessSP();
+  Process::BreakpointUpdateGuard guard =
+      process && m_locations.GetSize() > 1 ? process->HoldForBreakpointUpdates()
+                                           : nullptr;
   if (enable)
     m_locations.ResolveAllBreakpointSites();
   else
@@ -517,6 +521,14 @@ const BreakpointOptions &Breakpoint::GetOptions() const { return m_options; }
 void Breakpoint::ResolveBreakpoint() {
   if (m_resolver_sp) {
     ElapsedTime elapsed(m_resolve_time);
+    ProcessSP process = m_target.GetProcessSP();
+    const bool may_resolve_multiple_locations =
+        m_resolver_sp->GetResolverTy() !=
+        BreakpointResolver::ResolverTy::AddressResolver;
+    Process::BreakpointUpdateGuard guard =
+        process && may_resolve_multiple_locations
+            ? process->HoldForBreakpointUpdates()
+            : nullptr;
     m_resolver_sp->ResolveBreakpoint(*m_filter_sp);
   }
 }

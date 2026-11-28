@@ -176,6 +176,8 @@ public:
   size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
   // Process Breakpoints
+  BreakpointUpdateGuard HoldForBreakpointUpdates() override;
+
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
   llvm::Error UpdateBreakpointSites(
