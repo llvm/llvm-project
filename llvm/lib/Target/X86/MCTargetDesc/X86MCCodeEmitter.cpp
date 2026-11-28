@@ -294,10 +294,14 @@ public:
     return Kind;
   }
 
+  uint8_t firstPayload() const {
+    return ((~R) & 0x1) << 7 | ((~X) & 0x1) << 6 | ((~B) & 0x1) << 5;
+  }
+  uint8_t lastPayload() const {
+    return ((~VEX_4V) & 0xf) << 3 | VEX_L << 2 | VEX_PP;
+  }
+
   void emit(SmallVectorImpl<char> &CB) const {
-    uint8_t FirstPayload =
-        ((~R) & 0x1) << 7 | ((~X) & 0x1) << 6 | ((~B) & 0x1) << 5;
-    uint8_t LastPayload = ((~VEX_4V) & 0xf) << 3 | VEX_L << 2 | VEX_PP;
     switch (Kind) {
     case None:
       return;
@@ -312,18 +316,18 @@ public:
       return;
     case VEX2:
       emitByte(0xC5, CB);
-      emitByte(((~R) & 1) << 7 | LastPayload, CB);
+      emitByte(((~R) & 1) << 7 | lastPayload(), CB);
       return;
     case VEX3:
     case XOP:
       emitByte(Kind == VEX3 ? 0xC4 : 0x8F, CB);
-      emitByte(FirstPayload | VEX_5M, CB);
-      emitByte(W << 7 | LastPayload, CB);
+      emitByte(firstPayload() | VEX_5M, CB);
+      emitByte(W << 7 | lastPayload(), CB);
       return;
     case EVEX:
       assert(VEX_5M && !(VEX_5M & 0x8) && "invalid mmm fields for EVEX!");
       emitByte(0x62, CB);
-      emitByte(FirstPayload | ((~R2) & 0x1) << 4 | B2 << 3 | VEX_5M, CB);
+      emitByte(firstPayload() | ((~R2) & 0x1) << 4 | B2 << 3 | VEX_5M, CB);
       emitByte(W << 7 | ((~VEX_4V) & 0xf) << 3 | ((~X2) & 0x1) << 2 | VEX_PP,
                CB);
       emitByte(EVEX_z << 7 | EVEX_L2 << 6 | VEX_L << 5 | EVEX_b << 4 |
@@ -375,10 +379,12 @@ private:
                         const MCSubtargetInfo &STI,
                         bool ForceSIB = false) const;
 
-  PrefixKind emitPrefixImpl(const MCInst &MI, const MCSubtargetInfo &STI,
+  PrefixKind emitPrefixImpl(const MCInst &MI, const MCInstrDesc &Desc,
+                            unsigned OpBias, const MCSubtargetInfo &STI,
                             SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
+                                 const MCInstrDesc &Desc, unsigned OpBias,
                                  const MCSubtargetInfo &STI,
                                  SmallVectorImpl<char> &CB) const;
 
@@ -386,10 +392,12 @@ private:
                                  SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitOpcodePrefix(int MemOperand, const MCInst &MI,
+                              const MCInstrDesc &Desc, unsigned OpBias,
                               const MCSubtargetInfo &STI,
                               SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitREXPrefix(int MemOperand, const MCInst &MI,
+                           const MCInstrDesc &Desc, unsigned OpBias,
                            const MCSubtargetInfo &STI,
                            SmallVectorImpl<char> &CB) const;
 };
@@ -680,7 +688,9 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   // 16-bit addressing forms of the ModR/M byte have a different encoding for
   // the R/M field and are far more limited in which registers can be used.
-  if (IsAdSize16 || X86_MC::is16BitMemOperand(MI, Op, STI)) {
+  // 64-bit mode has no 16-bit addressing.
+  if (IsAdSize16 || (!STI.hasFeature(X86::Is64Bit) &&
+                     X86_MC::is16BitMemOperand(MI, Op, STI))) {
     if (BaseReg) {
       // For 32-bit addressing, the row and column values in Table 2-2 are
       // basically the same. It's AX/CX/DX/BX/SP/BP/SI/DI in that order, with
@@ -790,8 +800,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       int ImmOffset = 0;
       if (X86II::isDispOrCDisp8(TSFlags, Disp.getImm(), &ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), CB);
-        emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB,
-                      Fixups, ImmOffset);
+        emitConstant(Disp.getImm() + ImmOffset, 1, CB);
         return;
       }
     }
@@ -864,15 +873,18 @@ void X86MCCodeEmitter::emitMemModRMByte(
 /// \returns one of the REX, XOP, VEX2, VEX3, EVEX if any of them is used,
 /// otherwise returns None.
 PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
+                                            const MCInstrDesc &Desc,
+                                            unsigned OpBias,
                                             const MCSubtargetInfo &STI,
                                             SmallVectorImpl<char> &CB) const {
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
-  // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
-  // Emit segment override opcode prefix as needed.
-  if (MemoryOperand != -1)
+  // Determine where the memory operand starts, if present, and emit its
+  // segment override opcode prefix as needed.
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  if (MemoryOperand != -1) {
+    MemoryOperand += OpBias;
     emitSegmentOverridePrefix(MemoryOperand + X86::AddrSegmentReg, MI, CB);
+  }
 
   // Emit the repeat opcode prefix as needed.
   unsigned Flags = MI.getFlags();
@@ -909,8 +921,8 @@ PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
   // REX prefix is optional, but if used must be immediately before the opcode
   // Encoding type for this instruction.
   return (TSFlags & X86II::EncodingMask)
-             ? emitVEXOpcodePrefix(MemoryOperand, MI, STI, CB)
-             : emitOpcodePrefix(MemoryOperand, MI, STI, CB);
+             ? emitVEXOpcodePrefix(MemoryOperand, MI, Desc, OpBias, STI, CB)
+             : emitOpcodePrefix(MemoryOperand, MI, Desc, OpBias, STI, CB);
 }
 
 // AVX instructions are encoded using an encoding scheme that combines
@@ -926,19 +938,16 @@ PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
 
 /// Emit XOP, VEX2, VEX3 or EVEX prefix.
 /// \returns the used prefix.
-PrefixKind
-X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
-                                      const MCSubtargetInfo &STI,
-                                      SmallVectorImpl<char> &CB) const {
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+PrefixKind X86MCCodeEmitter::emitVEXOpcodePrefix(
+    int MemOperand, const MCInst &MI, const MCInstrDesc &Desc, unsigned OpBias,
+    const MCSubtargetInfo &STI, SmallVectorImpl<char> &CB) const {
   uint64_t TSFlags = Desc.TSFlags;
 
   assert(!(TSFlags & X86II::LOCK) && "Can't have LOCK VEX.");
 
 #ifndef NDEBUG
   unsigned NumOps = MI.getNumOperands();
-  for (unsigned I = NumOps ? X86II::getOperandBias(Desc) : 0; I != NumOps;
-       ++I) {
+  for (unsigned I = NumOps ? OpBias : 0; I != NumOps; ++I) {
     const MCOperand &MO = MI.getOperand(I);
     if (!MO.isReg())
       continue;
@@ -1029,7 +1038,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
 
-  unsigned CurOp = X86II::getOperandBias(Desc);
+  unsigned CurOp = OpBias;
   bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   switch (TSFlags & X86II::FormMask) {
@@ -1304,53 +1313,33 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 ///
 /// \returns the used prefix (REX or None).
 PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
+                                           const MCInstrDesc &Desc,
+                                           unsigned OpBias,
                                            const MCSubtargetInfo &STI,
                                            SmallVectorImpl<char> &CB) const {
   if (!STI.hasFeature(X86::Is64Bit))
     return None;
   X86OpcodePrefixHelper Prefix(*Ctx.getRegisterInfo());
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
   Prefix.setW(TSFlags & X86II::REX_W);
   unsigned NumOps = MI.getNumOperands();
+  unsigned CurOp = NumOps ? OpBias : 0;
+  // 8-bit registers only occur as the register operands visited below.
   bool UsesHighByteReg = false;
-#ifndef NDEBUG
-  bool HasRegOp = false;
-#endif
-  unsigned CurOp = NumOps ? X86II::getOperandBias(Desc) : 0;
-  for (unsigned i = CurOp; i != NumOps; ++i) {
-    const MCOperand &MO = MI.getOperand(i);
-    if (MO.isReg()) {
-#ifndef NDEBUG
-      HasRegOp = true;
-#endif
-      MCRegister Reg = MO.getReg();
-      if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
-        UsesHighByteReg = true;
-      // If it accesses SPL, BPL, SIL, or DIL, then it requires a REX prefix.
-      if (X86II::isX86_64NonExtLowByteReg(Reg))
-        Prefix.setLowerBound(REX);
-    } else if (MO.isExpr() && STI.getTargetTriple().isX32()) {
-      // GOTTPOFF and TLSDESC relocations require a REX prefix to allow
-      // linker optimizations: even if the instructions we see may not require
-      // any prefix, they may be replaced by instructions that do. This is
-      // handled as a special case here so that it also works for hand-written
-      // assembly without the user needing to write REX, as with GNU as.
-      const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
-      if (Ref && (Ref->getSpecifier() == X86::S_GOTTPOFF ||
-                  Ref->getSpecifier() == X86::S_TLSDESC)) {
-        Prefix.setLowerBound(REX);
-      }
-    }
-  }
-  if (MI.getFlags() & X86::IP_USE_REX)
-    Prefix.setLowerBound(REX);
-  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix ||
-      MI.getFlags() & X86::IP_USE_REX2)
-    Prefix.setLowerBound(REX2);
+  auto RegOp = [&](unsigned OpNum) {
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
+    if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
+      UsesHighByteReg = true;
+    // If it accesses SPL, BPL, SIL, or DIL, then it requires a REX prefix.
+    if (X86II::isX86_64NonExtLowByteReg(Reg))
+      Prefix.setLowerBound(REX);
+    return OpNum;
+  };
   switch (TSFlags & X86II::FormMask) {
   default:
-    assert(!HasRegOp && "Unexpected form in emitREXPrefix!");
+    assert(none_of(drop_begin(MI, CurOp),
+                   [](const MCOperand &MO) { return MO.isReg(); }) &&
+           "Unexpected form in emitREXPrefix!");
     break;
   case X86II::RawFrm:
   case X86II::RawFrmMemOffs:
@@ -1359,29 +1348,29 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
   case X86II::RawFrmDstSrc:
     break;
   case X86II::AddRegFrm:
-    Prefix.setBB2(MI, CurOp++);
+    Prefix.setBB2(MI, RegOp(CurOp++));
     break;
   case X86II::MRMSrcReg:
   case X86II::MRMSrcRegCC:
-    Prefix.setRR2(MI, CurOp++);
-    Prefix.setBB2(MI, CurOp++);
+    Prefix.setRR2(MI, RegOp(CurOp++));
+    Prefix.setBB2(MI, RegOp(CurOp++));
     break;
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemCC:
-    Prefix.setRR2(MI, CurOp++);
+    Prefix.setRR2(MI, RegOp(CurOp++));
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     CurOp += X86::AddrNumOperands;
     break;
   case X86II::MRMDestReg:
-    Prefix.setBB2(MI, CurOp++);
-    Prefix.setRR2(MI, CurOp++);
+    Prefix.setBB2(MI, RegOp(CurOp++));
+    Prefix.setRR2(MI, RegOp(CurOp++));
     break;
   case X86II::MRMDestMem:
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     CurOp += X86::AddrNumOperands;
-    Prefix.setRR2(MI, CurOp++);
+    Prefix.setRR2(MI, RegOp(CurOp++));
     break;
   case X86II::MRMXmCC:
   case X86II::MRMXm:
@@ -1406,9 +1395,31 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
   case X86II::MRM5r:
   case X86II::MRM6r:
   case X86II::MRM7r:
-    Prefix.setBB2(MI, CurOp++);
+    Prefix.setBB2(MI, RegOp(CurOp++));
     break;
   }
+  if (STI.getTargetTriple().isX32()) {
+    for (unsigned I = OpBias; I < NumOps; ++I) {
+      const MCOperand &MO = MI.getOperand(I);
+      if (!MO.isExpr())
+        continue;
+      // GOTTPOFF and TLSDESC relocations require a REX prefix to allow
+      // linker optimizations: even if the instructions we see may not require
+      // any prefix, they may be replaced by instructions that do. This is
+      // handled as a special case here so that it also works for hand-written
+      // assembly without the user needing to write REX, as with GNU as.
+      const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
+      if (Ref && (Ref->getSpecifier() == X86::S_GOTTPOFF ||
+                  Ref->getSpecifier() == X86::S_TLSDESC)) {
+        Prefix.setLowerBound(REX);
+      }
+    }
+  }
+  if (MI.getFlags() & X86::IP_USE_REX)
+    Prefix.setLowerBound(REX);
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix ||
+      MI.getFlags() & X86::IP_USE_REX2)
+    Prefix.setLowerBound(REX2);
   Prefix.setM((TSFlags & X86II::OpMapMask) == X86II::TB);
   PrefixKind Kind = Prefix.determineOptimalKind();
   if (Kind && UsesHighByteReg)
@@ -1433,9 +1444,10 @@ void X86MCCodeEmitter::emitSegmentOverridePrefix(
 ///
 /// \returns the used prefix (REX or None).
 PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
+                                              const MCInstrDesc &Desc,
+                                              unsigned OpBias,
                                               const MCSubtargetInfo &STI,
                                               SmallVectorImpl<char> &CB) const {
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
 
   // Emit the operand size opcode prefix as needed.
@@ -1466,7 +1478,7 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
   // Handle REX prefix.
   assert((STI.hasFeature(X86::Is64Bit) || !(TSFlags & X86II::REX_W)) &&
          "REX.W requires 64bit mode.");
-  PrefixKind Kind = emitREXPrefix(MemOperand, MI, STI, CB);
+  PrefixKind Kind = emitREXPrefix(MemOperand, MI, Desc, OpBias, STI, CB);
 
   // 0x0F escape code must be emitted just before the opcode.
   switch (TSFlags & X86II::OpMapMask) {
@@ -1496,13 +1508,13 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
 void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
                                   const MCSubtargetInfo &STI) const {
-  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
 
   // Pseudo instructions don't get encoded.
-  if (X86II::isPseudo(TSFlags))
+  if (X86II::isPseudo(Desc.TSFlags))
     return;
 
-  emitPrefixImpl(MI, STI, CB);
+  emitPrefixImpl(MI, Desc, X86II::getOperandBias(Desc), STI, CB);
 }
 
 void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
@@ -1527,7 +1539,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   uint64_t StartByte = CB.size();
 
-  PrefixKind Kind = emitPrefixImpl(MI, STI, CB);
+  PrefixKind Kind = emitPrefixImpl(MI, Desc, CurOp, STI, CB);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
