@@ -1892,6 +1892,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU, an
   IGCA target or `generic`. Any other value, e.g. a misspelled `xe-pcv`, is an
   error rather than a device job for a device that does not exist.
+- Added `__builtin_sycl_dynamic_local_memory`. It returns a pointer to the
+  dynamic local memory for work-groups. It is intended for use by the SYCL
+  runtime library.
 
 #### Improvements
 

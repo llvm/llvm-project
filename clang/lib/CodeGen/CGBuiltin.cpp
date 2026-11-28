@@ -6963,6 +6963,31 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
     return RValue::get(Str.getPointer());
   }
+  case Builtin::BI__builtin_sycl_dynamic_local_memory: {
+    llvm::Type *RetTy = ConvertType(E->getType());
+    // Dynamic local memory only exists on the device; host code never reaches
+    // a kernel's reification, so return a null pointer.
+    // FIXME: Use of the builtin in host code will be diagnosed in a follow-up
+    // PR.
+    if (!getLangOpts().SYCLIsDevice)
+      return RValue::get(
+          llvm::ConstantPointerNull::get(cast<llvm::PointerType>(RetTy)));
+
+    StringRef Name = "__sycl_dynamic_local_memory";
+    llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(Name);
+    if (!GV) {
+      unsigned AS = getContext().getTargetAddressSpace(LangAS::sycl_local);
+      GV = new llvm::GlobalVariable(
+          CGM.getModule(), llvm::ArrayType::get(Int8Ty, 0),
+          /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
+          /*Initializer=*/nullptr, Name, /*InsertBefore=*/nullptr,
+          llvm::GlobalValue::NotThreadLocal, AS);
+      // The dynamic local memory block is allocated by the driver or backend,
+      // which therefore determines its alignment. No alignment is specified
+      // here and none is guaranteed.
+    }
+    return RValue::get(GV);
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
