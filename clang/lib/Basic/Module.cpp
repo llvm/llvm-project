@@ -278,7 +278,7 @@ static bool coversPath(StringRef Ancestor, StringRef Path) {
 }
 
 void Module::addDirectoryDependency(StringRef Path) {
-  std::vector<std::string> &Deps =
+  SmallVectorImpl<std::string> &Deps =
       getTopLevelModule()->TopLevelOnly.getOrCreate().DirectoryDependencies;
   // These are recursive dependencies, so an entry under one already recorded
   // adds nothing. Submodules contribute to the same list, and their umbrellas

@@ -426,14 +426,14 @@ public:
 
 private:
   /// The submodules of this module, indexed by name.
-  std::vector<ModuleRef> SubModules;
+  SmallVector<ModuleRef, 0> SubModules;
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
   llvm::StringMap<unsigned> SubModuleIndex;
 
   /// top-level header filenames that aren't resolved to FileEntries yet.
-  std::vector<std::string> TopHeaderNames;
+  SmallVector<std::string, 1> TopHeaderNames;
 
   /// The ID used when referencing this module within a VisibleModuleSet.
   unsigned VisibilityID;
@@ -459,7 +459,7 @@ private:
   // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
   // The extra element at the end acts as the end index of the last HeaderKind.
   unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
-  SmallVector<Header, 2> HeadersStorage;
+  SmallVector<Header, 1> HeadersStorage;
 
 public:
   ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
@@ -599,7 +599,7 @@ public:
 
   /// The set of modules imported by this module, and on which this
   /// module depends.
-  llvm::SmallVector<ModuleRef, 2> Imports;
+  llvm::SmallVector<ModuleRef, 0> Imports;
 
   /// Describes an exported module.
   ///
@@ -608,7 +608,7 @@ public:
   using ExportDecl = std::pair<ModuleRef, bool>;
 
   /// The set of export declarations.
-  SmallVector<ExportDecl, 2> Exports;
+  SmallVector<ExportDecl, 1> Exports;
 
   /// Describes an exported module that has not yet been resolved
   /// (perhaps because the module it refers to has not yet been loaded).
@@ -742,7 +742,7 @@ private:
     std::string ExportAsModule;
 
     /// The top-level headers associated with this module.
-    llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
+    llvm::SmallSetVector<FileEntryRef, 1> TopHeaders;
 
     /// Cache of modules visible to lookup in this module.
     llvm::DenseSet<const Module *> VisibleModulesCache;
@@ -759,35 +759,35 @@ private:
     ///
     /// If any of these requirements are not available, the \c IsAvailable bit
     /// will be false to indicate that this (sub)module is not available.
-    SmallVector<Requirement, 2> Requirements;
+    SmallVector<Requirement, 0> Requirements;
 
     /// A module with the same name that shadows this module.
     Module *ShadowingModule = nullptr;
 
     /// The set of top-level modules that affected the compilation of this
     /// module, but were not imported.
-    llvm::SmallVector<ModuleRef, 2> AffectingClangModules;
+    llvm::SmallVector<ModuleRef, 0> AffectingClangModules;
 
     /// The directly used modules.
-    SmallVector<Module *, 2> DirectUses;
+    SmallVector<Module *, 0> DirectUses;
 
     /// The set of use declarations that have yet to be resolved.
     SmallVector<ModuleId, 0> UnresolvedDirectUses;
 
     /// When \c NoUndeclaredIncludes is true, the set of modules this module
     /// tried to import but didn't because they are not direct uses.
-    llvm::SmallSetVector<const Module *, 2> UndeclaredUses;
+    llvm::SetVector<const Module *> UndeclaredUses;
 
     /// The set of libraries or frameworks to link against when
     /// an entity from this module is used.
-    llvm::SmallVector<LinkLibrary, 2> LinkLibraries;
+    llvm::SmallVector<LinkLibrary, 0> LinkLibraries;
 
     /// The list of conflicts for which the module-id has not yet been
     /// resolved.
     SmallVector<UnresolvedConflict, 0> UnresolvedConflicts;
 
     /// The list of conflicts.
-    std::vector<Conflict> Conflicts;
+    SmallVector<Conflict, 0> Conflicts;
   };
 
   /// Mutable because the visible modules cache is built lazily.
@@ -945,7 +945,7 @@ private:
     std::string PresumedModuleMapFile;
 
     /// Directories this module depends on the listing of.
-    std::vector<std::string> DirectoryDependencies;
+    SmallVector<std::string, 0> DirectoryDependencies;
 
     /// The AST file name and key if this is a top-level module which has a
     /// corresponding serialized AST file, or null otherwise.
@@ -960,7 +960,7 @@ private:
 
     /// The set of "configuration macros", which are macros that
     /// (intentionally) change how this module is built.
-    std::vector<std::string> ConfigMacros;
+    SmallVector<std::string, 0> ConfigMacros;
   };
 
   LazyMembers<TopLevelMembers> TopLevelOnly;
@@ -1335,8 +1335,8 @@ public:
 
   unsigned getVisibilityID() const { return VisibilityID; }
 
-  using submodule_iterator = std::vector<ModuleRef>::iterator;
-  using submodule_const_iterator = std::vector<ModuleRef>::const_iterator;
+  using submodule_iterator = SmallVectorImpl<ModuleRef>::iterator;
+  using submodule_const_iterator = SmallVectorImpl<ModuleRef>::const_iterator;
 
   llvm::iterator_range<submodule_iterator> submodules() {
     return llvm::make_range(SubModules.begin(), SubModules.end());
