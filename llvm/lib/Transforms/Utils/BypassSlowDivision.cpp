@@ -37,6 +37,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
+#include <utility>
 
 using namespace llvm;
 
@@ -62,7 +63,7 @@ struct QuotRemWithBB {
 };
 
 using DivCacheTy = DenseMap<DivRemMapKey, QuotRemPair>;
-using BypassWidthsTy = DenseMap<unsigned, unsigned>;
+using BypassWidthsTy = DenseMap<unsigned, std::pair<unsigned, bool>>;
 using VisitedSetTy = SmallPtrSet<Instruction *, 4>;
 
 enum ValueRange {
@@ -77,6 +78,7 @@ enum ValueRange {
 
 class FastDivInsertionTask {
   bool IsValidTask = false;
+  bool BypassConstantDivisor = false;
   Instruction *SlowDivOrRem = nullptr;
   IntegerType *BypassType = nullptr;
   BasicBlock *MainBB = nullptr;
@@ -144,8 +146,9 @@ FastDivInsertionTask::FastDivInsertionTask(Instruction *I,
     return;
 
   // Get type for div/rem instruction with bypass bitwidth.
-  IntegerType *BT = IntegerType::get(I->getContext(), BI->second);
+  IntegerType *BT = IntegerType::get(I->getContext(), BI->second.first);
   BypassType = BT;
+  BypassConstantDivisor = BI->second.second;
 
   // The original basic block.
   MainBB = I->getParent();
@@ -411,11 +414,17 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     return QuotRemPair(ExtDiv, ExtRem);
   }
 
-  if (isa<ConstantInt>(Divisor)) {
+  if (auto *CDivisor = dyn_cast<ConstantInt>(Divisor)) {
     // If the divisor is a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
-    return std::nullopt;
+    //
+    // Setting BypassConstantDivisor to true enables the bypass
+    // optimization for constant divisors. But zero and powers of 2
+    // should never be bypassed.
+    if (!BypassConstantDivisor || CDivisor->getValue().isZero() ||
+        CDivisor->getValue().isPowerOf2())
+      return std::nullopt;
   }
 
   // After Constant Hoisting pass, long constants may be represented as

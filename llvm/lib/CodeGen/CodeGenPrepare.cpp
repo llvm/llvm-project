@@ -475,7 +475,7 @@ bool CodeGenPrepare::_run(Function &F) {
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
   if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
-    const DenseMap<unsigned int, unsigned int> &BypassWidths =
+    const DenseMap<unsigned int, std::pair<unsigned int, bool>> &BypassWidths =
         TLI->getBypassSlowDivWidths();
     BasicBlock *BB = &*F.begin();
     while (BB != nullptr) {
