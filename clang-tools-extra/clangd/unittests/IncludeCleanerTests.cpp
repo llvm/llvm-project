@@ -11,6 +11,7 @@
 #include "Diagnostics.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
+#include "Preamble.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -25,7 +26,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -743,6 +747,78 @@ TEST(IncludeCleaner, DifferentHeaderSameSpelling) {
   auto AST = TU.build();
   auto Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, NoCrashOnHeaderReplacedBehindSymlink) {
+  // InMemoryFileSystem::getRealPath() doesn't resolve symlinks.
+  class RealPathFS : public llvm::vfs::ProxyFileSystem {
+  public:
+    using ProxyFileSystem::ProxyFileSystem;
+    std::error_code getRealPath(const llvm::Twine &Path,
+                                llvm::SmallVectorImpl<char> &Output) override {
+      if (auto EC = ProxyFileSystem::getRealPath(Path, Output))
+        return EC;
+      llvm::sys::path::replace_path_prefix(Output, testPath("link"),
+                                           testPath("real"));
+      return {};
+    }
+  };
+  // A MockFS in which the directory "link" is a symlink to the directory
+  // "real".
+  class SymlinkFS : public MockFS {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
+      auto MemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+      MemFS->setCurrentWorkingDirectory(testRoot());
+      for (const auto &[File, Contents] : Files)
+        MemFS->addFile(File, /*ModificationTime=*/0,
+                       llvm::MemoryBuffer::getMemBufferCopy(Contents, File));
+      MemFS->addSymbolicLink(testPath("link"), testPath("real"),
+                             /*ModificationTime=*/0);
+      return llvm::makeIntrusiveRefCnt<RealPathFS>(std::move(MemFS));
+    }
+  };
+
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+    #include "bar.h"
+    void baz() { foo(); }
+  )cpp";
+  TU.AdditionalFiles["real/foo.h"] = guard("void foo();");
+  TU.AdditionalFiles["real/bar.h"] = guard("void bar();");
+  TU.ExtraArgs.push_back("-Ilink");
+
+  SymlinkFS FS;
+  IgnoreDiagnostics Diags;
+  auto Inputs = TU.inputs(FS);
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                                /*StoreInMemory=*/true,
+                                /*PreambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+
+  // Replace foo.h, like an editor that saves by renaming a temporary file over
+  // the original. InMemoryFileSystem derives UniqueIDs from file contents, so
+  // the new file has a different UniqueID. The preamble's stat cache hides
+  // this for the path the header was included by, but not for its canonical
+  // path.
+  TU.AdditionalFiles["real/foo.h"] = guard("void foo(); void qux();");
+  Inputs = TU.inputs(FS);
+  CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto AST = ParsedAST::build(testPath(TU.Filename), Inputs, std::move(CI), {},
+                              Preamble);
+  ASSERT_TRUE(AST);
+  auto FooH = AST->getSourceManager().getFileManager().getOptionalFileRef(
+      testPath("real/foo.h"));
+  ASSERT_TRUE(FooH);
+  ASSERT_FALSE(AST->getIncludeStructure().getID(&FooH->getFileEntry()));
+
+  auto Findings = computeIncludeCleanerFindings(*AST);
+  EXPECT_THAT(Findings.UnusedIncludes,
+              ElementsAre(Pointee(writtenInclusion("\"bar.h\""))));
   EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
 }
 } // namespace
