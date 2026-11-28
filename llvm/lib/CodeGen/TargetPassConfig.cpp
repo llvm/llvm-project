@@ -1157,15 +1157,18 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createStaticDataSplitterLegacyPass());
     addPass(createStaticDataAnnotatorLegacyPass());
   }
-  // We run the BasicBlockSections pass if we need BB sections, BB address map,
-  // or function splitting. With function splitting, functions which are
-  // eligible for basic-block-sections optimizations (`=all`, or `=list=` with
-  // function included in the list profile) get that optimization, and the other
+  // We run the BasicBlockSections pass if we need BB sections or function
+  // splitting. With function splitting, functions which are eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) get that optimization, and the other
   // functions are split using their PGO/AutoFDO profile.
-  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
-      TM->Options.BBAddrMap || SplitFunctionsWithPGO) {
-    if (shouldEmitBBHash() || Opts.basic_block_section_match_infer)
-      addPass(llvm::createMachineBlockHashInfoPass());
+  const bool RunBBSections =
+      TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
+      SplitFunctionsWithPGO;
+  if ((RunBBSections || TM->Options.BBAddrMap) &&
+      (shouldEmitBBHash() || Opts.basic_block_section_match_infer))
+    addPass(llvm::createMachineBlockHashInfoPass());
+  if (RunBBSections) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
