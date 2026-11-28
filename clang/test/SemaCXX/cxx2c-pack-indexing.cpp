@@ -374,7 +374,7 @@ void foo(auto...x){
     // expected-error@-2   2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
 }
 int test(){
-    (void)foo<int>(0); // expected-note {{in instantiation of function template specialization 'GH205650::foo<int, int>' requested here}}
+    (void)foo<int>(0); // expected-note {{in instantiation of function template specialization 'GH205650::foo<int>' requested here}}
 
 }
 }

@@ -1588,3 +1588,31 @@ TEST(DeclPrinter, TestTemplateSuppressDeclAttributes) {
       "template <typename T> class A {}",
       [](PrintingPolicy &Policy) { Policy.SuppressDeclAttributes = true; }));
 }
+
+TEST(DeclPrinter, TestTemplateParameterPackDeduction) {
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "template<typename... Args>"
+      "void f(Args&&...);"
+      "void t() { f(short{}, double{}); }",
+      functionDecl(hasName("f"), isTemplateInstantiation()).bind("id"),
+      "template<> void f<short, double>(short &&, double &&)"));
+}
+
+TEST(DeclPrinter, TestTemplateParameterPackMultiDeduction) {
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "template<typename...> struct X {};"
+      "template<typename ...T, typename ...U> void f(X<T...>, X<U...>);"
+      "void g(X<int, char> x, X<float> y) { f(x, y); }",
+      functionDecl(hasName("f"), isTemplateInstantiation()).bind("id"),
+      "template<> void f<int, char>(X<int, char>, X<float>)"));
+}
+
+TEST(DeclPrinter, TestTemplateParameterPackForwarding) {
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "template<typename ...T> struct A {"
+      "  template<T ...A, typename ...B> void f(B...);"
+      "};"
+      "void g(A<int, int> a) { a.f<1, 2, int>(3); }",
+      functionDecl(hasName("f"), isTemplateInstantiation()).bind("id"),
+      "template<> void f<1, 2>(int)"));
+}
