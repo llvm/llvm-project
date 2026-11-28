@@ -123,6 +123,14 @@ functions:
     return_type: char *
     arguments:
       - type: const char *
+  - name: getsubopt
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char **__restrict
+      - type: char *const *__restrict
+      - type: char **__restrict
   - name: getloadavg
     standards:
       - bsd
