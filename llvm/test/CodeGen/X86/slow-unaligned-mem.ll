@@ -42,10 +42,10 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=barcelona     2>&1 | FileCheck %s --check-prefixes=FAST,FAST-SSE
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=btver1        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-SSE
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=btver2        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver1        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver2        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver3        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver4        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver1        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX128
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver2        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX128
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver3        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX128
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver4        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX128
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver1        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver2        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver3        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256

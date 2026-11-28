@@ -1649,7 +1649,8 @@ def ProcessorFeatures {
                                          TuningFastScalarShiftMasks,
                                          TuningBranchFusion,
                                          TuningSBBDepBreaking,
-                                         TuningInsertVZEROUPPER];
+                                         TuningInsertVZEROUPPER,
+                                         TuningPrefer128Bit];
 
   // PileDriver
   list<SubtargetFeature> BdVer2AdditionalFeatures = [FeatureF16C,
