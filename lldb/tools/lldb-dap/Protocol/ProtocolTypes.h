@@ -28,6 +28,7 @@
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #define LLDB_DAP_INVALID_SRC_REF int32_t(0)
 #define LLDB_DAP_INVALID_VALUE_LOC 0
@@ -713,6 +714,15 @@ struct FunctionBreakpoint {
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
   String hitCondition;
+
+  /// lldb-dap Extensions
+  /// @{
+
+  /// The names (file names or paths) of the modules to restrict the function
+  /// lookup to. Empty means the lookup is not restricted.
+  std::vector<String> modules;
+
+  /// @}
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);

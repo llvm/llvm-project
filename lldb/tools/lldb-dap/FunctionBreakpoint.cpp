@@ -8,15 +8,22 @@
 
 #include "FunctionBreakpoint.h"
 #include "DAP.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBMutex.h"
 #include <mutex>
+#include <string>
 
 namespace lldb_dap {
 
 FunctionBreakpoint::FunctionBreakpoint(
     DAP &d, const protocol::FunctionBreakpoint &breakpoint)
     : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
-      m_function_name(breakpoint.name) {}
+      m_function_name(breakpoint.name) {
+  for (const protocol::String &module : breakpoint.modules)
+    if (!module.empty())
+      m_modules.insert(module.str());
+}
 
 void FunctionBreakpoint::SetBreakpoint() {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
@@ -24,7 +31,14 @@ void FunctionBreakpoint::SetBreakpoint() {
 
   if (m_function_name.empty())
     return;
-  m_bp = m_dap.target.BreakpointCreateByName(m_function_name.c_str());
+
+  lldb::SBFileSpecList module_list;
+  for (const std::string &module : m_modules)
+    module_list.AppendIfUnique(
+        lldb::SBFileSpec(module.c_str(), /*resolve=*/false));
+
+  m_bp = m_dap.target.BreakpointCreateByName(
+      m_function_name.c_str(), module_list, lldb::SBFileSpecList());
   Breakpoint::SetBreakpoint();
 }
 
