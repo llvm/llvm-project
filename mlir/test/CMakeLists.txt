@@ -135,6 +135,7 @@ set(MLIR_TEST_DEPENDS
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
+  mlir-opt-fuzzer
   mlir-query
   mlir-reduce
   mlir-rewrite
