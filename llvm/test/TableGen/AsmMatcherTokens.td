@@ -68,8 +68,8 @@ def Instr2 : ArchInstruction<"Instr2 shift $foo", (outs RegClass:$foo), (ins)> {
 
 // Ensure that we call `getDiagKindFromTokenClass` when a token is expected but not found
 // CHECK-LABEL: validateOperandClass
-// CHECK:      (MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
-// CHECK-NEXT:   ArchOperand &Operand = (ArchOperand &)GOp;
+// CHECK:      (const MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
+// CHECK-NEXT:   const ArchOperand &Operand = static_cast<const ArchOperand &>(GOp);
 // CHECK-NEXT:   if (Kind == InvalidMatchClass)
 // CHECK-NEXT:     return MCTargetAsmParser::Match_InvalidOperand;
 // CHECK-EMPTY:

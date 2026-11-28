@@ -52,7 +52,7 @@ struct CSKYOperand;
 class CSKYAsmParser : public MCTargetAsmParser {
   const CSKYMCOptions &CLOpts;
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
@@ -281,23 +281,23 @@ public:
 
   bool isSImm8() const { return isSImm<8>(); }
 
-  bool isUImm5Shift1() { return isUImm<5, 1>(); }
-  bool isUImm5Shift2() { return isUImm<5, 2>(); }
-  bool isUImm7Shift1() { return isUImm<7, 1>(); }
-  bool isUImm7Shift2() { return isUImm<7, 2>(); }
-  bool isUImm7Shift3() { return isUImm<7, 3>(); }
-  bool isUImm8Shift2() { return isUImm<8, 2>(); }
-  bool isUImm8Shift3() { return isUImm<8, 3>(); }
-  bool isUImm8Shift8() { return isUImm<8, 8>(); }
-  bool isUImm8Shift16() { return isUImm<8, 16>(); }
-  bool isUImm8Shift24() { return isUImm<8, 24>(); }
-  bool isUImm12Shift1() { return isUImm<12, 1>(); }
-  bool isUImm12Shift2() { return isUImm<12, 2>(); }
-  bool isUImm16Shift8() { return isUImm<16, 8>(); }
-  bool isUImm16Shift16() { return isUImm<16, 16>(); }
-  bool isUImm24Shift8() { return isUImm<24, 8>(); }
+  bool isUImm5Shift1() const { return isUImm<5, 1>(); }
+  bool isUImm5Shift2() const { return isUImm<5, 2>(); }
+  bool isUImm7Shift1() const { return isUImm<7, 1>(); }
+  bool isUImm7Shift2() const { return isUImm<7, 2>(); }
+  bool isUImm7Shift3() const { return isUImm<7, 3>(); }
+  bool isUImm8Shift2() const { return isUImm<8, 2>(); }
+  bool isUImm8Shift3() const { return isUImm<8, 3>(); }
+  bool isUImm8Shift8() const { return isUImm<8, 8>(); }
+  bool isUImm8Shift16() const { return isUImm<8, 16>(); }
+  bool isUImm8Shift24() const { return isUImm<8, 24>(); }
+  bool isUImm12Shift1() const { return isUImm<12, 1>(); }
+  bool isUImm12Shift2() const { return isUImm<12, 2>(); }
+  bool isUImm16Shift8() const { return isUImm<16, 8>(); }
+  bool isUImm16Shift16() const { return isUImm<16, 16>(); }
+  bool isUImm24Shift8() const { return isUImm<24, 8>(); }
 
-  bool isSImm16Shift1() { return isSImm<16, 1>(); }
+  bool isSImm16Shift1() const { return isSImm<16, 1>(); }
 
   bool isCSKYSymbol() const { return isImm(); }
 
@@ -374,7 +374,7 @@ public:
     return true;
   }
 
-  bool isExtImm6() {
+  bool isExtImm6() const {
     if (!isImm())
       return false;
 
@@ -1600,9 +1600,10 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
   return false;
 }
 
-unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                   unsigned Kind) {
-  CSKYOperand &Op = static_cast<CSKYOperand &>(AsmOp);
+unsigned
+CSKYAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
+                                          unsigned Kind) {
+  const CSKYOperand &Op = static_cast<const CSKYOperand &>(AsmOp);
 
   if (!Op.isReg())
     return Match_InvalidOperand;

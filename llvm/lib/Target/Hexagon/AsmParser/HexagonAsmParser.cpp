@@ -139,7 +139,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
   bool OutOfRange(SMLoc IDLoc, long long Val, long long Max);
   int processInstruction(MCInst &Inst, OperandVector const &Operands,
@@ -1302,9 +1302,10 @@ static MCInst makeCombineInst(int opCode, MCOperand &Rdd, MCOperand &MO1,
 
 // Define this matcher function after the auto-generated include so we
 // have the match class enum definitions.
-unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                      unsigned Kind) {
-  HexagonOperand *Op = static_cast<HexagonOperand *>(&AsmOp);
+unsigned
+HexagonAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
+                                             unsigned Kind) {
+  const HexagonOperand *Op = static_cast<const HexagonOperand *>(&AsmOp);
 
   switch (Kind) {
   case MCK_0: {

@@ -46,7 +46,7 @@ def InstA : Instruction {
   let AsmString = "foo $rd, $a, $b, $c";
 }
 
-// CHECK-LABEL: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
+// CHECK-LABEL: static unsigned validateOperandClass(const MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
 // CHECK:       case MCK_DefaultSubtargetOp: {
 // CHECK-NEXT:    DiagnosticPredicate DP(Operand.isDefaultSubtargetOp(STI));
 // CHECK:       case MCK_PlainImm: {

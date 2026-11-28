@@ -68,7 +68,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -1743,9 +1743,9 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 }
 
 unsigned
-LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+LoongArchAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
                                                unsigned Kind) {
-  LoongArchOperand &Op = static_cast<LoongArchOperand &>(AsmOp);
+  const LoongArchOperand &Op = static_cast<const LoongArchOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
 
