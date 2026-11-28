@@ -1034,7 +1034,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
           {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
-      setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+      setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SHUFFLE_VAR}, VT,
+                         Custom);
 
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -1180,7 +1181,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_SHUFFLE_VAR}, VT,
+                         Custom);
       setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV, ISD::MASKED_UREM,
                           ISD::MASKED_SREM},
                          VT, Legal);
@@ -1343,7 +1345,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::STRICT_FROUNDEVEN, ISD::STRICT_FNEARBYINT},
                          VT, Custom);
 
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_SHUFFLE_VAR}, VT,
+                         Custom);
     };
 
     // Sets common extload/truncstore actions on RVV floating-point vector
@@ -1370,7 +1373,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
                           ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE_LEFT,
-                          ISD::VECTOR_SPLICE_RIGHT, ISD::VECTOR_COMPRESS},
+                          ISD::VECTOR_SPLICE_RIGHT, ISD::VECTOR_COMPRESS,
+                          ISD::VECTOR_SHUFFLE_VAR},
                          VT, Custom);
       setVectorInterleaveAction(
           {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
@@ -1426,7 +1430,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                           ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
                           ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT,
-                          ISD::VECTOR_COMPRESS},
+                          ISD::VECTOR_COMPRESS, ISD::VECTOR_SHUFFLE_VAR},
                          VT, Custom);
       setVectorInterleaveAction(
           {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
@@ -1597,7 +1601,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                            Custom);
 
-        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction({ISD::VECTOR_SHUFFLE, ISD::VECTOR_SHUFFLE_VAR}, VT,
+                           Custom);
 
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
@@ -1733,7 +1738,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                             ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
-                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
+                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_SHUFFLE_VAR,
+                            ISD::VECTOR_COMPRESS},
                            VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -7473,6 +7479,55 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 
+SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  MVT VT = Op.getSimpleValueType();
+
+  if (VT.getVectorElementType() == MVT::i1) {
+    MVT WideVT = VT.changeVectorElementType(MVT::i8);
+    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, V);
+    SDValue Shuf = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, WideVT, Ext, Mask);
+    return DAG.getSetCC(DL, VT, Shuf, DAG.getConstant(0, DL, WideVT),
+                        ISD::SETNE);
+  }
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VT);
+  unsigned MaxVLMAX = VT.isFixedLengthVector()
+                          ? VT.getVectorNumElements()
+                          : computeVLMAXBounds(ContainerVT, Subtarget).second;
+
+  // At SEW=8, vrgather.vv can only index elements 0-255, so a mask that can
+  // exceed that needs vrgatherei16.vv.
+  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  MVT IndexVT = VT.changeVectorElementTypeToInteger();
+  if (VT.getScalarSizeInBits() == 8 && MaxVLMAX > 256 &&
+      Mask.getScalarValueSizeInBits() > 8) {
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    assert(isTypeLegal(IndexVT) && "Mask type should be legal");
+  }
+
+  // Clamping not needed since out of range lanes are poison.
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IndexVT);
+
+  if (VT.isFixedLengthVector()) {
+    V = convertToScalableVector(ContainerVT, V, DAG, Subtarget);
+    Idx = convertToScalableVector(getContainerForFixedLengthVector(IndexVT),
+                                  Idx, DAG, Subtarget);
+  }
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Res = DAG.getNode(GatherOpc, DL, ContainerVT, V, Idx,
+                            DAG.getPOISON(ContainerVT), TrueMask, VL);
+  if (VT.isFixedLengthVector())
+    Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
+  return Res;
+}
+
 // Match shuffle masks that can be lowered to a P extension packed pair.
 static bool isPackedPairShuffleMask(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
@@ -9159,6 +9214,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return lowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::CONCAT_VECTORS: {
     // Split CONCAT_VECTORS into a series of INSERT_SUBVECTOR nodes. This is
     // better than going through the stack, as the default expansion does.
