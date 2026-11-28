@@ -80,7 +80,41 @@
   /* therefore, no trap reason is emitted for this case. */                    \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0, 0x19, "")                    \
   SANITIZER_CHECK(ReturnAlignmentAssumption, return_alignment_assumption, 0,   \
-                  0x1a, "Alignment assumption violated")
+                  0x1a, "Alignment assumption violated")                       \
+  /* Reserved 0x70..0x7f for x86-64 KCFI traps: */                             \
+  /* ud1l (0x70 | reg)(%eax), %eax (reg 0..15, 0x74 / rsp = unknown/merged) */ \
+  SANITIZER_CHECK(KCFIReserved70, cfi_check_fail, 0, 0x70,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved71, cfi_check_fail, 0, 0x71,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved72, cfi_check_fail, 0, 0x72,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved73, cfi_check_fail, 0, 0x73,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved74, cfi_check_fail, 0, 0x74,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved75, cfi_check_fail, 0, 0x75,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved76, cfi_check_fail, 0, 0x76,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved77, cfi_check_fail, 0, 0x77,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved78, cfi_check_fail, 0, 0x78,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved79, cfi_check_fail, 0, 0x79,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7A, cfi_check_fail, 0, 0x7a,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7B, cfi_check_fail, 0, 0x7b,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7C, cfi_check_fail, 0, 0x7c,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7D, cfi_check_fail, 0, 0x7d,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7E, cfi_check_fail, 0, 0x7e,                     \
+                  "Control flow integrity check failed")                       \
+  SANITIZER_CHECK(KCFIReserved7F, cfi_check_fail, 0, 0x7f,                     \
+                  "Control flow integrity check failed")
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version, Code, Msg) Enum = Code,
