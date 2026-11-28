@@ -375,6 +375,8 @@ static void checkOptions(Ctx &ctx) {
   if (ctx.arg.emachine != EM_RISCV) {
     if (ctx.arg.relaxGP)
       ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+    if (ctx.arg.relaxZcmt)
+      ErrAlways(ctx) << "--relax-tbljal is only supported on RISC-V targets";
     if (ctx.arg.zZicfilpUnlabeledReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
                         "RISC-V targets";
@@ -438,6 +440,8 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-r and --debug-names may not be used together";
     if (!ctx.arg.zSectionHeader)
       ErrAlways(ctx) << "-r and -z nosectionheader may not be used together";
+    if (ctx.arg.emachine == EM_RISCV && ctx.arg.relaxZcmt)
+      Warn(ctx) << "--relax-tbljal is disabled for relocatable links";
   }
 
   if (ctx.arg.executeOnly) {
@@ -1568,6 +1572,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   ctx.arg.relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   ctx.arg.relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
+  ctx.arg.relaxZcmt = false;
+  for (auto *arg : args.filtered(OPT_relax_tbljal, OPT_no_relax_tbljal)) {
+    ctx.arg.relaxZcmt = arg->getOption().matches(OPT_relax_tbljal);
+    if (ctx.arg.relaxZcmt && StringRef(arg->getValue()) != "zcmt")
+      Err(ctx) << "unsupported table-jump scheme '" << arg->getValue()
+               << "' in --relax-tbljal= (expected zcmt)";
+  }
   ctx.arg.rpath = getRpath(args);
   ctx.arg.relocatable = args.hasArg(OPT_relocatable);
   ctx.arg.resolveGroups =
