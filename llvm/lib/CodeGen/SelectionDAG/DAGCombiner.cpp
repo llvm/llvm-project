@@ -15808,29 +15808,67 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       (Frozen && !Load->hasNUsesOfValue(1, 0)))
     return {};
 
-  // If this is zext nneg, see if it would make sense to treat it as a sext.
-  // We want to either legalize the type or avoid a non-free zero extension.
-  if (NonNegZExt && TLI.isTypeLegal(VT) &&
-      (!TLI.isTypeLegal(Load->getValueType(0)) ||
-       !TLI.isZExtFree(SDValue(Load, 0), VT))) {
+  if (NonNegZExt) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode *User : Load->users()) {
-      if (User->getOpcode() == ISD::SETCC) {
-        ISD::CondCode CC = User->getOperandCondCode(2);
-        if (ISD::isSignedIntSetCC(CC)) {
-          ExtLoadType = ISD::SEXTLOAD;
-          ExtOpc = ISD::SIGN_EXTEND;
-          break;
-        }
-      } else if (User->getOpcode() == ISD::SELECT_CC &&
-                 (User->getOperand(0) == SDValue(Load, 0) ||
-                  User->getOperand(1) == SDValue(Load, 0)) &&
-                 ISD::isSignedIntSetCC(User->getOperandCondCode(4))) {
-        ExtLoadType = ISD::SEXTLOAD;
-        ExtOpc = ISD::SIGN_EXTEND;
+    SDValue V(Load, 0);
+    EVT SrcVT = V.getValueType();
+    bool PreferSigned = false;
+    for (SDUse &Use : Load->uses()) {
+      if (Use.getResNo() != V.getResNo())
+        continue;
+      SDNode *User = Use.getUser();
+      // An ordinary zext still needs the zero high bits.
+      if (User->getOpcode() == ISD::ZERO_EXTEND &&
+          !User->getFlags().hasNonNeg()) {
+        PreferSigned = false;
         break;
       }
+      bool IsSetCC = User->getOpcode() == ISD::SETCC;
+      if ((!IsSetCC && User->getOpcode() != ISD::SELECT_CC) ||
+          Use.getOperandNo() >= 2)
+        continue;
+      ISD::CondCode CC = User->getOperandCondCode(IsSetCC ? 2 : 4);
+      // Promotion of an unsigned compare can require masking a signed load.
+      if (ISD::isUnsignedIntSetCC(CC) && !TLI.isTypeLegal(SrcVT)) {
+        PreferSigned = false;
+        break;
+      }
+      if (!ISD::isSignedIntSetCC(CC))
+        continue;
+      // The multi-use fold widens SETCC, but leaves SELECT_CC narrow.
+      if (IsSetCC && !TLI.isTypeLegal(VT)) {
+        PreferSigned = false;
+        break;
+      }
+      if (!TLI.isTypeLegal(SrcVT) || !TLI.isZExtFree(V, VT)) {
+        PreferSigned = true;
+        continue;
+      }
+      // Widening can bring two sign tests to the same width for (a | b) < 0.
+      if (IsSetCC && CC == ISD::SETLT && isNullConstant(User->getOperand(1)))
+        for (SDUse &CmpUse : User->uses()) {
+          SDNode *Or = CmpUse.getUser();
+          if (Or->getOpcode() != ISD::OR)
+            continue;
+          SDValue Peer = Or->getOperand(1 - CmpUse.getOperandNo());
+          if (Peer.getOpcode() == ISD::SETCC &&
+              Peer.getOperand(0).getValueType() == VT &&
+              Peer->getOperandCondCode(2) == ISD::SETLT &&
+              isNullConstant(Peer.getOperand(1)))
+            PreferSigned = true;
+        }
+    }
+    // For example, MSP430's byte load already supplies a word-sized offset
+    // and its signed byte compare doesn't need a separate sign extension.
+    auto HasExtLoad = [&](ISD::LoadExtType Kind) {
+      return TLI.isLoadLegalOrCustom(VT, SrcVT, Load->getAlign(),
+                                     Load->getAddressSpace(), Kind, false);
+    };
+    if (PreferSigned &&
+        (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
+      ExtLoadType = ISD::SEXTLOAD;
+      ExtOpc = ISD::SIGN_EXTEND;
     }
   }
 
