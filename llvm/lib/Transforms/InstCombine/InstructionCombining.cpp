@@ -3634,10 +3634,48 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
 
   // nusw + nneg -> nuw
+  //
+  // A non-negative index only implies a non-negative offset when its stride is
+  // also representable as a non-negative value of the index type. E.g. with a
+  // 16-bit index type, the stride 40000 is -25536 as an i16, so a non-negative
+  // index still yields a negative offset, and promoting nusw to nuw would
+  // wrongly make the GEP poison. The same holds for constant struct field
+  // offsets.
+  auto StridesFitIndexType = [&]() {
+    unsigned IdxWidth = DL.getIndexTypeSizeInBits(GEP.getType());
+    // A value is non-negative in the index type iff it fits into IdxWidth - 1
+    // bits.
+    auto FitsNonNegative = [&](uint64_t Val) {
+      unsigned NonNegBits = IdxWidth - 1;
+      return NonNegBits >= 64 || Val < (uint64_t(1) << NonNegBits);
+    };
+    for (gep_type_iterator I = gep_type_begin(GEP), E = gep_type_end(GEP);
+         I != E; ++I) {
+      if (I.isStruct()) {
+        auto *CIdx = dyn_cast<ConstantInt>(I.getOperand());
+        if (!CIdx)
+          return false;
+        TypeSize FieldOff = DL.getStructLayout(I.getStructType())
+                                ->getElementOffset(CIdx->getZExtValue());
+        if (FieldOff.isScalable() || !FitsNonNegative(FieldOff.getFixedValue()))
+          return false;
+        continue;
+      }
+      TypeSize Stride = I.getSequentialElementStride(DL);
+      if (Stride.isScalable() || !FitsNonNegative(Stride.getFixedValue()))
+        return false;
+    }
+    return true;
+  };
+
+  auto IndicesNonNegative = [&] {
+    return all_of(GEP.indices(), [&](Value *Idx) {
+      return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
+    });
+  };
+
   if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
-      all_of(GEP.indices(), [&](Value *Idx) {
-        return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
-      })) {
+      IndicesNonNegative() && StridesFitIndexType()) {
     GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
     return &GEP;
   }
