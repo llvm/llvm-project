@@ -499,12 +499,13 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   return Tag == Counter::Zero;
 }
 
-/// Determine if we should skip the first byte of the section content
-static bool shouldSkipSectionFirstByte(SectionRef &Section) {
+/// Determine if we should skip the section's leading sentinel and padding.
+static bool shouldSkipSectionPadding(SectionRef &Section) {
   const ObjectFile *Obj = Section.getObject();
   // If this is a linked PE/COFF file, then we have to skip over the null byte
-  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
-  // If the name section is .lprfcovnames, it doesn't have the null byte at the
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime,
+  // together with any zero padding before the names.
+  // If the name section is .lcovn, it doesn't have the null byte at the
   // beginning.
   if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
     if (Expected<StringRef> NameOrErr = Section.getName())
@@ -520,8 +521,8 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   Data = *DataOrErr;
   Address = Section.getAddress();
 
-  if (shouldSkipSectionFirstByte(Section))
-    Data = Data.substr(1);
+  if (shouldSkipSectionPadding(Section))
+    Data = Data.drop_while([](char C) { return C == '\0'; });
 
   return Error::success();
 }
@@ -1136,8 +1137,8 @@ lookupAllocatableSection(ObjectFile &OF, InstrProfSectKind IPSK) {
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
   auto Content = *ContentsOrErr;
-  if (shouldSkipSectionFirstByte(Section))
-    Content = Content.drop_front(1);
+  if (shouldSkipSectionPadding(Section))
+    Content = Content.drop_while([](char C) { return C == '\0'; });
   return std::make_pair(Content, Section.getAddress());
 }
 

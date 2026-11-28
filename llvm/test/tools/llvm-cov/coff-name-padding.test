@@ -1,0 +1,77 @@
+## Linked COFF names have a start sentinel, possibly followed by zero padding.
+## The coverage-only names section has no sentinel.
+##
+## The three section payloads come from
+## Inputs/showLineExecutionCounts-single.yaml, repackaged as a linked PE image.
+## .lcovfun describes "main" by its name hash; .lcovmap supplies its filenames;
+## .lprfn supplies the name that llvm-cov must recover from that hash.
+## The coverage mappings stay fixed: only the names prefix, section name, and
+## machine header vary. No compiler, linker, or executable execution is needed.
+## -empty-profile supplies zero execution counts without a profile file.
+## Exporting "main" proves that the reader decoded the names successfully.
+
+## Ordinary start sentinel: one zero byte.
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-cov export %t.exe -empty-profile | FileCheck %s
+## Sentinel plus three padding bytes: skipping just the sentinel must fail.
+# RUN: yaml2obj -DPADDING=00000000 %s -o %t.exe
+# RUN: llvm-cov export %t.exe -empty-profile | FileCheck %s
+## A longer prefix and an Arm64 header: do not assume one fixed padding size.
+# RUN: yaml2obj -DPADDING=0000000000000000 -DMACHINE=IMAGE_FILE_MACHINE_ARM64 %s -o %t.exe
+# RUN: llvm-cov export %t.exe -empty-profile | FileCheck %s
+## Coverage-only names start directly with the encoding, without a sentinel.
+# RUN: yaml2obj -DNAME=.lcovn -DPADDING= %s -o %t.exe
+# RUN: llvm-cov export %t.exe -empty-profile | FileCheck %s
+## No names at all: exhausting the zero prefix must give an error, not a crash.
+# RUN: yaml2obj -DNAMES= %s -o %t.exe
+# RUN: not llvm-cov export %t.exe -empty-profile 2>&1 | FileCheck %s --check-prefix=EMPTY
+
+# CHECK: "name":"main"
+# EMPTY: error: failed to load coverage:
+
+--- !COFF
+OptionalHeader:
+  ImageBase: 0x140000000
+  SectionAlignment: 4096
+  FileAlignment: 512
+  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI
+header:
+  Machine: [[MACHINE=IMAGE_FILE_MACHINE_AMD64]]
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  ## One packed function record (byte offsets, little-endian integer fields):
+  ##   0..7:   NameRef, the hash of "main".
+  ##   8..11:  DataSize = 164 bytes of coverage mapping.
+  ##   12..19: FuncHash, the function's structural hash.
+  ##   20..27: FilenamesRef, the hash of the filename encoding in .lcovmap.
+  ##   28..191: the original fixture's region/counter mappings, unchanged.
+  - Name: .lcovfun
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress: 0x1000
+    VirtualSize: 192
+    SectionData: FAD58DE7366495DBA40000006733DBEA42F87E03C60E0B951FF3509D01010101091A01060C13021002010001010107000820051500070008050009008A8080800805000A0204150204008A8080800815000A02041003010001030113001A2009010013001A09001C001F09002000A18080800809002102041003010001010107000D200D190007000D0D000F0090808080080D00100015190018001D010107000D20111D0007000D11000F018980808008110109000E1D0109000E1001010001
+  ## Four little-endian u32 header fields: {0, 32, 0, 6}.
+  ## The filename encoding is 32 bytes; format version 7 is encoded as 6.
+  ## Filename bytes: 02 (two entries), 1D (29 uncompressed bytes), 00 (not
+  ## compressed), 00 (empty compilation directory), 1B (27-byte filename),
+  ## followed by ASCII "showLineExecutionCounts.cpp".
+  - Name: .lcovmap
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress: 0x2000
+    VirtualSize: 48
+    SectionData: 00000000200000000000000006000000021D00001B73686F774C696E65457865637574696F6E436F756E74732E637070
+  ## .lprfn: [start sentinel + optional padding] [encoded names] [end sentinel].
+  ## For .lcovn, the final zero is trailing padding rather than a sentinel.
+  ## PADDING includes the start sentinel, so four zero bytes mean one sentinel
+  ## plus three padding bytes. NAMES is:
+  ##   04       ULEB128 uncompressed name-data size: four bytes.
+  ##   00       ULEB128 compressed size: zero means uncompressed.
+  ##   6D61696E ASCII "main", with no terminating NUL in the name data.
+  ## Only the leading zeros may be skipped; the 00 after 04 is part of the
+  ## encoding and must remain intact. Clearing NAMES makes the section all zero.
+  - Name: [[NAME=.lprfn]]
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress: 0x3000
+    VirtualSize: 32
+    SectionData: '[[PADDING=00]][[NAMES=04006D61696E]]00'
+symbols: []
