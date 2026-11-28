@@ -49607,6 +49607,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   EVT VT = LHS.getValueType();
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Selecting between illegal bf16 vectors (for example v8bf16 without AVX)
+  // would otherwise be scalarized element by element. Select as integers
+  // instead.
+  if (DCI.isBeforeLegalize() && VT.isFixedLengthVector() &&
+      VT.getVectorElementType() == MVT::bf16 && !TLI.isTypeLegal(VT)) {
+    EVT IntVT = VT.changeVectorElementTypeToInteger();
+    SDValue Sel =
+        DAG.getNode(N->getOpcode(), DL, IntVT, Cond, DAG.getBitcast(IntVT, LHS),
+                    DAG.getBitcast(IntVT, RHS));
+    return DAG.getBitcast(VT, Sel);
+  }
+
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond);
   unsigned EltBitWidth = VT.getScalarSizeInBits();
 

@@ -3880,78 +3880,11 @@ define <8 x bfloat> @select_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat> %b) n
 ;
 ; SSE2-LABEL: select_v8bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pushq %rbp
-; SSE2-NEXT:    pushq %r15
-; SSE2-NEXT:    pushq %r14
-; SSE2-NEXT:    pushq %r13
-; SSE2-NEXT:    pushq %r12
-; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    movq %xmm0, %rdi
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    movq %xmm0, %r14
-; SSE2-NEXT:    movl %r14d, %eax
-; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    movq %xmm1, %r10
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1,1]
-; SSE2-NEXT:    movq %xmm1, %r11
-; SSE2-NEXT:    movl %r11d, %r9d
-; SSE2-NEXT:    shrl $16, %r9d
-; SSE2-NEXT:    movq %r11, %rdx
-; SSE2-NEXT:    shrq $48, %rdx
-; SSE2-NEXT:    movq %r14, %r12
-; SSE2-NEXT:    shrq $48, %r12
-; SSE2-NEXT:    movq %r11, %rbx
-; SSE2-NEXT:    shrq $32, %rbx
-; SSE2-NEXT:    movq %r14, %r13
-; SSE2-NEXT:    shrq $32, %r13
-; SSE2-NEXT:    movl %edi, %ebp
-; SSE2-NEXT:    shrl $16, %ebp
-; SSE2-NEXT:    movl %r10d, %esi
-; SSE2-NEXT:    shrl $16, %esi
-; SSE2-NEXT:    movq %r10, %rcx
-; SSE2-NEXT:    shrq $48, %rcx
-; SSE2-NEXT:    movq %rdi, %r15
-; SSE2-NEXT:    shrq $48, %r15
-; SSE2-NEXT:    movq %r10, %r8
-; SSE2-NEXT:    shrq $32, %r8
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    shrq $32, %rax
-; SSE2-NEXT:    testb $1, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Reload
-; SSE2-NEXT:    cmovnel %eax, %r8d
-; SSE2-NEXT:    cmovnel %r15d, %ecx
-; SSE2-NEXT:    cmovnel %edi, %r10d
-; SSE2-NEXT:    cmovnel %ebp, %esi
-; SSE2-NEXT:    cmovnel %r13d, %ebx
-; SSE2-NEXT:    cmovnel %r12d, %edx
-; SSE2-NEXT:    cmovnel %r14d, %r11d
-; SSE2-NEXT:    cmovnel {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 4-byte Folded Reload
-; SSE2-NEXT:    shll $16, %r9d
-; SSE2-NEXT:    movzwl %r11w, %eax
-; SSE2-NEXT:    orl %r9d, %eax
-; SSE2-NEXT:    shll $16, %edx
-; SSE2-NEXT:    movzwl %bx, %edi
-; SSE2-NEXT:    orl %edx, %edi
-; SSE2-NEXT:    shlq $32, %rdi
-; SSE2-NEXT:    orq %rax, %rdi
-; SSE2-NEXT:    shll $16, %esi
-; SSE2-NEXT:    movzwl %r10w, %eax
-; SSE2-NEXT:    orl %esi, %eax
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movzwl %r8w, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    shlq $32, %rdx
-; SSE2-NEXT:    orq %rax, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    movq %rdi, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %r12
-; SSE2-NEXT:    popq %r13
-; SSE2-NEXT:    popq %r14
-; SSE2-NEXT:    popq %r15
-; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    testb $1, %dil
+; SSE2-NEXT:    jne .LBB41_2
+; SSE2-NEXT:  # %bb.1:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:  .LBB41_2:
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: select_v8bf16:
@@ -3984,6 +3917,71 @@ define <8 x bfloat> @select_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat> %b) n
   ret <8 x bfloat> %sel
 }
 
+define <3 x bfloat> @select_v3bf16(i1 %cond, <3 x bfloat> %a, <3 x bfloat> %b) nounwind {
+; X86-LABEL: select_v3bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    jne .LBB42_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    vmovaps %xmm1, %xmm0
+; X86-NEXT:  .LBB42_2:
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: select_v3bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    testb $1, %dil
+; SSE2-NEXT:    jne .LBB42_2
+; SSE2-NEXT:  # %bb.1:
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:  .LBB42_2:
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    shrq $32, %rcx
+; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm2
+; SSE2-NEXT:    pandn %xmm2, %xmm3
+; SSE2-NEXT:    por %xmm0, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,0,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; SSE2-NEXT:    pandn %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: select_v3bf16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    testb $1, %dil
+; AVX2-NEXT:    jne .LBB42_2
+; AVX2-NEXT:  # %bb.1:
+; AVX2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX2-NEXT:  .LBB42_2:
+; AVX2-NEXT:    retq
+;
+; AVX-LABEL: select_v3bf16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    testb $1, %dil
+; AVX-NEXT:    jne .LBB42_2
+; AVX-NEXT:  # %bb.1:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:  .LBB42_2:
+; AVX-NEXT:    retq
+;
+; AVX512BW-LABEL: select_v3bf16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    testb $1, %dil
+; AVX512BW-NEXT:    jne .LBB42_2
+; AVX512BW-NEXT:  # %bb.1:
+; AVX512BW-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512BW-NEXT:  .LBB42_2:
+; AVX512BW-NEXT:    retq
+  %sel = select i1 %cond, <3 x bfloat> %a, <3 x bfloat> %b
+  ret <3 x bfloat> %sel
+}
+
 define <8 x bfloat> @vselect_v8bf16(<8 x i1> %m, <8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; X86-LABEL: vselect_v8bf16:
 ; X86:       # %bb.0:
@@ -3994,85 +3992,11 @@ define <8 x bfloat> @vselect_v8bf16(<8 x i1> %m, <8 x bfloat> %a, <8 x bfloat> %
 ;
 ; SSE2-LABEL: vselect_v8bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pushq %rbp
-; SSE2-NEXT:    pushq %r15
-; SSE2-NEXT:    pushq %r14
-; SSE2-NEXT:    pushq %r13
-; SSE2-NEXT:    pushq %r12
-; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    movq %xmm2, %rsi
-; SSE2-NEXT:    movq %rsi, %rdx
-; SSE2-NEXT:    shrq $32, %rdx
-; SSE2-NEXT:    movq %xmm1, %r8
-; SSE2-NEXT:    movq %r8, %rax
-; SSE2-NEXT:    shrq $32, %rax
-; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE2-NEXT:    movq %rsi, %rcx
-; SSE2-NEXT:    shrq $48, %rcx
-; SSE2-NEXT:    movq %r8, %rdi
-; SSE2-NEXT:    shrq $48, %rdi
-; SSE2-NEXT:    movl %r8d, %r10d
-; SSE2-NEXT:    shrl $16, %r10d
-; SSE2-NEXT:    movl %esi, %r9d
-; SSE2-NEXT:    shrl $16, %r9d
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm2 = xmm2[1,1]
-; SSE2-NEXT:    movq %xmm2, %r15
-; SSE2-NEXT:    movq %r15, %r11
-; SSE2-NEXT:    shrq $32, %r11
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1,1]
-; SSE2-NEXT:    movq %xmm1, %r12
-; SSE2-NEXT:    movq %r12, %r14
-; SSE2-NEXT:    shrq $32, %r14
-; SSE2-NEXT:    movq %r15, %rbx
-; SSE2-NEXT:    shrq $48, %rbx
-; SSE2-NEXT:    movq %r12, %r13
-; SSE2-NEXT:    shrq $48, %r13
-; SSE2-NEXT:    movl %r12d, %ebp
-; SSE2-NEXT:    shrl $16, %ebp
-; SSE2-NEXT:    movl %r15d, %eax
-; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %ebp, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %r12d, %r15d
-; SSE2-NEXT:    movzwl %r15w, %r15d
-; SSE2-NEXT:    orl %eax, %r15d
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %r13d, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %r14d, %r11d
-; SSE2-NEXT:    movzwl %r11w, %r11d
-; SSE2-NEXT:    orl %ebx, %r11d
-; SSE2-NEXT:    shlq $32, %r11
-; SSE2-NEXT:    orq %r15, %r11
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %r10d, %r9d
-; SSE2-NEXT:    shll $16, %r9d
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %r8d, %esi
-; SSE2-NEXT:    movzwl %si, %eax
-; SSE2-NEXT:    orl %r9d, %eax
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel %edi, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    cmovnel {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Folded Reload
-; SSE2-NEXT:    movzwl %dx, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    shlq $32, %rdx
-; SSE2-NEXT:    orq %rax, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    movq %r11, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %r12
-; SSE2-NEXT:    popq %r13
-; SSE2-NEXT:    popq %r14
-; SSE2-NEXT:    popq %r15
-; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    psllw $15, %xmm0
+; SSE2-NEXT:    psraw $15, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pandn %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: vselect_v8bf16:
