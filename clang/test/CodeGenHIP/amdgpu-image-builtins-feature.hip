@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgpu9.42 -fcuda-is-device -S -verify=device -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.42 -fcuda-is-device -emit-llvm -verify=device -o - %s
 // RUN: %clang_cc1 -triple x86_64 -aux-triple amdgpu -fsyntax-only -verify=host %s
 
 // host-no-diagnostics

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgpu9.42-- -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.42-- -emit-llvm -verify -o - %s
 // REQUIRES: amdgpu-registered-target
 
 // expected-no-diagnostics
