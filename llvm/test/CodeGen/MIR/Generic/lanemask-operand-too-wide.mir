@@ -1,0 +1,12 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Check that the MIR parser rejects lane masks wider than LaneBitmask.
+
+---
+name: too_wide_lanemask
+body: |
+  bb.0:
+    %0:_(s32) = IMPLICIT_DEF
+    ; CHECK: [[@LINE+1]]:49: invalid lane mask value
+    %1:_(s32) = COPY_LANEMASK %0(s32), lanemask(0x1FFFFFFFFFFFFFFFF)
+...
