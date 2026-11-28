@@ -51,7 +51,9 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
   if (dependenceComponents.empty() || loopNestDepth > numCommonLoops)
     return "true";
   std::string result;
-  for (const auto &dependenceComponent : dependenceComponents) {
+  result += "(";
+  for (size_t i = 0, e = dependenceComponents.size(); i < e; ++i) {
+    const auto &dependenceComponent = dependenceComponents[i];
     std::string lbStr = "-inf";
     if (dependenceComponent.lb.has_value() &&
         *dependenceComponent.lb != std::numeric_limits<int64_t>::min())
@@ -62,9 +64,38 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
         *dependenceComponent.ub != std::numeric_limits<int64_t>::max())
       ubStr = std::to_string(*dependenceComponent.ub);
 
-    result += "[" + lbStr + ", " + ubStr + "]";
+    if (lbStr == ubStr)
+      result += lbStr;
+    else
+      result += "[" + lbStr + ", " + ubStr + "]";
+
+    if (i < e - 1)
+      result += ", ";
   }
+  result += ")";
   return result;
+}
+
+static std::string getDependenceType(Operation *srcOp, Operation *dstOp) {
+  std::string depandenceRelation;
+
+  auto getAccessTypeLabel = [](Operation *op) {
+    std::string str;
+    if (isa<AffineLoadOp>(op))
+      str += "R";
+    if (isa<AffineStoreOp>(op))
+      str += "W";
+    return str;
+  };
+
+  // A dependence is a pair of statement instances that expresses that the
+  // second statement instance should be executed after the first instance.
+  depandenceRelation += getAccessTypeLabel(dstOp);
+  depandenceRelation += "A";
+  depandenceRelation += getAccessTypeLabel(srcOp);
+  assert(depandenceRelation.size() == 3 &&
+         "srcOp/desOp must be AffineLoadOp/AffineStoreOp");
+  return depandenceRelation;
 }
 
 // For each access in 'loadsAndStores', runs a dependence check between this
@@ -90,11 +121,9 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
           srcOpInst->emitError("dependence check failed");
         } else {
           bool ret = hasDependence(result);
-          // TODO: Print dependence type (i.e. RAW, etc) and print
-          // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
-          // vectors from ([1, 1], [3, 3]) to (1, 3).
-          srcOpInst->emitRemark("dependence from ")
-              << i << " to " << j << " at depth " << d << " = "
+          srcOpInst->emitRemark(getDependenceType(srcOpInst, dstOpInst))
+              << " dependence from " << i << " to " << j << " at depth " << d
+              << " = "
               << getDirectionVectorStr(ret, numCommonLoops, d,
                                        dependenceComponents);
         }
