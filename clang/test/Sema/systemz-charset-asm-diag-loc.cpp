@@ -1,5 +1,4 @@
-// FIXME: Tracked by https://github.com/llvm/llvm-project/issues/241514
-// RUN: not --crash %clang_cc1 -triple s390x-none-zos -fexec-charset IBM-1047 %s -std=c++23 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple s390x-none-zos -fexec-charset IBM-1047 %s -std=c++23 -fsyntax-only -verify
 // REQUIRES: asserts
 
 // In IBM-1047, \x68 is U+00C7 (LATIN CAPITAL LETTER C WITH CEDILLA), so the

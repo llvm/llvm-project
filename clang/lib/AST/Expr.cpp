@@ -1391,8 +1391,14 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     unsigned TokNumBytes = SLP.GetStringLength();
 
     // If the byte is in this token, return the location of the byte.
-    if (ByteNo < TokNumBytes ||
-        (ByteNo == TokNumBytes && TokNo == getNumConcatenated() - 1)) {
+    //
+    // The string data may have been converted to a different encoding (e.g.
+    // -fexec-charset) than the one obtained by re-lexing the source token here,
+    // so ByteNo can lie beyond the end of the last token. In that case, clamp
+    // to the end of the last token rather than failing.
+    bool IsLastToken = TokNo == getNumConcatenated() - 1;
+    if (ByteNo < TokNumBytes || IsLastToken) {
+      ByteNo = std::min(ByteNo, TokNumBytes);
       unsigned Offset = SLP.getOffsetOfStringByte(TheTok, ByteNo);
 
       // Now that we know the offset of the token in the spelling, use the
