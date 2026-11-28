@@ -3850,6 +3850,14 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpPredicate Pred, Value *LHS,
       if (Pred == ICmpInst::ICMP_ULT)
         return ConstantInt::getFalse(getCompareTy(II));
     }
+    // uadd.sat(X, Y) uge X | Y
+    if (match(RHS, m_c_Or(m_Specific(II->getArgOperand(0)),
+                          m_Specific(II->getArgOperand(1))))) {
+      if (Pred == ICmpInst::ICMP_UGE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_ULT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
     return nullptr;
   case Intrinsic::usub_sat:
     // usub.sat(X, Y) ule X - Y

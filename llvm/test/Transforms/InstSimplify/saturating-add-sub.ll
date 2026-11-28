@@ -943,6 +943,72 @@ define i1 @icmp_ult_uaddsat_add(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
+define i1 @icmp_uge_uaddsat_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_uge_uaddsat_or(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %or = or i8 %x, %y
+  %cmp = icmp uge i8 %sat, %or
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_uaddsat_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ult_uaddsat_or(
+; CHECK-NEXT:    ret i1 false
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %or = or i8 %x, %y
+  %cmp = icmp ult i8 %sat, %or
+  ret i1 %cmp
+}
+
+define i1 @icmp_ule_or_uaddsat(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ule_or_uaddsat(
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %or = or i8 %y, %x
+  %cmp = icmp ule i8 %or, %sat
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_uge_uaddsat_or_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_uge_uaddsat_or_vec(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
+  %or = or <2 x i8> %x, %y
+  %cmp = icmp uge <2 x i8> %sat, %or
+  ret <2 x i1> %cmp
+}
+
+define i1 @icmp_ugt_uaddsat_or_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ugt_uaddsat_or_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SAT]], [[OR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %or = or i8 %x, %y
+  %cmp = icmp ugt i8 %sat, %or
+  ret i1 %cmp
+}
+
+define i1 @icmp_uge_uaddsat_unrelated_or_fail(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_uge_uaddsat_unrelated_or_fail(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SAT]], [[OR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  %or = or i8 %x, %z
+  %cmp = icmp uge i8 %sat, %or
+  ret i1 %cmp
+}
+
 define i1 @icmp_uge_uaddsat_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @icmp_uge_uaddsat_add(
 ; CHECK-NEXT:    ret i1 true
