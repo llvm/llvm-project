@@ -101,6 +101,8 @@ struct LoweringPreparePass
   void lowerLocalInitOp(cir::LocalInitOp op);
   void lowerRegisterExitDtorOp(cir::RegisterExitDtorOp op);
   void lowerStdOp(cir::StdOpInterface op);
+  void lowerIfOp(cir::IfOp op);
+  void lowerTernaryOp(cir::TernaryOp op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -2819,6 +2821,49 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
   op->erase();
 }
 
+/// If `cond` is the result of a chain of cir.not ops, sets it to the input of
+/// the innermost cir.not, erasing each cir.not left without uses.  Returns true
+/// if the chain has an odd length, which inverts the condition.
+static bool stripNotsFromCondition(mlir::OpOperand &cond) {
+  bool inverted = false;
+  while (auto notOp = cond.get().getDefiningOp<cir::NotOp>()) {
+    cond.set(notOp.getInput());
+    if (notOp->use_empty())
+      notOp.erase();
+    inverted = !inverted;
+  }
+  return inverted;
+}
+
+/// Swaps the bodies of `a` and `b`.  std::swap on the block lists does not
+/// update each block's parent region, so the bodies move with takeBody.
+static void swapRegions(mlir::Region &a, mlir::Region &b) {
+  mlir::Region aBody;
+  aBody.takeBody(a);
+  a.takeBody(b);
+  b.takeBody(aBody);
+}
+
+void LoweringPreparePass::lowerIfOp(cir::IfOp op) {
+  bool inverted = stripNotsFromCondition(op.getConditionMutable());
+  if (!inverted)
+    return;
+
+  // An empty else region becomes the then region after the swap, and a cir.if
+  // needs a then block, so give the else region a block that yields.
+  if (op.getElseRegion().empty()) {
+    cir::CIRBaseBuilderTy builder(getContext());
+    builder.createBlock(&op.getElseRegion());
+    cir::YieldOp::create(builder, op.getLoc());
+  }
+  swapRegions(op.getThenRegion(), op.getElseRegion());
+}
+
+void LoweringPreparePass::lowerTernaryOp(cir::TernaryOp op) {
+  if (stripNotsFromCondition(op.getCondMutable()))
+    swapRegions(op.getTrueRegion(), op.getFalseRegion());
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -2868,6 +2913,10 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
     lowerLocalInitOp(initOp);
+  } else if (auto ifOp = dyn_cast<cir::IfOp>(op)) {
+    lowerIfOp(ifOp);
+  } else if (auto ternaryOp = dyn_cast<cir::TernaryOp>(op)) {
+    lowerTernaryOp(ternaryOp);
   }
 }
 
@@ -3551,7 +3600,8 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexFMulOp, cir::ComplexFDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
                   cir::StoreOp, cir::CmpThreeWayOp, cir::LocalInitOp,
-                  cir::RegisterExitDtorOp, cir::StdOpInterface>(op))
+                  cir::RegisterExitDtorOp, cir::StdOpInterface, cir::IfOp,
+                  cir::TernaryOp>(op))
       opsToTransform.push_back(op);
   });
 
