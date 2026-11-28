@@ -69,3 +69,27 @@ body: |
   bb.0:
     S_WAITCNT_DEPCTR .VaVdst_-1
 ...
+
+;--- negative-zero-counter.mir
+# RUN: not llc %t/negative-zero-counter.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/negative-zero-counter.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .VaVdst_-0
+# CHECK-NEXT:                             ^
+name: NegativeZeroCounter
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VaVdst_-0
+...
+
+;--- counter-exceeds-32-bits.mir
+# RUN: not llc %t/counter-exceeds-32-bits.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/counter-exceeds-32-bits.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .VaVdst_4294967296
+# CHECK-NEXT:                             ^
+name: CounterExceeds32Bits
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VaVdst_4294967296
+...
