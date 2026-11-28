@@ -64,7 +64,6 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::UnresolvedUsingValue:
   case Decl::NonTypeTemplateParm:
   case Decl::CXXDeductionGuide:
-  case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
   case Decl::CXXConversion:
@@ -127,6 +126,7 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     }
     return;
   case Decl::Function:     // void X();
+  case Decl::CXXMethod:    // void X::f();
   case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::ExplicitInstantiation:
