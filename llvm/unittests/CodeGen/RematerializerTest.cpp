@@ -1232,3 +1232,207 @@ TEST_F(RematerializerTest, RegionEndNotRematerializable) {
       },
       /*PreRemat=*/doNothing, BuildRegions);
 }
+
+/// Checks that region upper bounds are updated when dead-def elimination
+/// deletes an unrematerializable MI that is a region's upper bound.
+TEST_F(RematerializerTest, DeadDefRegionEnd) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %cst:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    undef %multidef.sub0:vreg_64 = IMPLICIT_DEF
+    %multidef.sub1:vreg_64 = IMPLICIT_DEF
+    %add:vgpr_32 = V_ADD_U32_e32 %multidef.sub0, %multidef.sub0, implicit $exec
+
+  bb.1:
+    S_NOP 0, implicit %cst, implicit %add
+    S_ENDPGM 0
+)MIR";
+  MachineInstr *Sub1Def = nullptr, *Sub0Def = nullptr;
+  ProcessMIRFn PreRemat = [&](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+    Sub0Def = &*std::next(MBB0.begin());
+    Sub1Def = &*std::next(Sub0Def->getIterator());
+
+    // Flip %multidef's subdefinition order (see SplitSubRegDeadDef), making
+    // the sub1 definition dead once %add is rematerialized.
+    moveMIAndAdjustLiveness(Sub0Def->getIterator(), *Sub1Def, LIS);
+  };
+  // The soon-to-be-dead sub1 definition of %multidef splits bb.0 into two
+  // regions and is excluded from both.
+  BuildRegionsFn BuildRegions =
+      [&](MachineFunction &MF,
+          SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
+        MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+        MachineBasicBlock &MBB1 = *MF.getBlockNumbered(1);
+        Regions.push_back({MBB0.begin(), Sub1Def->getIterator()});
+        Regions.push_back({std::next(Sub1Def->getIterator()), MBB0.end()});
+        Regions.push_back({MBB1.begin(), std::prev(MBB1.end())});
+      };
+
+  rematerializerTest(
+      MIRBody,
+      [&](RematerializerWrapper &RW) {
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0Top = 0, MBB0Bot = 1, MBB1 = 2;
+        const RegisterIdx Add = 1;
+
+        // Only %cst and %add are rematerializable.
+        ASSERT_EQ(RW->getNumRegs(), 2U);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, Sub1Def->getIterator());
+        ASSERT_REGION_SIZES();
+
+        // Rematerializing %add to bb.1 deletes the sub1 definition of
+        // %multidef, which is the first region's upper bound. The bound must
+        // move to the next MI.
+        RW->rematerializeToRegion(Add, MBB1, DRI);
+        RW.moveMIs(MBB0Bot, MBB1, 1);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, Sub0Def->getIterator());
+        ASSERT_REGION_SIZES();
+      },
+      PreRemat, BuildRegions);
+}
+
+/// Here the two regions in bb.0 are directly adjacent: the first region's upper
+/// bound and the second's lower bound are the exact same iterator, with no
+/// excluded MI in between. Dead-def elimination deleting that shared boundary
+/// instruction must push both neighbors' boundaries forward in lockstep, not
+/// just one of them.
+TEST_F(RematerializerTest, ZeroGapRegionDeadDefEnd) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %cst:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    undef %multidef.sub0:vreg_64 = IMPLICIT_DEF
+    %multidef.sub1:vreg_64 = IMPLICIT_DEF
+    %add:vgpr_32 = V_ADD_U32_e32 %multidef.sub0, %multidef.sub0, implicit $exec
+
+  bb.1:
+    S_NOP 0, implicit %cst, implicit %add
+    S_ENDPGM 0
+)MIR";
+  MachineInstr *Sub1Def = nullptr, *Sub0Def = nullptr;
+  ProcessMIRFn PreRemat = [&](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+    Sub0Def = &*std::next(MBB0.begin());
+    Sub1Def = &*std::next(Sub0Def->getIterator());
+
+    // Flip %multidef's subdefinition order (see SplitSubRegDeadDef), making
+    // the sub1 definition dead once %add is rematerialized.
+    moveMIAndAdjustLiveness(Sub0Def->getIterator(), *Sub1Def, LIS);
+  };
+  // Unlike DeadDefRegionEnd, the soon-to-be-dead sub1 definition is the first
+  // (real) instruction of the second region rather than being excluded from
+  // both regions.
+  BuildRegionsFn BuildRegions =
+      [&](MachineFunction &MF,
+          SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
+        MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+        MachineBasicBlock &MBB1 = *MF.getBlockNumbered(1);
+        Regions.push_back({MBB0.begin(), Sub1Def->getIterator()});
+        Regions.push_back({Sub1Def->getIterator(), MBB0.end()});
+        Regions.push_back({MBB1.begin(), std::prev(MBB1.end())});
+      };
+
+  rematerializerTest(
+      MIRBody,
+      [&](RematerializerWrapper &RW) {
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0Top = 0, MBB0Bot = 1, MBB1 = 2;
+        const RegisterIdx Add = 1;
+
+        // Only %cst and %add are rematerializable.
+        ASSERT_EQ(RW->getNumRegs(), 2U);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, Sub1Def->getIterator());
+        ASSERT_EQ(RW->getRegion(MBB0Bot).first, Sub1Def->getIterator());
+        ASSERT_REGION_SIZES();
+
+        // Rematerializing %add to bb.1 deletes the sub1 definition of
+        // %multidef, which is simultaneously the first region's upper bound
+        // and the second region's (inclusive) first instruction. Both
+        // boundaries must move to the next MI together.
+        RW->rematerializeToRegion(Add, MBB1, DRI);
+        RW.removeMIs(MBB0Bot, 1).moveMIs(MBB0Bot, MBB1, 1);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, Sub0Def->getIterator());
+        ASSERT_EQ(RW->getRegion(MBB0Bot).first, Sub0Def->getIterator());
+        ASSERT_REGION_SIZES();
+      },
+      PreRemat, BuildRegions);
+}
+
+/// Mirrors ZeroGapRegionDeadDefEnd but on register creation instead of
+/// deletion: rematerializing a register to a position before the current
+/// start of a region must also recede the directly adjacent, preceding
+/// region's upper bound to the exact same new position, not one instruction
+/// further back.
+TEST_F(RematerializerTest, ZeroGapRegionRematRecedesBound) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %cst:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %keep:vgpr_32 = V_ADD_U32_e32 %cst, %cst, implicit $exec
+    S_NOP 0, implicit %keep
+    S_ENDPGM 0
+)MIR";
+  // The two regions are directly adjacent: the first ends exactly where the
+  // second (containing %keep's definition) begins.
+  BuildRegionsFn BuildRegions =
+      [](MachineFunction &MF,
+         SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
+        MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+        MachineInstr *Keep = &*std::next(MBB0.begin());
+        MachineInstr *EndPgm = &*std::prev(MBB0.end());
+        Regions.push_back({MBB0.begin(), Keep->getIterator()});
+        Regions.push_back({Keep->getIterator(), EndPgm->getIterator()});
+      };
+
+  rematerializerTest(
+      MIRBody,
+      [&](RematerializerWrapper &RW) {
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0Top = 0, MBB0Bot = 1;
+        const RegisterIdx Cst = 0;
+
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, RW->getRegion(MBB0Bot).first);
+        ASSERT_REGION_SIZES();
+
+        // Rematerializing %cst to the second region inserts the new copy
+        // right before %keep, i.e. exactly at the shared boundary. The first
+        // region loses its only (now dead) instruction, and the second
+        // region's lower bound recedes to the new copy. The first region's
+        // upper bound must recede to the exact same position, not any
+        // further back, or it will wrongly exclude its own remaining content.
+        RW->rematerializeToRegion(Cst, MBB0Bot, DRI);
+        RW.removeMIs(MBB0Top, 1).addMIs(MBB0Bot, 1);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, RW->getRegion(MBB0Bot).first);
+        ASSERT_REGION_SIZES();
+      },
+      doNothing, BuildRegions);
+}
+
+/// The rematerializer used to not recede the beginning of a region that starts
+/// with a debug instruction when rematerializing right before it. Consequently,
+/// the rematerialized definition of %0 would not be part of the MBB1 region and
+/// last assert would fail.
+TEST_F(RematerializerTest, RecedeRegionBeginBeforeDebug) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+
+  bb.1:
+    DBG_PHI $vgpr0, 1
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+
+    const unsigned MBB1 = 1;
+    const RegisterIdx Cst0 = 0;
+    ASSERT_EQ(RW->getNumRegs(), 1U);
+    ASSERT_REGION_SIZES();
+
+    MachineBasicBlock::iterator StartMBB1 = RW->getRegion(MBB1).first;
+    EXPECT_TRUE(StartMBB1->isDebugInstr());
+    RW->rematerializeToPos(Cst0, MBB1, StartMBB1, DRI);
+    RW.addMIs(MBB1, 1);
+    ASSERT_REGION_SIZES();
+  });
+}

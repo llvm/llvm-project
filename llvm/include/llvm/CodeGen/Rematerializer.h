@@ -230,10 +230,15 @@ public:
 
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  Rematerializer(MachineFunction &MF, MutableArrayRef<RegionBoundaries> Regions,
+  Rematerializer(MachineFunction &MF,
+                 MutableArrayRef<RegionBoundaries> RegionBounds,
                  LiveIntervals &LIS)
-      : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
-        TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {}
+      : MRI(MF.getRegInfo()), LIS(LIS), TII(*MF.getSubtarget().getInstrInfo()),
+        TRI(TII.getRegisterInfo()) {
+    Regions.reserve(RegionBounds.size());
+    for (RegionBoundaries &Bounds : RegionBounds)
+      Regions.push_back(Bounds);
+  }
 
   /// Goes through the whole MF and identifies all rematerializable registers.
   /// Returns whether there is any rematerializable register in regions.
@@ -272,7 +277,7 @@ public:
 
   const RegionBoundaries &getRegion(RegisterIdx RegionIdx) const {
     assert(RegionIdx < Regions.size() && "out of bounds");
-    return Regions[RegionIdx];
+    return Regions[RegionIdx].Bounds;
   }
   unsigned getNumRegions() const { return Regions.size(); }
 
@@ -469,7 +474,6 @@ private:
     void LRE_WillEraseInstruction(MachineInstr *MI) override;
   };
 
-  MutableArrayRef<RegionBoundaries> Regions;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
@@ -515,12 +519,43 @@ private:
   /// data in the \ref Regs vector. This includes registers that no longer exist
   /// in the MIR.
   DenseMap<Register, RegisterIdx> RegToIdx;
-  /// Parent block of each region, in order.
-  SmallVector<MachineBasicBlock *> RegionMBB;
+
+  /// Tracking data for a rematerialization region.
+  struct RematRegion {
+    /// Sentinel region index to indicate "no region".
+    static constexpr unsigned NoRegion = ~0;
+
+    /// Beginning (inclusive) and end (exclusive) of the region. Cannot be empty
+    /// at the beginning but can become empty through rematerializations.
+    RegionBoundaries &Bounds;
+    /// Parent block.
+    MachineBasicBlock *MBB = nullptr;
+    /// Index of previous region in the block, if any.
+    unsigned Prev = NoRegion;
+    /// Index of next region in the block, if any.
+    unsigned Next = NoRegion;
+
+    RematRegion(RegionBoundaries &Bounds) : Bounds(Bounds) {}
+  };
+  /// All rematerialization regions.
+  SmallVector<RematRegion> Regions;
+
+  /// Changes the beginning of region \p RegionIdx to \p NewBound. This also
+  /// updates the previous region(s) in the same block when they share the same
+  /// old bound. Returns the index of the earliest region whose bounds changed.
+  unsigned changeRegionBegin(unsigned RegionIdx,
+                             MachineBasicBlock::iterator NewBound);
+
+  /// Changes the ending of region \p RegionIdx to \p NewBound. This also
+  /// updates the next region(s) in the same block when they share the same
+  /// old bound. Returns the index of the latest region whose bounds changed.
+  unsigned changeRegionEnd(unsigned RegionIdx,
+                           MachineBasicBlock::iterator NewBound);
 
   /// Common post-processing step after creating a new register \p RematRegIdx
-  /// based on register \p ModelRegIdx.
-  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx);
+  /// at \p InsertPos based on register \p ModelRegIdx.
+  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx,
+                             MachineBasicBlock::iterator InsertPos);
 
   /// Common pre-processing step before deleting a register \p DeleteRegIdx. The
   /// register must still have alive definitions.

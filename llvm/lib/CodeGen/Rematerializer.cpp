@@ -83,7 +83,7 @@ RegisterIdx Rematerializer::rematerializeToRegion(RegisterIdx RootIdx,
   // If there are no users in the region, rematerialize the register at the very
   // end of the region.
   MachineBasicBlock::iterator InsertPos =
-      FirstMI ? FirstMI : Regions[UseRegion].second;
+      FirstMI ? FirstMI : Regions[UseRegion].Bounds.second;
   RegisterIdx NewRegIdx =
       rematerializeToPos(RootIdx, UseRegion, InsertPos, DRI);
   transferRegionUsers(RootIdx, NewRegIdx, UseRegion);
@@ -348,12 +348,23 @@ void Rematerializer::DeadDefDelegate::LRE_WillEraseInstruction(
     // FIXME: the rematerializer should stop tracking regions and operate on a
     // machine basic block-basis. This would simplify this and a lot of the
     // tracking elsewhere.
-    MachineBasicBlock::iterator It = MI->getIterator();
+    const MachineBasicBlock::iterator DelIt = MI->getIterator();
     const LiveIntervals &LIS = Remater.LIS;
     SlotIndex MISlot = LIS.getInstructionIndex(*MI);
-    unsigned MIRegion = ~0U;
-    for (auto [RegionIdx, Bounds] : enumerate(Remater.Regions)) {
-      auto &[RegionBegin, RegionEnd] = Bounds;
+    unsigned MIRegion = RematRegion::NoRegion;
+    for (auto [RegionIdx, Region] : enumerate(Remater.Regions)) {
+      auto &[RegionBegin, RegionEnd] = Region.Bounds;
+      // The MI may be the (exclusive) upper bound of a region. The bound must
+      // be pushed past it to remain valid.
+      if (RegionEnd == DelIt) {
+        if (RegionBegin == DelIt)
+          Remater.changeRegionBegin(RegionIdx, std::next(RegionBegin));
+        MIRegion = Remater.changeRegionEnd(RegionIdx, std::next(RegionEnd));
+        if (MIRegion == RegionIdx)
+          return;
+        break;
+      }
+
       MachineBasicBlock::iterator FirstMI =
           skipDebugInstructionsForward(RegionBegin, RegionEnd);
       if (FirstMI == RegionEnd) {
@@ -371,13 +382,18 @@ void Rematerializer::DeadDefDelegate::LRE_WillEraseInstruction(
 
         // We have found the region the MI is a part of.
         MIRegion = RegionIdx;
-        if (RegionBegin == It)
-          ++RegionBegin;
+        if (RegionBegin == DelIt)
+          Remater.changeRegionBegin(RegionIdx, std::next(RegionBegin));
         break;
       }
     }
 
-    // All rematerializable registers that this MI uses must be notified.
+    // All rematerializable registers that the MI uses must be notified. No
+    // rematerializable register can be used by an instruction outside
+    // rematerialization regions, so we can bail out early if the MI is outside
+    // regions.
+    if (MIRegion == RematRegion::NoRegion)
+      return;
     SmallDenseSet<Register, 2> UsedRegs;
     for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
@@ -386,7 +402,6 @@ void Rematerializer::DeadDefDelegate::LRE_WillEraseInstruction(
       auto RematRegUse = Remater.RegToIdx.find(Reg);
       if (RematRegUse == Remater.RegToIdx.end())
         continue;
-      assert(MIRegion != ~0U && "remat user cannot be outside regions");
       Remater.Regs[RematRegUse->second].eraseUser(MI, MIRegion);
     }
     return;
@@ -428,12 +443,13 @@ void Rematerializer::preDeletion(RegisterIdx DeleteRegIdx) {
   // Update region boundary if necessary. It is not possible for the deleted
   // instruction to be the upper region boundary since we don't ever consider
   // them rematerializable.
-  MachineBasicBlock::iterator &RegionBegin = Regions[DeleteReg.DefRegion].first;
+  auto [Begin, _] = Regions[DeleteReg.DefRegion].Bounds;
   for (MachineInstr *DefMI : DeleteReg.Defs) {
-    if (RegionBegin != DefMI)
+    if (Begin != DefMI)
       break;
-    ++RegionBegin;
+    ++Begin;
   }
+  changeRegionBegin(DeleteReg.DefRegion, Begin);
 
   if (isOriginalRegister(DeleteRegIdx))
     return;
@@ -452,27 +468,45 @@ bool Rematerializer::analyze() {
   UnrematableDeps.clear();
   Origins.clear();
   Rematerializations.clear();
-  RegionMBB.clear();
   RegToIdx.clear();
   if (Regions.empty())
     return false;
 
   /// Maps all MIs to their parent region.
   DenseMap<MachineInstr *, unsigned> MIRegion;
+  /// Maps basic blocks to the regions they contain.
+  DenseMap<const MachineBasicBlock *,
+           SmallVector<std::pair<unsigned, SlotIndex>, 4>>
+      RegionsPerMBB;
 
   // Initialize MI to containing region mapping.
-  RegionMBB.resize(Regions.size(), nullptr);
-  for (const auto &[RegionIdx, RegionBounds] : enumerate(Regions)) {
-    auto [MI, End] = RegionBounds;
+  for (const auto &[RegionIdx, Region] : enumerate(Regions)) {
+    auto [MI, End] = Region.Bounds;
     MI = skipDebugInstructionsForward(MI, End);
     assert(MI != End && "empty region");
-    RegionMBB[RegionIdx] = MI->getParent();
+    MachineBasicBlock *MBB = MI->getParent();
+    Regions[RegionIdx].MBB = MBB;
+    RegionsPerMBB[MBB].push_back({RegionIdx, LIS.getInstructionIndex(*MI)});
     for (; MI != End; ++MI) {
       if (MI->isDebugInstr())
         continue;
       assert(!MI->isTerminator() && "no terminator allowed in region");
       if (!MIRegion.insert({&*MI, RegionIdx}).second)
         llvm_unreachable("overlapping regions");
+    }
+  }
+
+  // Determine region ordering within blocks.
+  for (auto &[MBB, RegionIndices] : RegionsPerMBB) {
+    sort(RegionIndices, [&](const std::pair<unsigned, SlotIndex> &LHS,
+                            const std::pair<unsigned, SlotIndex> &RHS) {
+      return LHS.second < RHS.second;
+    });
+    unsigned PrevIdx = RegionIndices.front().first;
+    for (const auto &[RegionIdx, _] : drop_begin(RegionIndices)) {
+      Regions[PrevIdx].Next = RegionIdx;
+      Regions[RegionIdx].Prev = PrevIdx;
+      PrevIdx = RegionIdx;
     }
   }
 
@@ -672,11 +706,11 @@ Rematerializer::rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
   // register.
   Register NewDefReg = MRI.cloneVirtualRegister(FromReg.getDefReg());
   for (const MachineInstr *DefMI : FromReg.Defs) {
-    TII.reMaterialize(*RegionMBB[UseRegion], InsertPos, NewDefReg, 0, *DefMI);
+    TII.reMaterialize(*Regions[UseRegion].MBB, InsertPos, NewDefReg, 0, *DefMI);
     NewReg.Defs.push_back(&*std::prev(InsertPos));
   }
   RegToIdx.insert({NewDefReg, NewRegIdx});
-  postRematerialization(RegIdx, NewRegIdx);
+  postRematerialization(RegIdx, NewRegIdx, InsertPos);
 
   noteRegCreated(NewRegIdx);
   LLVM_DEBUG(dbgs() << "** Rematerialized " << printID(RegIdx) << " as "
@@ -711,17 +745,59 @@ void Rematerializer::recreateReg(
   const Reg &ModelReg = getReg(ModelRegIdx);
 
   for (auto [DefMI, InsertPos] : zip_equal(ModelReg.Defs, Positions)) {
-    TII.reMaterialize(*RegionMBB[OriginReg.DefRegion], InsertPos, DefReg, 0,
+    TII.reMaterialize(*Regions[OriginReg.DefRegion].MBB, InsertPos, DefReg, 0,
                       *DefMI);
     OriginReg.Defs.push_back(&*std::prev(InsertPos));
   }
-  postRematerialization(ModelRegIdx, RegIdx);
+  postRematerialization(ModelRegIdx, RegIdx, Positions.front());
   LLVM_DEBUG(dbgs() << "** Recreated " << printID(RegIdx) << " as "
                     << printRematReg(RegIdx) << '\n');
 }
 
-void Rematerializer::postRematerialization(RegisterIdx ModelRegIdx,
-                                           RegisterIdx RematRegIdx) {
+unsigned
+Rematerializer::changeRegionBegin(unsigned RegionIdx,
+                                  MachineBasicBlock::iterator NewBound) {
+  auto &[Begin, _] = Regions[RegionIdx].Bounds;
+  for (unsigned PrevIdx = Regions[RegionIdx].Prev;
+       PrevIdx != RematRegion::NoRegion;) {
+    auto &[PrevBegin, PrevEnd] = Regions[PrevIdx].Bounds;
+    if (PrevEnd != Begin)
+      break;
+    RegionIdx = PrevIdx;
+    bool WasEmpty = PrevBegin == PrevEnd;
+    PrevEnd = NewBound;
+    if (!WasEmpty)
+      break;
+    PrevBegin = NewBound;
+    PrevIdx = Regions[PrevIdx].Prev;
+  }
+  Begin = NewBound;
+  return RegionIdx;
+}
+
+unsigned Rematerializer::changeRegionEnd(unsigned RegionIdx,
+                                         MachineBasicBlock::iterator NewBound) {
+  auto &[_, End] = Regions[RegionIdx].Bounds;
+  for (unsigned NextIdx = Regions[RegionIdx].Next;
+       NextIdx != RematRegion::NoRegion;) {
+    auto &[NextBegin, NextEnd] = Regions[NextIdx].Bounds;
+    if (NextBegin != End)
+      break;
+    RegionIdx = NextIdx;
+    bool WasEmpty = NextBegin == NextEnd;
+    NextBegin = NewBound;
+    if (!WasEmpty)
+      break;
+    NextEnd = NewBound;
+    NextIdx = Regions[NextIdx].Next;
+  }
+  End = NewBound;
+  return RegionIdx;
+}
+
+void Rematerializer::postRematerialization(
+    RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx,
+    MachineBasicBlock::iterator InsertPos) {
   Reg &ModelReg = Regs[ModelRegIdx], &RematReg = Regs[RematRegIdx];
 
   SlotIndex UseIdx;
@@ -735,11 +811,9 @@ void Rematerializer::postRematerialization(RegisterIdx ModelRegIdx,
 
   // The start of the new register's region may have changed.
   MachineInstr &FirstDefMI = *RematReg.getFirstDef();
-  auto &[RegionBegin, RegionEnd] = Regions[RematReg.DefRegion];
-  if (RegionBegin == RegionEnd ||
-      (!RegionBegin->isDebugInstr() && LIS.getInstructionIndex(*RegionBegin) >
-                                           LIS.getInstructionIndex(FirstDefMI)))
-    RegionBegin = FirstDefMI.getIterator();
+  const auto &[Begin, End] = Regions[RematReg.DefRegion].Bounds;
+  if (Begin == InsertPos)
+    changeRegionBegin(RematReg.DefRegion, FirstDefMI.getIterator());
 
   // Replace dependencies as needed in the rematerialized MI. All dependencies
   // of the latter gain a new user.
@@ -1014,22 +1088,23 @@ Printable Rematerializer::printRematReg(RegisterIdx RegIdx, bool SkipRegions,
         // First display all regions in which the register is live-through and
         // not used.
         bool First = true;
-        for (const auto &[I, Bounds] : enumerate(Regions)) {
+        for (const auto &[I, Region] : enumerate(Regions)) {
           if (PrintReg.Uses.contains(I))
             continue;
           // The register must be live at the live-ins and live-outs of the
           // region.
+          const auto &[Begin, End] = Region.Bounds;
           MachineBasicBlock::iterator LiveIn =
-              skipDebugInstructionsForward(Bounds.first, Bounds.second);
-          if (LiveIn == Bounds.second) {
+              skipDebugInstructionsForward(Begin, End);
+          if (LiveIn == End) {
             // The region has no non-debug instructions, it's hard to assess
             // whether the register is live across it without an index.
             continue;
           }
           // LiveIn is inside the range and a non-debug instruction so we know
           // this will also point to a non-debug instruction within the region.
-          MachineBasicBlock::iterator LiveOut = skipDebugInstructionsBackward(
-              std::prev(Bounds.second), Bounds.first);
+          MachineBasicBlock::iterator LiveOut =
+              skipDebugInstructionsBackward(std::prev(End), Begin);
           if (LI.liveAt(LIS.getInstructionIndex(*LiveIn)) &&
               LI.liveAt(LIS.getInstructionIndex(*LiveOut).getDeadSlot())) {
             OS << (First ? " - " : ",") << I;
