@@ -146,6 +146,8 @@ class LargeMmapAllocator {
       stat->Sub(AllocatorStatAllocated, h->map_size);
       stat->Sub(AllocatorStatMapped, h->map_size);
     }
+    CHECK_GE(reinterpret_cast<uptr>(h), h->map_beg);
+    CHECK_LT(reinterpret_cast<uptr>(h), h->map_beg + h->map_size);
     MapUnmapCallback().OnUnmap(h->map_beg, h->map_size);
     UnmapOrDie(reinterpret_cast<void*>(h->map_beg), h->map_size);
   }
