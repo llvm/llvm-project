@@ -14,6 +14,7 @@
 #include "Relocations.h"
 #include "Symbols.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Parallel.h"
 
 namespace lld::elf {
 
@@ -38,9 +39,13 @@ inline void applyBranchToBranchOptImpl(
     Ctx &ctx, GetControlTransferAddend getControlTransferAddend,
     GetBranchInfoAtTarget getBranchInfoAtTarget,
     RedirectControlTransferRelocations redirectControlTransferRelocations) {
-  // Needs to run serially because it writes to the relocations array as well as
-  // reading relocations of other sections.
-  for (ELFFileBase *f : ctx.objectFiles) {
+  struct Redirect {
+    Relocation *from;
+    const Relocation *to;
+  };
+  SmallVector<SmallVector<Redirect, 0>, 0> redirects(ctx.objectFiles.size());
+  parallelFor(0, ctx.objectFiles.size(), [&](size_t fileIndex) {
+    ELFFileBase *f = ctx.objectFiles[fileIndex];
     auto getRelocBranchInfo =
         [&getBranchInfoAtTarget](
             Relocation &r,
@@ -82,10 +87,13 @@ inline void applyBranchToBranchOptImpl(
             break;
           targetAndAddend = nextTargetAndAddend;
         }
-        redirectControlTransferRelocations(r, *targetAndAddend.first);
+        redirects[fileIndex].push_back({&r, targetAndAddend.first});
       }
     }
-  }
+  });
+  for (SmallVector<Redirect, 0> &fileRedirects : redirects)
+    for (const Redirect &redirect : fileRedirects)
+      redirectControlTransferRelocations(*redirect.from, *redirect.to);
 }
 
 } // namespace lld::elf
