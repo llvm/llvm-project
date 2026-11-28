@@ -1,0 +1,123 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK:       BL @leaf_helper
+# CHECK:       $w0 = MOVZWi 4, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT:  $x16 = ORRXrs $xzr, $x19, 0
+# CHECK-NEXT:  TCRETURNrix16x17 $x16, 0, implicit $sp
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_1
+# CHECK:       $x16 = LDRXui $x0, 0
+# CHECK-NEXT:  TCRETURNrix16x17 $x16, 0, implicit $sp
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_2
+# CHECK:       $x16 = LDRXui $x0, 1
+# CHECK-NEXT:  $x17 = ORRXrs $xzr, $x16, 0
+# CHECK-NEXT:  TCRETURNrix17 $x17, 0, implicit $sp
+
+--- |
+  define hidden void @leaf_helper() { ret void }
+
+  define hidden void @nonleaf_thunk_a() minsize noredzone "branch-target-enforcement" { ret void }
+  define hidden void @nonleaf_thunk_b() minsize noredzone "branch-target-enforcement" { ret void }
+  define hidden void @nonleaf_thunk_c() minsize noredzone "branch-target-enforcement" { ret void }
+
+  define hidden void @already_x16_a() minsize noredzone "branch-target-enforcement" { ret void }
+  define hidden void @already_x16_b() minsize noredzone "branch-target-enforcement" { ret void }
+
+  define hidden void @x16_pauth_lr_a() minsize noredzone "branch-target-enforcement" "branch-protection-pauth-lr" { ret void }
+  define hidden void @x16_pauth_lr_b() minsize noredzone "branch-target-enforcement" "branch-protection-pauth-lr" { ret void }
+...
+---
+name: leaf_helper
+frameInfo:
+  isCalleeSavedInfoValid: true
+body: |
+  bb.0:
+    RET undef $lr
+...
+---
+name: nonleaf_thunk_a
+body: |
+  bb.0:
+    liveins: $lr, $x19, $x20
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    BL @leaf_helper, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $w0 = MOVZWi 4, 0
+    BLR $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: nonleaf_thunk_b
+body: |
+  bb.0:
+    liveins: $lr, $x19, $x20
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    BL @leaf_helper, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $w0 = MOVZWi 4, 0
+    BLR $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: nonleaf_thunk_c
+body: |
+  bb.0:
+    liveins: $lr, $x19, $x20
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    BL @leaf_helper, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $w0 = MOVZWi 4, 0
+    BLR $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: already_x16_a
+body: |
+  bb.0:
+    liveins: $lr, $x0
+    $w1 = MOVZWi 10, 0
+    $w2 = MOVZWi 20, 0
+    $x16 = LDRXui $x0, 0
+    BLR $x16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: already_x16_b
+body: |
+  bb.0:
+    liveins: $lr, $x0
+    $w1 = MOVZWi 10, 0
+    $w2 = MOVZWi 20, 0
+    $x16 = LDRXui $x0, 0
+    BLR $x16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: x16_pauth_lr_a
+body: |
+  bb.0:
+    liveins: $lr, $x0
+    $w1 = MOVZWi 30, 0
+    $w2 = MOVZWi 40, 0
+    $x16 = LDRXui $x0, 1
+    BLR $x16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
+---
+name: x16_pauth_lr_b
+body: |
+  bb.0:
+    liveins: $lr, $x0
+    $w1 = MOVZWi 30, 0
+    $w2 = MOVZWi 40, 0
+    $x16 = LDRXui $x0, 1
+    BLR $x16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    RET undef $lr
+...
