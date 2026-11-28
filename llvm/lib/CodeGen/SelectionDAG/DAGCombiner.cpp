@@ -17949,12 +17949,13 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ANY_EXTEND))
     return SDValue();
 
-  // Fold extract-and-trunc into a narrow extract. For example:
+  // Fold extract-and-trunc into a narrow extract. For example, on little-endian
+  // targets:
   //   i64 x = EXTRACT_VECTOR_ELT(v2i64 val, i32 1)
   //   i32 y = TRUNCATE(i64 x)
   //        -- becomes --
-  //   v16i8 b = BITCAST (v2i64 val)
-  //   i8 x = EXTRACT_VECTOR_ELT(v16i8 b, i32 8)
+  //   v4i32 b = BITCAST(v2i64 val)
+  //   i32 y = EXTRACT_VECTOR_ELT(v4i32 b, i32 2)
   //
   // Note: We only run this optimization after type legalization (which often
   // creates this pattern) and before operation legalization after which
