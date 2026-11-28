@@ -1202,7 +1202,9 @@ vector float test115(void) {
 }
 vector unsigned char test116(void) {
 // CHECK-BE: [[T1:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32> {{.+}}, <2 x i64> {{.+}}, i32 7)
-// CHECK-BE-NEXT: bitcast <4 x i32> [[T1]] to <16 x i8>
+// CHECK-BE-NEXT: store <4 x i32> [[T1]], ptr %{{.+}}, align 16
+// CHECK-BE-NEXT: [[T2:%.+]] = load <16 x i8>, ptr %{{.+}}, align 16
+// CHECK-BE-NEXT: ret <16 x i8> [[T2]]
 // CHECK: [[T1:%.+]] = shufflevector <2 x i64> {{.+}}, <2 x i64> {{.+}}, <2 x i32> <i32 1, i32 0>
 // CHECK-NEXT: [[T2:%.+]] =  bitcast <2 x i64> [[T1]] to <4 x i32>
 // CHECK-NEXT: [[T3:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32> [[T2]], <2 x i64> {{.+}}, i32 5)
@@ -1210,7 +1212,9 @@ vector unsigned char test116(void) {
 }
 vector unsigned char test117(void) {
 // CHECK-BE: [[T1:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32> {{.+}}, <2 x i64> {{.+}}, i32 12)
-// CHECK-BE-NEXT: bitcast <4 x i32> [[T1]] to <16 x i8>
+// CHECK-BE-NEXT: store <4 x i32> [[T1]], ptr %{{.+}}, align 16
+// CHECK-BE-NEXT: [[T2:%.+]] = load <16 x i8>, ptr %{{.+}}, align 16
+// CHECK-BE-NEXT: ret <16 x i8> [[T2]]
 // CHECK: [[T1:%.+]] = shufflevector <2 x i64> {{.+}}, <2 x i64> {{.+}}, <2 x i32> <i32 1, i32 0>
 // CHECK-NEXT: [[T2:%.+]] =  bitcast <2 x i64> [[T1]] to <4 x i32>
 // CHECK-NEXT: [[T3:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32> [[T2]], <2 x i64> {{.+}}, i32 0)
