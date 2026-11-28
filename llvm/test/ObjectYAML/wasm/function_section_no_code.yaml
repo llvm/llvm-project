@@ -1,0 +1,81 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/no-comdat.yaml -o %t/no-comdat.o
+# RUN: obj2yaml %t/no-comdat.o > %t/no-comdat.out.yaml
+# RUN: FileCheck %s --check-prefix=NO-COMDAT < %t/no-comdat.out.yaml
+# RUN: yaml2obj %t/no-comdat.out.yaml -o %t/no-comdat.roundtrip.o
+# RUN: cmp %t/no-comdat.o %t/no-comdat.roundtrip.o
+# RUN: yaml2obj %t/comdat.yaml -o %t/comdat.o
+# RUN: obj2yaml %t/comdat.o > %t/comdat.out.yaml
+# RUN: FileCheck %s --check-prefix=COMDAT < %t/comdat.out.yaml
+# RUN: yaml2obj %t/comdat.out.yaml -o %t/comdat.roundtrip.o
+# RUN: cmp %t/comdat.o %t/comdat.roundtrip.o
+
+## Functions must be initialized even when there is no code section. In
+## particular, the linking section must not treat an uninitialized Comdat as an
+## index, and COMDAT function indices must account for imported functions.
+
+# NO-COMDAT:      - Type:            FUNCTION
+# NO-COMDAT-NEXT:   FunctionTypes:   [ 0 ]
+# NO-COMDAT-NEXT: - Type:            CUSTOM
+# NO-COMDAT-NEXT:   Name:            linking
+# NO-COMDAT-NEXT:   Version:         2
+# NO-COMDAT-NEXT: ...
+
+# COMDAT:      - Type:            FUNCTION
+# COMDAT-NEXT:   FunctionTypes:   [ 0, 0 ]
+# COMDAT-NEXT: - Type:            CUSTOM
+# COMDAT-NEXT:   Name:            linking
+# COMDAT-NEXT:   Version:         2
+# COMDAT-NEXT:   Comdats:
+# COMDAT-NEXT:     - Name:            group
+# COMDAT-NEXT:       Entries:
+# COMDAT-NEXT:         - Kind:            FUNCTION
+# COMDAT-NEXT:           Index:           1
+# COMDAT-NEXT:         - Kind:            FUNCTION
+# COMDAT-NEXT:           Index:           2
+# COMDAT-NEXT: ...
+
+#--- no-comdat.yaml
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+
+#--- comdat.yaml
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: IMPORT
+    Imports:
+      - Module: env
+        Field: imported
+        Kind: FUNCTION
+        SigIndex: 0
+  - Type: FUNCTION
+    FunctionTypes: [ 0, 0 ]
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+    Comdats:
+      - Name: group
+        Entries:
+          - Kind: FUNCTION
+            Index: 1
+          - Kind: FUNCTION
+            Index: 2
