@@ -67,3 +67,24 @@ TEST(LlvmLibcSharedRpcTest, TestIncrement) {
   ProcA.unlock(lane_mask, index);
   ProcB.unlock(lane_mask, index);
 }
+
+#ifndef _M_IX86
+TEST(LlvmLibcSharedRpcTest, TestDoorbell) {
+  constexpr uint32_t port_count = 1;
+  constexpr uint32_t lane_size = 1;
+  alignas(64)
+      uint8_t buffer[::rpc::Server::allocation_size(lane_size, port_count)] = {
+          0};
+  alignas(8) uint64_t value = 0;
+
+  auto *doorbell = reinterpret_cast<::rpc::Doorbell *>(buffer);
+  doorbell->value = &value;
+
+  ::rpc::Process<false> client(port_count, buffer);
+  ::rpc::Process<true> server(port_count, buffer);
+  client.notify(1);
+  EXPECT_EQ(value, uint64_t(1));
+  server.finish(1);
+  EXPECT_EQ(value, uint64_t(0));
+}
+#endif
