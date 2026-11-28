@@ -612,6 +612,11 @@ namespace {
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
+    bool selectBMI2ShiftAmount(SDValue N, unsigned Width, SDValue &Amt);
+    template <unsigned Width>
+    bool selectBMI2ShiftAmount(SDValue N, SDValue &Amt) {
+      return selectBMI2ShiftAmount(N, Width, Amt);
+    }
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTERNLOG(SDNode *N);
     bool matchVPTERNLOG(SDNode *Root, SDNode *ParentA, SDNode *ParentB,
@@ -4714,6 +4719,43 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   MachineSDNode *CNode = CurDAG->getMachineNode(ROpc, dl, VTs, Ops);
   InGlue = SDValue(CNode, 2);
   return CNode;
+}
+
+bool X86DAGToDAGISel::selectBMI2ShiftAmount(SDValue N, unsigned Width,
+                                            SDValue &Amt) {
+  // Keep a shared truncate for expanded wide shifts to avoid extending live
+  // ranges.
+  if (N.getOpcode() != ISD::AND && !N.hasOneUse())
+    return false;
+
+  SDValue Src;
+  if (!selectShiftAmountMask(N, Width, Src))
+    return false;
+
+  MVT VT = Width == 64 ? MVT::i64 : MVT::i32;
+  MVT SrcVT = Src.getSimpleValueType();
+  SDLoc DL(N);
+  if (SrcVT == VT) {
+    Amt = Src;
+    return true;
+  }
+
+  if (SrcVT == MVT::i64) {
+    Amt = CurDAG->getTargetExtractSubreg(X86::sub_32bit, DL, VT, Src);
+    return true;
+  }
+
+  if (SrcVT == MVT::i8 || SrcVT == MVT::i16 || SrcVT == MVT::i32) {
+    unsigned SubIdx = SrcVT == MVT::i8    ? X86::sub_8bit
+                      : SrcVT == MVT::i16 ? X86::sub_16bit
+                                          : X86::sub_32bit;
+    SDValue Undef =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT), 0);
+    Amt = CurDAG->getTargetInsertSubreg(SubIdx, DL, VT, Undef, Src);
+    return true;
+  }
+
+  return false;
 }
 
 bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {

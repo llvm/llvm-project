@@ -869,6 +869,13 @@ def shiftMask64 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
   return isUnneededShiftMask(N, 6);
 }]>;
 
+// Shift amounts for SHLX/SHRX/SARX, which read only the low 5 or 6 bits of the
+// amount. These match only when a mask on the amount can be dropped, and the
+// result is the unmasked amount in a GR32/GR64. Unlike shiftMask*, they also
+// look through a truncate to a wider mask. See selectBMI2ShiftAmount.
+def bmi2ShiftAmt32 : ComplexPattern<i8, 1, "selectBMI2ShiftAmount<32>">;
+def bmi2ShiftAmt64 : ComplexPattern<i8, 1, "selectBMI2ShiftAmount<64>">;
+
 //===----------------------------------------------------------------------===//
 // Pattern fragments to auto generate BMI instructions.
 //===----------------------------------------------------------------------===//

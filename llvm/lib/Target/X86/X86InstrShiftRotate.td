@@ -645,12 +645,10 @@ multiclass ShiftX_Pats<SDNode op, string suffix = ""> {
    def : Pat<(op GR64:$src1, GR8:$src2),
               (!cast<Instruction>(NAME#"64rr"#suffix) GR64:$src1,
                (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-   def : Pat<(op GR32:$src1, (shiftMask32 GR8:$src2)),
-              (!cast<Instruction>(NAME#"32rr"#suffix) GR32:$src1,
-               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-   def : Pat<(op GR64:$src1, (shiftMask64 GR8:$src2)),
-              (!cast<Instruction>(NAME#"64rr"#suffix) GR64:$src1,
-               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR32:$src1, (bmi2ShiftAmt32 GR32:$src2)),
+              (!cast<Instruction>(NAME#"32rr"#suffix) GR32:$src1, GR32:$src2)>;
+   def : Pat<(op GR64:$src1, (bmi2ShiftAmt64 GR64:$src2)),
+              (!cast<Instruction>(NAME#"64rr"#suffix) GR64:$src1, GR64:$src2)>;
   }
   // We prefer to use
   //  mov (%ecx), %esi
@@ -668,12 +666,10 @@ multiclass ShiftX_Pats<SDNode op, string suffix = ""> {
   def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
              (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(op (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
-             (!cast<Instruction>(NAME#"32rm"#suffix) addr:$src1,
-              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(op (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
-             (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi32 addr:$src1), (bmi2ShiftAmt32 GR32:$src2)),
+             (!cast<Instruction>(NAME#"32rm"#suffix) addr:$src1, GR32:$src2)>;
+  def : Pat<(op (loadi64 addr:$src1), (bmi2ShiftAmt64 GR64:$src2)),
+             (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1, GR64:$src2)>;
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
