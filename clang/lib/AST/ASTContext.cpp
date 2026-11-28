@@ -925,7 +925,11 @@ static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
                                           const LangOptions &LangOpts) {
   switch (LangOpts.getAddressSpaceMapMangling()) {
   case LangOptions::ASMM_Target:
-    return TI.useAddressSpaceMapMangling();
+    // In CUDA and HIP, the host registers kernels with their device names, so
+    // the host and the device must mangle them in the same way. The host
+    // doesn't know which numbers the device maps language address spaces to,
+    // so both sides mangle them by name.
+    return !LangOpts.CUDA && TI.useAddressSpaceMapMangling();
   case LangOptions::ASMM_On:
     return true;
   case LangOptions::ASMM_Off:
