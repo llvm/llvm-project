@@ -4997,7 +4997,8 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   int Dpp8Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dpp8);
   bool IsDPP = DppCtrlIdx >= 0 || Dpp8Idx >= 0;
 
-  if (IsDPP && !hasDPPSrc1SGPR(getSTI())) {
+  if (IsDPP && (!hasDPPSrc1SGPR(getSTI()) ||
+                AMDGPU::isVOP3DPPSrc1RevOpc(getSTI(), Opc))) {
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     if (Src1Idx >= 0) {
       const MCOperand &Src1 = Inst.getOperand(Src1Idx);

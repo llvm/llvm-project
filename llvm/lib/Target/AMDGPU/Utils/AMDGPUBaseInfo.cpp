@@ -3682,6 +3682,73 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
+bool isVOP3DPPSrc1RevOpc(const MCSubtargetInfo &STI, unsigned Opc) {
+  switch (Opc) {
+  // The integer subtracts are REV-type on every generation that has them.
+  case AMDGPU::V_SUBREV_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp_gfx13:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_NC_U32_e64_dpp8_gfx13:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_CO_U32_e64_dpp8_gfx13:
+  case AMDGPU::V_SUBBREV_U32_e64_dpp:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp_gfx11:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp8_gfx11:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e64_dpp8_gfx13:
+    return true;
+
+  // The 16- and 32-bit shift REVs are REV-type on GFX13 only. The 64-bit forms
+  // are not, and are deliberately absent.
+  case AMDGPU::V_ASHRREV_I32_e64_dpp_gfx13:
+  case AMDGPU::V_ASHRREV_I32_e64_dpp8_gfx13:
+  case AMDGPU::V_ASHRREV_I16_t16_e64_dpp_gfx13:
+  case AMDGPU::V_ASHRREV_I16_t16_e64_dpp8_gfx13:
+  case AMDGPU::V_ASHRREV_I16_fake16_e64_dpp_gfx13:
+  case AMDGPU::V_ASHRREV_I16_fake16_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHLREV_B32_e64_dpp_gfx13:
+  case AMDGPU::V_LSHLREV_B32_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHLREV_B16_t16_e64_dpp_gfx13:
+  case AMDGPU::V_LSHLREV_B16_t16_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHLREV_B16_fake16_e64_dpp_gfx13:
+  case AMDGPU::V_LSHLREV_B16_fake16_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHRREV_B32_e64_dpp_gfx13:
+  case AMDGPU::V_LSHRREV_B32_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHRREV_B16_t16_e64_dpp_gfx13:
+  case AMDGPU::V_LSHRREV_B16_t16_e64_dpp8_gfx13:
+  case AMDGPU::V_LSHRREV_B16_fake16_e64_dpp_gfx13:
+  case AMDGPU::V_LSHRREV_B16_fake16_e64_dpp8_gfx13:
+    return true;
+  // The pseudos are shared across generations, so ask the subtarget.
+  case AMDGPU::V_ASHRREV_I32_e64_dpp:
+  case AMDGPU::V_ASHRREV_I16_e64_dpp:
+  case AMDGPU::V_ASHRREV_I16_t16_e64_dpp:
+  case AMDGPU::V_ASHRREV_I16_fake16_e64_dpp:
+  case AMDGPU::V_LSHLREV_B32_e64_dpp:
+  case AMDGPU::V_LSHLREV_B16_e64_dpp:
+  case AMDGPU::V_LSHLREV_B16_t16_e64_dpp:
+  case AMDGPU::V_LSHLREV_B16_fake16_e64_dpp:
+  case AMDGPU::V_LSHRREV_B32_e64_dpp:
+  case AMDGPU::V_LSHRREV_B16_e64_dpp:
+  case AMDGPU::V_LSHRREV_B16_t16_e64_dpp:
+  case AMDGPU::V_LSHRREV_B16_fake16_e64_dpp:
+    return isGFX13Plus(STI);
+
+  default:
+    return false;
+  }
+}
+
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F32_gfx1250:
