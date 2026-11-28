@@ -73,6 +73,9 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
   ConstraintMgr = (*CreateCMgr)(*this, ExprEng);
 }
 
+// Out-of-line so unique_ptr members can use forward-declared types.
+ProgramStateManager::~ProgramStateManager() = default;
+
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
     ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
 

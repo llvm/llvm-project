@@ -562,6 +562,8 @@ public:
                  llvm::BumpPtrAllocator& alloc,
                  ExprEngine *expreng);
 
+  ~ProgramStateManager();
+
   ProgramStateRef getInitialState(const StackFrame *InitSF);
 
   ASTContext &getContext() { return svalBuilder->getContext(); }
