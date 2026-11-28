@@ -5423,6 +5423,12 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   // Operands evaluated outside omp.parallel are destroyed once, after it.
   lower::StatementContext parallelStmtCtx;
 
+  // DISTRIBUTE encloses PARALLEL in the source, so its clauses are evaluated
+  // before omp.parallel, even though omp.distribute is nested inside it.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, parallelStmtCtx,
+                       distributeItem->clauses, loc, distributeClauseOps);
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5446,10 +5452,6 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
                     /*isComposite=*/true);
 
   // Clause processing.
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
-
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
   llvm::SmallVector<const semantics::Symbol *> wsloopLinearSyms;
@@ -5504,6 +5506,12 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   // Operands evaluated outside omp.parallel are destroyed once, after it.
   lower::StatementContext parallelStmtCtx;
 
+  // DISTRIBUTE encloses PARALLEL in the source, so its clauses are evaluated
+  // before omp.parallel, even though omp.distribute is nested inside it.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, parallelStmtCtx,
+                       distributeItem->clauses, loc, distributeClauseOps);
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5530,10 +5538,6 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   // Use a shared cache so that both wsloop and simd produce the same SSA
   // values for array/box reduction variables. See genCompositeDoSimd.
   llvm::DenseMap<const semantics::Symbol *, mlir::Value> reductionVarCache;
-
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
