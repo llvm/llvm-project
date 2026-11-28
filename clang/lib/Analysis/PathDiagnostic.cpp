@@ -526,6 +526,9 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
   case CFGElement::CXXRecordTypedCall:
     return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(), SM,
                                   CallerSF);
+  case CFGElement::CleanupFunction:
+    return PathDiagnosticLocation(
+        Source.castAs<CFGCleanupFunction>().getPseudoCallExpr(), SM, CallerSF);
   case CFGElement::Initializer: {
     const CFGInitializer &Init = Source.castAs<CFGInitializer>();
     return PathDiagnosticLocation(Init.getInitializer()->getInit(), SM,
@@ -561,7 +564,6 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
   }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:
-  case CFGElement::CleanupFunction:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::FullExprCleanup:
