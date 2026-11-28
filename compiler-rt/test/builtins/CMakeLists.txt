@@ -181,6 +181,10 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     endforeach()
   endforeach()
 
+  if(COMPILER_RT_HAS_ASM_VARIANT_PCS OR COMPILER_RT_HAS_${arch}_ASM_VARIANT_PCS OR APPLE OR WIN32)
+    list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_aarch64_preservemost")
+  endif()
+
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
   configure_lit_site_cfg(
