@@ -242,8 +242,9 @@ MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
                                     MutableArrayRef<DynamicAPInt> dividend,
                                     DynamicAPInt &divisor);
 
-/// The following overload using int64_t is required for a callsite in
-/// AffineStructures.h.
+/// Fixed-width overload. Returns ReprKind::None if no representation is found
+/// or the normalized dividend or divisor cannot be represented in the output
+/// types. On failure, both output parameters are left unchanged.
 MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
                                     ArrayRef<bool> foundRepr, unsigned pos,
                                     SmallVector<int64_t, 8> &dividend,
