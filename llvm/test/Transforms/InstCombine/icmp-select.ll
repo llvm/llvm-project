@@ -956,6 +956,98 @@ end:
   ret i1 %cmp
 }
 
+define i1 @icmp_eq_select_const_zext(i1 %cond, i8 %x) {
+; CHECK-LABEL: @icmp_eq_select_const_zext(
+; CHECK-NEXT:    [[SEL_NARROW:%.*]] = select i1 [[COND:%.*]], i8 43, i8 37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SEL_NARROW]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sel = select i1 %cond, i32 43, i32 37
+  %ext = zext i8 %x to i32
+  %cmp = icmp eq i32 %sel, %ext
+  ret i1 %cmp
+}
+
+define i1 @icmp_slt_zext_select_const(i1 %cond, i8 %x) {
+; CHECK-LABEL: @icmp_slt_zext_select_const(
+; CHECK-NEXT:    [[SEL_NARROW:%.*]] = select i1 [[COND:%.*]], i8 43, i8 37
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[EXT]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL_NARROW]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sel = select i1 %cond, i32 43, i32 37
+  %ext = zext i8 %x to i32
+  call void @use(i32 %ext)
+  %cmp = icmp slt i32 %ext, %sel
+  ret i1 %cmp
+}
+
+define i1 @icmp_slt_sext_select_const(i1 %cond, i8 %x) {
+; CHECK-LABEL: @icmp_slt_sext_select_const(
+; CHECK-NEXT:    [[SEL_NARROW:%.*]] = select i1 [[COND:%.*]], i8 -5, i8 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL_NARROW]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sel = select i1 %cond, i32 -5, i32 10
+  %ext = sext i8 %x to i32
+  %cmp = icmp slt i32 %ext, %sel
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_sext_select_const(i1 %cond, i8 %x) {
+; CHECK-LABEL: @icmp_ult_sext_select_const(
+; CHECK-NEXT:    [[SEL_NARROW:%.*]] = select i1 [[COND:%.*]], i8 -5, i8 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL_NARROW]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sel = select i1 %cond, i32 -5, i32 10
+  %ext = sext i8 %x to i32
+  %cmp = icmp ult i32 %ext, %sel
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_eq_select_const_zext_vec(<2 x i1> %cond, <2 x i8> %x) {
+; CHECK-LABEL: @icmp_eq_select_const_zext_vec(
+; CHECK-NEXT:    [[SEL_NARROW:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i8> <i8 43, i8 poison>, <2 x i8> <i8 37, i8 92>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SEL_NARROW]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sel = select <2 x i1> %cond, <2 x i32> <i32 43, i32 poison>, <2 x i32> <i32 37, i32 92>
+  %ext = zext <2 x i8> %x to <2 x i32>
+  %cmp = icmp eq <2 x i32> %sel, %ext
+  ret <2 x i1> %cmp
+}
+
+define i1 @icmp_eq_select_const_zext_multiuse_sel_neg(i1 %cond, i8 %x) {
+; CHECK-LABEL: @icmp_eq_select_const_zext_multiuse_sel_neg(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 43, i32 37
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], [[EXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sel = select i1 %cond, i32 43, i32 37
+  call void @use(i32 %sel)
+  %ext = zext i8 %x to i32
+  %cmp = icmp eq i32 %sel, %ext
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_eq_select_const_zext_vec_out_of_range_neg(<2 x i1> %cond, <2 x i8> %x) {
+; CHECK-LABEL: @icmp_eq_select_const_zext_vec_out_of_range_neg(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 43, i32 300>, <2 x i32> <i32 37, i32 92>
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SEL]], [[EXT]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sel = select <2 x i1> %cond, <2 x i32> <i32 43, i32 300>, <2 x i32> <i32 37, i32 92>
+  %ext = zext <2 x i8> %x to <2 x i32>
+  %cmp = icmp eq <2 x i32> %sel, %ext
+  ret <2 x i1> %cmp
+}
+
+
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 7}
