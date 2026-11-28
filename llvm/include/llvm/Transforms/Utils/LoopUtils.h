@@ -216,10 +216,11 @@ LLVM_ABI bool isAlmostDeadIV(PHINode *IV, BasicBlock *LatchBlock, Value *Cond);
 LLVM_ABI void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                              LoopInfo *LI, MemorySSA *MSSA = nullptr);
 
-/// Remove the backedge of the specified loop.  Handles loop nests and general
+/// Remove the backedge of the specified loop. Handles loop nests and general
 /// loop structures subject to the precondition that the loop has no parent
-/// loop and has a single latch block.  Preserves all listed analyses.
-LLVM_ABI void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+/// loop and has a single latch block. Preserves all listed analyses. Returns
+/// false if the backedge could not be removed.
+LLVM_ABI bool breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
                                 LoopInfo &LI, MemorySSA *MSSA);
 
 /// Try to promote memory values to scalars by sinking stores out of

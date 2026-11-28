@@ -743,15 +743,12 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   }
 }
 
-void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+bool llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
                              LoopInfo &LI, MemorySSA *MSSA) {
   auto *Latch = L->getLoopLatch();
   assert(Latch && "multiple latches not yet supported");
   auto *Header = L->getHeader();
   Loop *OutermostLoop = L->getOutermostLoop();
-
-  SE.forgetLoop(L);
-  SE.forgetBlockAndLoopDispositions();
 
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSA)
@@ -759,11 +756,11 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 
   // Update the CFG and domtree.  We chose to special case a couple of
   // of common cases for code quality and test readability reasons.
-  [&]() -> void {
+  bool BackedgeBroken = [&]() -> bool {
     if (auto *BI = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
       DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
       (void)changeToUnreachable(BI, /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
-      return;
+      return true;
     }
     if (auto *BI = dyn_cast<CondBrInst>(Latch->getTerminator())) {
       // Conditional latch/exit - note that latch can be shared by inner
@@ -790,7 +787,7 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
         DTU.applyUpdates({{DominatorTree::Delete, Latch, Header}});
         if (MSSA)
           MSSAU->applyUpdates({{DominatorTree::Delete, Latch, Header}}, DT);
-        return;
+        return true;
       }
     }
 
@@ -799,10 +796,20 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     // termiantors.
     auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
 
+    if (!BackedgeBB)
+      return false;
+
     DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
     (void)changeToUnreachable(BackedgeBB->getTerminator(),
                               /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
+    return true;
   }();
+
+  if (!BackedgeBroken)
+    return false;
+
+  SE.forgetLoop(L);
+  SE.forgetBlockAndLoopDispositions();
 
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
@@ -815,6 +822,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // loop which might have a had a block removed.
   if (OutermostLoop != L)
     formLCSSARecursively(*OutermostLoop, DT, &LI, &SE);
+
+  return true;
 }
 
 
