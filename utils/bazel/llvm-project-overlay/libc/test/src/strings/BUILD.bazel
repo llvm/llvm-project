@@ -25,10 +25,16 @@ libc_test(
     name = "bcmp_test",
     srcs = ["bcmp_test.cpp"],
     deps = [
+        "//libc/src/__support/macros/properties:os",
         "//libc/src/strings:bcmp",
         "//libc/test/UnitTest:test_logger",
         "//libc/test/src/string:memory_check_utils",
-    ],
+    ] + select({
+        "//libc:full_build": [],
+        "//conditions:default": [
+            "//libc/test/src/string:protected_pages",
+        ],
+    }),
 )
 
 libc_test(

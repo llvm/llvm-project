@@ -13,7 +13,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/endian_internal.h"
+#include "src/__support/macros/attributes.h" // LIBC_ALWAYS_INLINE, LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_generic.h" // generic::splat
 #include "src/string/memory_utils/utils.h"      // Ptr, CPtr
@@ -121,42 +124,82 @@ inline_memset_aligned_access_64bit(Ptr dst, uint8_t value, size_t count) {
 // bcmp
 ///////////////////////////////////////////////////////////////////////////////
 
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_aligned_access_32bit(CPtr p1, CPtr p2, size_t count) {
-  constexpr size_t kAlign = sizeof(uint32_t);
-  if (count <= 2 * kAlign)
-    return inline_bcmp_byte_per_byte(p1, p2, count);
-  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
-  if (auto value = inline_bcmp_byte_per_byte(p1, p2, bytes_to_p1_align))
-    return value;
-  size_t offset = bytes_to_p1_align;
-  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint32_t a = load32_aligned<uint32_t>(p1, offset);
-    uint32_t b = load32_aligned(p2, offset, p2_alignment);
-    if (a != b)
-      return BcmpReturnType::nonzero();
+template <typename Word>
+LIBC_ALWAYS_INLINE BcmpReturnType inline_bcmp_aligned_access(CPtr p1, CPtr p2,
+                                                             size_t count) {
+  constexpr size_t ALIGN = sizeof(Word);
+  if (count == 0)
+    return BcmpReturnType::zero();
+  if (count <= 3)
+    return cpp::to_integer<uint32_t>((p1[0] ^ p2[0]) |
+                                     (p1[count - 1] ^ p2[count - 1]) |
+                                     (p1[count >> 1] ^ p2[count >> 1]));
+  if (count >= 2 * ALIGN) {
+    size_t lead = static_cast<size_t>(distance_to_align_up<ALIGN>(p1));
+    const size_t p2_align =
+        (static_cast<size_t>(distance_to_align_down<ALIGN>(p2)) + lead) &
+        (ALIGN - 1);
+    // When `p1` and `p2` are not mutually aligned, consume one extra leading
+    // word byte-by-byte so `p1` stays aligned and `p2_base = p2 - p2_align`
+    // lies strictly inside the caller's buffer (never reading outside
+    // `[0, count)`).
+    if (p2_align != 0)
+      lead += ALIGN;
+    if (lead != 0) {
+      if (auto value = inline_bcmp_byte_per_byte(p1, p2, lead))
+        return value;
+      p1 += lead;
+      p2 += lead;
+      count -= lead;
+    }
+    auto load_word = [](CPtr p) -> Word {
+      return load_unaligned<Word>(assume_aligned<ALIGN>(p));
+    };
+    if (p2_align == 0) {
+      if constexpr (ALIGN == 8) {
+        LIBC_LOOP_NOUNROLL
+        for (; count >= 32; p1 += 32, p2 += 32, count -= 32) {
+          if ((load_word(p1) ^ load_word(p2)) |
+              (load_word(p1 + 8) ^ load_word(p2 + 8)) |
+              (load_word(p1 + 16) ^ load_word(p2 + 16)) |
+              (load_word(p1 + 24) ^ load_word(p2 + 24)))
+            return BcmpReturnType::nonzero();
+        }
+      }
+      LIBC_LOOP_NOUNROLL
+      for (; count >= ALIGN; p1 += ALIGN, p2 += ALIGN, count -= ALIGN) {
+        if (load_word(p1) != load_word(p2))
+          return BcmpReturnType::nonzero();
+      }
+    } else if (count >= 2 * ALIGN) {
+      CPtr p2_base = p2 - p2_align;
+      const unsigned sh_lo = static_cast<unsigned>(p2_align * 8);
+      const unsigned sh_hi = static_cast<unsigned>((ALIGN * 8) - sh_lo);
+      Word prev = load_word(p2_base);
+      LIBC_LOOP_NOUNROLL
+      for (; count >= 2 * ALIGN;
+           p1 += ALIGN, p2_base += ALIGN, count -= ALIGN) {
+        const Word next = load_word(p2_base + ALIGN);
+        const Word w2 = Endian::IS_LITTLE ? (prev >> sh_lo) | (next << sh_hi)
+                                          : (prev << sh_lo) | (next >> sh_hi);
+        if (load_word(p1) != w2)
+          return BcmpReturnType::nonzero();
+        prev = next;
+      }
+      p2 = p2_base + p2_align;
+    }
   }
-  return inline_bcmp_byte_per_byte(p1, p2, count, offset);
+  return inline_bcmp_byte_per_byte(p1, p2, count);
 }
 
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
+[[maybe_unused]] LIBC_ALWAYS_INLINE BcmpReturnType
+inline_bcmp_aligned_access_32bit(CPtr p1, CPtr p2, size_t count) {
+  return inline_bcmp_aligned_access<uint32_t>(p1, p2, count);
+}
+
+[[maybe_unused]] LIBC_ALWAYS_INLINE BcmpReturnType
 inline_bcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
-  constexpr size_t kAlign = sizeof(uint64_t);
-  if (count <= 2 * kAlign)
-    return inline_bcmp_byte_per_byte(p1, p2, count);
-  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
-  if (auto value = inline_bcmp_byte_per_byte(p1, p2, bytes_to_p1_align))
-    return value;
-  size_t offset = bytes_to_p1_align;
-  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint64_t a = load64_aligned<uint64_t>(p1, offset);
-    uint64_t b = load64_aligned(p2, offset, p2_alignment);
-    if (a != b)
-      return BcmpReturnType::nonzero();
-  }
-  return inline_bcmp_byte_per_byte(p1, p2, count, offset);
+  return inline_bcmp_aligned_access<uint64_t>(p1, p2, count);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

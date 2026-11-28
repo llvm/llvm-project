@@ -36,6 +36,7 @@ libc_support_library(
         "arm/inline_memcpy.h",
         "arm/inline_memset.h",
         "generic/aligned_access.h",
+        "generic/bcmp_utils.h",
         "generic/byte_per_byte.h",
         "generic/inline_strlen.h",
         "inline_bcmp.h",

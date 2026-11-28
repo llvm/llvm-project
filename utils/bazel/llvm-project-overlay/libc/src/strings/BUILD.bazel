@@ -55,7 +55,9 @@ libc_function(
     hdrs = ["bcmp.h"],
     deps = [
         "//libc/src/__support:common",
+        "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
         "//libc/src/string/memory_utils",
     ],
 )
