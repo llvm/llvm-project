@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -65,6 +66,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   if (!RD.getDeclName().isIdentifier())
     return false;
 
+  // partially removeable with feature
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
       return N->isStdNamespace() ||
@@ -72,6 +74,8 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     return false;
   }
 
+  // this code could be removed if base::Optional and folly::Optional used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
@@ -79,17 +83,24 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
+  // this code could be removed if Optional_Base used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional_Base") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
+  // this code could be removed if NullableValue used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
+
+  if (RD.hasAttr<AnalyzeAsClassAttr>())
+    return true;
 
   return false;
 }
@@ -228,6 +239,40 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
+static bool hasAnalyzeAsMethodNameHelper(const NamedDecl &Node,
+                                         std::string MethodName,
+                                         std::string Label) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
+      StringRef AttrValue = Attr->getMethodName();
+      StringRef LabelValue = Attr->getLabel();
+      return (AttrValue == MethodName && LabelValue == Label);
+    }
+  }
+  return false;
+}
+
+AST_MATCHER_P2(NamedDecl, hasAnalyzeAsMethodNameAndLabel, std::string,
+               MethodName, std::string, Label) {
+  return hasAnalyzeAsMethodNameHelper(Node, MethodName, Label);
+}
+
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+  return hasAnalyzeAsMethodNameHelper(Node, MethodName, "");
+}
+
+auto isOptionalOperatorCallWithLabelMatcher(std::string operatorName,
+                                            std::string label) {
+  return cxxOperatorCallExpr(callee(
+      cxxMethodDecl(hasAnalyzeAsMethodNameAndLabel(operatorName, label))));
+}
+
+auto isOptionalConstructorCallWithLabelMatcher(std::string operatorName,
+                                            std::string label) {
+  return cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+    hasAnalyzeAsMethodNameAndLabel(operatorName, label))));
+}
+
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
@@ -252,6 +297,7 @@ auto isMakeOptionalCall() {
       hasOptionalOrDerivedType());
 }
 
+// partially removeable with feature
 auto nulloptTypeDecl() {
   return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
                               "base::nullopt_t", "folly::None",
@@ -260,6 +306,7 @@ auto nulloptTypeDecl() {
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
+// partially removeable with feature
 auto inPlaceClass() {
   return namedDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
                               "base::in_place_t", "folly::in_place_t",
@@ -364,7 +411,7 @@ auto isValueOrStringEmptyCall() {
       callee(cxxMethodDecl(hasName("empty"))),
       onImplicitObjectArgument(ignoringImplicit(
           cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
-                            callee(cxxMethodDecl(hasName("value_or"),
+                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyzeAsMethodName("value_or")),
                                                  ofClass(optionalClass()))),
                             hasArgument(0, stringLiteral(hasSize(0))))
               .bind(ValueOrCallID))));
@@ -456,6 +503,20 @@ void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
   Env.setValue(locForHasValue(OptionalLoc), HasValueVal);
 }
 
+static void setHasValueHelper(const CXXMemberCallExpr *E,
+                              LatticeTransferState &State, bool objectValue) {
+  if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env)) {
+    setHasValue(*Loc, State.Env.getBoolLiteralValue(objectValue), State.Env);
+  }
+}
+
+auto transferSetHasValue(bool Value) {
+  return [Value](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+                 LatticeTransferState &State) {
+    setHasValueHelper(E, State, Value);
+  };
+}
+
 /// Returns the symbolic value that represents the "has_value" property of the
 /// optional at `OptionalLoc`. Returns null if `OptionalLoc` is null.
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
@@ -471,7 +532,22 @@ BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
 }
 
 QualType valueTypeFromOptionalDecl(const CXXRecordDecl &RD) {
+
   auto &CTSD = cast<ClassTemplateSpecializationDecl>(RD);
+
+  // handle curiously recurring template pattern
+  if (RD.hasDefinition()) {
+    IdentifierInfo &id = RD.getASTContext().Idents.get("value_type");
+    DeclContextLookupResult Lookup = RD.lookup(&id);
+    if (!Lookup.empty()) {
+      auto *TypeND = dyn_cast<TypedefNameDecl>(Lookup.front());
+      if (TypeND) {
+        return TypeND->getUnderlyingType();
+      }
+    }
+  }
+
+  // if this is a regular template with a type
   return CTSD.getTemplateArgs()[0].getAsType();
 }
 
@@ -870,6 +946,18 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
   setHasValue(*Loc2, *BoolVal1, Env);
 }
 
+void transferObjectValue(const CXXMemberCallExpr *E,
+                         const MatchFinder::MatchResult &,
+                         LatticeTransferState &State) {
+  assert(E->getNumArgs() == 1);
+  auto *OtherLoc = State.Env.get<RecordStorageLocation>(*E->getArg(0));
+  auto HasValue = getHasValue(State.Env, OtherLoc);
+  if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env)) {
+    setHasValue(*Loc, HasValue ? *HasValue : State.Env.makeAtomicBoolValue(),
+                State.Env);
+  }
+}
+
 void transferSwapCall(const CXXMemberCallExpr *E,
                       const MatchFinder::MatchResult &,
                       LatticeTransferState &State) {
@@ -1013,8 +1101,9 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithNameMatcher(hasName("value"),
-                                             IgnorableOptional);
+  return isOptionalMemberCallWithNameMatcher(
+      anyOf(hasName("value"), hasAnalyzeAsMethodName("value")),
+      IgnorableOptional);
 }
 
 StatementMatcher
@@ -1033,6 +1122,13 @@ auto buildTransferMatchSwitch() {
 
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "value"),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(true));
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -1041,6 +1137,14 @@ auto buildTransferMatchSwitch() {
           })
       // optional::optional(nullopt_t)
       .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "null"),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(false));
+          }
+        )
+      .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -1048,6 +1152,9 @@ auto buildTransferMatchSwitch() {
                                    State.Env.getBoolLiteralValue(false));
           })
       // optional::optional (value/conversion)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "object"),
+          transferValueOrConversionConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
       // optional::optional (allocator-extended value/conversion)
@@ -1056,6 +1163,21 @@ auto buildTransferMatchSwitch() {
           transferAllocatorExtendedValueOrConversionConstructor)
 
       // optional::operator=
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isOptionalOperatorCallWithLabelMatcher("operator=", "null"),
+          transferNulloptAssignment)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "null")),
+          transferSetHasValue(false))
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "value")),
+          transferSetHasValue(true))
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "object")),
+          transferObjectValue)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
           transferValueOrConversionAssignment)
@@ -1089,9 +1211,12 @@ auto buildTransferMatchSwitch() {
       // optional::has_value, optional::hasValue
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
+      // "hasValue" could be removed if folly::Optional used
+      // [[clang::analyze_as_method("has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
-              hasAnyName("has_value", "hasValue")),
+              anyOf(hasAnyName("has_value", "hasValue"),
+                    hasAnalyzeAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1099,15 +1224,18 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
-      // NullableValue::isNull
-      // Only NullableValue has isNull
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on
+      // isNull() *NYI NullableValue::isNull Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
-      // NullableValue::makeValue, NullableValue::makeValueInplace
-      // Only NullableValue has these methods, but this
-      // will also pass for other types
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_method("emplace")]] on makeValue() and
+      // makeValueInplace() NullableValue::makeValue,
+      // NullableValue::makeValueInplace Only NullableValue has these methods,
+      // but this will also pass for other types
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               hasAnyName("makeValue", "makeValueInplace")),
@@ -1121,7 +1249,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("emplace")),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1132,7 +1261,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("reset")),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1144,7 +1274,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("swap")),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap
