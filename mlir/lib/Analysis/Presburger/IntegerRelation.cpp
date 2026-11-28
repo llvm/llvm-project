@@ -333,7 +333,10 @@ SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMax() const {
     IntMatrix mat = flippedPiece.output.getOutputMatrix();
     for (unsigned i = 0, e = mat.getNumRows(); i < e; i++)
       mat.negateRow(i);
-    MultiAffineFunction maf(flippedPiece.output.getSpace(), mat);
+    // Negating the output rows leaves the divisions they refer to unchanged,
+    // so the division representations must be carried over.
+    MultiAffineFunction maf(flippedPiece.output.getSpace(), mat,
+                            flippedPiece.output.getDivs());
     PWMAFunction::Piece piece = {flippedPiece.domain, maf};
     symbolicIntegerLexMax.lexopt.addPiece(piece);
   }
