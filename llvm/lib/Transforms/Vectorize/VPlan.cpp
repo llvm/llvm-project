@@ -150,6 +150,10 @@ Type *VPValue::getScalarType() const {
   llvm_unreachable("Unhandled VPValue subclass");
 }
 
+Type *VPValue::getWideType(ElementCount VF) const {
+  return toVectorizedTy(getScalarType(), VF);
+}
+
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
@@ -1880,7 +1884,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
-    Tys.push_back(toVectorizedTy(Op->getScalarType(), VF));
+    Tys.push_back(Op->getWideType(VF));
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
