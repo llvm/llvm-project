@@ -98,7 +98,6 @@ void j(void) {
   struct t::u t;
 }
 
-#if 0
 template <typename T>
 struct v {
   static T i;
@@ -109,5 +108,12 @@ T v<T>::i = ^{ static T i = T(); return i; }();
 
 template class v<char>;
 template class v<int>;
-#endif
 
+// CHECK-X86-DAG: @"?i@?$v@D@@2DA" = weak_odr dso_local global i8 0
+// CHECK-X86-DAG: @"?i@?1??_block_invoke_1@0?$v@D@@YAXPAU__block_literal_1@@@Z@4DA" = linkonce_odr dso_local global i8 0
+// CHECK-X86-DAG: @"?i@?$v@H@@2HA" = weak_odr dso_local global i32 0
+// CHECK-X86-DAG: @"?i@?1??_block_invoke_1@0?$v@H@@YAXPAU__block_literal_1@@@Z@4HA" = linkonce_odr dso_local global i32 0
+// CHECK-X64-DAG: @"?i@?$v@D@@2DA" = weak_odr dso_local global i8 0
+// CHECK-X64-DAG: @"?i@?1??_block_invoke_1@0?$v@D@@YAXPEAU__block_literal_1@@@Z@4DA" = linkonce_odr dso_local global i8 0
+// CHECK-X64-DAG: @"?i@?$v@H@@2HA" = weak_odr dso_local global i32 0
+// CHECK-X64-DAG: @"?i@?1??_block_invoke_1@0?$v@H@@YAXPEAU__block_literal_1@@@Z@4HA" = linkonce_odr dso_local global i32 0
