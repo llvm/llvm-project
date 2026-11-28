@@ -139,3 +139,74 @@ TEST_F(SBCommandInterpreterTest, MultiWordCommand) {
     EXPECT_STREQ(result.GetOutput(), "It worked again\n");
   }
 }
+
+TEST_F(SBCommandInterpreterTest, InvalidArguments) {
+  SBCommandInterpreter interp = debugger.GetCommandInterpreter();
+  const char *line = "breakpoint ";
+  const char *end = line + strlen(line);
+  SBStringList matches, descriptions;
+
+  EXPECT_EQ(interp.HandleCompletion(nullptr, 0, /*match_start_point=*/0,
+                                    /*max_return_elements=*/-1, matches),
+            0);
+  EXPECT_EQ(interp.HandleCompletion(nullptr, nullptr, nullptr,
+                                    /*match_start_point=*/0,
+                                    /*max_return_elements=*/-1, matches),
+            0);
+  EXPECT_EQ(interp.HandleCompletion(line, nullptr, end,
+                                    /*match_start_point=*/0,
+                                    /*max_return_elements=*/-1, matches),
+            0);
+  EXPECT_EQ(interp.HandleCompletion(line, end, nullptr,
+                                    /*match_start_point=*/0,
+                                    /*max_return_elements=*/-1, matches),
+            0);
+
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                nullptr, 0, /*match_start_point=*/0,
+                /*max_return_elements=*/-1, matches, descriptions),
+            0);
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                nullptr, nullptr, nullptr, /*match_start_point=*/0,
+                /*max_return_elements=*/-1, matches, descriptions),
+            0);
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                line, nullptr, end, /*match_start_point=*/0,
+                /*max_return_elements=*/-1, matches, descriptions),
+            0);
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                line, end, nullptr, /*match_start_point=*/0,
+                /*max_return_elements=*/-1, matches, descriptions),
+            0);
+
+  EXPECT_EQ(matches.GetSize(), 0u);
+  EXPECT_EQ(descriptions.GetSize(), 0u);
+}
+
+TEST_F(SBCommandInterpreterTest, ExecutionContextInvalidArguments) {
+  SBCommandInterpreter interp = debugger.GetCommandInterpreter();
+  SBExecutionContext exe_ctx;
+  const char *line = "breakpoint ";
+  SBStringList matches, descriptions;
+
+  // The cursor is after the end of the line.
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                line, strlen(line) + 1, /*max_return_elements=*/-1, exe_ctx,
+                matches, descriptions),
+            0);
+
+  EXPECT_EQ(interp.HandleCompletionWithDescriptions(
+                nullptr, 0, /*max_return_elements=*/-1, exe_ctx, matches,
+                descriptions),
+            0);
+
+  // An invalid interpreter.
+  SBCommandInterpreter invalid;
+  EXPECT_EQ(invalid.HandleCompletionWithDescriptions(
+                line, strlen(line), /*max_return_elements=*/-1, exe_ctx,
+                matches, descriptions),
+            0);
+
+  EXPECT_EQ(matches.GetSize(), 0u);
+  EXPECT_EQ(descriptions.GetSize(), 0u);
+}
