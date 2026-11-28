@@ -22,7 +22,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min> = phi (smin) ir<%start>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.loc> = phi (find-iv) ir<poison>, vp<[[VP7:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.loc> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.split:
@@ -48,10 +48,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (smin) vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<[[VP6]]>, vp<[[VP9]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP10]]>, vp<[[VP7]]>, ir<-1>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (umin) vp<[[VP11]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP9]]>, ir<%start>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, ir<0>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP10]]>, vp<[[VP7]]>, ir<9223372036854775807>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (smin) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp ne vp<[[VP12]]>, ir<-9223372036854775808>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, vp<[[VP12]]>, ir<0>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-lane vp<[[VP15]]>
 ; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-part vp<[[VP14]]>

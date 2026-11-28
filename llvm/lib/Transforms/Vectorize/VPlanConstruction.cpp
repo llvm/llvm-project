@@ -2177,6 +2177,26 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // extract.last.active intrinsic.
     auto *RdxResult =
         findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeSelect);
+    // Skip FindLast reductions already handled by handleMultiUseReductions.
+    if (!RdxResult) {
+      auto *ExtractR =
+          findSingleUser<VPInstruction::ExtractLane>(BackedgeSelect);
+      VPValue *MaskCmpLHS, *MaskCmpRHS;
+      if (ExtractR &&
+          match(ExtractR,
+                m_ExtractLane(m_FirstActiveLane(m_SpecificICmp(
+                                  ICmpInst::ICMP_EQ, m_VPValue(MaskCmpLHS),
+                                  m_VPValue(MaskCmpRHS))),
+                              m_Specific(BackedgeSelect)))) {
+        auto *FindIVSelect = dyn_cast<VPInstruction>(MaskCmpRHS);
+        if (FindIVSelect &&
+            matchFindIVResult(
+                FindIVSelect,
+                m_Select(m_VPValue(), m_Specific(MaskCmpLHS), m_VPValue()),
+                m_ZeroInt()))
+          continue;
+      }
+    }
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
@@ -2228,11 +2248,6 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 /// return the smallest index of the FindLastIV reduction result using UMin,
 /// unless \p MinOrMaxResult equals the start value of its MinOrMax reduction.
 /// In that case, return the start value of the FindLastIV reduction instead.
-/// If \p WideIV is not canonical, a new canonical wide IV is added, and the
-/// final result is scaled back to the non-canonical \p WideIV.
-/// The final value of the FindLastIV reduction is originally computed using
-/// \p FindIVSelect, \p FindIVCmp, and \p FindIVRdxResult, which are replaced
-/// and removed.
 /// Returns true if the pattern was handled successfully, false otherwise.
 static bool handleFirstArgMinOrMax(
     VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
@@ -2272,38 +2287,24 @@ static bool handleFirstArgMinOrMax(
       FindIVSelectR->getOperand(2) != WideIV)
     return false;
 
-  // If the original wide IV is not canonical, create a new one. The canonical
-  // wide IV is guaranteed to not wrap for all lanes that are active in the
-  // vector loop.
-  if (!WideIV->isCanonical()) {
-    VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
-    VPIRValue *One = Plan.getConstantInt(Ty, 1);
-    auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
-        nullptr, Zero, One, WideIV->getVFValue(),
-        WideIV->getInductionDescriptor(),
-        VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
-        WideIV->getDebugLoc());
-    WidenCanIV->insertBefore(WideIV);
-
-    // Update the select to use the wide canonical IV.
-    FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
-                              WidenCanIV);
-  }
-  FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
+  RecurKind FindIVKind = FindIVRdxResult->getRecurKind();
+  if (FindIVKind != RecurKind::SMax && FindIVKind != RecurKind::UMax)
+    return false;
+  RecurKind NewFindIVKind =
+      FindIVKind == RecurKind::SMax ? RecurKind::SMin : RecurKind::UMin;
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:
-  //  1. Find the first canonical indices corresponding to partial min/max
-  //     values, using loop reductions.
-  //  2. Find which of the partial min/max values are equal to the overall
+  //  1. Find which of the partial min/max values are equal to the overall
   //     min/max value.
-  //  3. Select among the canonical indices those corresponding to the overall
+  //  2. Select among the index values those corresponding to the overall
   //     min/max value.
-  //  4. Find the first canonical index of overall min/max and scale it back to
-  //     the original IV using VPDerivedIVRecipe.
-  //  5. If the overall min/max equals the starting min/max, the condition in
-  //     the loop was always false, due to being strict; return the start value
-  //     of FindLastIVPhiR in that case.
+  //  3. Find the min index values of overall min/max. Using smin or umin
+  //     depends on whether the original FindIV reduction result uses smax or
+  //     umax.
+  //  4. Replace original FindIV max reduction result with the new min reduction
+  //     result. The sentinel-handling icmp-select code can be reused rather
+  //     than removed.
   //
   // For example, we transforms two independent reduction result computations
   // for
@@ -2334,57 +2335,36 @@ static bool handleFirstArgMinOrMax(
   //  vp<%reduced.min> = compute-reduction-result (umin) ir<%min.val.next>
   //  vp<%reduced.mins.mask> = icmp eq ir<%min.val.next>, vp<%reduced.min>
   //  vp<%idxs2reduce> = select vp<%reduced.mins.mask>, ir<%min.idx.next>,
-  //                            ir<MaxUInt>
-  //  vp<%reduced.idx> = compute-reduction-result (umin) vp<%idxs2reduce>
-  //  vp<%scaled.idx> = DERIVED-IV ir<20> + vp<%reduced.idx> * ir<1>
-  //  vp<%always.false> = icmp eq vp<%reduced.min>, ir<100>
-  //  vp<%final.idx> = select vp<%always.false>, ir<10>,
-  //                          vp<%scaled.idx>
+  //                            ir<MaxSInt>
+  //  vp<%reduced.idx> = compute-reduction-result (smin) vp<%idxs2reduce>
+  //  vp<%cmp> = icmp ne vp<%reduced.idx>, ir<sentinel.min.start>
+  //  vp<%find.iv.result> = select vp<%cmp>, vp<%reduced.idx>, ir<10>
 
   VPBuilder Builder(FindIVRdxResult);
   VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
   auto *FinalMinOrMaxCmp =
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
   VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
-  VPValue *MaxIV =
-      Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
+  VPValue *MaxIV = Plan.getConstantInt(
+      NewFindIVKind == RecurKind::SMin
+          ? APInt::getSignedMaxValue(Ty->getIntegerBitWidth())
+          : APInt::getMaxValue(Ty->getIntegerBitWidth()));
   auto *FinalIVSelect =
       Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
-  VPIRFlags RdxFlags(RecurKind::UMin, false, false, FastMathFlags());
+  VPIRFlags RdxFlags(NewFindIVKind, false, false, FastMathFlags());
   VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
       VPInstruction::ComputeReductionResult, {FinalIVSelect}, RdxFlags,
       FindIVRdxResult->getDebugLoc());
-
-  // If we used a new wide canonical IV convert the reduction result back to the
-  // original IV scale before the final select.
-  if (!WideIV->isCanonical()) {
-    auto *DerivedIVRecipe = new VPDerivedIVRecipe(
-        InductionDescriptor::IK_IntInduction,
-        nullptr, // No FPBinOp for integer induction
-        WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
-    DerivedIVRecipe->insertBefore(Builder.getRecipeAtInsertPoint());
-    FinalCanIV = DerivedIVRecipe;
-  }
-
-  // If the final min/max value matches its start value, the condition in the
-  // loop was always false, i.e. no induction value has been selected. If that's
-  // the case, set the result of the IV reduction to its start value.
-  VPValue *AlwaysFalse = Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxResult,
-                                            MinOrMaxPhiR->getStartValue());
-  VPValue *FinalIV = Builder.createSelect(
-      AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
-  FindIVSelect->replaceAllUsesWith(FinalIV);
-
-  // Erase the old FindIV result pattern which is now dead.
-  FindIVSelect->eraseFromParent();
-  FindIVCmp->eraseFromParent();
+  FindIVRdxResult->replaceAllUsesWith(FinalCanIV);
   FindIVRdxResult->eraseFromParent();
   return true;
 }
 
 bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
                                                OptimizationRemarkEmitter *ORE,
-                                               Loop *TheLoop) {
+                                               Loop *TheLoop,
+                                               PredicatedScalarEvolution &PSE) {
+  VPWidenIntOrFpInductionRecipe *WidenIterIV = nullptr;
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinOrMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
@@ -2481,34 +2461,90 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
-    // Cmp must be used by the select of a FindLastIV chain.
+    // Cmp must be used by the select of a FindLast chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
-    VPValue *IVOp, *FindIV;
+    VPValue *IVOp, *Find;
     if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
         !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(Find))))
       return false;
 
-    if (!isa<VPReductionPHIRecipe>(FindIV)) {
-      std::swap(FindIV, IVOp);
+    if (!isa<VPReductionPHIRecipe>(Find)) {
+      std::swap(Find, IVOp);
       Pred = CmpInst::getInversePredicate(Pred);
     }
 
-    auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
-                           FindIVPhiR->getRecurrenceKind()))
+    auto *FindPhiR = dyn_cast<VPReductionPHIRecipe>(Find);
+    if (!FindPhiR || !RecurrenceDescriptor::isFindRecurrenceKind(
+                         FindPhiR->getRecurrenceKind()))
       return false;
 
-    assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
+    assert(!FindPhiR->isInLoop() && !FindPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
+
+    VPValue *FindBackedge = FindPhiR->getBackedgeValue();
+    VPInstruction *FindResult =
+        findSingleUser<VPInstruction::ComputeReductionResult>(FindBackedge);
+    assert(FindResult &&
+           "must be able to retrieve the FindResult VPInstruction");
+
+    VPReductionPHIRecipe *FindIVPhiR = FindPhiR;
+    VPInstruction *FindIVResult = FindResult;
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            FindPhiR->getRecurrenceKind())) {
+      Type *TCTy = Plan.getTripCount()->getScalarType();
+      if (!WidenIterIV) {
+        VPValue *One = Plan.getConstantInt(TCTy, 1);
+        WidenIterIV = new VPWidenIntOrFpInductionRecipe(
+            /*IV=*/nullptr, One, One, &Plan.getVF(),
+            InductionDescriptor::getCanonicalIntInduction(TCTy, *PSE.getSE()),
+            VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
+            DebugLoc::getUnknown());
+        WidenIterIV->insertBefore(FindPhiR);
+      }
+      IVOp = WidenIterIV;
+      VPValue *Zero = Plan.getZero(TCTy);
+      FindIVPhiR = new VPReductionPHIRecipe(
+          /*Phi=*/nullptr, RecurKind::FindIV, *Zero, *Zero, RdxUnordered{1}, {},
+          /*HasUsesOutsideReductionChain=*/false);
+      FindIVPhiR->insertBefore(FindPhiR);
+
+      VPValue *TrueVal = WidenIterIV;
+      VPValue *FalseVal = FindIVPhiR;
+      if (match(Sel,
+                m_Select(m_Specific(Cmp), m_Specific(FindPhiR), m_VPValue())))
+        std::swap(TrueVal, FalseVal);
+      VPValue *IterBackedge =
+          VPBuilder(Sel->getDefiningRecipe())
+              .createSelect(Cmp, TrueVal, FalseVal, DebugLoc::getUnknown());
+      if (HeaderMask)
+        IterBackedge = VPBuilder(cast<VPRecipeWithIRFlags>(
+                                     FindBackedge->getDefiningRecipe()))
+                           .createSelect(HeaderMask, IterBackedge, FindIVPhiR);
+
+      FindIVPhiR->setOperand(1, IterBackedge);
+
+      VPBuilder MiddleBuilder(FindResult);
+      VPIRFlags Flags(RecurKind::UMax, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                      FastMathFlags());
+      DebugLoc ExitDL = FindResult->getDebugLoc();
+      FindIVResult = MiddleBuilder.createNaryOp(
+          VPInstruction::ComputeReductionResult, IterBackedge, Flags, ExitDL);
+      VPValue *IterCmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE,
+                                                  FindIVResult, Zero, ExitDL);
+      VPValue *IterResult =
+          MiddleBuilder.createSelect(IterCmp, FindIVResult, Zero, ExitDL);
+      VPValue *Mask = MiddleBuilder.createICmp(CmpInst::ICMP_EQ, IterBackedge,
+                                               IterResult, ExitDL);
+      VPValue *FirstActive = MiddleBuilder.createFirstActiveLane(Mask, ExitDL);
+      VPValue *NewFindLastResult = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLane, {FirstActive, FindBackedge}, ExitDL);
+      FindResult->replaceAllUsesWith(NewFindLastResult);
+      FindResult->eraseFromParent();
+    }
 
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
-    VPInstruction *FindIVResult =
-        findSingleUser<VPInstruction::ComputeReductionResult>(
-            FindIVPhiR->getBackedgeValue());
-    assert(FindIVResult &&
-           "must be able to retrieve the FindIVResult VPInstruction");
     RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
     if (FindIVMinMaxKind != RecurKind::SMax &&
         FindIVMinMaxKind != RecurKind::UMax)

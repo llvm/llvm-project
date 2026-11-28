@@ -26,7 +26,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DATA-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DATA-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; DATA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; DATA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; DATA-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[N]])
 ; DATA-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[INDEX]]
 ; DATA-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 4 [[TMP2]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
@@ -44,10 +44,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP30]], i64 0
 ; DATA-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; DATA-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
-; DATA-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> splat (i64 -1)
-; DATA-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP13]])
-; DATA-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[TMP30]], [[START]]
-; DATA-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], i64 0, i64 [[TMP33]]
+; DATA-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; DATA-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP13]])
+; DATA-NEXT:    [[TMP15:%.*]] = icmp ne i64 [[TMP14]], -9223372036854775808
+; DATA-NEXT:    [[TMP35:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; DATA-NEXT:    br label %[[FOR_END:.*]]
 ; DATA:       [[FOR_END]]:
 ; DATA-NEXT:    ret i64 [[TMP35]]
@@ -76,7 +76,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_NO_LANEMASK-NEXT:    [[TMP20:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; DATA_NO_LANEMASK-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; DATA_NO_LANEMASK-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP4:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[TMP20]]
 ; DATA_NO_LANEMASK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 4 [[TMP21]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
@@ -94,10 +94,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP31]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT6]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = icmp eq <vscale x 2 x i64> [[TMP8]], [[BROADCAST_SPLAT7]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP14:%.*]] = select <vscale x 2 x i1> [[TMP13]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> splat (i64 -1)
-; DATA_NO_LANEMASK-NEXT:    [[TMP34:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP14]])
-; DATA_NO_LANEMASK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[TMP31]], [[START]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], i64 0, i64 [[TMP34]]
+; DATA_NO_LANEMASK-NEXT:    [[TMP14:%.*]] = select <vscale x 2 x i1> [[TMP13]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; DATA_NO_LANEMASK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP14]])
+; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP15]], -9223372036854775808
+; DATA_NO_LANEMASK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    br label %[[FOR_END:.*]]
 ; DATA_NO_LANEMASK:       [[FOR_END]]:
 ; DATA_NO_LANEMASK-NEXT:    ret i64 [[TMP36]]
@@ -122,7 +122,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_LOAD_CONTINUE5]] ]
 ; DATA_AND_CONTROL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE5]] ]
 ; DATA_AND_CONTROL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[PRED_LOAD_CONTINUE5]] ]
-; DATA_AND_CONTROL-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_LOAD_CONTINUE5]] ]
+; DATA_AND_CONTROL-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_LOAD_CONTINUE5]] ]
 ; DATA_AND_CONTROL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[TMP18]]
 ; DATA_AND_CONTROL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 4 [[TMP19]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; DATA_AND_CONTROL-NEXT:    [[TMP4:%.*]] = icmp slt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
@@ -141,10 +141,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP30]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; DATA_AND_CONTROL-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 2 x i64> [[TMP6]], [[BROADCAST_SPLAT5]]
-; DATA_AND_CONTROL-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -1)
-; DATA_AND_CONTROL-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP13]])
-; DATA_AND_CONTROL-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[TMP30]], [[START]]
-; DATA_AND_CONTROL-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], i64 0, i64 [[TMP33]]
+; DATA_AND_CONTROL-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; DATA_AND_CONTROL-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP13]])
+; DATA_AND_CONTROL-NEXT:    [[TMP15:%.*]] = icmp ne i64 [[TMP14]], -9223372036854775808
+; DATA_AND_CONTROL-NEXT:    [[TMP35:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; DATA_AND_CONTROL-NEXT:    br label %[[FOR_END:.*]]
 ; DATA_AND_CONTROL:       [[FOR_END]]:
 ; DATA_AND_CONTROL-NEXT:    ret i64 [[TMP35]]
@@ -337,3 +337,19 @@ for.end:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable"}
+;.
+; DATA: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.
+; DATA_NO_LANEMASK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA_NO_LANEMASK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA_NO_LANEMASK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA_NO_LANEMASK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.
+; DATA_AND_CONTROL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA_AND_CONTROL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA_AND_CONTROL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA_AND_CONTROL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.

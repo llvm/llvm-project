@@ -250,7 +250,8 @@ struct VPlanTransforms {
   /// respectively. Otherwise return false.
   static bool handleMultiUseReductions(VPlan &Plan,
                                        OptimizationRemarkEmitter *ORE,
-                                       Loop *TheLoop);
+                                       Loop *TheLoop,
+                                       PredicatedScalarEvolution &PSE);
 
   /// Check if \p Plan contains any FMaxNum, FMinNum, FMaxSelectNoFMF or
   /// FMinSelectNoFMF reductions. If they do, try to update the vector loop to
