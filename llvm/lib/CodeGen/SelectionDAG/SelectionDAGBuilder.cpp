@@ -10968,7 +10968,7 @@ static SDValue getInlineAsmOutput(const TargetLowering::AsmOperandInfo &OpInfo,
   case TargetLowering::C_Address:
     break; // Silence warning.
   case TargetLowering::C_Unknown:
-    assert(false && "Unexpected unknown constraint");
+    llvm_unreachable("Unexpected unknown constraint");
   }
   return SDValue();
 }
@@ -11010,7 +11010,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
   // The indirect targets of a callbr read its outputs again, from the
   // registers that the INLINEASM_BR defines them in.
-  SmallVector<CallBrOutput, 2> *CallBrOuts =
+  SmallVectorImpl<CallBrOutput> *CallBrOuts =
       IsCallBr ? &CallBrOutputs[cast<CallBrInst>(&Call)] : nullptr;
 
   // Deal with output operands.
@@ -11044,10 +11044,12 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
         OutputValues.push_back(Val);
         if (CallBrOuts) {
-          const RegsForValue &Regs = OpInfo.AssignedRegs;
+          // Nothing reads OpInfo after this, so move what the indirect targets
+          // need instead of copying it.
+          RegsForValue &Regs = OpInfo.AssignedRegs;
           assert(Regs.ValueVTs.size() == 1 && "Expected one value per operand");
-          CallBrOuts->push_back(
-              {OpInfo, Regs.Regs, Regs.RegVTs.front(), Regs.ValueVTs.front()});
+          CallBrOuts->push_back({std::move(OpInfo), std::move(Regs.Regs),
+                                 Regs.RegVTs.front(), Regs.ValueVTs.front()});
         }
       }
     }
@@ -13297,7 +13299,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   for (const CallBrOutput &Output : It->second) {
     RegsForValue Regs(Output.Regs, Output.RegVT, Output.ValueVT);
     for (Register Reg : Regs.Regs)
-      if (Reg.isPhysical())
+      if (Reg.isPhysical() && !FuncInfo.MBB->isLiveIn(Reg))
         FuncInfo.MBB->addLiveIn(Reg);
 
     SDValue Glue;
