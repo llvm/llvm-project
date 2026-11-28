@@ -1090,8 +1090,7 @@ AArch64ExpandPseudoImpl::ConditionalBlocks
 AArch64ExpandPseudoImpl::expandConditionalPseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
     MachineInstrBuilder &Branch) {
-  assert((std::next(MBBI) != MBB.end() ||
-          MBB.successors().begin() != MBB.successors().end()) &&
+  assert((next_nodbg(MBBI, MBB.end()) != MBB.end() || !MBB.succ_empty()) &&
          "Unexpected unreachable in block");
 
   // Split MBB and create two new blocks:
@@ -1100,6 +1099,9 @@ AArch64ExpandPseudoImpl::expandConditionalPseudo(
   //  - EndBB contains all instructions after the conditional pseudo.
   MachineInstr &PrevMI = *std::prev(MBBI);
   MachineBasicBlock *CondBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
+  if (next_nodbg(MBBI, CondBB->end()) == CondBB->end())
+    MBB.splice(Branch->getIterator(), CondBB, std::next(MBBI), CondBB->end());
+
   MachineBasicBlock *EndBB =
       std::next(MBBI) == CondBB->end()
           ? *CondBB->successors().begin()
@@ -1192,9 +1194,7 @@ AArch64ExpandPseudoImpl::expandCondSMToggle(MachineBasicBlock &MBB,
   // seems unnecessary to restore pstate.sm when that happens. Note that it is
   // not just an optimisation, the code below expects a successor instruction/block
   // in order to split the block at MBBI.
-  if (std::next(MBBI) == MBB.end() &&
-      MI.getParent()->successors().begin() ==
-          MI.getParent()->successors().end()) {
+  if (next_nodbg(MBBI, MBB.end()) == MBB.end() && MBB.succ_empty()) {
     MI.eraseFromParent();
     return &MBB;
   }
