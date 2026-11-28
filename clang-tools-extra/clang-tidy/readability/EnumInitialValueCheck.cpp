@@ -13,8 +13,12 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/CheckedArithmetic.h"
+#include <optional>
+#include <utility>
 
 using namespace clang::ast_matchers;
 
@@ -72,9 +76,97 @@ static bool areAllEnumeratorsInitialized(const EnumDecl &Node) {
 /// IntegerLiteral.
 static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   const Expr *const Init = Enumerator->getInitExpr();
-  if (!Init)
+  if (!Init || Init->isValueDependent())
     return false;
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
+}
+
+/// Splits an enumerator initializer into `Base + Offset`, where `Base` is a
+/// value-dependent expression, or null if the initializer is a constant.
+/// Value-dependent expressions are never evaluated.
+static std::optional<std::pair<const Expr *, int64_t>>
+splitInitExpr(const Expr *E, const ASTContext &Ctx) {
+  E = E->IgnoreParenImpCasts();
+  // Enumerator values are not computed in a dependent context, so references
+  // to other enumerators are resolved through their initializers.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl()))
+      if (const Expr *Init = ECD->getInitExpr())
+        return splitInitExpr(Init, Ctx);
+
+  if (!E->isValueDependent()) {
+    if (const std::optional<llvm::APSInt> Value =
+            E->getIntegerConstantExpr(Ctx))
+      if (const std::optional<int64_t> Offset = Value->tryExtValue())
+        return std::make_pair(nullptr, *Offset);
+    return std::nullopt;
+  }
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(E); BO && BO->isAdditiveOp()) {
+    const auto LHS = splitInitExpr(BO->getLHS(), Ctx);
+    const auto RHS = splitInitExpr(BO->getRHS(), Ctx);
+    if (LHS && RHS && !RHS->first) {
+      const std::optional<int64_t> Offset =
+          BO->getOpcode() == BO_Add
+              ? llvm::checkedAdd(LHS->second, RHS->second)
+              : llvm::checkedSub(LHS->second, RHS->second);
+      if (!Offset)
+        return std::nullopt;
+      return std::make_pair(LHS->first, *Offset);
+    }
+    if (LHS && RHS && !LHS->first && BO->getOpcode() == BO_Add) {
+      const std::optional<int64_t> Offset =
+          llvm::checkedAdd(LHS->second, RHS->second);
+      if (!Offset)
+        return std::nullopt;
+      return std::make_pair(RHS->first, *Offset);
+    }
+  }
+  return std::make_pair(E, 0);
+}
+
+// Checks whether two symbolic expressions share the same base.
+static bool isSameBase(const Expr *LHS, const Expr *RHS,
+                       const ASTContext &Ctx) {
+  if (!LHS || !RHS)
+    return LHS == RHS;
+  llvm::FoldingSetNodeID LHSID;
+  llvm::FoldingSetNodeID RHSID;
+  LHS->Profile(LHSID, Ctx, /*Canonical=*/true);
+  RHS->Profile(RHSID, Ctx, /*Canonical=*/true);
+  return LHSID == RHSID;
+}
+
+/// Returns true if all but the last enumerator are explicitly initialized
+/// with consecutive integer constant expression values and the last
+/// enumerator's value is left implicit, e.g.
+///   enum E { A = 10, B = 11, C = 12, Size };
+/// In a dependent context, initializers like `V` and `V + 1` are compared
+/// symbolically; values whose difference cannot be determined are rejected.
+static bool hasConsecutiveInitialValuesExceptLast(const EnumDecl &Node) {
+  const ASTContext &Ctx = Node.getASTContext();
+  std::optional<std::pair<const Expr *, int64_t>> PrevValue;
+  for (auto It = Node.enumerator_begin(), End = Node.enumerator_end();
+       It != End; ++It) {
+    const Expr *Init = (*It)->getInitExpr();
+    if (std::next(It) == End)
+      return PrevValue && !Init;
+    if (!Init)
+      return false;
+
+    const auto Value = splitInitExpr(Init, Ctx);
+    if (!Value)
+      return false;
+    if (PrevValue) {
+      const std::optional<int64_t> Expected =
+          llvm::checkedAdd(PrevValue->second, int64_t{1});
+      if (!Expected || Value->second != *Expected ||
+          !isSameBase(PrevValue->first, Value->first, Ctx))
+        return false;
+    }
+    PrevValue = Value;
+  }
+  return false;
 }
 
 static void cleanInitialValue(const DiagnosticBuilder &Diag,
@@ -104,10 +196,13 @@ AST_MATCHER(EnumDecl, isMacro) {
   return Loc.isMacroID();
 }
 
-AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
+AST_MATCHER_P2(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs, bool,
+               AllowConsecutiveExceptLast) {
   return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
          isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
-         areAllEnumeratorsInitialized(Node);
+         areAllEnumeratorsInitialized(Node) ||
+         (AllowConsecutiveExceptLast &&
+          hasConsecutiveInitialValuesExceptLast(Node));
 }
 
 AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
@@ -167,7 +262,9 @@ EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
       AllowExplicitSequentialInitialValues(
           Options.get("AllowExplicitSequentialInitialValues", true)),
       AllowReferencedInitialValues(
-          Options.get("AllowReferencedInitialValues", false)) {}
+          Options.get("AllowReferencedInitialValues", false)),
+      AllowConsecutiveInitialValuesExceptLast(
+          Options.get("AllowConsecutiveInitialValuesExceptLast", false)) {}
 
 void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
@@ -176,14 +273,18 @@ void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 AllowExplicitSequentialInitialValues);
   Options.store(Opts, "AllowReferencedInitialValues",
                 AllowReferencedInitialValues);
+  Options.store(Opts, "AllowConsecutiveInitialValuesExceptLast",
+                AllowConsecutiveInitialValuesExceptLast);
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
   const bool AllowSelfRefs = AllowReferencedInitialValues;
-  Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
-                              unless(hasConsistentInitialValues(AllowSelfRefs)))
-                         .bind("inconsistent"),
-                     this);
+  Finder->addMatcher(
+      enumDecl(isDefinition(), unless(isMacro()),
+               unless(hasConsistentInitialValues(
+                   AllowSelfRefs, AllowConsecutiveInitialValuesExceptLast)))
+          .bind("inconsistent"),
+      this);
   if (!AllowExplicitZeroFirstInitialValue)
     Finder->addMatcher(
         enumDecl(isDefinition(),
@@ -209,8 +310,9 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
                                     "first enumerator")
           << getName(Enum);
 
+      // Enumerator values are not computed in a dependent context.
       for (const EnumConstantDecl *ECD : Enum->enumerators()) {
-        if (ECD->getInitExpr() == nullptr) {
+        if (ECD->getInitExpr() == nullptr && !Enum->isDependentContext()) {
           const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
               ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
           if (EndLoc.isMacroID())
