@@ -2108,10 +2108,14 @@ defm : PatXrXrXr<mulsub, "XVMSUB">;
 // XVDIV_{B/H/W/D}[U]
 defm : PatXrXr<sdiv, "XVDIV">;
 defm : PatXrXrU<udiv, "XVDIV">;
+defm : PatXrXr<loongarch_vdiv, "XVDIV">;
+defm : PatXrXrU<loongarch_vdiv_u, "XVDIV">;
 
 // XVMOD_{B/H/W/D}[U]
 defm : PatXrXr<srem, "XVMOD">;
 defm : PatXrXrU<urem, "XVMOD">;
+defm : PatXrXr<loongarch_vmod, "XVMOD">;
+defm : PatXrXrU<loongarch_vmod_u, "XVMOD">;
 
 // XVAND_V
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in

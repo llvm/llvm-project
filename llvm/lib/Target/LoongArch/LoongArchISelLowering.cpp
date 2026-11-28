@@ -546,6 +546,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::ZERO_EXTEND);
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::MUL);
+    setTargetDAGCombine({ISD::SREM, ISD::UREM});
   }
 
   // Set DAG combine for 'LASX' feature.
@@ -9401,9 +9402,128 @@ performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Match (seteq X, splat(C)) where C satisfies Pred.
+static bool isSetEqSplat(SDValue V, SDValue X,
+                         function_ref<bool(const APInt &)> Pred) {
+  if (V.getOpcode() != ISD::SETCC ||
+      cast<CondCodeSDNode>(V.getOperand(2))->get() != ISD::SETEQ)
+    return false;
+
+  SDValue LHS = V.getOperand(0);
+  SDValue RHS = V.getOperand(1);
+  if (RHS == X)
+    std::swap(LHS, RHS);
+  if (LHS != X)
+    return false;
+
+  ConstantSDNode *C = isConstOrConstSplat(RHS, /*AllowUndefs=*/false,
+                                          /*AllowTruncation=*/true);
+  return C && Pred(C->getAPIntValue().trunc(X.getScalarValueSizeInBits()));
+}
+
+// The [x]vdiv/[x]vmod instructions return x / 0 = 0, x % 0 = 0,
+// MIN / -1 = MIN and MIN % -1 = 0. Return true if, in the lanes where Cond is
+// set, dividing A by 1 gives the same result as the instruction with B. For
+// division, the caller must zero the lanes where B is zero.
+static bool isRedundantDivisorGuard(SDValue Cond, SDValue A, SDValue B,
+                                    unsigned Opc, unsigned Depth = 0) {
+  if (Depth >= 6)
+    return false;
+
+  switch (Cond.getOpcode()) {
+  case ISD::OR:
+    return isRedundantDivisorGuard(Cond.getOperand(0), A, B, Opc, Depth + 1) &&
+           isRedundantDivisorGuard(Cond.getOperand(1), A, B, Opc, Depth + 1);
+  case ISD::AND: {
+    SDValue Op0 = Cond.getOperand(0);
+    SDValue Op1 = Cond.getOperand(1);
+    if (isRedundantDivisorGuard(Op0, A, B, Opc, Depth + 1) ||
+        isRedundantDivisorGuard(Op1, A, B, Opc, Depth + 1))
+      return true;
+
+    // MIN / -1 = MIN / 1.
+    auto IsOverflow = [&](SDValue X, SDValue Y) {
+      return isSetEqSplat(
+                 X, A, [](const APInt &C) { return C.isMinSignedValue(); }) &&
+             isSetEqSplat(Y, B, [](const APInt &C) { return C.isAllOnes(); });
+    };
+    return Opc == ISD::SDIV && (IsOverflow(Op0, Op1) || IsOverflow(Op1, Op0));
+  }
+  default:
+    break;
+  }
+
+  // x / 1 = x and x % 1 = x % 0 = 0.
+  if (isSetEqSplat(Cond, B, [](const APInt &C) { return C.isOne(); }) ||
+      isSetEqSplat(Cond, B, [](const APInt &C) { return C.isZero(); }))
+    return true;
+
+  // x % -1 = x % 1 = 0.
+  return Opc == ISD::SREM &&
+         isSetEqSplat(Cond, B, [](const APInt &C) { return C.isAllOnes(); });
+}
+
+// Match B guarded by a redundant select or umax, and return B.
+static SDValue matchGuardedDivisor(SDValue D, SDValue A, unsigned Opc) {
+  // umax(b, 1) == select(b == 0, 1, b).
+  if (D.getOpcode() == ISD::UMAX && isOneOrOneSplat(D.getOperand(1)))
+    return D.getOperand(0);
+
+  if (D.getOpcode() == ISD::VSELECT && isOneOrOneSplat(D.getOperand(1)) &&
+      isRedundantDivisorGuard(D.getOperand(0), A, D.getOperand(2), Opc))
+    return D.getOperand(2);
+
+  return SDValue();
+}
+
+// (srem/urem a, (guarded b)) -> (VMOD/VMOD_U a, b)
+static SDValue performREMCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  SDValue A = N->getOperand(0);
+  SDValue B = matchGuardedDivisor(N->getOperand(1), A, Opc);
+  if (!B)
+    return SDValue();
+
+  return DAG.getNode(Opc == ISD::SREM ? LoongArchISD::VMOD
+                                      : LoongArchISD::VMOD_U,
+                     SDLoc(N), VT, A, B);
+}
+
+// (vselect (seteq b, 0), 0, (sdiv/udiv a, (guarded b))) -> (VDIV/VDIV_U a, b)
+static SDValue combineGuardedVectorDiv(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  SDValue Div = N->getOperand(2);
+  unsigned Opc = Div.getOpcode();
+  if ((Opc != ISD::SDIV && Opc != ISD::UDIV) || !Div.hasOneUse() ||
+      !ISD::isConstantSplatVectorAllZeros(N->getOperand(1)))
+    return SDValue();
+
+  SDValue A = Div.getOperand(0);
+  SDValue B = matchGuardedDivisor(Div.getOperand(1), A, Opc);
+  if (!B || !isSetEqSplat(N->getOperand(0), B,
+                          [](const APInt &C) { return C.isZero(); }))
+    return SDValue();
+
+  return DAG.getNode(Opc == ISD::SDIV ? LoongArchISD::VDIV
+                                      : LoongArchISD::VDIV_U,
+                     SDLoc(N), VT, A, B);
+}
+
 static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = combineGuardedVectorDiv(N, DAG))
+    return V;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -9885,6 +10005,9 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::MUL:
     return performMULCombine(N, DAG, DCI, Subtarget);
+  case ISD::SREM:
+  case ISD::UREM:
+    return performREMCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }

@@ -75,6 +75,13 @@ def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
 def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 def loongarch_vandn: SDNode<"LoongArchISD::VANDN", SDT_LoongArchV2R>;
 
+// Vector div/rem with defined results: x / 0 = 0, x % 0 = 0, MIN / -1 = MIN
+// and MIN % -1 = 0.
+def loongarch_vdiv : SDNode<"LoongArchISD::VDIV", SDT_LoongArchV2R>;
+def loongarch_vdiv_u : SDNode<"LoongArchISD::VDIV_U", SDT_LoongArchV2R>;
+def loongarch_vmod : SDNode<"LoongArchISD::VMOD", SDT_LoongArchV2R>;
+def loongarch_vmod_u : SDNode<"LoongArchISD::VMOD_U", SDT_LoongArchV2R>;
+
 def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
 def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I_D", SDT_LoongArchV2RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
@@ -2358,10 +2365,14 @@ defm : PatVrVrVr<mulsub, "VMSUB">;
 // VDIV_{B/H/W/D}[U]
 defm : PatVrVr<sdiv, "VDIV">;
 defm : PatVrVrU<udiv, "VDIV">;
+defm : PatVrVr<loongarch_vdiv, "VDIV">;
+defm : PatVrVrU<loongarch_vdiv_u, "VDIV">;
 
 // VMOD_{B/H/W/D}[U]
 defm : PatVrVr<srem, "VMOD">;
 defm : PatVrVrU<urem, "VMOD">;
+defm : PatVrVr<loongarch_vmod, "VMOD">;
+defm : PatVrVrU<loongarch_vmod_u, "VMOD">;
 
 // VAND_V
 foreach vt = [v16i8, v8i16, v4i32, v2i64] in
