@@ -747,9 +747,9 @@ public:
     // A cycle has exit divergence if the label of an exit block does
     // not match the label of its header.
     for (auto C = CI.getCycle(&DivTermBlock); C; C = CI.getParentCycle(C)) {
-      if (CI.isReducible(C)) {
-        // The exit divergence of a reducible cycle is recorded while
-        // propagating labels.
+      if (CI.isReducible(C) && CI.getHeader(C) != &DivTermBlock) {
+        // The exit divergence of a reducible cycle is recorded when label
+        // propagation visits its header, which never happens for DivTermBlock.
         continue;
       }
       SmallVector<BlockT *> Exits;
