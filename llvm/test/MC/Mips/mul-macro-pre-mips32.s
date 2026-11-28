@@ -27,3 +27,11 @@
 # R5900:      addiu $1, $zero, 10
 # R5900-NEXT: mult  $5, $1
 # R5900-NEXT: mflo  $4
+
+  mul $4, 10
+# CHECK:      addiu $1, $zero, 10    # encoding: [0x24,0x01,0x00,0x0a]
+# CHECK-NEXT: mult  $4, $1           # encoding: [0x00,0x81,0x00,0x18]
+# CHECK-NEXT: mflo  $4               # encoding: [0x00,0x00,0x20,0x12]
+# R5900:      addiu $1, $zero, 10
+# R5900-NEXT: mult  $4, $1
+# R5900-NEXT: mflo  $4
