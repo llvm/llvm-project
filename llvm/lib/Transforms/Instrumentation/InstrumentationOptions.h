@@ -28,6 +28,19 @@ enum class RecordStackHistoryMode {
   // Add a call to __hwasan_add_frame_record in the runtime.
   libcall,
 };
+
+// How PGO profile use handles instrumentable functions missing from the
+// profile.
+enum class PGOMissingFuncBehavior {
+  // Leave unannotated (unknown entry count).
+  None,
+
+  // Mark as cold (entry count 0 and Attribute::Cold).
+  Cold,
+
+  // Mark as hot (Attribute::Hot).
+  Hot,
+};
 } // namespace llvm
 
 #define OPTIONS_STRUCT_DECL
