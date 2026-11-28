@@ -105,6 +105,9 @@ class SchedMachineModel {
   // Warn about InstRWs that resolve to the same entries as the base SchedRW.
   bit WarnRedundantInstRW = true;
 
+  // Warn about WriteRes that resolve to the same entries as their fallback.
+  bit WarnRedundantWriteRes = true;
+
   // A processor may only implement part of published ISA, due to either new ISA
   // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation
   // (ARM/MIPS/PowerPC/SPARC soft float cores).
@@ -228,6 +231,12 @@ class Sched<list<SchedReadWrite> schedrw> {
 class SchedWrite : SchedReadWrite;
 def NoWrite : SchedWrite;
 
+// Define a SchedWrite that uses another SchedWrite on models that don't
+// define it.
+class SchedWriteFallback<SchedWrite fallback> : SchedWrite {
+  SchedWrite Fallback = fallback;
+}
+
 // Define a scheduler resource associated with a use operand.
 class SchedRead  : SchedReadWrite;
 
@@ -320,6 +329,11 @@ class WriteRes<SchedWrite write, list<ProcResourceKind> resources>
 // must be referenced by InstRW or ItinRW.
 class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
   ProcWriteResources<resources>;
+
+// Use as a fallback to make a SchedWrite unsupported by default.
+def UnsupportedWrite : SchedWriteRes<[]> {
+  let Unsupported = true;
+}
 
 // Define values common to ReadAdvance and SchedReadAdvance.
 //

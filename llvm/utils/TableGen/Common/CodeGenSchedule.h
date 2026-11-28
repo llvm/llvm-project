@@ -58,6 +58,7 @@ struct CodeGenSchedRW {
   bool IsSequence;
   IdxVec Sequence;
   ConstRecVec Aliases;
+  const Record *Fallback = nullptr;
 
   CodeGenSchedRW()
       : Index(0), TheDef(nullptr), IsRead(false), IsAlias(false),
@@ -74,6 +75,8 @@ struct CodeGenSchedRW {
     // added. Note that implicit Reads (from ReadVariant) may have a Sequence
     // (but no record).
     IsSequence = Def->isSubClassOf("WriteSequence");
+    if (Def->isSubClassOf("SchedWriteFallback"))
+      Fallback = Def->getValueAsDef("Fallback");
   }
 
   CodeGenSchedRW(unsigned Idx, bool Read, ArrayRef<unsigned> Seq,
@@ -446,6 +449,8 @@ class CodeGenSchedModels {
   DenseMap<const Record *, unsigned> SchedWriteIdx;
   DenseMap<const Record *, unsigned> SchedReadIdx;
 
+  DenseSet<std::pair<const Record *, const Record *>> ModelWriteRes;
+
   // List of unique SchedClasses.
   std::vector<CodeGenSchedClass> SchedClasses;
 
@@ -556,6 +561,9 @@ public:
   void expandRWSequence(unsigned RWIdx, IdxVec &RWSeq, bool IsRead) const;
   void expandRWSeqForProc(unsigned RWIdx, IdxVec &RWSeq, bool IsRead,
                           const CodeGenProcModel &ProcModel) const;
+
+  const CodeGenSchedRW &resolveFallback(const CodeGenSchedRW &RW,
+                                        const CodeGenProcModel &PM) const;
 
   unsigned addSchedClass(const Record *ItinDef, ArrayRef<unsigned> OperWrites,
                          ArrayRef<unsigned> OperReads,
