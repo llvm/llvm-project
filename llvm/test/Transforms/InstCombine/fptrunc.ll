@@ -64,7 +64,7 @@ define float @fptrunc_select_true_val(float %x, double %y, i1 %cond) {
 define float @fptrunc_fast_select_true_val(float %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fptrunc_fast_select_true_val(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast double [[Y:%.*]] to float
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[NARROW_SEL]]
 ;
   %e = fpext float %x to double
@@ -88,7 +88,7 @@ define <2 x float> @fptrunc_select_false_val(<2 x float> %x, <2 x double> %y, <2
 define <2 x float> @fptrunc_nnan_select_false_val(<2 x float> %x, <2 x double> %y, <2 x i1> %cond) {
 ; CHECK-LABEL: @fptrunc_nnan_select_false_val(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc nnan <2 x double> [[Y:%.*]] to <2 x float>
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select nnan <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[NARROW_SEL]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
