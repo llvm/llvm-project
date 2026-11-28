@@ -812,7 +812,12 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   // mappings to preserve the outer depths.
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          SubstArgs)) {
+          SubstArgs) ||
+      Trap.hasErrorOccurred()) {
+    // Access-control failures are diagnosed as SFINAE, so they don't make
+    // SubstTemplateArgumentsInParameterMapping return true. Check the trap
+    // as well, otherwise the constraint is incorrectly treated as satisfied.
+    // See https://github.com/llvm/llvm-project/issues/246008.
     Satisfaction.IsSatisfied = false;
     if (Trap.hasErrorOccurred())
       consumeSFINAEFailure(Info, Satisfaction);
