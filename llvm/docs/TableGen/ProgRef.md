@@ -967,10 +967,10 @@ statements within the scope of the `let`.
 
 ```{eval-rst}
 .. productionlist::
-   Let:  "let" `LetList` "in" "{" `Statement`* "}"
-      :| "let" `LetList` "in" `Statement`
+   Let:  "let" `LetList` "in" `StatementOrList`
    LetList: `LetItem` ("," `LetItem`)*
    LetItem: [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value`
+   StatementOrList: "{" `Statement`* "}" | `Statement`
 ```
 
 The `let` statement establishes a scope, which is a sequence of statements
@@ -1382,8 +1382,7 @@ variable over a sequence of values.
 
 ```{eval-rst}
 .. productionlist::
-   Foreach: "foreach" `ForeachIterator` "in" "{" `Statement`* "}"
-          :| "foreach" `ForeachIterator` "in" `Statement`
+   Foreach: "foreach" `ForeachIterator` "in" `StatementOrList`
    ForeachIterator: `TokIdentifier` "=" (`RangeList` | `RangePiece` | `Value`)
 ```
 
@@ -1442,9 +1441,7 @@ on the value of an expression.
 
 ```{eval-rst}
 .. productionlist::
-   If: "if" `Value` "then" `IfBody`
-     :| "if" `Value` "then" `IfBody` "else" `IfBody`
-   IfBody: "{" `Statement`* "}" | `Statement`
+   If: "if" `Value` "then" `StatementOrList` [ "else" `StatementOrList` ]
 ```
 
 The value expression is evaluated. If it evaluates to true (in the same
@@ -1458,7 +1455,7 @@ has the usual ambiguity with "dangling else" clauses, and it is resolved in
 the usual way: in a case like `if v1 then if v2 then {...} else {...}`, the
 `else` associates with the inner `if` rather than the outer one.
 
-The {token}`IfBody` of the then and else arms of the `if` establish an
+The {token}`StatementOrList` of the then and else arms of the `if` establish an
 inner scope. Any `defvar` variables defined in the bodies go out of scope
 when the bodies are finished (see [Defvar in a Record Body](#defvar-in-a-record-body) for more details).
 
