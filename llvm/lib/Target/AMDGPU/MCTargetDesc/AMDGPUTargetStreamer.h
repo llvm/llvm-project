@@ -93,7 +93,7 @@ public:
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type){};
 
-  virtual void emitAMDGPULDS(MCSymbol *Symbol, unsigned Size, Align Alignment) {
+  virtual void emitAMDGPULDS(MCSymbol *Symbol, uint64_t Size, Align Alignment) {
   }
 
   virtual void EmitMCResourceInfo(
@@ -167,7 +167,7 @@ public:
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
-  void emitAMDGPULDS(MCSymbol *Sym, unsigned Size, Align Alignment) override;
+  void emitAMDGPULDS(MCSymbol *Sym, uint64_t Size, Align Alignment) override;
 
   void EmitMCResourceInfo(
       const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
@@ -233,7 +233,7 @@ public:
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
-  void emitAMDGPULDS(MCSymbol *Sym, unsigned Size, Align Alignment) override;
+  void emitAMDGPULDS(MCSymbol *Sym, uint64_t Size, Align Alignment) override;
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion() override;
