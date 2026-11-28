@@ -3056,96 +3056,6 @@ entry:
   ret i64 %3
 }
 
-declare <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>) nounwind readnone
-
-define <2 x double> @test19(<1 x i64> %a) nounwind readnone optsize ssp {
-; X86-LABEL: test19:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl 12(%ebp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    cvtpi2pd (%esp), %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test19:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    cvtpi2pd %mm0, %xmm0
-; X64-NEXT:    retq
-entry:
-  %0 = bitcast <1 x i64> %a to <2 x i32>
-  %1 = bitcast <2 x i32> %0 to <1 x i64>
-  %2 = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64> %1) nounwind readnone
-  ret <2 x double> %2
-}
-
-declare <1 x i64> @llvm.x86.sse.cvttpd2pi(<2 x double>) nounwind readnone
-
-define i64 @test18(<2 x double> %a) nounwind readnone optsize ssp {
-; X86-LABEL: test18:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    cvttpd2pi %xmm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test18:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    cvttpd2pi %xmm0, %mm0
-; X64-NEXT:    movq %mm0, %rax
-; X64-NEXT:    retq
-entry:
-  %0 = tail call <1 x i64> @llvm.x86.sse.cvttpd2pi(<2 x double> %a) nounwind readnone
-  %1 = bitcast <1 x i64> %0 to <2 x i32>
-  %2 = bitcast <2 x i32> %1 to <1 x i64>
-  %3 = extractelement <1 x i64> %2, i32 0
-  ret i64 %3
-}
-
-declare <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>) nounwind readnone
-
-define i64 @test17(<2 x double> %a) nounwind readnone optsize ssp {
-; X86-LABEL: test17:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    cvtpd2pi %xmm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test17:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    cvtpd2pi %xmm0, %mm0
-; X64-NEXT:    movq %mm0, %rax
-; X64-NEXT:    retq
-entry:
-  %0 = tail call <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double> %a) nounwind readnone
-  %1 = bitcast <1 x i64> %0 to <2 x i32>
-  %2 = bitcast <2 x i32> %1 to <1 x i64>
-  %3 = extractelement <1 x i64> %2, i32 0
-  ret i64 %3
-}
-
 declare <1 x i64> @llvm.x86.mmx.palignr.b(<1 x i64>, <1 x i64>, i8) nounwind readnone
 
 define i64 @test16(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
@@ -3786,33 +3696,6 @@ entry:
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
-
-define <4 x float> @test89(<4 x float> %a, <1 x i64> %b) nounwind {
-; X86-LABEL: test89:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl 12(%ebp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    cvtpi2ps (%esp), %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test89:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    cvtpi2ps %mm0, %xmm0
-; X64-NEXT:    retq
-  %c = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a, <1 x i64> %b)
-  ret <4 x float> %c
-}
-
-declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>) nounwind readnone
 
 define void @test90() {
 ; ALL-LABEL: test90:
