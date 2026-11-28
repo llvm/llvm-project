@@ -2324,7 +2324,10 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
   Builder builder(ctx);
   AffineMap map =
       isMin ? cast<AffineMinOp>(op).getMap() : cast<AffineMaxOp>(op).getMap();
-  ValueRange operands = op->getOperands();
+  SmallVector<Value> operands =
+      isMin ? cast<AffineMinOp>(op).getOperands()
+            : cast<AffineMaxOp>(op).getOperands();
+  affine::fullyComposeAffineMapAndOperands(&map, &operands);
   unsigned numResults = map.getNumResults();
 
   // Add a few extra dimensions.
