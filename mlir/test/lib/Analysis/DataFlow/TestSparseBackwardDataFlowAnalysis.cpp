@@ -20,7 +20,7 @@ namespace {
 /// Lattice value storing the a set of memory resources that something
 /// is written to.
 struct WrittenToLatticeValue {
-  bool operator==(const WrittenToLatticeValue &other) {
+  bool operator==(const WrittenToLatticeValue &other) const {
     return this->writes == other.writes;
   }
 
