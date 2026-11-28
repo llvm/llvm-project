@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -135,9 +136,11 @@ public:
     // Treat configured included source files #include "foo.cpp" same as the
     // main file.
     StringRef FileName = SM.getFilename(SL);
-    for (StringRef Extension : UnityBuildFileExtensions)
-      if (FileName.ends_with(Extension))
-        return true;
+    auto EndsWithExtension = [&](StringRef Extension) {
+      return FileName.ends_with(Extension);
+    };
+    if (llvm::any_of(UnityBuildFileExtensions, EndsWithExtension))
+      return true;
 
     // Support the "unified sources" compilation method (eg. WebKit) that
     // involves producing non-header files that include other non-header files.

@@ -15,11 +15,20 @@
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "llvm/ADT/STLExtras.h"
+#include <iterator>
 #include <optional>
 
 namespace clang {
 
 namespace ento {
+
+// Returns true if any non-null child of S satisfies Pred.
+static bool anyChild(const Stmt *S, bool (*Pred)(const Stmt *)) {
+  return llvm::any_of(S->children(), [Pred](const Stmt *Child) {
+    return Child && Pred(Child);
+  });
+}
 
 // Recursively find any substatements containing macros
 bool containsMacro(const Stmt *S) {
@@ -29,11 +38,7 @@ bool containsMacro(const Stmt *S) {
   if (S->getEndLoc().isMacroID())
     return true;
 
-  for (const Stmt *Child : S->children())
-    if (Child && containsMacro(Child))
-      return true;
-
-  return false;
+  return anyChild(S, containsMacro);
 }
 
 // Recursively find any substatements containing enum constants
@@ -43,11 +48,7 @@ bool containsEnum(const Stmt *S) {
   if (DR && isa<EnumConstantDecl>(DR->getDecl()))
     return true;
 
-  for (const Stmt *Child : S->children())
-    if (Child && containsEnum(Child))
-      return true;
-
-  return false;
+  return anyChild(S, containsEnum);
 }
 
 // Recursively find any substatements containing static vars
@@ -59,11 +60,7 @@ bool containsStaticLocal(const Stmt *S) {
       if (VD->isStaticLocal())
         return true;
 
-  for (const Stmt *Child : S->children())
-    if (Child && containsStaticLocal(Child))
-      return true;
-
-  return false;
+  return anyChild(S, containsStaticLocal);
 }
 
 // Recursively find any substatements containing __builtin_offsetof
@@ -71,11 +68,7 @@ bool containsBuiltinOffsetOf(const Stmt *S) {
   if (isa<OffsetOfExpr>(S))
     return true;
 
-  for (const Stmt *Child : S->children())
-    if (Child && containsBuiltinOffsetOf(Child))
-      return true;
-
-  return false;
+  return anyChild(S, containsBuiltinOffsetOf);
 }
 
 // Extract lhs and rhs from assignment statement
@@ -123,9 +116,10 @@ std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   // Filter out parens.
   std::vector<Token> FilteredTokens;
   FilteredTokens.reserve(MI->tokens().size());
-  for (auto &T : MI->tokens())
-    if (!T.isOneOf(tok::l_paren, tok::r_paren))
-      FilteredTokens.push_back(T);
+  auto IsNotParen = [](const Token &T) {
+    return !T.isOneOf(tok::l_paren, tok::r_paren);
+  };
+  llvm::copy_if(MI->tokens(), std::back_inserter(FilteredTokens), IsNotParen);
 
   // Parse an integer at the end of the macro definition.
   const Token &T = FilteredTokens.back();
