@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -36,6 +37,26 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   if (!copyOp)
     return false;
   return copyOp.getTarget() == buffer;
+}
+
+/// Return true when `op` is in `loop`'s body, including nested regions.
+static bool isInsideLoop(Operation *op, LoopLikeOpInterface loop) {
+  Operation *loopOp = loop;
+  return op->getParentOp() == loopOp || loopOp->isProperAncestor(op);
+}
+
+/// Return true when `overwrite` dominates every read reachable through `user`.
+/// `memref.view` does not read the buffer, so it may be created before the
+/// overwrite as long as every user of that view is dominated by `overwrite`.
+static bool dominatesBufferRead(DominanceInfo &dom, Operation *overwrite,
+                                Operation *user) {
+  if (dom.dominates(overwrite, user))
+    return true;
+  if (!isa<memref::ViewOp>(user))
+    return false;
+  return llvm::all_of(user->getUsers(), [&](Operation *viewUser) {
+    return dominatesBufferRead(dom, overwrite, viewUser);
+  });
 }
 
 /// Replace the uses of `oldOp` with the given `val` and for view-like uses
@@ -135,6 +156,94 @@ static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
   return success();
 }
 
+/// Round `numElements` up so each multi-buffer slot satisfies the alloc
+/// alignment. Only the expanded alloc base is aligned; without this, slot 1
+/// can start at a non-aligned byte offset. Caller must pass an int/float
+/// element type; sub-byte widths are left unpadded.
+static int64_t alignToAllocAlignment(int64_t numElements,
+                                     memref::AllocOp allocOp) {
+  IntegerAttr alignment = allocOp.getAlignmentAttr();
+  if (!alignment)
+    return numElements;
+  Type elementType = allocOp.getType().getElementType();
+  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
+  if (bitWidth % 8 != 0)
+    return numElements;
+  uint64_t elementBytes = bitWidth / 8;
+  uint64_t alignBytes = static_cast<uint64_t>(alignment.getInt());
+  if (alignBytes % elementBytes != 0)
+    return numElements;
+  return static_cast<int64_t>(
+      llvm::alignTo(static_cast<uint64_t>(numElements) * elementBytes,
+                    alignBytes) /
+      elementBytes);
+}
+
+/// Layout of the expanded alloc. Non-int/float elements or layouts that cannot
+/// be analyzed stay dense.
+///
+/// If the source has an identity layout and the slot pitch already satisfies
+/// the alloc alignment, the expanded alloc stays identity (dense).
+/// If the slot pitch needs to be rounded up to satisfy the alloc alignment,
+/// or if the source already has a strided layout, the expanded alloc gets an
+/// explicit strided layout where the new leading stride is
+/// `size0 * stride0` (rounded up to the alloc alignment) and trailing strides
+/// are preserved.
+static MemRefLayoutAttrInterface multiBufferLayout(memref::AllocOp allocOp) {
+  MemRefType srcType = allocOp.getType();
+  SmallVector<int64_t> strides;
+  int64_t offset = 0;
+  if (!srcType.getElementType().isIntOrFloat() ||
+      failed(srcType.getStridesAndOffset(strides, offset)) ||
+      srcType.getShape().empty() || strides.empty() ||
+      !ShapedType::isStatic(srcType.getDimSize(0)) ||
+      !ShapedType::isStatic(strides.front()) || strides.front() <= 0)
+    return {};
+
+  int64_t unpaddedPitch = srcType.getDimSize(0) * strides.front();
+  int64_t leadingStride = alignToAllocAlignment(unpaddedPitch, allocOp);
+
+  // Identity layout without alignment padding stays dense.
+  if (srcType.getLayout().isIdentity() && leadingStride == unpaddedPitch)
+    return {};
+
+  SmallVector<int64_t> expandedStrides{leadingStride};
+  llvm::append_range(expandedStrides, strides);
+  return StridedLayoutAttr::get(srcType.getContext(), /*offset=*/0,
+                                expandedStrides);
+}
+
+/// Return true if `allocOp` has a `memref.view` user.
+static bool hasViewUser(memref::AllocOp allocOp) {
+  return llvm::any_of(allocOp->getUsers(), llvm::IsaPred<memref::ViewOp>);
+}
+
+/// Return true if `allocOp` is a static 1-D identity i8 `memref.view` source.
+/// A dynamic length cannot be turned into a constant flat slot size.
+static bool isViewedByteAlloc(memref::AllocOp allocOp) {
+  MemRefType type = allocOp.getType();
+  return hasViewUser(allocOp) && type.getRank() == 1 && type.hasStaticShape() &&
+         type.getElementType().isSignlessInteger(8) &&
+         type.getLayout().isIdentity();
+}
+
+/// Replace the deallocs of `allocOp` with deallocs of `mbAlloc`.
+static void replaceDeallocs(RewriterBase &rewriter, memref::AllocOp allocOp,
+                            memref::AllocOp mbAlloc) {
+  for (OpOperand &use : llvm::make_early_inc_range(allocOp->getUses())) {
+    auto deallocOp = dyn_cast<memref::DeallocOp>(use.getOwner());
+    if (!deallocOp)
+      continue;
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(deallocOp);
+    auto newDeallocOp =
+        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
+    (void)newDeallocOp;
+    LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
+    rewriter.eraseOp(deallocOp);
+  }
+}
+
 // Transformation to do multi-buffering/array expansion to remove dependencies
 // on the temporary allocation between consecutive loop iterations.
 // Returns success if the transformation happened and failure otherwise.
@@ -166,9 +275,15 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
         LLVM_DEBUG(DBGS() << "--Skip user: found loop-carried dependence\n");
         continue;
       }
-      // If this user doesn't dominate all the other users keep looking.
+      // If this user doesn't dominate all the other reads keep looking.
+      // A view may be created earlier in this loop; only its reads have to be
+      // dominated. A view outside this loop is rejected, matching the case
+      // where the copy does not dominate the view op.
       if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
-            return !dom.dominates(user, otherUser);
+            if (!dominatesBufferRead(dom, user, otherUser))
+              return true;
+            return isa<memref::ViewOp>(otherUser) &&
+                   !isInsideLoop(otherUser, parentLoop);
           })) {
         LLVM_DEBUG(
             DBGS() << "--Skip user: does not dominate all other users\n");
@@ -210,6 +325,49 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   LLVM_DEBUG(DBGS() << "Start multibuffering loop: " << candidateLoop << "\n");
 
+  Location loc = allocOp->getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+
+  // `memref.view` needs a 1-D byte source with identity layout, so a viewed
+  // byte alloc stays flat, with slots starting at multiples of the alloc
+  // alignment. The alloc is replaced by a view of the current slot so its view
+  // users keep their constant byte shifts. A dynamic length has no constant
+  // slot size; leave it unchanged instead of adding a leading dimension.
+  if (hasViewUser(allocOp)) {
+    if (!isViewedByteAlloc(allocOp)) {
+      LLVM_DEBUG(DBGS() << "Skip alloc: viewed alloc is not a static 1-D i8\n");
+      return failure();
+    }
+    int64_t slotBytes = allocOp.getType().getDimSize(0);
+    int64_t slotStride = alignToAllocAlignment(slotBytes, allocOp);
+    int64_t flatBytes = slotStride * (multiBufferingFactor - 1) + slotBytes;
+    MemRefType flatType =
+        MemRefType::Builder(allocOp.getType()).setShape({flatBytes});
+    rewriter.setInsertionPoint(allocOp);
+    auto mbAlloc = memref::AllocOp::create(
+        rewriter, loc, flatType, ValueRange{}, allocOp.getAlignmentAttr());
+    mbAlloc->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
+    LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
+
+    rewriter.setInsertionPointToStart(
+        &candidateLoop.getLoopRegions().front()->front());
+    Value lbVal = getValueOrCreateConstantIndexOp(rewriter, loc, *lowerBound);
+    Value stepVal = getValueOrCreateConstantIndexOp(rewriter, loc, *singleStep);
+    AffineExpr iv, lb, step;
+    bindDims(rewriter.getContext(), iv, lb, step);
+    Value slotOffset = affine::makeComposedAffineApply(
+        rewriter, loc,
+        ((iv - lb).floorDiv(step)) % multiBufferingFactor * slotStride,
+        {*inductionVar, lbVal, stepVal});
+    Value slot = memref::ViewOp::create(rewriter, loc, allocOp.getType(),
+                                        mbAlloc, slotOffset, ValueRange{});
+    LLVM_DEBUG(DBGS() << "--multi-buffered slot view: " << slot << "\n");
+
+    replaceDeallocs(rewriter, allocOp, mbAlloc);
+    rewriter.replaceOp(allocOp, slot);
+    return mbAlloc;
+  }
+
   // 1. Construct the multi-buffered memref type.
   ArrayRef<int64_t> originalShape = allocOp.getType().getShape();
   SmallVector<int64_t, 4> multiBufferedShape{multiBufferingFactor};
@@ -217,12 +375,10 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   LLVM_DEBUG(DBGS() << "--original type: " << allocOp.getType() << "\n");
   MemRefType mbMemRefType = MemRefType::Builder(allocOp.getType())
                                 .setShape(multiBufferedShape)
-                                .setLayout(MemRefLayoutAttrInterface());
+                                .setLayout(multiBufferLayout(allocOp));
   LLVM_DEBUG(DBGS() << "--multi-buffered type: " << mbMemRefType << "\n");
 
   // 2. Create the multi-buffered alloc.
-  Location loc = allocOp->getLoc();
-  OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
   auto mbAlloc = memref::AllocOp::create(
       rewriter, loc, mbMemRefType, ValueRange{}, allocOp.getAlignmentAttr());
@@ -265,18 +421,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   // 5. Due to the recursive nature of replaceUsesAndPropagateType , we need
   // to handle dealloc uses separately..
-  for (OpOperand &use : llvm::make_early_inc_range(allocOp->getUses())) {
-    auto deallocOp = dyn_cast<memref::DeallocOp>(use.getOwner());
-    if (!deallocOp)
-      continue;
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(deallocOp);
-    auto newDeallocOp =
-        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
-    (void)newDeallocOp;
-    LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
-    rewriter.eraseOp(deallocOp);
-  }
+  replaceDeallocs(rewriter, allocOp, mbAlloc);
 
   // 6. RAUW with the particular slice, taking modular rotation into account.
   if (failed(replaceUsesAndPropagateType(rewriter, allocOp, subview)))
