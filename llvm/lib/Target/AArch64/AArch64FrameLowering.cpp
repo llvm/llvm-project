@@ -1993,8 +1993,24 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
 
     // Realign the fixed offset if necessary. This is relevant when spilling Q
     // registers after spilling an odd amount of X registers.
-    if (!RGI.isScalable() && ByteOffset % Scale != 0)
+    if (!RGI.isScalable() && ByteOffset % Scale != 0) {
       ByteOffset = AlignOffset(ByteOffset, Scale);
+      // On Windows the callee-save area is filled bottom up, so realigning
+      // here leaves a gap between the previously spilled register and this
+      // one, rather than at the top of the area. PrologEpilogInserter lays
+      // out the callee-save frame objects top down in CSI order and knows
+      // nothing about this gap, so mirror it by over-aligning the object
+      // directly below the gap. Otherwise the frame objects for every
+      // register below the gap end up 8 bytes higher than where they are
+      // actually spilled, and the lowest spill slot overlaps the local area.
+      if (IsWindows && NeedGapToAlignStack) {
+        assert(i != FirstReg && "Gap at the bottom of the callee-save area");
+        int BelowGapIdx = CSI[i - RegInc].getFrameIdx();
+        assert(MFI.getObjectAlign(BelowGapIdx) <= Align(16));
+        MFI.setObjectAlignment(BelowGapIdx, Align(16));
+        NeedGapToAlignStack = false;
+      }
+    }
 
     int OffsetPre = RGI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
@@ -2080,7 +2096,9 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     // x19, d8. d9, gap.
     // Set extra alignment on the topmost stack object (the first element in
     // CSI, which goes top down), to create the gap above it.
-    if (AFI->hasCalleeSaveStackFreeSpace())
+    // If the free space was already used to realign a Q register spill above,
+    // there is no gap left at the top.
+    if (NeedGapToAlignStack)
       MFI.setObjectAlignment(CSI[0].getFrameIdx(), Align(16));
     // We iterated bottom up over the registers; flip RegGroups back to top
     // down order.
