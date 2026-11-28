@@ -2398,6 +2398,12 @@ def NoCommon : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def ExtendLifetimesDisable : InheritableAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+}
+
 def NoDebug : InheritableAttr {
   let Spellings = [GCC<"nodebug">];
   let Subjects = SubjectList<[TypedefName, FunctionLike, ObjCMethod, NonParmVar]>;
