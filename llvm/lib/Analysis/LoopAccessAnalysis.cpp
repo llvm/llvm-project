@@ -3076,10 +3076,22 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // At least Src or Sink are loop invariant and the other is strided or
   // invariant.
   if (!StrideAPtrInt || !StrideBPtrInt) {
-    // If both are loop-invariant and access the same location, we cannot
-    // vectorize.
-    if (!StrideAPtrInt && !StrideBPtrInt && Dist->isZero())
-      return MemoryDepChecker::Dependence::InvariantUnsafe;
+    if (!StrideAPtrInt && !StrideBPtrInt && !isa<SCEVCouldNotCompute>(Dist)) {
+      // If both are loop-invariant and access the same location, we cannot
+      // vectorize.
+      if (Dist->isZero())
+        return MemoryDepChecker::Dependence::InvariantUnsafe;
+      // Each access touches the same bytes in every iteration, so they are
+      // independent iff they do not overlap: B, which starts Dist bytes after
+      // A, starts at or after the end of A, or ends at or before the start of
+      // A.
+      const SCEV *AStoreSzSCEV = SE.getStoreSizeOfExpr(Dist->getType(), ATy);
+      const SCEV *BStoreSzSCEV = SE.getStoreSizeOfExpr(Dist->getType(), BTy);
+      if (SE.isKnownPredicate(CmpInst::ICMP_SGE, Dist, AStoreSzSCEV) ||
+          SE.isKnownPredicate(CmpInst::ICMP_SLE, Dist,
+                              SE.getNegativeSCEV(BStoreSzSCEV)))
+        return MemoryDepChecker::Dependence::NoDep;
+    }
     // Otherwise, we can generate a runtime check to disambiguate the accesses.
     return MemoryDepChecker::Dependence::Unknown;
   }
