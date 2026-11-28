@@ -1,9 +1,14 @@
-//===-- Implementation of hypotf function ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Correctly rounded generic implementation of hypot.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H
@@ -21,6 +26,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
 
@@ -228,41 +234,58 @@ LIBC_INLINE constexpr T hypot(T x, T y) {
     }
   }
 
-  bool round_bit = y_new & StorageType(1);
-  bool lsb = y_new & StorageType(2);
-
-  if ((out_exp == 0) && (round_bit || sticky_bits || (r != 0)))
-    raise_underflow_except_if_required<T>();
-
   if (y_new >= ONE) {
     y_new -= ONE;
-
-    if (out_exp == 0) {
+    if (out_exp == 0)
       out_exp = 1;
-    }
   }
 
-  y_new >>= 1;
+  bool round_bit = y_new & StorageType(1);
+  bool lsb = y_new & StorageType(2);
+  bool inexact = round_bit || sticky_bits || (r != 0);
 
+  // When out_exp == 0, y_new < ONE is in units of 2^(1 - EXP_BIAS - P) where
+  // P = FRACTION_LEN + 1 and r = sum - y_new^2. On targets with after-rounding
+  // tininess, P-bit unbounded-exponent rounding reaches min_normal (ONE) iff
+  // y_new == ONE - 1 and sqrt(sum) >= ONE - 1/2 (r >= ONE) in FE_TONEAREST, or
+  // sqrt(sum) > ONE - 1 (r != 0 || sticky_bits) in FE_UPWARD.
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  // Round to the nearest, tie to even.
-  if (round_bit && (lsb || sticky_bits || (r != 0)))
-    ++y_new;
+  bool round_up = round_bit && (lsb || sticky_bits || (r != 0));
+#ifdef LIBC_TARGET_CPU_HAS_TININESS_AFTER_ROUNDING
+  bool not_tiny = (y_new == ONE - 1) && (r >= ONE);
 #else
-  // Round to the nearest, tie to even.
+  constexpr bool not_tiny = false;
+#endif
+#else
   int round_mode = quick_get_round();
+  bool round_up = false;
+#ifdef LIBC_TARGET_CPU_HAS_TININESS_AFTER_ROUNDING
+  bool not_tiny = false;
+#else
+  constexpr bool not_tiny = false;
+#endif
   switch (round_mode) {
   case FE_TONEAREST:
-    // Round to nearest, ties to even
-    if (round_bit && (lsb || sticky_bits || (r != 0)))
-      ++y_new;
+    round_up = round_bit && (lsb || sticky_bits || (r != 0));
+#ifdef LIBC_TARGET_CPU_HAS_TININESS_AFTER_ROUNDING
+    not_tiny = (y_new == ONE - 1) && (r >= ONE);
+#endif
     break;
   case FE_UPWARD:
-    if (round_bit || sticky_bits || (r != 0))
-      ++y_new;
+    round_up = inexact;
+#ifdef LIBC_TARGET_CPU_HAS_TININESS_AFTER_ROUNDING
+    not_tiny = (y_new == ONE - 1) && ((r != 0) || sticky_bits);
+#endif
     break;
   }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+  if ((out_exp == 0) && inexact && !not_tiny)
+    raise_underflow_except_if_required<T>();
+
+  y_new >>= 1;
+  if (round_up)
+    ++y_new;
 
   if (y_new >= (ONE >> 1)) {
     y_new -= ONE >> 1;

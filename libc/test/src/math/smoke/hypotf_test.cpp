@@ -1,19 +1,37 @@
-//===-- Unittests for hypotf ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Smoke tests for hypotf.
+///
+//===----------------------------------------------------------------------===//
 
 #include "HypotTest.h"
 
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/math/hypotf.h"
 
 using LlvmLibcHypotfTest = HypotTestTemplate<float>;
 
 TEST_F(LlvmLibcHypotfTest, SpecialNumbers) {
   test_special_numbers(&LIBC_NAMESPACE::hypotf);
+
+  libc_errno = 0;
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      inf, LIBC_NAMESPACE::hypotf(max_normal, max_normal),
+      FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+  libc_errno = 0;
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      max_normal, LIBC_NAMESPACE::hypotf(max_normal, max_normal),
+      FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ

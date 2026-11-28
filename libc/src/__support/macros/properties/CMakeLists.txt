@@ -22,6 +22,7 @@ add_header_library(
     cpu_features.h
   DEPENDS
     .architectures
+    .compiler
 )
 
 add_header_library(

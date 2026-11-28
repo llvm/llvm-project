@@ -1,9 +1,14 @@
-//===-- Utility class to test different flavors of hypot ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Test template for hypot functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
@@ -34,8 +39,10 @@ struct HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
     EXPECT_FP_EQ(func(sNaN, neg_inf), aNaN);
 #endif // !LIBC_TARGET_ARCH_IS_NVPTX
 
-    EXPECT_FP_EQ(func(inf, aNaN), inf);
-    EXPECT_FP_EQ(func(aNaN, neg_inf), inf);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(inf, neg_inf), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(neg_inf, inf), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(inf, aNaN), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(aNaN, neg_inf), 0);
     EXPECT_FP_EQ(func(aNaN, aNaN), aNaN);
     EXPECT_FP_EQ(func(aNaN, zero), aNaN);
     EXPECT_FP_EQ(func(neg_zero, aNaN), aNaN);

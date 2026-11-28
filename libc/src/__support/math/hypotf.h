@@ -1,14 +1,21 @@
-//===-- Implementation header for hypotf ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Single-precision hypotf function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF_H
 
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -17,6 +24,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -42,7 +50,9 @@ LIBC_INLINE float hypotf(float x, float y) {
     }
     if (x_bits.is_inf() || y_bits.is_inf())
       return FPBits::inf().get_val();
-    return x + y;
+    if (x_bits.is_nan())
+      return x;
+    return y;
   }
 
   double xd = static_cast<double>(x);
@@ -63,6 +73,10 @@ LIBC_INLINE float hypotf(float x, float y) {
   DoubleBits result(fputil::sqrt<double>(sum_sq));
   double r = result.get_val();
   float r_f = static_cast<float>(r);
+  if (LIBC_UNLIKELY(FPBits(r_f).is_inf() || r >= 0x1.0p128)) {
+    fputil::set_errno_if_required(ERANGE);
+    return r_f;
+  }
 
   // If any of the sticky bits of the result are non-zero, except the LSB, then
   // the rounded result is correct.

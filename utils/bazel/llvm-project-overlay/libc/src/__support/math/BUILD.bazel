@@ -6215,8 +6215,9 @@ libc_support_library(
     hdrs = ["hypot.h"],
     deps = [
         "//libc/hdr:fenv_macros",
-        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/FPUtil:hypot",
@@ -6232,6 +6233,8 @@ libc_support_library(
     name = "hypotf",
     hdrs = ["hypotf.h"],
     deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:fenv_impl",
@@ -6240,6 +6243,7 @@ libc_support_library(
         "//libc/src/__support/FPUtil:sqrt",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 

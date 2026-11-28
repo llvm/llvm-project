@@ -1,19 +1,21 @@
-//===-- Compile time cpu feature detection ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file lists target cpu features by introspecting compiler enabled
-// preprocessor definitions.
+///
+/// \file
+/// Target CPU feature definitions introspected from compiler macros.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
 
-#include "architectures.h"
-#include "compiler.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #if defined(__ARM_FEATURE_FP16_SCALAR_ARITHMETIC)
 #define LIBC_TARGET_CPU_HAS_FULLFP16
@@ -161,6 +163,15 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #define LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS
+#endif
+
+// IEEE 754-2019 tininess detection mode of the target hardware FPU:
+// x86, RISC-V, and Hexagon detect tininess after rounding; ARM/AArch64 detect
+// tininess before rounding.
+#if defined(LIBC_TARGET_ARCH_IS_X86) ||                                        \
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+#define LIBC_TARGET_CPU_HAS_TININESS_AFTER_ROUNDING
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H

@@ -1,22 +1,28 @@
-//===-- Implementation header for hypot -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Double-precision hypot function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOT_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOT_H
 
 #include "hdr/fenv_macros.h"
-#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -72,25 +78,33 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
   constexpr double ERR = 0x1.0p-102;
 
   // Ziv's rounding test.
-  double upper = r_h.hi + (r_lo + ERR);
-  double lower = r_h.hi + (r_lo - ERR);
+  double r_lo_u = r_lo + ERR;
+  double r_lo_l = r_lo - ERR;
+  double upper = r_h.hi + r_lo_u;
+  double lower = r_h.hi + r_lo_l;
 
   if (LIBC_LIKELY(upper == lower)) {
 #ifdef LIBC_MATH_HAS_NO_EXCEPT
-    return (upper - correction) * SCALE_BACK;
+    double unscaled = upper - correction;
+    return unscaled * SCALE_BACK;
 #else
-    // Check to raise underflow correctly.
     DoubleDouble r = fputil::exact_add(r_h.hi, r_lo);
     r.hi -= correction;
-    // Raise underflow if needed:
-    if ((r.hi < 1.0 && r.lo != 0.0) || (r.hi == 1.0 && r.lo < 0.0))
-      fputil::raise_underflow_except_if_required<double>();
-
-    return r.hi * SCALE_BACK;
+    if (r.hi < 1.0) {
+      if (r.lo != 0.0)
+        fputil::raise_underflow_except_if_required<double>();
+      return r.hi * SCALE_BACK;
+    }
+    if (r.hi > 1.0)
+      return r.hi * SCALE_BACK;
+    // When r.hi == 1.0 (at the min_normal boundary), delegate to fputil::hypot
+    // for exact before/after-rounding tininess detection.
 #endif // LIBC_MATH_HAS_NO_EXCEPT
   }
 
-  return fputil::hypot(a * SCALE_BACK, b * SCALE_BACK);
+  double x_unscaled = a * SCALE_BACK;
+  double y_unscaled = b * SCALE_BACK;
+  return fputil::hypot(x_unscaled, y_unscaled);
 }
 
 } // namespace hypot_internal
@@ -174,8 +188,8 @@ LIBC_INLINE double hypot(double x, double y) {
     //   a^2 + b^2 >= 2^848 * (1 - 2^-53 + 2^-108).
     // For a fast sufficient condition that can be done in double precision:
     //   a^2 + b^2 >= 2^848.
-    if (sumsq >= 0x1.0p848)
-      return sumsq * scale_back;
+    if (LIBC_UNLIKELY(sumsq >= 0x1.0p848))
+      return fputil::set_overflow<double>();
 #endif // !LIBC_MATH_HAS_NO_EXCEPT
   } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 400) << (32 - 11)))) {
     // The smaller magnitude is below 2^-400 (or 0), need to scale up to prevent
@@ -273,11 +287,17 @@ LIBC_INLINE double hypot(double x, double y) {
   constexpr double ERR = 0x1.0p-102;
 
   // Ziv's rounding test.
-  double upper = r_hi + fputil::multiply_add(r_hi, ERR, r_lo);
-  double lower = r_hi + fputil::sub_multiply(r_lo, r_hi, ERR);
+  double err_u = fputil::multiply_add(r_hi, ERR, r_lo);
+  double err_l = fputil::sub_multiply(r_lo, r_hi, ERR);
+  double upper = r_hi + err_u;
+  double lower = r_hi + err_l;
 
   if (LIBC_LIKELY(upper == lower)) {
-    return upper * scale_back;
+    double res = upper * scale_back;
+    if (LIBC_UNLIKELY(FPBits(res).is_inf() ||
+                      (scale_back > 1.0 && upper >= 0x1.0p424)))
+      return fputil::set_overflow<double>();
+    return res;
   }
 
   return fputil::hypot(x, y);
