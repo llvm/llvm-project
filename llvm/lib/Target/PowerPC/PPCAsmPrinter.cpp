@@ -1839,7 +1839,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     bool IsConditional;
-    if (RetOpcode == PPC::BCCLR) {
+    if (PPCInstrInfo::isPredicatedBLR8(RetOpcode)) {
       IsConditional = true;
     } else if (RetOpcode == PPC::TCRETURNdi8 || RetOpcode == PPC::TCRETURNri8 ||
                RetOpcode == PPC::TCRETURNai8) {
@@ -1872,13 +1872,31 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
       // of instructions change.
       FallthroughLabel = OutContext.createTempSymbol();
-      EmitToStreamer(
-          *OutStreamer,
-          MCInstBuilder(PPC::BCC)
-              .addImm(PPC::InvertPredicate(
-                  static_cast<PPC::Predicate>(MI->getOperand(1).getImm())))
-              .addReg(MI->getOperand(2).getReg())
-              .addExpr(MCSymbolRefExpr::create(FallthroughLabel, OutContext)));
+      MCInst Branch;
+      switch (RetOpcode) {
+      case PPC::BCCLR:
+        Branch = MCInstBuilder(PPC::BCC)
+                     .addImm(PPC::InvertPredicate(static_cast<PPC::Predicate>(
+                         MI->getOperand(1).getImm())))
+                     .addReg(MI->getOperand(2).getReg());
+        break;
+      case PPC::BCLR:
+        Branch = MCInstBuilder(PPC::BCn).addReg(MI->getOperand(1).getReg());
+        break;
+      case PPC::BCLRn:
+        Branch = MCInstBuilder(PPC::BC).addReg(MI->getOperand(1).getReg());
+        break;
+      // bdnz and bdz decrement CTR just as bdzlr and bdnzlr do.
+      case PPC::BDZLR8:
+        Branch.setOpcode(PPC::BDNZ8);
+        break;
+      case PPC::BDNZLR8:
+        Branch.setOpcode(PPC::BDZ8);
+        break;
+      }
+      Branch.addOperand(MCOperand::createExpr(
+          MCSymbolRefExpr::create(FallthroughLabel, OutContext)));
+      EmitToStreamer(*OutStreamer, Branch);
       RetInst = MCInst();
       RetInst.setOpcode(PPC::BLR8);
     }

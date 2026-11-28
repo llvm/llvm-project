@@ -3006,7 +3006,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_RET: {
     // Size of xray sled.
     unsigned RetOpcode = MI.getOperand(0).getImm();
-    bool IsConditional = RetOpcode == PPC::BCCLR;
+    bool IsConditional = isPredicatedBLR8(RetOpcode);
     return (8 + IsConditional) * 4;
   }
   case TargetOpcode::BUNDLE:
