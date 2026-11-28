@@ -150,6 +150,8 @@ struct omp_lock_t {
   void *Lock;
 };
 
+using omp_event_handle_t = uintptr_t;
+
 using InterWarpCopyFnTy = void (*)(void *src, int32_t warp_num);
 using ShuffleReductFnTy = void (*)(void *rhsData, int16_t lane_id,
                                    int16_t lane_offset, int16_t shortCircuit);

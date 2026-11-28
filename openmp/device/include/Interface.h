@@ -175,6 +175,8 @@ int omp_test_lock(omp_lock_t *Lock);
 int omp_in_final(void);
 
 int omp_get_max_task_priority(void);
+
+void omp_fulfill_event(omp_event_handle_t Event);
 ///}
 
 /// Misc
@@ -343,6 +345,9 @@ int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,
 int32_t __kmpc_omp_task_with_deps(IdentTy *Loc, uint32_t TId,
                                   TaskDescriptorTy *TaskDescriptor, int32_t,
                                   void *, int32_t, void *);
+
+void *__kmpc_task_allow_completion_event(IdentTy *Loc, uint32_t TId,
+                                         TaskDescriptorTy *TaskDescriptor);
 
 void __kmpc_omp_task_begin_if0(IdentTy *Loc, uint32_t TId,
                                TaskDescriptorTy *TaskDescriptor);
