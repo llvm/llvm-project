@@ -179,8 +179,10 @@ static constexpr OptionEnumValueElement g_plugin_domain_values[] = {
     {lldb::ePluginDomainKindGlobal, "global",
      "Apply to all debugger instances."},
     {lldb::ePluginDomainKindDebugger, "debugger",
-     "Apply to the current debugger instance."},
-    {lldb::ePluginDomainKindTarget, "target", "Apply to the current target."},
+     "Apply to the processes that are alive in the current debugger "
+     "instance."},
+    {lldb::ePluginDomainKindTarget, "target",
+     "Apply to the process of the current target."},
 };
 
 static constexpr OptionEnumValueElement g_resolver_mask_values[] = {
