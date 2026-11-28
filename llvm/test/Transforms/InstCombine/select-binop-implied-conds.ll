@@ -257,6 +257,30 @@ define i32 @add_selects_prof_other_only(i32 %p, i32 %x, i32 %y, i32 %def) {
   ret i32 %sum
 }
 
+; Test transform of:
+;   ((P == A ? X : Def) + Base) + (P == B ? Y : 0)
+; into:
+;   Base + (P == A ? X : (Def + (P == B ? Y : 0))
+define i32 @add_selects_reassoc_base(i32 %p, i32 %x, i32 %y, i32 %def, i32 %base) {
+; CHECK-LABEL: define i32 @add_selects_reassoc_base(
+; CHECK-SAME: i32 [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[DEF:%.*]], i32 [[BASE:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[P]], 288
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[P]], 128
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0, !prof [[PROF0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[DEF]], [[SEL1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C0]], i32 [[X]], i32 [[TMP1]], !prof [[PROF1]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i32 [[TMP2]], [[BASE]]
+; CHECK-NEXT:    ret i32 [[SUM2]]
+;
+  %c0 = icmp eq i32 %p, 288
+  %sel0 = select i1 %c0, i32 %x, i32 %def, !prof !0
+  %c1 = icmp eq i32 %p, 128
+  %sel1 = select i1 %c1, i32 %y, i32 0, !prof !1
+  %sum1 = add i32 %sel0, %base
+  %sum2 = add i32 %sum1, %sel1
+  ret i32 %sum2
+}
+
 !0 = !{!"branch_weights", i32 10, i32 90}
 !1 = !{!"branch_weights", i32 20, i32 80}
 ;.
