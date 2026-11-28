@@ -176,6 +176,20 @@ func.func @ceildivs_edge() -> (index, index) {
   return %0, %1 : index, index
 }
 
+// CHECK-LABEL: @ceildivs_min
+func.func @ceildivs_min() -> (index, index) {
+  %min64 = index.constant -9223372036854775808
+  %min32 = index.constant -2147483648
+  %two = index.constant 2
+  %three = index.constant 3
+  %a = index.ceildivs %min64, %two
+  %b = index.ceildivs %min32, %three
+  // CHECK-DAG: %[[A:.*]] = index.constant -4611686018427387904
+  // CHECK-DAG: %[[B:.*]] = index.constant -715827882
+  // CHECK: return %[[A]], %[[B]]
+  return %a, %b : index, index
+}
+
 // CHECK-LABEL: @ceildivu
 func.func @ceildivu() -> index {
   %0 = index.constant 0x200000001
