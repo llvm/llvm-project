@@ -57385,6 +57385,49 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
                           PMADDBuilder);
 }
 
+// Truncate vectors to half their element width with one VPERMT2B/W/D per
+// 512-bit result instead of two VPMOV* truncations and a VINSERTI64X4.
+static SDValue
+combineVectorTruncationWithVPERMV3(SDNode *N, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  unsigned DstBits = VT.getScalarSizeInBits();
+  if (DAG.shouldOptForSize() || !VT.isVector() ||
+      VT.getFixedSizeInBits() < 512 ||
+      !isPowerOf2_64(VT.getFixedSizeInBits()) ||
+      Src.getScalarValueSizeInBits() != 2 * DstBits)
+    return SDValue();
+
+  EVT SubVT =
+      EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), 512 / DstBits);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVT))
+    return SDValue();
+
+  // VPERMT2B needs VBMI and VPERMT2W needs BWI.
+  if ((DstBits == 8 && !Subtarget.hasVBMI()) ||
+      (DstBits == 16 && !Subtarget.hasBWI()))
+    return SDValue();
+
+  // Leave saturating truncations to PACKSS/PACKUS and VPMOVS/VPMOVUS.
+  SDLoc DL(N);
+  if (detectSSatPattern(Src, VT) || detectSSatPattern(Src, VT, true) ||
+      detectUSatPattern(Src, VT, DAG, DL))
+    return SDValue();
+
+  // Truncate each 1024-bit slice of the source to one 512-bit result.
+  unsigned NumSubElts = SubVT.getVectorNumElements();
+  auto Mask = createStrideMask(0, 2, NumSubElts);
+  SmallVector<SDValue, 4> Parts;
+  for (unsigned I = 0, E = VT.getVectorNumElements(); I != E; I += NumSubElts) {
+    auto [Lo, Hi] =
+        DAG.SplitVector(extractSubVector(Src, I, DAG, DL, 1024), DL);
+    Parts.push_back(DAG.getVectorShuffle(SubVT, DL, DAG.getBitcast(SubVT, Lo),
+                                         DAG.getBitcast(SubVT, Hi), Mask));
+  }
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Parts);
+}
+
 static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
@@ -57458,6 +57501,9 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
     if (BCSrc.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MMX_MOVD2W, DL, MVT::i32, BCSrc);
   }
+
+  if (SDValue V = combineVectorTruncationWithVPERMV3(N, DAG, Subtarget))
+    return V;
 
   return SDValue();
 }
