@@ -3907,11 +3907,16 @@ LogicalResult cir::DerivedMethodOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
-                         cir::AwaitKind kind, BuilderCallbackRef readyBuilder,
+                         cir::AwaitKind kind, mlir::ValueRange suspendArgs,
+                         mlir::StringAttr suspendWrapper,
+                         BuilderCallbackRef readyBuilder,
                          BuilderCallbackRef suspendBuilder,
                          BuilderCallbackRef resumeBuilder) {
   result.addAttribute(getKindAttrName(result.name),
                       cir::AwaitKindAttr::get(builder.getContext(), kind));
+  result.addOperands(suspendArgs);
+  if (suspendWrapper)
+    result.addAttribute(getSuspendWrapperAttrName(result.name), suspendWrapper);
   {
     OpBuilder::InsertionGuard guard(builder);
     Region *readyRegion = result.addRegion();
@@ -3974,12 +3979,37 @@ void cir::AwaitOp::getSuccessorRegions(
 }
 
 LogicalResult cir::AwaitOp::verify() {
+  if (getSuspendWrapper()) {
+    if (getSuspendArgs().size() != 2)
+      return emitOpError("wrapper requires awaiter and frame operands");
+    if (!isa<cir::PointerType>(getSuspendArgs()[0].getType()))
+      return emitOpError("wrapper awaiter must be a pointer");
+    auto frameType = dyn_cast<cir::PointerType>(getSuspendArgs()[1].getType());
+    if (!frameType || !isa<cir::VoidType>(frameType.getPointee()))
+      return emitOpError("wrapper frame must be a void pointer");
+  } else if (!getSuspendArgs().empty()) {
+    return emitOpError("suspend operands require a wrapper name");
+  }
+
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
   if (this->getSuspend().empty())
     return emitOpError("suspend region must not be empty");
-  if (!isa<CoroSuspendPoint>(this->getSuspend().back().getTerminator()))
+  auto suspendPoint =
+      dyn_cast<CoroSuspendPoint>(this->getSuspend().back().getTerminator());
+  if (!suspendPoint)
     return emitOpError("suspend region must end with cir.coro.suspend_point");
+  if (suspendPoint.getResult() &&
+      isa<cir::PointerType>(suspendPoint.getResult().getType()) &&
+      !getSuspendWrapper())
+    return emitOpError("pointer suspend result requires wrapper data");
+  return success();
+}
+
+LogicalResult cir::CoroSuspendPoint::verify() {
+  mlir::Value result = getResult();
+  if (result && !isa<cir::BoolType, cir::PointerType>(result.getType()))
+    return emitOpError("result must be a bool or pointer");
   return success();
 }
 

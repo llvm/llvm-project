@@ -810,6 +810,34 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMTryLLVMIntrinsicCallOpLowering::matchAndRewrite(
+    cir::TryLLVMIntrinsicCallOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultType = mlir::LLVM::LLVMVoidType::get(getContext());
+  if (op->getNumResults()) {
+    resultType = getTypeConverter()->convertType(op->getResult(0).getType());
+    if (!resultType)
+      return op.emitError("expected LLVM result type");
+  }
+
+  llvm::SmallVector<mlir::Type> argumentTypes;
+  for (mlir::Value operand : adaptor.getOperands())
+    argumentTypes.push_back(operand.getType());
+  auto functionType =
+      mlir::LLVM::LLVMFunctionType::get(resultType, argumentTypes);
+
+  std::string intrinsicName = ("llvm." + op.getIntrinsicName()).str();
+  createLLVMFuncOpIfNotExist(rewriter, symbolTables, op, intrinsicName,
+                             functionType);
+
+  auto callee =
+      mlir::FlatSymbolRefAttr::get(rewriter.getContext(), intrinsicName);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
+      op, functionType, callee, adaptor.getOperands(), op.getNormalDest(),
+      mlir::ValueRange{}, op.getUnwindDest(), mlir::ValueRange{});
+  return mlir::success();
+}
+
 /// BoolAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
   mlir::DataLayout layout(parentModule);

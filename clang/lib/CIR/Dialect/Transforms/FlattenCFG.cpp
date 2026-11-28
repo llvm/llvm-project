@@ -13,18 +13,22 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -936,6 +940,56 @@ collectThrowingCalls(mlir::Region &region,
   });
 }
 
+static bool isThrowingAwaitSuspend(mlir::Operation *op) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(op)
+      .Case<cir::CoroAwaitSuspendVoidOp, cir::CoroAwaitSuspendBoolOp>(
+          [](auto awaitOp) { return !awaitOp.getNothrow(); })
+      .Case<cir::CoroAwaitSuspendHandleOp>([](auto) { return true; })
+      .Default([](auto) { return false; });
+}
+
+static void collectThrowingAwaitSuspends(
+    mlir::Region &region,
+    llvm::SmallVectorImpl<mlir::Operation *> &awaitsToRewrite) {
+  region.walk([&](mlir::Operation *op) {
+    if (isThrowingAwaitSuspend(op))
+      awaitsToRewrite.push_back(op);
+  });
+}
+
+static llvm::StringRef getAwaitSuspendIntrinsicName(mlir::Operation *op) {
+  return llvm::TypeSwitch<mlir::Operation *, llvm::StringRef>(op)
+      .Case<cir::CoroAwaitSuspendVoidOp>(
+          [](auto) { return "coro.await.suspend.void"; })
+      .Case<cir::CoroAwaitSuspendBoolOp>(
+          [](auto) { return "coro.await.suspend.bool"; })
+      .Case<cir::CoroAwaitSuspendHandleOp>(
+          [](auto) { return "coro.await.suspend.handle"; })
+      .Default([](auto) -> llvm::StringRef {
+        llvm_unreachable("expected await-suspend operation");
+      });
+}
+
+static void replaceAwaitSuspendWithTryIntrinsic(mlir::Operation *awaitOp,
+                                                mlir::Block *unwindDest,
+                                                mlir::RewriterBase &rewriter) {
+  mlir::Block *normalDest = rewriter.splitBlock(
+      awaitOp->getBlock(), std::next(awaitOp->getIterator()));
+
+  mlir::Type resultType =
+      awaitOp->getNumResults() ? awaitOp->getResult(0).getType() : mlir::Type();
+  rewriter.setInsertionPoint(awaitOp);
+  auto tryIntrinsic = cir::TryLLVMIntrinsicCallOp::create(
+      rewriter, awaitOp->getLoc(),
+      rewriter.getStringAttr(getAwaitSuspendIntrinsicName(awaitOp)), resultType,
+      normalDest, unwindDest, awaitOp->getOperands());
+
+  if (resultType)
+    rewriter.replaceAllUsesWith(awaitOp->getResult(0),
+                                tryIntrinsic.getResult());
+  rewriter.eraseOp(awaitOp);
+}
+
 // Collect all cir.throw operations in a region that need to be replaced
 // with cir.try_throw operations so they can unwind through an enclosing
 // cleanup or catch handler. Nested cleanup scopes and try ops are always
@@ -1517,17 +1571,14 @@ public:
   // the to branch to a dispatch block that loads the destination slot and uses
   // switch.flat to branch to the correct destination.
   //
-  // If the cleanup scope requires EH cleanup, any call operations in the body
-  // that may throw are replaced with cir.try_call operations that unwind to an
-  // EH cleanup block. The cleanup block(s) will be terminated with a cir.resume
-  // operation. If this cleanup scope is enclosed by a try operation, the
-  // flattening of the try operation flattening will replace the cir.resume with
-  // a branch to a catch dispatch block. Otherwise, the cir.resume operation
-  // remains in place and will unwind to the caller.
+  // If the cleanup scope requires EH cleanup, throwing operations in the body
+  // unwind to an EH cleanup block. If this cleanup scope is enclosed by a try
+  // operation, its cir.resume is later connected to the catch dispatch block.
   mlir::LogicalResult
   flattenCleanup(cir::CleanupScopeOp cleanupOp,
                  llvm::SmallVectorImpl<CleanupExit> &exits,
                  llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite,
+                 llvm::SmallVectorImpl<mlir::Operation *> &awaitsToRewrite,
                  llvm::SmallVectorImpl<cir::ThrowOp> &throwsToRewrite,
                  llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
@@ -1593,20 +1644,22 @@ public:
     // the cleanup region since buildEHCleanupBlocks clones from it. The unwind
     // block is inserted before the EH cleanup entry so that the final layout
     // is: body -> normal cleanup -> exit -> unwind -> EH cleanup -> continue.
-    // EH cleanup blocks are needed when there are throwing calls or throws
-    // that need to be rewritten, or when there are resume ops from
+    // EH cleanup blocks are needed when there are throwing operations that
+    // need to be rewritten, or when there are resume ops from
     // already-flattened inner cleanup scopes that need to chain through this
     // cleanup's EH handler.
     mlir::Block *unwindBlock = nullptr;
     mlir::Block *ehCleanupEntry = nullptr;
-    if (hasEHCleanup && (!callsToRewrite.empty() || !throwsToRewrite.empty() ||
-                         !resumeOpsToChain.empty())) {
+    if (hasEHCleanup &&
+        (!callsToRewrite.empty() || !awaitsToRewrite.empty() ||
+         !throwsToRewrite.empty() || !resumeOpsToChain.empty())) {
       ehCleanupEntry =
           buildEHCleanupBlocks(cleanupOp, loc, continueBlock, rewriter);
-      // The unwind block is only needed when there are throwing calls or
-      // throws that need a shared unwind destination. Resume ops from inner
-      // cleanups branch directly to the EH cleanup entry.
-      if (!callsToRewrite.empty() || !throwsToRewrite.empty())
+      // The unwind block is only needed when throwing operations need a shared
+      // unwind destination. Resume ops from inner cleanups branch directly to
+      // the EH cleanup entry.
+      if (!callsToRewrite.empty() || !awaitsToRewrite.empty() ||
+          !throwsToRewrite.empty())
         unwindBlock = buildUnwindBlock(ehCleanupEntry, /*isCleanupOnly=*/true,
                                        loc, ehCleanupEntry, rewriter);
     }
@@ -1729,24 +1782,25 @@ public:
       }
     }
 
-    // Replace non-nothrow calls and throws with try_call/try_throw
-    // operations. All calls and throws within this cleanup scope share the
-    // same unwind destination.
+    // Give all throwing operations in this cleanup scope the same unwind
+    // destination.
     if (hasEHCleanup) {
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
+      for (mlir::Operation *awaitOp : awaitsToRewrite)
+        replaceAwaitSuspendWithTryIntrinsic(awaitOp, unwindBlock, rewriter);
       for (cir::ThrowOp throwOp : throwsToRewrite)
         replaceThrowWithTryThrow(throwOp, unwindBlock, loc, rewriter);
     }
 
-    // Handle throwing calls and throws in EH cleanup blocks. When an
-    // exception is thrown during cleanup code that runs on the exception
+    // Handle throwing operations in EH cleanup blocks. When an exception is
+    // thrown during cleanup code that runs on the exception
     // unwind path, the C++ standard requires that std::terminate() be
-    // called. Replace such calls and throws with try_call/try_throw
-    // operations that unwind to a terminate block containing
+    // called. Give these operations a terminate block containing
     // cir.eh.initiate + cir.eh.terminate.
     if (ehCleanupEntry) {
       llvm::SmallVector<cir::CallOp> ehCleanupThrowingCalls;
+      llvm::SmallVector<mlir::Operation *> ehCleanupThrowingAwaits;
       llvm::SmallVector<cir::ThrowOp> ehCleanupThrows;
       for (mlir::Block *block = ehCleanupEntry; block != continueBlock;
            block = block->getNextNode()) {
@@ -1754,16 +1808,22 @@ public:
           if (auto callOp = mlir::dyn_cast<cir::CallOp>(op)) {
             if (!callOp.getNothrow())
               ehCleanupThrowingCalls.push_back(callOp);
+          } else if (isThrowingAwaitSuspend(op)) {
+            ehCleanupThrowingAwaits.push_back(op);
           } else if (auto throwOp = mlir::dyn_cast<cir::ThrowOp>(op)) {
             ehCleanupThrows.push_back(throwOp);
           }
         });
       }
-      if (!ehCleanupThrowingCalls.empty() || !ehCleanupThrows.empty()) {
+      if (!ehCleanupThrowingCalls.empty() || !ehCleanupThrowingAwaits.empty() ||
+          !ehCleanupThrows.empty()) {
         mlir::Block *terminateBlock =
             buildTerminateUnwindBlock(loc, continueBlock, rewriter);
         for (cir::CallOp callOp : ehCleanupThrowingCalls)
           replaceCallWithTryCall(callOp, terminateBlock, loc, rewriter);
+        for (mlir::Operation *awaitOp : ehCleanupThrowingAwaits)
+          replaceAwaitSuspendWithTryIntrinsic(awaitOp, terminateBlock,
+                                              rewriter);
         for (cir::ThrowOp throwOp : ehCleanupThrows)
           replaceThrowWithTryThrow(throwOp, terminateBlock, loc, rewriter);
       }
@@ -1838,14 +1898,16 @@ public:
            "cleanup scope body has no exit");
 #endif
 
-    // Collect non-nothrow calls and throws that need to be converted to
-    // try_call/try_throw. A marker-only cleanup must not introduce an unwind
-    // edge unless an enclosing handler or real EH cleanup requires one.
+    // Collect operations that need an unwind edge. A marker-only cleanup must
+    // not introduce one unless an enclosing handler or real EH cleanup
+    // requires it.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
+    llvm::SmallVector<mlir::Operation *> awaitsToRewrite;
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
     if (hasEHCleanup && (!isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()) ||
                          hasEnclosingEHRequirement(cleanupOp))) {
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
+      collectThrowingAwaitSuspends(cleanupOp.getBodyRegion(), awaitsToRewrite);
       collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
     }
 
@@ -1856,8 +1918,8 @@ public:
     if (hasEHCleanup)
       collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
 
-    return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,
-                          resumeOpsToChain, rewriter);
+    return flattenCleanup(cleanupOp, exits, callsToRewrite, awaitsToRewrite,
+                          throwsToRewrite, resumeOpsToChain, rewriter);
   }
 };
 
@@ -2073,9 +2135,11 @@ public:
     mlir::MutableArrayRef<mlir::Region> handlerRegions =
         tryOp.getHandlerRegions();
 
-    // Collect throwing calls and throws in the try body.
+    // Collect throwing operations in the try body.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     collectThrowingCalls(tryOp.getTryRegion(), callsToRewrite);
+    llvm::SmallVector<mlir::Operation *> awaitsToRewrite;
+    collectThrowingAwaitSuspends(tryOp.getTryRegion(), awaitsToRewrite);
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
     collectThrows(tryOp.getTryRegion(), throwsToRewrite);
 
@@ -2111,13 +2175,13 @@ public:
       return mlir::success();
     }
 
-    // If there are no throwing calls, no throws, and no resume ops from
-    // inner cleanup scopes, exceptions cannot reach the catch handlers.
+    // If there are no throwing operations and no resume ops from inner cleanup
+    // scopes, exceptions cannot reach the catch handlers.
     // Drop all uses from the (unreachable) handler regions before erasing
     // the try op, since handler ops may reference values that were inlined
     // from the try body into the parent block.
-    if (callsToRewrite.empty() && throwsToRewrite.empty() &&
-        resumeOpsToChain.empty()) {
+    if (callsToRewrite.empty() && awaitsToRewrite.empty() &&
+        throwsToRewrite.empty() && resumeOpsToChain.empty()) {
       for (mlir::Region &handlerRegion : handlerRegions)
         for (mlir::Block &block : handlerRegion)
           block.dropAllDefinedValueUses();
@@ -2163,20 +2227,22 @@ public:
           return mlir::isa<cir::CatchAllAttr>(attr);
         });
 
-    // Build a block to be the unwind desination for throwing calls/throws
-    // and replace the calls/throws with try_call/try_throw ops. Note that
+    // Build a shared unwind destination for throwing operations. Note that
     // the unwind block created here is something different than the unwind
     // handler that we may have created above. The unwind handler continues
     // unwinding after uncaught exceptions. This is the block that will
     // eventually become the landing pad for invoke instructions.
     bool isCleanupOnly = tryOp.getCleanup() && !hasCatchAll;
-    if (!callsToRewrite.empty() || !throwsToRewrite.empty()) {
-      // Create a shared unwind block for all throwing calls/throws.
+    if (!callsToRewrite.empty() || !awaitsToRewrite.empty() ||
+        !throwsToRewrite.empty()) {
+      // Create a shared unwind block for all throwing operations.
       mlir::Block *unwindBlock = buildUnwindBlock(dispatchBlock, isCleanupOnly,
                                                   loc, dispatchBlock, rewriter);
 
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
+      for (mlir::Operation *awaitOp : awaitsToRewrite)
+        replaceAwaitSuspendWithTryIntrinsic(awaitOp, unwindBlock, rewriter);
       for (cir::ThrowOp throwOp : throwsToRewrite)
         replaceThrowWithTryThrow(throwOp, unwindBlock, loc, rewriter);
     }
@@ -2401,6 +2467,170 @@ public:
 };
 
 class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
+  mlir::FailureOr<cir::FuncOp> createSuspendWrapper(
+      mlir::PatternRewriter &rewriter, cir::AwaitOp awaitOp,
+      cir::CoroSuspendPoint suspendPoint,
+      llvm::SmallVectorImpl<cir::AllocaOp> &capturedAllocas) const {
+    mlir::Region &suspendRegion = awaitOp.getSuspend();
+    mlir::ValueRange suspendArgs = awaitOp.getSuspendArgs();
+
+    llvm::SetVector<mlir::Value> captures;
+    mlir::getUsedValuesDefinedAbove(suspendRegion, suspendRegion, captures);
+    for (mlir::Value capture : captures)
+      if (capture != suspendArgs[0] && capture != suspendArgs[1] &&
+          !capture.getDefiningOp<cir::AllocaOp>()) {
+        awaitOp.emitError("await_suspend wrapper has an unexpected capture");
+        return mlir::failure();
+      }
+
+    mlir::Value suspendResult = suspendPoint.getResult();
+    mlir::Type returnType = suspendResult
+                                ? suspendResult.getType()
+                                : cir::VoidType::get(rewriter.getContext());
+    auto voidPtrType =
+        cir::PointerType::get(cir::VoidType::get(rewriter.getContext()));
+    auto functionType =
+        cir::FuncType::get({voidPtrType, voidPtrType}, returnType);
+
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    auto coroutineFunc = awaitOp->getParentOfType<cir::FuncOp>();
+    assert(coroutineFunc && "expected await operation inside a function");
+    auto module = coroutineFunc->getParentOfType<mlir::ModuleOp>();
+    rewriter.setInsertionPointToEnd(module.getBody());
+    cir::FuncOp wrapper =
+        cir::FuncOp::create(rewriter, awaitOp.getLoc(),
+                            awaitOp.getSuspendWrapperAttr(), functionType);
+    wrapper.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+    wrapper.setPrivate();
+    wrapper.setRequiresCallConvLowering(false);
+
+    for (llvm::StringRef name : {cir::CIRDialect::getTargetCPUAttrName(),
+                                 cir::CIRDialect::getTuneCPUAttrName(),
+                                 cir::CIRDialect::getTargetFeaturesAttrName()})
+      if (mlir::Attribute attr = coroutineFunc->getAttr(name))
+        wrapper->setAttr(name, attr);
+
+    mlir::UnitAttr unitAttr = rewriter.getUnitAttr();
+    wrapper.setInlineKind(cir::InlineKind::AlwaysInline);
+    wrapper->setAttr(cir::CIRDialect::getMustProgressAttrName(), unitAttr);
+    wrapper.setArgAttr(0, mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                       unitAttr);
+    wrapper.setArgAttr(0, mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                       unitAttr);
+    wrapper.setArgAttr(1, mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                       unitAttr);
+    if (suspendResult) {
+      wrapper.setResultAttr(0, mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                            unitAttr);
+      if (mlir::isa<cir::BoolType>(returnType))
+        wrapper.setResultAttr(0, mlir::LLVM::LLVMDialect::getZExtAttrName(),
+                              unitAttr);
+    }
+
+    mlir::Block *entry = wrapper.addEntryBlock();
+    rewriter.setInsertionPointToStart(entry);
+    mlir::Value awaiter = entry->getArgument(0);
+    if (awaiter.getType() != suspendArgs[0].getType())
+      awaiter = cir::CastOp::create(rewriter, awaitOp.getLoc(),
+                                    suspendArgs[0].getType(),
+                                    cir::CastKind::bitcast, awaiter);
+
+    mlir::IRMapping mapping;
+    mapping.map(suspendArgs[0], awaiter);
+    mapping.map(suspendArgs[1], entry->getArgument(1));
+    for (mlir::Value capture : captures) {
+      if (mapping.contains(capture))
+        continue;
+      cir::AllocaOp alloca = capture.getDefiningOp<cir::AllocaOp>();
+      assert(alloca && "unexpected await_suspend capture");
+      capturedAllocas.push_back(alloca);
+      rewriter.clone(*alloca, mapping);
+    }
+    rewriter.cloneRegionBefore(suspendRegion, wrapper.getBody(),
+                               wrapper.getBody().end(), mapping);
+    mlir::Block *clonedEntry = mapping.lookup(&suspendRegion.front());
+    rewriter.mergeBlocks(clonedEntry, entry);
+
+    auto clonedSuspendPoint = mlir::cast<cir::CoroSuspendPoint>(
+        mapping.lookup(suspendPoint.getOperation()));
+    rewriter.setInsertionPoint(clonedSuspendPoint);
+    if (suspendResult)
+      cir::ReturnOp::create(rewriter, clonedSuspendPoint.getLoc(),
+                            mapping.lookup(suspendResult));
+    else
+      cir::ReturnOp::create(rewriter, clonedSuspendPoint.getLoc());
+    rewriter.eraseOp(clonedSuspendPoint);
+    return wrapper;
+  }
+
+  mlir::LogicalResult outlineAwaitSuspend(mlir::PatternRewriter &rewriter,
+                                          cir::AwaitOp awaitOp) const {
+    if (!awaitOp.getSuspendWrapperAttr())
+      return mlir::success();
+
+    mlir::Region &suspendRegion = awaitOp.getSuspend();
+    auto suspendPoint =
+        mlir::cast<cir::CoroSuspendPoint>(suspendRegion.back().getTerminator());
+    mlir::Value suspendResult = suspendPoint.getResult();
+    const bool hasSuspendResult = static_cast<bool>(suspendResult);
+    const bool returnsBool =
+        suspendResult && mlir::isa<cir::BoolType>(suspendResult.getType());
+    if (suspendResult &&
+        !mlir::isa<cir::BoolType, cir::PointerType>(suspendResult.getType()))
+      return awaitOp.emitError("unsupported await_suspend result type");
+
+    bool suspendCanThrow = false;
+    suspendRegion.walk([&](mlir::Operation *op) {
+      if (auto call = mlir::dyn_cast<cir::CallOp>(op))
+        suspendCanThrow |= !call.getNothrow();
+      else if (mlir::isa<cir::TryCallOp, cir::TryLLVMIntrinsicCallOp,
+                         cir::ThrowOp, cir::TryThrowOp, cir::ResumeOp>(op))
+        suspendCanThrow = true;
+    });
+
+    llvm::SmallVector<cir::AllocaOp> capturedAllocas;
+    mlir::FailureOr<cir::FuncOp> wrapper =
+        createSuspendWrapper(rewriter, awaitOp, suspendPoint, capturedAllocas);
+    if (mlir::failed(wrapper))
+      return mlir::failure();
+
+    suspendRegion.dropAllReferences();
+    while (!suspendRegion.empty())
+      rewriter.eraseBlock(&suspendRegion.front());
+    for (cir::AllocaOp alloca : capturedAllocas)
+      if (alloca->use_empty())
+        rewriter.eraseOp(alloca);
+    mlir::Block *suspendBlock = rewriter.createBlock(&suspendRegion);
+    rewriter.setInsertionPointToStart(suspendBlock);
+
+    cir::PointerType wrapperPointerType =
+        cir::PointerType::get(wrapper->getFunctionType());
+    mlir::Value wrapperPointer = cir::GetGlobalOp::create(
+        rewriter, awaitOp.getLoc(), wrapperPointerType, wrapper->getSymName());
+    mlir::ValueRange suspendArgs = awaitOp.getSuspendArgs();
+
+    if (!hasSuspendResult) {
+      cir::CoroAwaitSuspendVoidOp::create(
+          rewriter, awaitOp.getLoc(), suspendArgs[0], suspendArgs[1],
+          wrapperPointer, /*nothrow=*/!suspendCanThrow);
+      cir::CoroSuspendPoint::create(rewriter, awaitOp.getLoc());
+    } else if (returnsBool) {
+      auto intrinsic = cir::CoroAwaitSuspendBoolOp::create(
+          rewriter, awaitOp.getLoc(), suspendArgs[0], suspendArgs[1],
+          wrapperPointer, /*nothrow=*/!suspendCanThrow);
+      cir::CoroSuspendPoint::create(rewriter, awaitOp.getLoc(),
+                                    intrinsic.getResult());
+    } else {
+      cir::CoroAwaitSuspendHandleOp::create(rewriter, awaitOp.getLoc(),
+                                            suspendArgs[0], suspendArgs[1],
+                                            wrapperPointer);
+      cir::CoroSuspendPoint::create(rewriter, awaitOp.getLoc());
+    }
+
+    rewriter.setInsertionPoint(awaitOp);
+    return mlir::success();
+  }
+
   // The ready region ends in a cir.condition that holds the result of
   // `await_ready()`. Replace it with a cir.brcond: if the awaiter is already
   // ready, skip the suspension and go straight to the resume region
@@ -2476,13 +2706,14 @@ class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
         cir::ConstPtrAttr::get(voidPtrTy, rewriter.getI64IntegerAttr(0)));
     auto coroSave = cir::CoroSaveOp::create(rewriter, loc, nullPtr);
     rewriter.setInsertionPoint(suspendPoint);
-    if (suspendPoint.getCond() != nullptr) {
+    mlir::Value suspendResult = suspendPoint.getResult();
+    if (suspendResult && mlir::isa<cir::BoolType>(suspendResult.getType())) {
       auto *oldinsertpoint = rewriter.getInsertionBlock();
       mlir::Block *suspendBlock = rewriter.splitBlock(
           rewriter.getInsertionBlock(), rewriter.getInsertionPoint());
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToEnd(oldinsertpoint);
-      cir::BrCondOp::create(rewriter, loc, suspendPoint.getCond(), suspendBlock,
+      cir::BrCondOp::create(rewriter, loc, suspendResult, suspendBlock,
                             &awaitOp.getResume().front(), mlir::ValueRange{},
                             mlir::ValueRange{});
     }
@@ -2578,6 +2809,9 @@ public:
     for (mlir::Region &region : awaitOp->getRegions())
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
+
+    if (mlir::failed(outlineAwaitSuspend(rewriter, awaitOp)))
+      return mlir::failure();
 
     mlir::Block *awaitBlock = rewriter.getInsertionBlock();
     // Split the current block before the AwaitOp to create the inlining

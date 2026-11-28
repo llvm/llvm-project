@@ -50,3 +50,136 @@ cir.func coroutine @missing_suspend_point(%arg0 : !cir.bool) {
   }
   cir.trap
 }
+
+// -----
+
+cir.func coroutine @bad_suspend_result(%arg0 : !cir.int<s, 32>) {
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : {
+      %cond = cir.const #cir.bool<true> : !cir.bool
+      cir.condition(%cond)
+    }, suspend : {
+      // expected-error@+1 {{result must be a bool or pointer}}
+      cir.coro.suspend_point(%arg0 : !cir.int<s, 32>)
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @missing_wrapper_data(%arg0 : !cir.ptr<!cir.void>) {
+  cir.coroutine initialSuspend : {
+    // expected-error@+1 {{pointer suspend result requires wrapper data}}
+    cir.await(init, ready : {
+      %cond = cir.const #cir.bool<true> : !cir.bool
+      cir.condition(%cond)
+    }, suspend : {
+      cir.coro.suspend_point(%arg0 : !cir.ptr<!cir.void>)
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @bad_wrapper_arg_count(%awaiter : !cir.ptr<!cir.void>) {
+  cir.coroutine initialSuspend : {
+    // expected-error@+1 {{wrapper requires awaiter and frame operands}}
+    cir.await(init, ready : {
+      %cond = cir.const #cir.bool<true> : !cir.bool
+      cir.condition(%cond)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },) wrapper "wrapper"(%awaiter) : (!cir.ptr<!cir.void>)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @bad_wrapper_awaiter(%awaiter : !cir.int<s, 32>,
+                                        %frame : !cir.ptr<!cir.void>) {
+  cir.coroutine initialSuspend : {
+    // expected-error@+1 {{wrapper awaiter must be a pointer}}
+    cir.await(init, ready : {
+      %cond = cir.const #cir.bool<true> : !cir.bool
+      cir.condition(%cond)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },) wrapper "wrapper"(%awaiter, %frame) : (!cir.int<s, 32>, !cir.ptr<!cir.void>)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @bad_wrapper_frame(
+    %awaiter : !cir.ptr<!cir.void>,
+    %frame : !cir.ptr<!cir.int<s, 32>>) {
+  cir.coroutine initialSuspend : {
+    // expected-error@+1 {{wrapper frame must be a void pointer}}
+    cir.await(init, ready : {
+      %cond = cir.const #cir.bool<true> : !cir.bool
+      cir.condition(%cond)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },) wrapper "wrapper"(%awaiter, %frame) : (!cir.ptr<!cir.void>, !cir.ptr<!cir.int<s, 32>>)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}

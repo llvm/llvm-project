@@ -5022,6 +5022,46 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
   ];
 }
 
+def CIR_TryLLVMIntrinsicCallOp : CIR_Op<"try_call_llvm_intrinsic", [
+  Terminator
+]> {
+  let summary = "Call an LLVM intrinsic with an unwind destination";
+  let description = [{
+    This operation is the exception-handling counterpart of
+    `cir.call_llvm_intrinsic`. It ends its block and transfers control to the
+    normal destination when the intrinsic returns, or to the unwind
+    destination when it throws.
+
+    This operation is used only after CFG flattening.
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = (ins StrAttr:$intrinsic_name,
+                       Variadic<CIR_AnyType>:$arg_ops);
+  let successors = (successor AnySuccessor:$normalDest,
+                               AnySuccessor:$unwindDest);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name,
+                   "mlir::Type":$resType,
+                   "mlir::Block *":$normalDest,
+                   "mlir::Block *":$unwindDest,
+                   CArg<"mlir::ValueRange", "{}">:$operands), [{
+      $_state.addAttribute("intrinsic_name", intrinsic_name);
+      $_state.addOperands(operands);
+      $_state.addSuccessors({normalDest, unwindDest});
+      if (resType)
+        $_state.addTypes(resType);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $intrinsic_name $arg_ops $normalDest `,` $unwindDest `:`
+    functional-type($arg_ops, $result) attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // DeleteArrayOp
 //===----------------------------------------------------------------------===//
@@ -5464,9 +5504,15 @@ def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
 
     Note that resulution of the common expression is assumed to happen
     as part of the enclosing await scope.
+
+    The optional `wrapper` data names the await-suspend wrapper and provides
+    its awaiter and coroutine frame arguments. CFG flattening uses this data
+    when it outlines the `suspend` region.
   }];
 
-  let arguments = (ins CIR_AwaitKindAttr:$kind);
+  let arguments = (ins CIR_AwaitKindAttr:$kind,
+                       Variadic<CIR_AnyType>:$suspend_args,
+                       OptionalAttr<StrAttr>:$suspend_wrapper);
   let regions = (region SizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
@@ -5474,8 +5520,9 @@ def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
     `(` enum($kind) `,`
     `ready` `:` $ready `,`
     `suspend` `:` $suspend `,`
-    `resume` `:` $resume `,`
-    `)`
+    `resume` `:` $resume `,` `)`
+    (`wrapper` $suspend_wrapper^ `(` $suspend_args `)` `:`
+      `(` type($suspend_args) `)`)?
     attr-dict
   }];
 
@@ -5483,6 +5530,8 @@ def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   let builders = [
     OpBuilder<(ins
       "cir::AwaitKind":$kind,
+      "mlir::ValueRange":$suspendArgs,
+      "mlir::StringAttr":$suspendWrapper,
       CArg<"BuilderCallbackRef",
            "nullptr">:$readyBuilder,
       CArg<"BuilderCallbackRef",
@@ -5681,6 +5730,57 @@ def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic AwaitSuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAwaitSuspendVoidOp :
+    CIR_CoroIntrinsicOp<"await.suspend.void",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper,
+           UnitAttr:$nothrow),
+      (outs)> {
+  let summary = "Represents llvm.coro.await.suspend.void";
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results)
+    (`nothrow` $nothrow^)? attr-dict
+  }];
+  let llvmOp = "CoroAwaitSuspendVoidOp";
+}
+
+def CIR_CoroAwaitSuspendBoolOp :
+    CIR_CoroIntrinsicOp<"await.suspend.bool",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper,
+           UnitAttr:$nothrow),
+      (outs CIR_BoolType:$result)> {
+  let summary = "Represents llvm.coro.await.suspend.bool";
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results)
+    (`nothrow` $nothrow^)? attr-dict
+  }];
+  let llvmOp = "CoroAwaitSuspendBoolOp";
+}
+
+def CIR_CoroAwaitSuspendHandleOp :
+    CIR_CoroIntrinsicOp<"await.suspend.handle",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper),
+      (outs)> {
+  let summary = "Represents llvm.coro.await.suspend.handle";
+  let description = [{
+    Performs an await-suspend operation that returns another coroutine handle.
+    The wrapper invokes await_suspend using the awaiter and current coroutine
+    frame. The returned handle identifies the coroutine resumed by symmetric
+    transfer.
+  }];
+
+  let llvmOp = "CoroAwaitSuspendHandleOp";
+}
+
+//===----------------------------------------------------------------------===//
 // Coroutine intrinsic SaveOp
 //===----------------------------------------------------------------------===//
 
@@ -5828,16 +5928,15 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
       `cir.coroutine`'s `destroy` region when the coroutine handle is
       destroyed.
 
-    When the optional `cond` operand is present, a `false` value vetoes the
-    suspension and control branches directly to the `resume` region of the
-    enclosing `cir.await`. A `true` value indicates the coroutine actually
-    suspends.
+    A boolean result can veto suspension: `false` branches directly to the
+    `resume` region, while `true` suspends. A pointer result is the coroutine
+    handle used for symmetric transfer.
   }];
 
-  let arguments = (ins Optional<CIR_AnyBoolType>:$cond);
+  let arguments = (ins Optional<CIR_AnyType>:$result);
 
   let assemblyFormat = [{
-    (`(` $cond^ `)`)? attr-dict
+    (`(` $result^ `:` type($result) `)`)? attr-dict
   }];
 
   let builders = [
@@ -5846,6 +5945,7 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
