@@ -48,6 +48,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -1291,6 +1292,23 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       }
       printOperand(MI, OpNum, O);
       return false;
+    case 'H': { // Print the second X register of a 128-bit operand.
+      // A 128-bit integer in an "r" operand takes two X registers, and $N
+      // prints the first, which holds the doubleword at the lower address.
+      // 'H' prints the other, as in GCC, where the two are an even/odd pair.
+      // Here they needn't be. The operand before the first register is the
+      // flag that says how many registers there are.
+      const InlineAsm::Flag F(MI->getOperand(OpNum - 1).getImm());
+      if (F.getNumOperandRegisters() != 2)
+        return true;
+
+      const MachineOperand &SecondMO = MI->getOperand(OpNum + 1);
+      if (!SecondMO.isReg() ||
+          !AArch64::GPR64allRegClass.contains(SecondMO.getReg()))
+        return true;
+
+      return printAsmMRegister(SecondMO, 'x', O);
+    }
     case 'b': // Print B register.
     case 'h': // Print H register.
     case 's': // Print S register.
