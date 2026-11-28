@@ -257,3 +257,18 @@ define i32 @no_bstrins_w(i32 %a) nounwind {
   %or = or i32 %and, 1193040    ; 0x00123450
   ret i32 %or
 }
+
+;; Expanding the funnel shift creates the OR first. Its operand only
+;; becomes an AND, and then a BSTRPICK, after the OR has been combined.
+define i32 @fshl_pack(i8 %a, i24 %b) nounwind {
+; CHECK-LABEL: fshl_pack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.w $a1, $a0, 31, 24
+; CHECK-NEXT:    move $a0, $a1
+; CHECK-NEXT:    ret
+  %ea = zext i8 %a to i32
+  %eb = zext i24 %b to i32
+  %sb = shl nuw i32 %eb, 8
+  %r = call i32 @llvm.fshl.i32(i32 %ea, i32 %sb, i32 24)
+  ret i32 %r
+}

@@ -7425,6 +7425,39 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, V);
 }
 
+// Undo the rewrites performANDCombine applies to (and X, mask), so that the
+// BSTRINS patterns in performORCombine match whether the DAG combiner visits
+// the OR or its operands first:
+//   (BSTRPICK X, msb, 0)              -> (and X, mask[msb:0])
+//   (shl (BSTRPICK X, msb, lsb), lsb) -> (and X, mask[msb:lsb])
+//   (shl (BSTRPICK X, msb, 0), c)     -> (shl (and X, mask[msb:0]), c)
+static SDValue unfoldBSTRPICK(SDValue V, SelectionDAG &DAG) {
+  SDValue Pick = V;
+  uint64_t Shamt = 0;
+  if (V.getOpcode() == ISD::SHL && isa<ConstantSDNode>(V.getOperand(1))) {
+    Pick = V.getOperand(0);
+    Shamt = V.getConstantOperandVal(1);
+  }
+  if (Pick.getOpcode() != LoongArchISD::BSTRPICK)
+    return V;
+  EVT VT = V.getValueType();
+  unsigned Bits = VT.getSizeInBits();
+  uint64_t Msb = Pick.getConstantOperandVal(1);
+  uint64_t Lsb = Pick.getConstantOperandVal(2);
+  if ((Lsb != Shamt && Lsb != 0) || Msb >= Bits)
+    return V;
+  SDLoc DL(V);
+  SDValue And = DAG.getNode(
+      ISD::AND, DL, VT, Pick.getOperand(0),
+      DAG.getConstant(APInt::getBitsSet(Bits, Lsb, Msb + 1), DL, VT));
+  // A full-width mask folds the AND away.
+  if (And.getOpcode() != ISD::AND)
+    return V;
+  if (Lsb == Shamt)
+    return And;
+  return DAG.getNode(ISD::SHL, DL, VT, And, V.getOperand(1));
+}
+
 static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const LoongArchSubtarget &Subtarget) {
@@ -7447,6 +7480,13 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
 
   if (ValBits != 32 && ValBits != 64)
     return SDValue();
+
+  // Match the patterns on the AND form of the operands, but build results
+  // from the original operands. The unfolded nodes are then dead and the DAG
+  // combiner deletes them.
+  SDValue Orig0 = N0, Orig1 = N1;
+  N0 = unfoldBSTRPICK(N0, DAG);
+  N1 = unfoldBSTRPICK(N1, DAG);
 
 Retry:
   // 1st pattern to match BSTRINS:
@@ -7518,7 +7558,7 @@ Retry:
                          DAG.getConstant(0, DL, GRLenVT));
     }
     return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
-                       DAG.getNode(ISD::SRL, DL, N1->getValueType(0), N1,
+                       DAG.getNode(ISD::SRL, DL, N1->getValueType(0), Orig1,
                                    DAG.getConstant(MaskIdx0, DL, GRLenVT)),
                        DAG.getConstant(ValBits == 32
                                            ? (MaskIdx0 + (MaskLen0 & 31) - 1)
@@ -7541,7 +7581,7 @@ Retry:
       (MaskIdx0 + MaskLen0 <= ValBits)) {
     LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 4\n");
     return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
-                       N1.getOperand(0),
+                       Orig1.getOperand(0),
                        DAG.getConstant((ValBits - 1), DL, GRLenVT),
                        DAG.getConstant(Shamt, DL, GRLenVT));
   }
@@ -7587,7 +7627,7 @@ Retry:
     APInt ShMask(ValBits, CNMask->getZExtValue() << Shamt);
     if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
       LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 6\n");
-      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, Orig0,
                          N1.getOperand(0).getOperand(0),
                          DAG.getConstant(Shamt + MaskLen - 1, DL, GRLenVT),
                          DAG.getConstant(Shamt, DL, GRLenVT));
@@ -7611,7 +7651,7 @@ Retry:
     APInt ShMask(ValBits, CNMask->getZExtValue());
     if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
       LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 7\n");
-      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, Orig0,
                          N1.getOperand(0).getOperand(0),
                          DAG.getConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
                          DAG.getConstant(MaskIdx, DL, GRLenVT));
@@ -7621,6 +7661,7 @@ Retry:
   // (or a, b) and (or b, a) are equivalent, so swap the operands and retry.
   if (!SwapAndRetried) {
     std::swap(N0, N1);
+    std::swap(Orig0, Orig1);
     SwapAndRetried = true;
     goto Retry;
   }
@@ -7642,7 +7683,7 @@ Retry2:
     APInt ShMask(ValBits, CNMask->getZExtValue());
     if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
       LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 8\n");
-      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, Orig0,
                          DAG.getNode(ISD::SRL, DL, N1->getValueType(0),
                                      N1->getOperand(0),
                                      DAG.getConstant(MaskIdx, DL, GRLenVT)),
@@ -7653,6 +7694,7 @@ Retry2:
   // Swap N0/N1 and retry.
   if (!SwapAndRetried) {
     std::swap(N0, N1);
+    std::swap(Orig0, Orig1);
     SwapAndRetried = true;
     goto Retry2;
   }
