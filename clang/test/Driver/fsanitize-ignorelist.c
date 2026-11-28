@@ -82,4 +82,9 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -fno-sanitize-ignorelist -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-NO-IGNORELIST
 // CHECK-MISSING-CFI-NO-IGNORELIST-NOT: error: no such file or directory: '{{.*}}cfi_ignorelist.txt'
 
+// Link-only invocations should not require cfi_ignorelist.txt in the resource dir.
+// RUN: touch %t.o
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -resource-dir=/dev/null %t.o -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-LINK-ONLY
+// CHECK-MISSING-CFI-LINK-ONLY-NOT: error:
+
 // DELIMITERS: {{^ *"}}
