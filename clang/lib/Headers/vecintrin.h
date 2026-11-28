@@ -16,6 +16,22 @@
 #define __ATTRS_o __attribute__((__overloadable__))
 #define __ATTRS_o_ai __attribute__((__overloadable__, __always_inline__))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __ATTRS_ai_constexpr __ATTRS_ai constexpr
+#define __ATTRS_o_ai_constexpr __ATTRS_o_ai constexpr
+#else
+#define __ATTRS_ai_constexpr __ATTRS_ai
+#define __ATTRS_o_ai_constexpr __ATTRS_o_ai
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+#define __ATTRS_ai_constexpr14 __ATTRS_ai constexpr
+#define __ATTRS_o_ai_constexpr14 __ATTRS_o_ai constexpr
+#else
+#define __ATTRS_ai_constexpr14 __ATTRS_ai
+#define __ATTRS_o_ai_constexpr14 __ATTRS_o_ai
+#endif
+
 #define __constant(PARM) \
   __attribute__((__enable_if__ ((PARM) == (PARM), \
      "argument must be a constant integer")))
@@ -45,108 +61,108 @@ __lcbb(const void *__ptr, unsigned short __len)
 
 /*-- vec_extract ------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai signed char
+static inline __ATTRS_o_ai_constexpr signed char
 vec_extract(__vector signed char __vec, int __index) {
   return __vec[__index & 15];
 }
 
-static inline __ATTRS_o_ai unsigned char
+static inline __ATTRS_o_ai_constexpr unsigned char
 vec_extract(__vector __bool char __vec, int __index) {
   return __vec[__index & 15];
 }
 
-static inline __ATTRS_o_ai unsigned char
+static inline __ATTRS_o_ai_constexpr unsigned char
 vec_extract(__vector unsigned char __vec, int __index) {
   return __vec[__index & 15];
 }
 
-static inline __ATTRS_o_ai signed short
+static inline __ATTRS_o_ai_constexpr signed short
 vec_extract(__vector signed short __vec, int __index) {
   return __vec[__index & 7];
 }
 
-static inline __ATTRS_o_ai unsigned short
+static inline __ATTRS_o_ai_constexpr unsigned short
 vec_extract(__vector __bool short __vec, int __index) {
   return __vec[__index & 7];
 }
 
-static inline __ATTRS_o_ai unsigned short
+static inline __ATTRS_o_ai_constexpr unsigned short
 vec_extract(__vector unsigned short __vec, int __index) {
   return __vec[__index & 7];
 }
 
-static inline __ATTRS_o_ai signed int
+static inline __ATTRS_o_ai_constexpr signed int
 vec_extract(__vector signed int __vec, int __index) {
   return __vec[__index & 3];
 }
 
-static inline __ATTRS_o_ai unsigned int
+static inline __ATTRS_o_ai_constexpr unsigned int
 vec_extract(__vector __bool int __vec, int __index) {
   return __vec[__index & 3];
 }
 
-static inline __ATTRS_o_ai unsigned int
+static inline __ATTRS_o_ai_constexpr unsigned int
 vec_extract(__vector unsigned int __vec, int __index) {
   return __vec[__index & 3];
 }
 
-static inline __ATTRS_o_ai signed long long
+static inline __ATTRS_o_ai_constexpr signed long long
 vec_extract(__vector signed long long __vec, int __index) {
   return __vec[__index & 1];
 }
 
-static inline __ATTRS_o_ai unsigned long long
+static inline __ATTRS_o_ai_constexpr unsigned long long
 vec_extract(__vector __bool long long __vec, int __index) {
   return __vec[__index & 1];
 }
 
-static inline __ATTRS_o_ai unsigned long long
+static inline __ATTRS_o_ai_constexpr unsigned long long
 vec_extract(__vector unsigned long long __vec, int __index) {
   return __vec[__index & 1];
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai float
+static inline __ATTRS_o_ai_constexpr float
 vec_extract(__vector float __vec, int __index) {
   return __vec[__index & 3];
 }
 #endif
 
-static inline __ATTRS_o_ai double
+static inline __ATTRS_o_ai_constexpr double
 vec_extract(__vector double __vec, int __index) {
   return __vec[__index & 1];
 }
 
 /*-- vec_insert -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr14 __vector signed char
 vec_insert(signed char __scalar, __vector signed char __vec, int __index) {
   __vec[__index & 15] = __scalar;
   return __vec;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_insert(unsigned char __scalar, __vector __bool char __vec, int __index) {
   __vector unsigned char __newvec = (__vector unsigned char)__vec;
   __newvec[__index & 15] = (unsigned char)__scalar;
   return __newvec;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_insert(unsigned char __scalar, __vector unsigned char __vec, int __index) {
   __vec[__index & 15] = __scalar;
   return __vec;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr14 __vector signed short
 vec_insert(signed short __scalar, __vector signed short __vec, int __index) {
   __vec[__index & 7] = __scalar;
   return __vec;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_insert(unsigned short __scalar, __vector __bool short __vec,
            int __index) {
   __vector unsigned short __newvec = (__vector unsigned short)__vec;
@@ -154,34 +170,34 @@ vec_insert(unsigned short __scalar, __vector __bool short __vec,
   return __newvec;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_insert(unsigned short __scalar, __vector unsigned short __vec,
            int __index) {
   __vec[__index & 7] = __scalar;
   return __vec;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr14 __vector signed int
 vec_insert(signed int __scalar, __vector signed int __vec, int __index) {
   __vec[__index & 3] = __scalar;
   return __vec;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_insert(unsigned int __scalar, __vector __bool int __vec, int __index) {
   __vector unsigned int __newvec = (__vector unsigned int)__vec;
   __newvec[__index & 3] = __scalar;
   return __newvec;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_insert(unsigned int __scalar, __vector unsigned int __vec, int __index) {
   __vec[__index & 3] = __scalar;
   return __vec;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr14 __vector signed long long
 vec_insert(signed long long __scalar, __vector signed long long __vec,
            int __index) {
   __vec[__index & 1] = __scalar;
@@ -189,7 +205,7 @@ vec_insert(signed long long __scalar, __vector signed long long __vec,
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_insert(unsigned long long __scalar, __vector __bool long long __vec,
            int __index) {
   __vector unsigned long long __newvec = (__vector unsigned long long)__vec;
@@ -197,7 +213,7 @@ vec_insert(unsigned long long __scalar, __vector __bool long long __vec,
   return __newvec;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_insert(unsigned long long __scalar, __vector unsigned long long __vec,
            int __index) {
   __vec[__index & 1] = __scalar;
@@ -205,14 +221,14 @@ vec_insert(unsigned long long __scalar, __vector unsigned long long __vec,
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr14 __vector float
 vec_insert(float __scalar, __vector float __vec, int __index) {
   __vec[__index & 3] = __scalar;
   return __vec;
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr14 __vector double
 vec_insert(double __scalar, __vector double __vec, int __index) {
   __vec[__index & 1] = __scalar;
   return __vec;
@@ -620,7 +636,7 @@ vec_revb(__vector double __vec) {
 
 /*-- vec_reve ---------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_reve(__vector signed char __vec) {
   return (__vector signed char) { __vec[15], __vec[14], __vec[13], __vec[12],
                                   __vec[11], __vec[10], __vec[9], __vec[8],
@@ -628,7 +644,7 @@ vec_reve(__vector signed char __vec) {
                                   __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_reve(__vector unsigned char __vec) {
   return (__vector unsigned char) { __vec[15], __vec[14], __vec[13], __vec[12],
                                     __vec[11], __vec[10], __vec[9], __vec[8],
@@ -636,7 +652,7 @@ vec_reve(__vector unsigned char __vec) {
                                     __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_reve(__vector __bool char __vec) {
   return (__vector __bool char) { __vec[15], __vec[14], __vec[13], __vec[12],
                                   __vec[11], __vec[10], __vec[9], __vec[8],
@@ -644,262 +660,262 @@ vec_reve(__vector __bool char __vec) {
                                   __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_reve(__vector signed short __vec) {
   return (__vector signed short) { __vec[7], __vec[6], __vec[5], __vec[4],
                                    __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_reve(__vector unsigned short __vec) {
   return (__vector unsigned short) { __vec[7], __vec[6], __vec[5], __vec[4],
                                      __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_reve(__vector __bool short __vec) {
   return (__vector __bool short) { __vec[7], __vec[6], __vec[5], __vec[4],
                                    __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_reve(__vector signed int __vec) {
   return (__vector signed int) { __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_reve(__vector unsigned int __vec) {
   return (__vector unsigned int) { __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_reve(__vector __bool int __vec) {
   return (__vector __bool int) { __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_reve(__vector signed long long __vec) {
   return (__vector signed long long) { __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_reve(__vector unsigned long long __vec) {
   return (__vector unsigned long long) { __vec[1], __vec[0] };
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_reve(__vector __bool long long __vec) {
   return (__vector __bool long long) { __vec[1], __vec[0] };
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_reve(__vector float __vec) {
   return (__vector float) { __vec[3], __vec[2], __vec[1], __vec[0] };
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_reve(__vector double __vec) {
   return (__vector double) { __vec[1], __vec[0] };
 }
 
 /*-- vec_sel ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_sel(__vector signed char __a, __vector signed char __b,
         __vector unsigned char __c) {
   return (((__vector signed char)__c & __b) |
           (~(__vector signed char)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_sel(__vector signed char __a, __vector signed char __b,
         __vector __bool char __c) {
   return (((__vector signed char)__c & __b) |
           (~(__vector signed char)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_sel(__vector __bool char __a, __vector __bool char __b,
         __vector unsigned char __c) {
   return (((__vector __bool char)__c & __b) |
           (~(__vector __bool char)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_sel(__vector __bool char __a, __vector __bool char __b,
         __vector __bool char __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_sel(__vector unsigned char __a, __vector unsigned char __b,
         __vector unsigned char __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_sel(__vector unsigned char __a, __vector unsigned char __b,
         __vector __bool char __c) {
   return (((__vector unsigned char)__c & __b) |
           (~(__vector unsigned char)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_sel(__vector signed short __a, __vector signed short __b,
         __vector unsigned short __c) {
   return (((__vector signed short)__c & __b) |
           (~(__vector signed short)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_sel(__vector signed short __a, __vector signed short __b,
         __vector __bool short __c) {
   return (((__vector signed short)__c & __b) |
           (~(__vector signed short)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_sel(__vector __bool short __a, __vector __bool short __b,
         __vector unsigned short __c) {
   return (((__vector __bool short)__c & __b) |
           (~(__vector __bool short)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_sel(__vector __bool short __a, __vector __bool short __b,
         __vector __bool short __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_sel(__vector unsigned short __a, __vector unsigned short __b,
         __vector unsigned short __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_sel(__vector unsigned short __a, __vector unsigned short __b,
         __vector __bool short __c) {
   return (((__vector unsigned short)__c & __b) |
           (~(__vector unsigned short)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_sel(__vector signed int __a, __vector signed int __b,
         __vector unsigned int __c) {
   return (((__vector signed int)__c & __b) |
           (~(__vector signed int)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_sel(__vector signed int __a, __vector signed int __b,
         __vector __bool int __c) {
   return (((__vector signed int)__c & __b) |
           (~(__vector signed int)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_sel(__vector __bool int __a, __vector __bool int __b,
         __vector unsigned int __c) {
   return (((__vector __bool int)__c & __b) |
           (~(__vector __bool int)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_sel(__vector __bool int __a, __vector __bool int __b,
         __vector __bool int __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_sel(__vector unsigned int __a, __vector unsigned int __b,
         __vector unsigned int __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_sel(__vector unsigned int __a, __vector unsigned int __b,
         __vector __bool int __c) {
   return (((__vector unsigned int)__c & __b) |
           (~(__vector unsigned int)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_sel(__vector signed long long __a, __vector signed long long __b,
         __vector unsigned long long __c) {
   return (((__vector signed long long)__c & __b) |
           (~(__vector signed long long)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_sel(__vector signed long long __a, __vector signed long long __b,
         __vector __bool long long __c) {
   return (((__vector signed long long)__c & __b) |
           (~(__vector signed long long)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_sel(__vector __bool long long __a, __vector __bool long long __b,
         __vector unsigned long long __c) {
   return (((__vector __bool long long)__c & __b) |
           (~(__vector __bool long long)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_sel(__vector __bool long long __a, __vector __bool long long __b,
         __vector __bool long long __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_sel(__vector unsigned long long __a, __vector unsigned long long __b,
         __vector unsigned long long __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_sel(__vector unsigned long long __a, __vector unsigned long long __b,
         __vector __bool long long __c) {
   return (((__vector unsigned long long)__c & __b) |
           (~(__vector unsigned long long)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_sel(__vector signed __int128 __a, __vector signed __int128 __b,
         __vector unsigned __int128 __c) {
   return (((__vector signed __int128)__c & __b) |
           (~(__vector signed __int128)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_sel(__vector signed __int128 __a, __vector signed __int128 __b,
         __vector __bool __int128 __c) {
   return (((__vector signed __int128)__c & __b) |
           (~(__vector signed __int128)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_sel(__vector __bool __int128 __a, __vector __bool __int128 __b,
         __vector unsigned __int128 __c) {
   return (((__vector __bool __int128)__c & __b) |
           (~(__vector __bool __int128)__c & __a));
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_sel(__vector __bool __int128 __a, __vector __bool __int128 __b,
         __vector __bool __int128 __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_sel(__vector unsigned __int128 __a, __vector unsigned __int128 __b,
         __vector unsigned __int128 __c) {
   return (__c & __b) | (~__c & __a);
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_sel(__vector unsigned __int128 __a, __vector unsigned __int128 __b,
         __vector __bool __int128 __c) {
   return (((__vector unsigned __int128)__c & __b) |
@@ -907,13 +923,13 @@ vec_sel(__vector unsigned __int128 __a, __vector unsigned __int128 __b,
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_sel(__vector float __a, __vector float __b, __vector unsigned int __c) {
   return (__vector float)((__c & (__vector unsigned int)__b) |
                           (~__c & (__vector unsigned int)__a));
 }
 
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr14 __vector float
 vec_sel(__vector float __a, __vector float __b, __vector __bool int __c) {
   __vector unsigned int __ac = (__vector unsigned int)__a;
   __vector unsigned int __bc = (__vector unsigned int)__b;
@@ -922,14 +938,14 @@ vec_sel(__vector float __a, __vector float __b, __vector __bool int __c) {
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_sel(__vector double __a, __vector double __b,
         __vector unsigned long long __c) {
   return (__vector double)((__c & (__vector unsigned long long)__b) |
                          (~__c & (__vector unsigned long long)__a));
 }
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr14 __vector double
 vec_sel(__vector double __a, __vector double __b,
         __vector __bool long long __c) {
   __vector unsigned long long __ac = (__vector unsigned long long)__a;
@@ -1919,88 +1935,88 @@ vec_gen_element_masks_128(__vector unsigned char __mask) {
 
 /*-- vec_splat --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_splat(__vector signed char __vec, int __index)
   __constant_range(__index, 0, 15) {
   return (__vector signed char)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_splat(__vector __bool char __vec, int __index)
   __constant_range(__index, 0, 15) {
   return (__vector __bool char)(__vector unsigned char)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_splat(__vector unsigned char __vec, int __index)
   __constant_range(__index, 0, 15) {
   return (__vector unsigned char)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_splat(__vector signed short __vec, int __index)
   __constant_range(__index, 0, 7) {
   return (__vector signed short)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_splat(__vector __bool short __vec, int __index)
   __constant_range(__index, 0, 7) {
   return (__vector __bool short)(__vector unsigned short)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_splat(__vector unsigned short __vec, int __index)
   __constant_range(__index, 0, 7) {
   return (__vector unsigned short)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_splat(__vector signed int __vec, int __index)
   __constant_range(__index, 0, 3) {
   return (__vector signed int)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_splat(__vector __bool int __vec, int __index)
   __constant_range(__index, 0, 3) {
   return (__vector __bool int)(__vector unsigned int)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_splat(__vector unsigned int __vec, int __index)
   __constant_range(__index, 0, 3) {
   return (__vector unsigned int)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_splat(__vector signed long long __vec, int __index)
   __constant_range(__index, 0, 1) {
   return (__vector signed long long)__vec[__index];
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_splat(__vector __bool long long __vec, int __index)
   __constant_range(__index, 0, 1) {
   return ((__vector __bool long long)
           (__vector unsigned long long)__vec[__index]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_splat(__vector unsigned long long __vec, int __index)
   __constant_range(__index, 0, 1) {
   return (__vector unsigned long long)__vec[__index];
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_splat(__vector float __vec, int __index)
   __constant_range(__index, 0, 3) {
   return (__vector float)__vec[__index];
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_splat(__vector double __vec, int __index)
   __constant_range(__index, 0, 1) {
   return (__vector double)__vec[__index];
@@ -2008,25 +2024,25 @@ vec_splat(__vector double __vec, int __index)
 
 /*-- vec_splat_s* -----------------------------------------------------------*/
 
-static inline __ATTRS_ai __vector signed char
+static inline __ATTRS_ai_constexpr __vector signed char
 vec_splat_s8(signed char __scalar)
   __constant(__scalar) {
   return (__vector signed char)__scalar;
 }
 
-static inline __ATTRS_ai __vector signed short
+static inline __ATTRS_ai_constexpr __vector signed short
 vec_splat_s16(signed short __scalar)
   __constant(__scalar) {
   return (__vector signed short)__scalar;
 }
 
-static inline __ATTRS_ai __vector signed int
+static inline __ATTRS_ai_constexpr __vector signed int
 vec_splat_s32(signed short __scalar)
   __constant(__scalar) {
   return (__vector signed int)(signed int)__scalar;
 }
 
-static inline __ATTRS_ai __vector signed long long
+static inline __ATTRS_ai_constexpr __vector signed long long
 vec_splat_s64(signed short __scalar)
   __constant(__scalar) {
   return (__vector signed long long)(signed long)__scalar;
@@ -2034,25 +2050,25 @@ vec_splat_s64(signed short __scalar)
 
 /*-- vec_splat_u* -----------------------------------------------------------*/
 
-static inline __ATTRS_ai __vector unsigned char
+static inline __ATTRS_ai_constexpr __vector unsigned char
 vec_splat_u8(unsigned char __scalar)
   __constant(__scalar) {
   return (__vector unsigned char)__scalar;
 }
 
-static inline __ATTRS_ai __vector unsigned short
+static inline __ATTRS_ai_constexpr __vector unsigned short
 vec_splat_u16(unsigned short __scalar)
   __constant(__scalar) {
   return (__vector unsigned short)__scalar;
 }
 
-static inline __ATTRS_ai __vector unsigned int
+static inline __ATTRS_ai_constexpr __vector unsigned int
 vec_splat_u32(signed short __scalar)
   __constant(__scalar) {
   return (__vector unsigned int)(signed int)__scalar;
 }
 
-static inline __ATTRS_ai __vector unsigned long long
+static inline __ATTRS_ai_constexpr __vector unsigned long long
 vec_splat_u64(signed short __scalar)
   __constant(__scalar) {
   return (__vector unsigned long long)(signed long long)__scalar;
@@ -2060,64 +2076,64 @@ vec_splat_u64(signed short __scalar)
 
 /*-- vec_splats -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_splats(signed char __scalar) {
   return (__vector signed char)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_splats(unsigned char __scalar) {
   return (__vector unsigned char)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_splats(signed short __scalar) {
   return (__vector signed short)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_splats(unsigned short __scalar) {
   return (__vector unsigned short)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_splats(signed int __scalar) {
   return (__vector signed int)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_splats(unsigned int __scalar) {
   return (__vector unsigned int)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_splats(signed long long __scalar) {
   return (__vector signed long long)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_splats(unsigned long long __scalar) {
   return (__vector unsigned long long)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_splats(signed __int128 __scalar) {
   return (__vector signed __int128)__scalar;
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_splats(unsigned __int128 __scalar) {
   return (__vector unsigned __int128)__scalar;
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_splats(float __scalar) {
   return (__vector float)__scalar;
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_splats(double __scalar) {
   return (__vector double)__scalar;
 }
@@ -2141,166 +2157,166 @@ vec_extend_s64(__vector signed int __a) {
 
 /*-- vec_mergeh -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_mergeh(__vector signed char __a, __vector signed char __b) {
   return (__vector signed char)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3],
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_mergeh(__vector __bool char __a, __vector __bool char __b) {
   return (__vector __bool char)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3],
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_mergeh(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector unsigned char)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3],
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_mergeh(__vector signed short __a, __vector signed short __b) {
   return (__vector signed short)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_mergeh(__vector __bool short __a, __vector __bool short __b) {
   return (__vector __bool short)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_mergeh(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector unsigned short)(
     __a[0], __b[0], __a[1], __b[1], __a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_mergeh(__vector signed int __a, __vector signed int __b) {
   return (__vector signed int)(__a[0], __b[0], __a[1], __b[1]);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_mergeh(__vector __bool int __a, __vector __bool int __b) {
   return (__vector __bool int)(__a[0], __b[0], __a[1], __b[1]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_mergeh(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector unsigned int)(__a[0], __b[0], __a[1], __b[1]);
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_mergeh(__vector signed long long __a, __vector signed long long __b) {
   return (__vector signed long long)(__a[0], __b[0]);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_mergeh(__vector __bool long long __a, __vector __bool long long __b) {
   return (__vector __bool long long)(__a[0], __b[0]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_mergeh(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector unsigned long long)(__a[0], __b[0]);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_mergeh(__vector float __a, __vector float __b) {
   return (__vector float)(__a[0], __b[0], __a[1], __b[1]);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_mergeh(__vector double __a, __vector double __b) {
   return (__vector double)(__a[0], __b[0]);
 }
 
 /*-- vec_mergel -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_mergel(__vector signed char __a, __vector signed char __b) {
   return (__vector signed char)(
     __a[8], __b[8], __a[9], __b[9], __a[10], __b[10], __a[11], __b[11],
     __a[12], __b[12], __a[13], __b[13], __a[14], __b[14], __a[15], __b[15]);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_mergel(__vector __bool char __a, __vector __bool char __b) {
   return (__vector __bool char)(
     __a[8], __b[8], __a[9], __b[9], __a[10], __b[10], __a[11], __b[11],
     __a[12], __b[12], __a[13], __b[13], __a[14], __b[14], __a[15], __b[15]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_mergel(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector unsigned char)(
     __a[8], __b[8], __a[9], __b[9], __a[10], __b[10], __a[11], __b[11],
     __a[12], __b[12], __a[13], __b[13], __a[14], __b[14], __a[15], __b[15]);
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_mergel(__vector signed short __a, __vector signed short __b) {
   return (__vector signed short)(
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_mergel(__vector __bool short __a, __vector __bool short __b) {
   return (__vector __bool short)(
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_mergel(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector unsigned short)(
     __a[4], __b[4], __a[5], __b[5], __a[6], __b[6], __a[7], __b[7]);
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_mergel(__vector signed int __a, __vector signed int __b) {
   return (__vector signed int)(__a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_mergel(__vector __bool int __a, __vector __bool int __b) {
   return (__vector __bool int)(__a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_mergel(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector unsigned int)(__a[2], __b[2], __a[3], __b[3]);
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_mergel(__vector signed long long __a, __vector signed long long __b) {
   return (__vector signed long long)(__a[1], __b[1]);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_mergel(__vector __bool long long __a, __vector __bool long long __b) {
   return (__vector __bool long long)(__a[1], __b[1]);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_mergel(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector unsigned long long)(__a[1], __b[1]);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_mergel(__vector float __a, __vector float __b) {
   return (__vector float)(__a[2], __b[2], __a[3], __b[3]);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_mergel(__vector double __a, __vector double __b) {
   return (__vector double)(__a[1], __b[1]);
 }
@@ -2669,345 +2685,345 @@ vec_unpackl(__vector unsigned long long __a) {
 
 /*-- vec_cmpeq --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpeq(__vector __bool char __a, __vector __bool char __b) {
   return (__vector __bool char)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpeq(__vector signed char __a, __vector signed char __b) {
   return (__vector __bool char)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpeq(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector __bool char)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpeq(__vector __bool short __a, __vector __bool short __b) {
   return (__vector __bool short)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpeq(__vector signed short __a, __vector signed short __b) {
   return (__vector __bool short)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpeq(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector __bool short)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpeq(__vector __bool int __a, __vector __bool int __b) {
   return (__vector __bool int)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpeq(__vector signed int __a, __vector signed int __b) {
   return (__vector __bool int)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpeq(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector __bool int)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpeq(__vector __bool long long __a, __vector __bool long long __b) {
   return (__vector __bool long long)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpeq(__vector signed long long __a, __vector signed long long __b) {
   return (__vector __bool long long)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpeq(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector __bool long long)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpeq(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return (__vector __bool __int128)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpeq(__vector signed __int128 __a, __vector signed __int128 __b) {
   return (__vector __bool __int128)(__a == __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpeq(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return (__vector __bool __int128)(__a == __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpeq(__vector float __a, __vector float __b) {
   return (__vector __bool int)(__a == __b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpeq(__vector double __a, __vector double __b) {
   return (__vector __bool long long)(__a == __b);
 }
 
 /*-- vec_cmpge --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpge(__vector signed char __a, __vector signed char __b) {
   return (__vector __bool char)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpge(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector __bool char)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpge(__vector signed short __a, __vector signed short __b) {
   return (__vector __bool short)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpge(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector __bool short)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpge(__vector signed int __a, __vector signed int __b) {
   return (__vector __bool int)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpge(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector __bool int)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpge(__vector signed long long __a, __vector signed long long __b) {
   return (__vector __bool long long)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpge(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector __bool long long)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpge(__vector signed __int128 __a, __vector signed __int128 __b) {
   return (__vector __bool __int128)(__a >= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpge(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return (__vector __bool __int128)(__a >= __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpge(__vector float __a, __vector float __b) {
   return (__vector __bool int)(__a >= __b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpge(__vector double __a, __vector double __b) {
   return (__vector __bool long long)(__a >= __b);
 }
 
 /*-- vec_cmpgt --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpgt(__vector signed char __a, __vector signed char __b) {
   return (__vector __bool char)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmpgt(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector __bool char)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpgt(__vector signed short __a, __vector signed short __b) {
   return (__vector __bool short)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmpgt(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector __bool short)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpgt(__vector signed int __a, __vector signed int __b) {
   return (__vector __bool int)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpgt(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector __bool int)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpgt(__vector signed long long __a, __vector signed long long __b) {
   return (__vector __bool long long)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpgt(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector __bool long long)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpgt(__vector signed __int128 __a, __vector signed __int128 __b) {
   return (__vector __bool __int128)(__a > __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmpgt(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return (__vector __bool __int128)(__a > __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmpgt(__vector float __a, __vector float __b) {
   return (__vector __bool int)(__a > __b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmpgt(__vector double __a, __vector double __b) {
   return (__vector __bool long long)(__a > __b);
 }
 
 /*-- vec_cmple --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmple(__vector signed char __a, __vector signed char __b) {
   return (__vector __bool char)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmple(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector __bool char)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmple(__vector signed short __a, __vector signed short __b) {
   return (__vector __bool short)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmple(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector __bool short)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmple(__vector signed int __a, __vector signed int __b) {
   return (__vector __bool int)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmple(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector __bool int)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmple(__vector signed long long __a, __vector signed long long __b) {
   return (__vector __bool long long)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmple(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector __bool long long)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmple(__vector signed __int128 __a, __vector signed __int128 __b) {
   return (__vector __bool __int128)(__a <= __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmple(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return (__vector __bool __int128)(__a <= __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmple(__vector float __a, __vector float __b) {
   return (__vector __bool int)(__a <= __b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmple(__vector double __a, __vector double __b) {
   return (__vector __bool long long)(__a <= __b);
 }
 
 /*-- vec_cmplt --------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmplt(__vector signed char __a, __vector signed char __b) {
   return (__vector __bool char)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_cmplt(__vector unsigned char __a, __vector unsigned char __b) {
   return (__vector __bool char)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmplt(__vector signed short __a, __vector signed short __b) {
   return (__vector __bool short)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_cmplt(__vector unsigned short __a, __vector unsigned short __b) {
   return (__vector __bool short)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmplt(__vector signed int __a, __vector signed int __b) {
   return (__vector __bool int)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmplt(__vector unsigned int __a, __vector unsigned int __b) {
   return (__vector __bool int)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmplt(__vector signed long long __a, __vector signed long long __b) {
   return (__vector __bool long long)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmplt(__vector unsigned long long __a, __vector unsigned long long __b) {
   return (__vector __bool long long)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmplt(__vector signed __int128 __a, __vector signed __int128 __b) {
   return (__vector __bool __int128)(__a < __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_cmplt(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return (__vector __bool __int128)(__a < __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_cmplt(__vector float __a, __vector float __b) {
   return (__vector __bool int)(__a < __b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_cmplt(__vector double __a, __vector double __b) {
   return (__vector __bool long long)(__a < __b);
 }
@@ -6445,90 +6461,90 @@ vec_blend(__vector double __a, __vector double __b,
 
 /*-- vec_and ---------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_and(__vector __bool char __a, __vector __bool char __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_and(__vector signed char __a, __vector signed char __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_and(__vector unsigned char __a, __vector unsigned char __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_and(__vector __bool short __a, __vector __bool short __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_and(__vector signed short __a, __vector signed short __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_and(__vector unsigned short __a, __vector unsigned short __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_and(__vector __bool int __a, __vector __bool int __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_and(__vector signed int __a, __vector signed int __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_and(__vector unsigned int __a, __vector unsigned int __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_and(__vector __bool long long __a, __vector __bool long long __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_and(__vector signed long long __a, __vector signed long long __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_and(__vector unsigned long long __a, __vector unsigned long long __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_and(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_and(__vector signed __int128 __a, __vector signed __int128 __b) {
   return __a & __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_and(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return __a & __b;
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_and(__vector float __a, __vector float __b) {
   return (__vector float)((__vector unsigned int)__a &
                           (__vector unsigned int)__b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_and(__vector double __a, __vector double __b) {
   return (__vector double)((__vector unsigned long long)__a &
                            (__vector unsigned long long)__b);
@@ -6536,90 +6552,90 @@ vec_and(__vector double __a, __vector double __b) {
 
 /*-- vec_or ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_or(__vector __bool char __a, __vector __bool char __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_or(__vector signed char __a, __vector signed char __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_or(__vector unsigned char __a, __vector unsigned char __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_or(__vector __bool short __a, __vector __bool short __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_or(__vector signed short __a, __vector signed short __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_or(__vector unsigned short __a, __vector unsigned short __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_or(__vector __bool int __a, __vector __bool int __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_or(__vector signed int __a, __vector signed int __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_or(__vector unsigned int __a, __vector unsigned int __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_or(__vector __bool long long __a, __vector __bool long long __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_or(__vector signed long long __a, __vector signed long long __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_or(__vector unsigned long long __a, __vector unsigned long long __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_or(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_or(__vector signed __int128 __a, __vector signed __int128 __b) {
   return __a | __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_or(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return __a | __b;
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_or(__vector float __a, __vector float __b) {
   return (__vector float)((__vector unsigned int)__a |
                           (__vector unsigned int)__b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_or(__vector double __a, __vector double __b) {
   return (__vector double)((__vector unsigned long long)__a |
                            (__vector unsigned long long)__b);
@@ -6627,90 +6643,90 @@ vec_or(__vector double __a, __vector double __b) {
 
 /*-- vec_xor ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_xor(__vector __bool char __a, __vector __bool char __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_xor(__vector signed char __a, __vector signed char __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_xor(__vector unsigned char __a, __vector unsigned char __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_xor(__vector __bool short __a, __vector __bool short __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_xor(__vector signed short __a, __vector signed short __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_xor(__vector unsigned short __a, __vector unsigned short __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_xor(__vector __bool int __a, __vector __bool int __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_xor(__vector signed int __a, __vector signed int __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_xor(__vector unsigned int __a, __vector unsigned int __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_xor(__vector __bool long long __a, __vector __bool long long __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_xor(__vector signed long long __a, __vector signed long long __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_xor(__vector unsigned long long __a, __vector unsigned long long __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_xor(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_xor(__vector signed __int128 __a, __vector signed __int128 __b) {
   return __a ^ __b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_xor(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return __a ^ __b;
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_xor(__vector float __a, __vector float __b) {
   return (__vector float)((__vector unsigned int)__a ^
                           (__vector unsigned int)__b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_xor(__vector double __a, __vector double __b) {
   return (__vector double)((__vector unsigned long long)__a ^
                            (__vector unsigned long long)__b);
@@ -6718,200 +6734,200 @@ vec_xor(__vector double __a, __vector double __b) {
 
 /*-- vec_andc ---------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_andc(__vector __bool char __a, __vector __bool char __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_andc(__vector signed char __a, __vector signed char __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_andc(__vector __bool char __a, __vector signed char __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_andc(__vector signed char __a, __vector __bool char __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_andc(__vector unsigned char __a, __vector unsigned char __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_andc(__vector __bool char __a, __vector unsigned char __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_andc(__vector unsigned char __a, __vector __bool char __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_andc(__vector __bool short __a, __vector __bool short __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_andc(__vector signed short __a, __vector signed short __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_andc(__vector __bool short __a, __vector signed short __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_andc(__vector signed short __a, __vector __bool short __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_andc(__vector unsigned short __a, __vector unsigned short __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_andc(__vector __bool short __a, __vector unsigned short __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_andc(__vector unsigned short __a, __vector __bool short __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_andc(__vector __bool int __a, __vector __bool int __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_andc(__vector signed int __a, __vector signed int __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_andc(__vector __bool int __a, __vector signed int __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_andc(__vector signed int __a, __vector __bool int __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_andc(__vector unsigned int __a, __vector unsigned int __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_andc(__vector __bool int __a, __vector unsigned int __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_andc(__vector unsigned int __a, __vector __bool int __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_andc(__vector __bool long long __a, __vector __bool long long __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_andc(__vector signed long long __a, __vector signed long long __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_andc(__vector __bool long long __a, __vector signed long long __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_andc(__vector signed long long __a, __vector __bool long long __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_andc(__vector unsigned long long __a, __vector unsigned long long __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_andc(__vector __bool long long __a, __vector unsigned long long __b) {
   return __a & ~__b;
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_andc(__vector unsigned long long __a, __vector __bool long long __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_andc(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_andc(__vector signed __int128 __a, __vector signed __int128 __b) {
   return __a & ~__b;
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_andc(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return __a & ~__b;
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_andc(__vector float __a, __vector float __b) {
   return (__vector float)((__vector unsigned int)__a &
                          ~(__vector unsigned int)__b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_andc(__vector double __a, __vector double __b) {
   return (__vector double)((__vector unsigned long long)__a &
                          ~(__vector unsigned long long)__b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_andc(__vector __bool long long __a, __vector double __b) {
   return (__vector double)((__vector unsigned long long)__a &
                          ~(__vector unsigned long long)__b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_andc(__vector double __a, __vector __bool long long __b) {
   return (__vector double)((__vector unsigned long long)__a &
                          ~(__vector unsigned long long)__b);
@@ -6919,200 +6935,200 @@ vec_andc(__vector double __a, __vector __bool long long __b) {
 
 /*-- vec_nor ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector __bool char
+static inline __ATTRS_o_ai_constexpr __vector __bool char
 vec_nor(__vector __bool char __a, __vector __bool char __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_nor(__vector signed char __a, __vector signed char __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_nor(__vector __bool char __a, __vector signed char __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_nor(__vector signed char __a, __vector __bool char __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_nor(__vector unsigned char __a, __vector unsigned char __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_nor(__vector __bool char __a, __vector unsigned char __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_nor(__vector unsigned char __a, __vector __bool char __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool short
+static inline __ATTRS_o_ai_constexpr __vector __bool short
 vec_nor(__vector __bool short __a, __vector __bool short __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_nor(__vector signed short __a, __vector signed short __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_nor(__vector __bool short __a, __vector signed short __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_nor(__vector signed short __a, __vector __bool short __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_nor(__vector unsigned short __a, __vector unsigned short __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_nor(__vector __bool short __a, __vector unsigned short __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_nor(__vector unsigned short __a, __vector __bool short __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool int
+static inline __ATTRS_o_ai_constexpr __vector __bool int
 vec_nor(__vector __bool int __a, __vector __bool int __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_nor(__vector signed int __a, __vector signed int __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_nor(__vector __bool int __a, __vector signed int __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_nor(__vector signed int __a, __vector __bool int __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_nor(__vector unsigned int __a, __vector unsigned int __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_nor(__vector __bool int __a, __vector unsigned int __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_nor(__vector unsigned int __a, __vector __bool int __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool long long
+static inline __ATTRS_o_ai_constexpr __vector __bool long long
 vec_nor(__vector __bool long long __a, __vector __bool long long __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_nor(__vector signed long long __a, __vector signed long long __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_nor(__vector __bool long long __a, __vector signed long long __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_nor(__vector signed long long __a, __vector __bool long long __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_nor(__vector unsigned long long __a, __vector unsigned long long __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_nor(__vector __bool long long __a, __vector unsigned long long __b) {
   return ~(__a | __b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_nor(__vector unsigned long long __a, __vector __bool long long __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector __bool __int128
+static inline __ATTRS_o_ai_constexpr __vector __bool __int128
 vec_nor(__vector __bool __int128 __a, __vector __bool __int128 __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_nor(__vector signed __int128 __a, __vector signed __int128 __b) {
   return ~(__a | __b);
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_nor(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return ~(__a | __b);
 }
 
 #if __ARCH__ >= 12
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_nor(__vector float __a, __vector float __b) {
   return (__vector float)~((__vector unsigned int)__a |
                          (__vector unsigned int)__b);
 }
 #endif
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_nor(__vector double __a, __vector double __b) {
   return (__vector double)~((__vector unsigned long long)__a |
                           (__vector unsigned long long)__b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_nor(__vector __bool long long __a, __vector double __b) {
   return (__vector double)~((__vector unsigned long long)__a |
                           (__vector unsigned long long)__b);
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_nor(__vector double __a, __vector __bool long long __b) {
   return (__vector double)~((__vector unsigned long long)__a |
                           (__vector unsigned long long)__b);
@@ -9394,27 +9410,27 @@ vec_srdb(__vector double __a, __vector double __b, int __c)
 
 /*-- vec_abs ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_abs(__vector signed char __a) {
   return vec_sel(__a, -__a, vec_cmplt(__a, (__vector signed char)0));
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_abs(__vector signed short __a) {
   return vec_sel(__a, -__a, vec_cmplt(__a, (__vector signed short)0));
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_abs(__vector signed int __a) {
   return vec_sel(__a, -__a, vec_cmplt(__a, (__vector signed int)0));
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_abs(__vector signed long long __a) {
   return vec_sel(__a, -__a, vec_cmplt(__a, (__vector signed long long)0));
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_abs(__vector signed __int128 __a) {
   return vec_sel(__a, -__a, vec_cmplt(__a, (__vector signed __int128)0));
 }
@@ -9447,164 +9463,164 @@ vec_nabs(__vector double __a) {
 
 /*-- vec_max ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_max(__vector signed char __a, __vector signed char __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr14 __vector signed char
 vec_max(__vector signed char __a, __vector __bool char __b) {
   __vector signed char __bc = (__vector signed char)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr14 __vector signed char
 vec_max(__vector __bool char __a, __vector signed char __b) {
   __vector signed char __ac = (__vector signed char)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_max(__vector unsigned char __a, __vector unsigned char __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_max(__vector unsigned char __a, __vector __bool char __b) {
   __vector unsigned char __bc = (__vector unsigned char)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_max(__vector __bool char __a, __vector unsigned char __b) {
   __vector unsigned char __ac = (__vector unsigned char)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_max(__vector signed short __a, __vector signed short __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr14 __vector signed short
 vec_max(__vector signed short __a, __vector __bool short __b) {
   __vector signed short __bc = (__vector signed short)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr14 __vector signed short
 vec_max(__vector __bool short __a, __vector signed short __b) {
   __vector signed short __ac = (__vector signed short)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_max(__vector unsigned short __a, __vector unsigned short __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_max(__vector unsigned short __a, __vector __bool short __b) {
   __vector unsigned short __bc = (__vector unsigned short)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_max(__vector __bool short __a, __vector unsigned short __b) {
   __vector unsigned short __ac = (__vector unsigned short)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_max(__vector signed int __a, __vector signed int __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr14 __vector signed int
 vec_max(__vector signed int __a, __vector __bool int __b) {
   __vector signed int __bc = (__vector signed int)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr14 __vector signed int
 vec_max(__vector __bool int __a, __vector signed int __b) {
   __vector signed int __ac = (__vector signed int)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_max(__vector unsigned int __a, __vector unsigned int __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_max(__vector unsigned int __a, __vector __bool int __b) {
   __vector unsigned int __bc = (__vector unsigned int)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_max(__vector __bool int __a, __vector unsigned int __b) {
   __vector unsigned int __ac = (__vector unsigned int)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_max(__vector signed long long __a, __vector signed long long __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr14 __vector signed long long
 vec_max(__vector signed long long __a, __vector __bool long long __b) {
   __vector signed long long __bc = (__vector signed long long)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr14 __vector signed long long
 vec_max(__vector __bool long long __a, __vector signed long long __b) {
   __vector signed long long __ac = (__vector signed long long)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_max(__vector unsigned long long __a, __vector unsigned long long __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_max(__vector unsigned long long __a, __vector __bool long long __b) {
   __vector unsigned long long __bc = (__vector unsigned long long)__b;
   return vec_sel(__bc, __a, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_max(__vector __bool long long __a, __vector unsigned long long __b) {
   __vector unsigned long long __ac = (__vector unsigned long long)__a;
   return vec_sel(__b, __ac, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_max(__vector signed __int128 __a, __vector signed __int128 __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_max(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return vec_sel(__b, __a, vec_cmpgt(__a, __b));
 }
@@ -9627,164 +9643,164 @@ vec_max(__vector double __a, __vector double __b) {
 
 /*-- vec_min ----------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr __vector signed char
 vec_min(__vector signed char __a, __vector signed char __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr14 __vector signed char
 vec_min(__vector signed char __a, __vector __bool char __b) {
   __vector signed char __bc = (__vector signed char)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed char
+static inline __ATTRS_o_ai_constexpr14 __vector signed char
 vec_min(__vector __bool char __a, __vector signed char __b) {
   __vector signed char __ac = (__vector signed char)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr __vector unsigned char
 vec_min(__vector unsigned char __a, __vector unsigned char __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_min(__vector unsigned char __a, __vector __bool char __b) {
   __vector unsigned char __bc = (__vector unsigned char)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned char
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned char
 vec_min(__vector __bool char __a, __vector unsigned char __b) {
   __vector unsigned char __ac = (__vector unsigned char)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr __vector signed short
 vec_min(__vector signed short __a, __vector signed short __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr14 __vector signed short
 vec_min(__vector signed short __a, __vector __bool short __b) {
   __vector signed short __bc = (__vector signed short)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed short
+static inline __ATTRS_o_ai_constexpr14 __vector signed short
 vec_min(__vector __bool short __a, __vector signed short __b) {
   __vector signed short __ac = (__vector signed short)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr __vector unsigned short
 vec_min(__vector unsigned short __a, __vector unsigned short __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_min(__vector unsigned short __a, __vector __bool short __b) {
   __vector unsigned short __bc = (__vector unsigned short)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned short
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned short
 vec_min(__vector __bool short __a, __vector unsigned short __b) {
   __vector unsigned short __ac = (__vector unsigned short)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_min(__vector signed int __a, __vector signed int __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr14 __vector signed int
 vec_min(__vector signed int __a, __vector __bool int __b) {
   __vector signed int __bc = (__vector signed int)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr14 __vector signed int
 vec_min(__vector __bool int __a, __vector signed int __b) {
   __vector signed int __ac = (__vector signed int)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr __vector unsigned int
 vec_min(__vector unsigned int __a, __vector unsigned int __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_min(__vector unsigned int __a, __vector __bool int __b) {
   __vector unsigned int __bc = (__vector unsigned int)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned int
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned int
 vec_min(__vector __bool int __a, __vector unsigned int __b) {
   __vector unsigned int __ac = (__vector unsigned int)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_min(__vector signed long long __a, __vector signed long long __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr14 __vector signed long long
 vec_min(__vector signed long long __a, __vector __bool long long __b) {
   __vector signed long long __bc = (__vector signed long long)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr14 __vector signed long long
 vec_min(__vector __bool long long __a, __vector signed long long __b) {
   __vector signed long long __ac = (__vector signed long long)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr __vector unsigned long long
 vec_min(__vector unsigned long long __a, __vector unsigned long long __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_min(__vector unsigned long long __a, __vector __bool long long __b) {
   __vector unsigned long long __bc = (__vector unsigned long long)__b;
   return vec_sel(__a, __bc, vec_cmpgt(__a, __bc));
 }
 
 // This prototype is deprecated.
-static inline __ATTRS_o_ai __vector unsigned long long
+static inline __ATTRS_o_ai_constexpr14 __vector unsigned long long
 vec_min(__vector __bool long long __a, __vector unsigned long long __b) {
   __vector unsigned long long __ac = (__vector unsigned long long)__a;
   return vec_sel(__ac, __b, vec_cmpgt(__ac, __b));
 }
 
-static inline __ATTRS_o_ai __vector signed __int128
+static inline __ATTRS_o_ai_constexpr __vector signed __int128
 vec_min(__vector signed __int128 __a, __vector signed __int128 __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
 
-static inline __ATTRS_o_ai __vector unsigned __int128
+static inline __ATTRS_o_ai_constexpr __vector unsigned __int128
 vec_min(__vector unsigned __int128 __a, __vector unsigned __int128 __b) {
   return vec_sel(__a, __b, vec_cmpgt(__a, __b));
 }
@@ -10871,12 +10887,12 @@ vec_floate(__vector double __a) {
 
 /*-- vec_double -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_double(__vector signed long long __a) {
   return __builtin_convertvector(__a, __vector double);
 }
 
-static inline __ATTRS_o_ai __vector double
+static inline __ATTRS_o_ai_constexpr __vector double
 vec_double(__vector unsigned long long __a) {
   return __builtin_convertvector(__a, __vector double);
 }
@@ -10885,12 +10901,12 @@ vec_double(__vector unsigned long long __a) {
 
 #if __ARCH__ >= 13
 
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_float(__vector signed int __a) {
   return __builtin_convertvector(__a, __vector float);
 }
 
-static inline __ATTRS_o_ai __vector float
+static inline __ATTRS_o_ai_constexpr __vector float
 vec_float(__vector unsigned int __a) {
   return __builtin_convertvector(__a, __vector float);
 }
@@ -10899,13 +10915,13 @@ vec_float(__vector unsigned int __a) {
 
 /*-- vec_signed -------------------------------------------------------------*/
 
-static inline __ATTRS_o_ai __vector signed long long
+static inline __ATTRS_o_ai_constexpr __vector signed long long
 vec_signed(__vector double __a) {
   return __builtin_convertvector(__a, __vector signed long long);
 }
 
 #if __ARCH__ >= 13
-static inline __ATTRS_o_ai __vector signed int
+static inline __ATTRS_o_ai_constexpr __vector signed int
 vec_signed(__vector float __a) {
   return __builtin_convertvector(__a, __vector signed int);
 }
