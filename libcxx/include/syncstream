@@ -400,31 +400,30 @@ private:
   }
 
   void __move_common(basic_syncbuf& __other) {
-      // Adjust the put area pointers to our buffer.
-      char_type* __p = static_cast<char_type*>(__str_.data());
-  this->setp(__p, __p + __str_.size());
-  this->pbump(__other.pptr() - __other.pbase());
+    // Adjust the put area pointers to our buffer.
+    char_type* __p = static_cast<char_type*>(__str_.data());
+    this->setp(__p, __p + __str_.size());
+    this->pbump(__other.pptr() - __other.pbase());
 
-  // Clear __other_ so the destructor will act as a NOP.
-  __other.setp(nullptr, nullptr);
-  __other.__wrapped_ = nullptr;
-}
+    // Clear __other_ so the destructor will act as a NOP.
+    __other.setp(nullptr, nullptr);
+    __other.__wrapped_ = nullptr;
+  }
 
   void __inc_reference() {
 #      if _LIBCPP_HAS_THREADS
-  if (__wrapped_)
-    __wrapped_streambuf_mutex::__instance().__inc_reference(__wrapped_);
+    if (__wrapped_)
+      __wrapped_streambuf_mutex::__instance().__inc_reference(__wrapped_);
 #      endif
-}
+  }
 
-void __dec_reference() noexcept {
+  void __dec_reference() noexcept {
 #      if _LIBCPP_HAS_THREADS
-  if (__wrapped_)
-    __wrapped_streambuf_mutex::__instance().__dec_reference(__wrapped_);
+    if (__wrapped_)
+      __wrapped_streambuf_mutex::__instance().__dec_reference(__wrapped_);
 #      endif
-}
-}
-;
+  }
+};
 
 using std::syncbuf;
 #      if _LIBCPP_HAS_WIDE_CHARACTERS

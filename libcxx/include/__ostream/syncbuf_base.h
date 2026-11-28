@@ -23,6 +23,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
+#  if defined(_LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL) || _LIBCPP_HAS_RTTI
+#    define _LIBCPP_HAS_SYNCBUF_MANIPULATORS 1
+#  else
+#    define _LIBCPP_HAS_SYNCBUF_MANIPULATORS 0
+#  endif
+
+#  if _LIBCPP_HAS_SYNCBUF_MANIPULATORS
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& emit_on_flush(basic_ostream<_CharT, _Traits>& __os);
 
@@ -31,6 +38,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& noemit_on_flush(basic_ostr
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_CharT, _Traits>& __os);
+#  endif
 
 template <class _CharT, class _Traits>
 class __syncbuf_base : public basic_streambuf<_CharT, _Traits> {
@@ -40,37 +48,42 @@ protected:
 private:
   bool __emit_on_sync_;
 
+#  ifdef _LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL __syncbuf_base* __get_syncbuf_base() override final { return this; }
+#  endif
+
   template <class, class, class>
   friend class basic_syncbuf;
+
+#  if _LIBCPP_HAS_SYNCBUF_MANIPULATORS
+  _LIBCPP_HIDE_FROM_ABI static __syncbuf_base* __as_syncbuf_base(basic_streambuf<_CharT, _Traits>* __buf) {
+    if (__buf == nullptr)
+      return nullptr;
+#    ifdef _LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL
+    return __buf->__get_syncbuf_base();
+#    else
+    return dynamic_cast<__syncbuf_base*>(__buf);
+#    endif
+  }
 
   friend basic_ostream<_CharT, _Traits>& emit_on_flush<>(basic_ostream<_CharT, _Traits>&);
   friend basic_ostream<_CharT, _Traits>& noemit_on_flush<>(basic_ostream<_CharT, _Traits>&);
   friend basic_ostream<_CharT, _Traits>& flush_emit<>(basic_ostream<_CharT, _Traits>&);
+#  endif
 };
 
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI __syncbuf_base<_CharT, _Traits>*
-__as_syncbuf_base([[maybe_unused]] basic_streambuf<_CharT, _Traits>* __buf) {
-#  if _LIBCPP_HAS_RTTI
-  return dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__buf);
-#  else
-  return nullptr;
-#  endif
-}
-
+#  if _LIBCPP_HAS_SYNCBUF_MANIPULATORS
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& emit_on_flush(basic_ostream<_CharT, _Traits>& __os) {
-  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
+  if (auto* __buf = __syncbuf_base<_CharT, _Traits>::__as_syncbuf_base(__os.rdbuf()))
     __buf->__emit_on_sync_ = true;
-  }
   return __os;
 }
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& noemit_on_flush(basic_ostream<_CharT, _Traits>& __os) {
-  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
+  if (auto* __buf = __syncbuf_base<_CharT, _Traits>::__as_syncbuf_base(__os.rdbuf()))
     __buf->__emit_on_sync_ = false;
-  }
   return __os;
 }
 
@@ -79,7 +92,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_
   // [ostream.manip]/12: flush(), then emit() under a sentry, setting badbit on
   // failure. With emit-on-sync temporarily on, flush() does both: its sync()
   // calls emit() and returns -1 if emit() fails, which flush() turns into badbit.
-  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
+  if (auto* __buf = __syncbuf_base<_CharT, _Traits>::__as_syncbuf_base(__os.rdbuf())) {
     auto __restore =
         std::__make_scope_guard([__buf, __old = __buf->__emit_on_sync_] { __buf->__emit_on_sync_ = __old; });
     __buf->__emit_on_sync_ = true;
@@ -89,6 +102,9 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_
   }
   return __os;
 }
+#  endif // _LIBCPP_HAS_SYNCBUF_MANIPULATORS
+
+#  undef _LIBCPP_HAS_SYNCBUF_MANIPULATORS
 
 #endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 

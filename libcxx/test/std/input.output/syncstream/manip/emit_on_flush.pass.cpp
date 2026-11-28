@@ -10,9 +10,7 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: libcpp-has-no-experimental-syncstream
 
-// Detecting a basic_syncbuf requires RTTI. Without it, libc++ treats every
-// stream as a non-sync stream.
-// XFAIL: no-rtti
+// XFAIL: no-rtti && !libcpp-abi-syncbuf-manip-virtual
 
 // template<class charT, class traits>
 // basic_ostream<charT, traits>& emit_on_flush(basic_ostream<charT, traits>& os);

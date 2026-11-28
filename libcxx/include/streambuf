@@ -135,6 +135,11 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+#    ifdef _LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL
+template <class _CharT, class _Traits>
+class __syncbuf_base;
+#    endif
+
 template <class _CharT, class _Traits>
 class basic_streambuf {
 public:
@@ -414,6 +419,13 @@ private:
   locale __loc_;
   _GetArea __get_area_ = {};
   _PutArea __put_area_ = {};
+
+#    ifdef _LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL
+  template <class, class>
+  friend class __syncbuf_base;
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __syncbuf_base<_CharT, _Traits>* __get_syncbuf_base() { return nullptr; }
+#    endif
 
   template <class _CharT2, class _Traits2, class _Allocator>
   _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT2, _Traits2>&
