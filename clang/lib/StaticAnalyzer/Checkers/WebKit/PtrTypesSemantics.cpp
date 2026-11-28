@@ -17,6 +17,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include <optional>
 
@@ -28,11 +29,11 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
   assert(R);
   assert(R->hasDefinition());
 
-  for (const CXXMethodDecl *MD : R->methods()) {
-    const auto MethodName = safeGetName(MD);
-    if (MethodName == NameToMatch && MD->getAccess() == AS_public)
-      return true;
-  }
+  auto IsPublicMethodWithName = [&](const CXXMethodDecl *MD) {
+    return safeGetName(MD) == NameToMatch && MD->getAccess() == AS_public;
+  };
+  if (llvm::any_of(R->methods(), IsPublicMethodWithName))
+    return true;
 
   for (const Decl *D : R->decls()) {
     const auto *Shadow = dyn_cast<UsingShadowDecl>(D);
@@ -174,14 +175,14 @@ QualType borrowedType(QualType T) {
 static bool hasLifetimeBoundCtor(const clang::CXXRecordDecl *R) {
   if (!R || !R->hasDefinition())
     return false;
-  for (const CXXConstructorDecl *Ctor : R->ctors()) {
-    for (const ParmVarDecl *Param : Ctor->parameters()) {
-      if (Param->hasAttr<LifetimeBoundAttr>() ||
-          Param->hasAttr<LifetimeCaptureByAttr>())
-        return true;
-    }
-  }
-  return false;
+  auto IsLifetimeBoundParam = [](const ParmVarDecl *Param) {
+    return Param->hasAttr<LifetimeBoundAttr>() ||
+           Param->hasAttr<LifetimeCaptureByAttr>();
+  };
+  auto HasLifetimeBoundParam = [&](const CXXConstructorDecl *Ctor) {
+    return llvm::any_of(Ctor->parameters(), IsLifetimeBoundParam);
+  };
+  return llvm::any_of(R->ctors(), HasLifetimeBoundParam);
 }
 
 static bool isStdRangesViewInterface(const clang::CXXRecordDecl *R) {
@@ -200,11 +201,10 @@ static bool derivesFromViewInterface(const clang::CXXRecordDecl *R) {
     return false;
   if (isStdRangesViewInterface(R))
     return true;
-  for (const CXXBaseSpecifier &Base : R->bases()) {
-    if (derivesFromViewInterface(Base.getType()->getAsCXXRecordDecl()))
-      return true;
-  }
-  return false;
+  auto BaseDerivesFromViewInterface = [](const CXXBaseSpecifier &Base) {
+    return derivesFromViewInterface(Base.getType()->getAsCXXRecordDecl());
+  };
+  return llvm::any_of(R->bases(), BaseDerivesFromViewInterface);
 }
 
 bool isStdView(const clang::CXXRecordDecl *R) {
@@ -643,10 +643,11 @@ static WebKitAnnotation annotationType(StringRef Annotation) {
 
 static bool hasAnnotationForFunction(const FunctionDecl *FD,
                                      WebKitAnnotation TargetAnnotation) {
-  for (auto *Attr : FD->specific_attrs<AnnotateAttr>()) {
-    if (annotationType(Attr->getAnnotation()) == TargetAnnotation)
-      return true;
-  }
+  auto HasTargetAnnotation = [&](const AnnotateAttr *Attr) {
+    return annotationType(Attr->getAnnotation()) == TargetAnnotation;
+  };
+  if (llvm::any_of(FD->specific_attrs<AnnotateAttr>(), HasTargetAnnotation))
+    return true;
   auto RetType = FD->getReturnType();
   auto *Type = RetType.getTypePtrOrNull();
   if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(Type))
@@ -843,19 +844,15 @@ class TrivialFunctionAnalysisVisitor
       return false;
     if (Cls->hasTrivialDestructor())
       return true;
-    for (const FieldDecl *F : Cls->fields()) {
-      if (!CanTriviallyDestruct(F->getType()))
-        return false;
-    }
-    for (const CXXBaseSpecifier &B : Cls->bases()) {
-      if (!CanTriviallyDestruct(B.getType()))
-        return false;
-    }
-    for (const CXXBaseSpecifier &B : Cls->vbases()) {
-      if (!CanTriviallyDestruct(B.getType()))
-        return false;
-    }
-    return true;
+    auto FieldCanTriviallyDestruct = [&](const FieldDecl *F) {
+      return CanTriviallyDestruct(F->getType());
+    };
+    auto BaseCanTriviallyDestruct = [&](const CXXBaseSpecifier &B) {
+      return CanTriviallyDestruct(B.getType());
+    };
+    return llvm::all_of(Cls->fields(), FieldCanTriviallyDestruct) &&
+           llvm::all_of(Cls->bases(), BaseCanTriviallyDestruct) &&
+           llvm::all_of(Cls->vbases(), BaseCanTriviallyDestruct);
   }
 
   bool CanTriviallyConstruct(QualType Ty) {
