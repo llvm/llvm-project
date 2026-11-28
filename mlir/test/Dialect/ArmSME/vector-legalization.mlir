@@ -528,6 +528,18 @@ func.func @transpose_store_scalable_via_za(%vec: vector<2x[4]xf32>, %dest: memre
 
 // -----
 
+// The tile is written transposed, so its in-bounds flags are swapped.
+
+// CHECK-LABEL: @transpose_store_scalable_via_za_out_of_bounds_cols(
+// CHECK: vector.transfer_write {{.*}} {in_bounds = [false, true], permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+func.func @transpose_store_scalable_via_za_out_of_bounds_cols(%vec: vector<2x[4]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
+  %tr = vector.transpose %vec, [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, false]} : vector<[4]x2xf32>,  memref<?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_store_scalable_via_za_masked(
 // CHECK-SAME:                                          %[[A:[a-z0-9]+]]: index,
 // CHECK-SAME:                                          %[[B:[a-z0-9]+]]: index)
