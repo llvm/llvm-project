@@ -1233,15 +1233,15 @@ declare void @use()
 define void @add_nsw_sext(ptr %p, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @add_nsw_sext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i32 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_REASS:%.*]] = add i32 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[SUM_REASS]] to i64
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nsw i32 [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[SUM]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 [[IDX]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IDX2:%.*]] = sext i32 [[SUM_REASS]] to i64
+; CHECK-NEXT:    [[IDX2:%.*]] = sext i32 [[SUM]] to i64
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IDX2]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[INDEX]], 1

@@ -2674,6 +2674,20 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
 
+  // The original nsw flags guarantee that LV + C1 + C2 is representable. If
+  // C1 + C2 is too, both reassociated adds keep nsw. With nuw on both adds,
+  // OverflowTracking keeps nsw.
+  bool MayDropNSW = Opcode == Instruction::Add && BO->hasNoSignedWrap() &&
+                    BO0->hasNoSignedWrap() &&
+                    !(BO->hasNoUnsignedWrap() && BO0->hasNoUnsignedWrap());
+  SimplifyQuery SQ(L.getHeader()->getDataLayout(), &Deps.DT, &Deps.AC,
+                   Preheader->getTerminator());
+  bool KeepNSW = MayDropNSW && computeOverflowForSignedAdd(C1, C2, SQ) ==
+                                   OverflowResult::NeverOverflows;
+  // Without nsw, sign extensions of the sum no longer distribute over the adds.
+  if (MayDropNSW && !KeepNSW && all_of(BO->users(), IsaPred<SExtInst>))
+    return false;
+
   IRBuilder<> Builder(Preheader->getTerminator());
   auto *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
 
@@ -2699,13 +2713,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
       Flags.applyFlags(*InvI);
     Flags.applyFlags(*NewBO);
 
-    // The original nsw flags guarantee that LV + C1 + C2 is representable.
-    // If C1 + C2 is representable too, both reassociated adds keep nsw.
-    SimplifyQuery SQ(L.getHeader()->getDataLayout(), &Deps.DT, &Deps.AC,
-                     Preheader->getTerminator());
-    if (Opcode == Instruction::Add && Flags.HasNSW && !Flags.HasNUW &&
-        computeOverflowForSignedAdd(C1, C2, SQ) ==
-            OverflowResult::NeverOverflows) {
+    if (KeepNSW) {
       if (InvI)
         InvI->setHasNoSignedWrap();
       NewBO->setHasNoSignedWrap();
