@@ -58,6 +58,22 @@ struct PartialEntityAccessModel<hlfir::DeclareOp>
   bool isCompleteView(mlir::Operation *op) const;
 };
 
+/// fir.store writes its value operand through its memory operand.
+struct StoreLikeModel
+    : public mlir::acc::StoreLikeOpInterface::ExternalModel<StoreLikeModel,
+                                                            fir::StoreOp> {
+  void
+  getStoredValues(mlir::Operation *op,
+                  llvm::SmallVectorImpl<mlir::acc::StoredValue> &stored) const {
+    auto store = mlir::cast<fir::StoreOp>(op);
+    stored.push_back({{mlir::acc::StoredSourceKind::Operand,
+                       &store.getValueMutable(),
+                       {},
+                       false},
+                      {mlir::acc::StoreLocation{&store.getMemrefMutable()}}});
+  }
+};
+
 struct AddressOfGlobalModel
     : public mlir::acc::AddressOfGlobalOpInterface::ExternalModel<
           AddressOfGlobalModel, fir::AddrOfOp> {

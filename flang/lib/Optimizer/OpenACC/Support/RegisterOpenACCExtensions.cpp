@@ -58,6 +58,7 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     fir::DeclareOp::attachInterface<
         OutlineIdentityOperandDeclareModel<fir::DeclareOp>>(*ctx);
 
+    fir::StoreOp::attachInterface<StoreLikeModel>(*ctx);
     fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
     fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
 
