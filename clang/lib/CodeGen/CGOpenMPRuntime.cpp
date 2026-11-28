@@ -8841,10 +8841,11 @@ private:
       auto *CAT = Context.getAsConstantArrayType(Ty);
       auto *VAT = Context.getAsVariableArrayType(Ty);
 
-      // We need all the dimension size except for the last dimension.
-      assert((VAT || CAT || &Component == &*Components.begin()) &&
-             "Should be either ConstantArray or VariableArray if not the "
-             "first Component");
+      // We need all the dimension size except for the last dimension. A
+      // pointer base (e.g. 'int (*u)[y][z]') is only the outermost dimension,
+      // which needs no size either.
+      assert((VAT || CAT || Ty->isAnyPointerType()) &&
+             "Should be either ConstantArray, VariableArray or a pointer");
 
       // Get element size if CurCounts is empty.
       if (CurCounts.empty()) {
