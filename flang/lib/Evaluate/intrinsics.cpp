@@ -2591,6 +2591,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         } else {
           resultType = DynamicType{*category, aType->kind()};
         }
+        if (name == "merge"s && resultType && resultType->IsPolymorphic() &&
+            !resultType->IsUnlimitedPolymorphic()) {
+          // The result of MERGE is polymorphic only if both TSOURCE and
+          // FSOURCE are polymorphic.
+          const ActualArgument *fsource{actualForDummy[1]};
+          std::optional<DynamicType> fType{
+              fsource ? fsource->GetType() : std::nullopt};
+          if (fType && !fType->IsPolymorphic()) {
+            resultType = DynamicType{resultType->GetDerivedTypeSpec()};
+          }
+        }
       }
       break;
     case KindCode::sameKind:

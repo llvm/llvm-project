@@ -296,3 +296,27 @@ subroutine CheckAssumedRankInSelectType(var)
   end select
  end
 end
+
+subroutine CheckMergeSelector
+  type :: base
+    integer :: id = 1
+  end type
+  class(base), allocatable :: t, u
+  type(base) :: f
+  allocate(t, u)
+  ! MERGE result is polymorphic only if both TSOURCE and FSOURCE are
+  !ERROR: Selector 'merge(t, f, .false.)' in SELECT TYPE statement must be polymorphic
+  select type (r => merge(t, f, .false.))
+  type is (base)
+    print *, r%id
+  end select
+  !ERROR: Selector 'merge(f, t, .false.)' in SELECT TYPE statement must be polymorphic
+  select type (r => merge(f, t, .false.))
+  type is (base)
+    print *, r%id
+  end select
+  select type (r => merge(t, u, .false.))
+  type is (base)
+    print *, r%id
+  end select
+end subroutine
