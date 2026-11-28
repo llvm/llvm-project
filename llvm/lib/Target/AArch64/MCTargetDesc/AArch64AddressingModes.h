@@ -545,6 +545,47 @@ static inline uint64_t decodeAdvSIMDModImmType6(uint8_t Imm) {
   return (EncVal << 56) | (EncVal << 40) | (EncVal << 24) | (EncVal << 8);
 }
 
+/// Returns true if \p Imm is a single shifted MOVI with \p EltBits (16 or 32)
+/// lanes, as used by the BIC and ORR immediate forms, and sets the 8-bit
+/// immediate \p Imm8 and the left shift \p Shift.
+static inline bool isAdvSIMDModImmShifted(uint64_t Imm, unsigned EltBits,
+                                          uint8_t &Imm8, unsigned &Shift) {
+  if (EltBits == 32) {
+    if (isAdvSIMDModImmType1(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType1(Imm);
+      Shift = 0;
+      return true;
+    }
+    if (isAdvSIMDModImmType2(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType2(Imm);
+      Shift = 8;
+      return true;
+    }
+    if (isAdvSIMDModImmType3(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType3(Imm);
+      Shift = 16;
+      return true;
+    }
+    if (isAdvSIMDModImmType4(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType4(Imm);
+      Shift = 24;
+      return true;
+    }
+  } else if (EltBits == 16) {
+    if (isAdvSIMDModImmType5(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType5(Imm);
+      Shift = 0;
+      return true;
+    }
+    if (isAdvSIMDModImmType6(Imm)) {
+      Imm8 = encodeAdvSIMDModImmType6(Imm);
+      Shift = 8;
+      return true;
+    }
+  }
+  return false;
+}
+
 // 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
 static inline bool isAdvSIMDModImmType7(uint64_t Imm) {
   return ((Imm >> 32) == (Imm & 0xffffffffULL)) &&

@@ -835,21 +835,22 @@ define <4 x i8> @umul_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: umul_v4i8:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov d3, d0
+; CHECK-GI-NEXT:    mul v4.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-GI-NEXT:    mul v1.4h, v3.4h, v1.4h
+; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    cmeq v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v3.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    and v4.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    mul v1.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mul v3.4h, v3.4h, v4.4h
-; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-NEXT:    ushr v3.4h, v3.4h, #8
-; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    cmeq v3.8b, v3.8b, v4.8b
-; CHECK-GI-NEXT:    mvn v3.8b, v3.8b
-; CHECK-GI-NEXT:    zip1 v3.8b, v3.8b, v3.8b
-; CHECK-GI-NEXT:    shl v3.4h, v3.4h, #15
-; CHECK-GI-NEXT:    cmlt v3.4h, v3.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    mvn v1.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v4.8b, v1.8b
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret

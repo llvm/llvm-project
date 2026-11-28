@@ -989,9 +989,8 @@ define <4 x i16> @hadd8_zext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ;
 ; CHECK-GI-LABEL: hadd8_zext_asr:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
-; CHECK-GI-NEXT:    and.8b v1, v1, v2
+; CHECK-GI-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-GI-NEXT:    bic.4h v1, #255, lsl #8
 ; CHECK-GI-NEXT:    add.4h v0, v0, v1
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ret
@@ -1037,9 +1036,8 @@ define <4 x i16> @hadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ;
 ; CHECK-GI-LABEL: hadd8_zext_lsr:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
-; CHECK-GI-NEXT:    and.8b v1, v1, v2
+; CHECK-GI-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-GI-NEXT:    bic.4h v1, #255, lsl #8
 ; CHECK-GI-NEXT:    add.4h v0, v0, v1
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ret
@@ -1196,9 +1194,8 @@ define <4 x i16> @rhadd8_zext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ;
 ; CHECK-GI-LABEL: rhadd8_zext_asr:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
-; CHECK-GI-NEXT:    and.8b v1, v1, v2
+; CHECK-GI-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-GI-NEXT:    bic.4h v1, #255, lsl #8
 ; CHECK-GI-NEXT:    movi.4h v2, #1
 ; CHECK-GI-NEXT:    add.4h v0, v0, v1
 ; CHECK-GI-NEXT:    add.4h v0, v0, v2
@@ -1252,9 +1249,8 @@ define <4 x i16> @rhadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ;
 ; CHECK-GI-LABEL: rhadd8_zext_lsr:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
-; CHECK-GI-NEXT:    and.8b v1, v1, v2
+; CHECK-GI-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-GI-NEXT:    bic.4h v1, #255, lsl #8
 ; CHECK-GI-NEXT:    movi.4h v2, #1
 ; CHECK-GI-NEXT:    add.4h v0, v0, v1
 ; CHECK-GI-NEXT:    add.4h v0, v0, v2
@@ -1780,9 +1776,8 @@ define <8 x i8> @andmask2v8i8(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-GI-LABEL: andmask2v8i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi.8h v2, #7
-; CHECK-GI-NEXT:    movi.2d v3, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    bic.8h v1, #255, lsl #8
 ; CHECK-GI-NEXT:    and.16b v0, v0, v2
-; CHECK-GI-NEXT:    and.16b v1, v1, v3
 ; CHECK-GI-NEXT:    add.8h v0, v0, v1
 ; CHECK-GI-NEXT:    shrn.8b v0, v0, #1
 ; CHECK-GI-NEXT:    ret
@@ -1806,8 +1801,7 @@ define <8 x i16> @andmask3v8i8(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-GI-LABEL: andmask3v8i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi.8h v2, #7
-; CHECK-GI-NEXT:    mvni.8h v3, #254, lsl #8
-; CHECK-GI-NEXT:    and.16b v1, v1, v3
+; CHECK-GI-NEXT:    bic.8h v1, #254, lsl #8
 ; CHECK-GI-NEXT:    and.16b v0, v0, v2
 ; CHECK-GI-NEXT:    add.8h v0, v0, v1
 ; CHECK-GI-NEXT:    ushr.8h v0, v0, #1

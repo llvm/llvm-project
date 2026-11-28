@@ -76,16 +76,10 @@ define double @nabsd(double %a) {
 }
 
 define <4 x float> @nabsv4f32(<4 x float> %a) {
-; CHECK-SD-LABEL: nabsv4f32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #128, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: nabsv4f32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.4s, #128, lsl #24
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: nabsv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #128, lsl #24
+; CHECK-NEXT:    ret
   %conv = bitcast <4 x float> %a to <4 x i32>
   %and = or <4 x i32> %conv, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %conv1 = bitcast <4 x i32> %and to <4 x float>

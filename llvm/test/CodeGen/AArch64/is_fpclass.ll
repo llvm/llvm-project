@@ -395,10 +395,9 @@ define <4 x i1> @isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-GI-LABEL: isfinite_v4h:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.4h, #128, lsl #8
-; CHECK-GI-NEXT:    movi v2.4h, #124, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmhi v0.4h, v2.4h, v0.4h
+; CHECK-GI-NEXT:    movi v1.4h, #124, lsl #8
+; CHECK-GI-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-GI-NEXT:    cmhi v0.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4h:
@@ -431,12 +430,11 @@ define <4 x i1> @not_isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-GI-LABEL: not_isfinite_v4h:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.4h, #128, lsl #8
-; CHECK-GI-NEXT:    movi v2.4h, #124, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v1.4h, v0.4h, v2.4h
-; CHECK-GI-NEXT:    cmhi v0.4h, v0.4h, v2.4h
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    movi v1.4h, #124, lsl #8
+; CHECK-GI-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-GI-NEXT:    cmeq v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    orr v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v4h:
@@ -473,9 +471,8 @@ define <4 x i1> @isfinite_v4f(<4 x float> %x) {
 ; CHECK-GI-LABEL: isfinite_v4f:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v1.4s, #127, msl #16
-; CHECK-GI-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-GI-NEXT:    bic v0.4s, #128, lsl #24
 ; CHECK-GI-NEXT:    fneg v1.4s, v1.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:    ret
@@ -512,9 +509,8 @@ define <4 x i1> @not_isfinite_v4f(<4 x float> %x) {
 ; CHECK-GI-LABEL: not_isfinite_v4f:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v1.4s, #127, msl #16
-; CHECK-GI-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-GI-NEXT:    bic v0.4s, #128, lsl #24
 ; CHECK-GI-NEXT:    fneg v1.4s, v1.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    cmeq v2.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    addhn v0.4h, v2.4s, v0.4s

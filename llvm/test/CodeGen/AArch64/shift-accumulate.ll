@@ -94,11 +94,10 @@ define <4 x i16> @ssra_v4i16(<4 x i16> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4h, #64, lsl #8
-; CHECK-GI-NEXT:    ushr v2.4h, v0.4h, #15
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushr v1.4h, v0.4h, #15
+; CHECK-GI-NEXT:    bic v0.4h, #64, lsl #8
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #14
-; CHECK-GI-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   ; set the 15th bit to zero. e.g. 0b1111111111111111 to 0b1011111111111111
   %2 = and <4 x i16> %0, <i16 49151, i16 49151,i16 49151,i16 49151>
@@ -121,11 +120,10 @@ define <4 x i32> @ssra_v4i32(<4 x i32> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #64, lsl #24
-; CHECK-GI-NEXT:    ushr v2.4s, v0.4s, #31
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ushr v1.4s, v0.4s, #31
+; CHECK-GI-NEXT:    bic v0.4s, #64, lsl #24
 ; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #30
-; CHECK-GI-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   ; set the 31th bit to zero.
   %2 = and <4 x i32> %0, <i32 3221225471, i32 3221225471,i32 3221225471,i32 3221225471>
@@ -148,8 +146,7 @@ define <1 x i64> @ssra_v1i64(<2 x i32> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v1i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #64, lsl #24
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.2s, #64, lsl #24
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    asr x9, x8, #62
 ; CHECK-GI-NEXT:    orr x8, x9, x8, lsr #63
@@ -174,8 +171,7 @@ define <2 x i64> @ssra_v2i64(<4 x i32> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #64, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    bic v0.4s, #64, lsl #24
 ; CHECK-GI-NEXT:    ushr v1.2d, v0.2d, #63
 ; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #62
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b

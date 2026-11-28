@@ -5,124 +5,44 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=+fullfp16 -global-isel | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 define <8 x i8> @v_orrimm(ptr %A) nounwind {
-; CHECK-NOFP16-SD-LABEL: v_orrimm:
-; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-SD-NEXT:    orr.2s v0, #1, lsl #24
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: v_orrimm:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    ldr d0, [x0]
-; CHECK-FP16-SD-NEXT:    orr.2s v0, #1, lsl #24
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: v_orrimm:
-; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    movi.2s v0, #1, lsl #24
-; CHECK-NOFP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-NOFP16-GI-NEXT:    orr.8b v0, v1, v0
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: v_orrimm:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi.2s v0, #1, lsl #24
-; CHECK-FP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-FP16-GI-NEXT:    orr.8b v0, v1, v0
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: v_orrimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    orr.2s v0, #1, lsl #24
+; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp3 = or <8 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1>
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @v_orrimmQ(ptr %A) nounwind {
-; CHECK-NOFP16-SD-LABEL: v_orrimmQ:
-; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    ldr q0, [x0]
-; CHECK-NOFP16-SD-NEXT:    orr.4s v0, #1, lsl #24
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: v_orrimmQ:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    ldr q0, [x0]
-; CHECK-FP16-SD-NEXT:    orr.4s v0, #1, lsl #24
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: v_orrimmQ:
-; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    movi.4s v0, #1, lsl #24
-; CHECK-NOFP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-NOFP16-GI-NEXT:    orr.16b v0, v1, v0
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: v_orrimmQ:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi.4s v0, #1, lsl #24
-; CHECK-FP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-FP16-GI-NEXT:    orr.16b v0, v1, v0
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: v_orrimmQ:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    orr.4s v0, #1, lsl #24
+; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
   %tmp3 = or <16 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1>
   ret <16 x i8> %tmp3
 }
 
 define <8 x i8> @v_bicimm(ptr %A) nounwind {
-; CHECK-NOFP16-SD-LABEL: v_bicimm:
-; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-SD-NEXT:    bic.2s v0, #255, lsl #24
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: v_bicimm:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    ldr d0, [x0]
-; CHECK-FP16-SD-NEXT:    bic.2s v0, #255, lsl #24
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: v_bicimm:
-; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    movi d0, #0xffffff00ffffff
-; CHECK-NOFP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-NOFP16-GI-NEXT:    and.8b v0, v1, v0
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: v_bicimm:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi d0, #0xffffff00ffffff
-; CHECK-FP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-FP16-GI-NEXT:    and.8b v0, v1, v0
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: v_bicimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    bic.2s v0, #255, lsl #24
+; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp3 = and <8 x i8> %tmp1, < i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0 >
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @v_bicimmQ(ptr %A) nounwind {
-; CHECK-NOFP16-SD-LABEL: v_bicimmQ:
-; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    ldr q0, [x0]
-; CHECK-NOFP16-SD-NEXT:    bic.4s v0, #255, lsl #24
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: v_bicimmQ:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    ldr q0, [x0]
-; CHECK-FP16-SD-NEXT:    bic.4s v0, #255, lsl #24
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: v_bicimmQ:
-; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    movi.2d v0, #0xffffff00ffffff
-; CHECK-NOFP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-NOFP16-GI-NEXT:    and.16b v0, v1, v0
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: v_bicimmQ:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi.2d v0, #0xffffff00ffffff
-; CHECK-FP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-FP16-GI-NEXT:    and.16b v0, v1, v0
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: v_bicimmQ:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    bic.4s v0, #255, lsl #24
+; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
   %tmp3 = and <16 x i8> %tmp1, < i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0 >
   ret <16 x i8> %tmp3

@@ -9449,6 +9449,44 @@ def : InstAlias<"orr.2s $Vd, $imm", (ORRv2i32 V64:$Vd,  imm0_255:$imm, 0)>;
 def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0)>;
 }
 
+/// An AND with a constant vector whose inverse repeats a shifted MOVI of
+// EltBits lanes can use the BIC immediate form, and an OR with one that does
+// the ORR one, whatever the vector's own element type.
+multiclass NEONBitwiseImmPats<ValueType VT, LLT GITy, RegisterOperand RC,
+                              int EltBits, Instruction BIC, Instruction ORR> {
+  def _bic : ComplexPattern<VT, 2, "SelectNEONBitwiseImm<" # EltBits # ", true>">;
+  def _orr : ComplexPattern<VT, 2, "SelectNEONBitwiseImm<" # EltBits # ", false>">;
+  def _gi_bic
+      : GIComplexOperandMatcher<GITy, "selectNEONBitwiseImm<" # EltBits # ", true>">,
+        GIComplexPatternEquiv<!cast<ComplexPattern>(NAME # "_bic")>;
+  def _gi_orr
+      : GIComplexOperandMatcher<GITy, "selectNEONBitwiseImm<" # EltBits # ", false>">,
+        GIComplexPatternEquiv<!cast<ComplexPattern>(NAME # "_orr")>;
+  let Predicates = [HasNEON] in {
+  def : Pat<(VT (and RC:$Rd, (!cast<ComplexPattern>(NAME # "_bic") i32:$imm8,
+                                                                    i32:$shift))),
+            (BIC RC:$Rd, i32:$imm8, i32:$shift)>;
+  def : Pat<(VT (or RC:$Rd, (!cast<ComplexPattern>(NAME # "_orr") i32:$imm8,
+                                                                   i32:$shift))),
+            (ORR RC:$Rd, i32:$imm8, i32:$shift)>;
+  }
+}
+
+defm neon_bitwise_imm_v16i8_16 : NEONBitwiseImmPats<v16i8, v16s8, V128, 16, BICv8i16, ORRv8i16>;
+defm neon_bitwise_imm_v8i16_16 : NEONBitwiseImmPats<v8i16, v8s16, V128, 16, BICv8i16, ORRv8i16>;
+defm neon_bitwise_imm_v4i32_16 : NEONBitwiseImmPats<v4i32, v4s32, V128, 16, BICv8i16, ORRv8i16>;
+defm neon_bitwise_imm_v2i64_16 : NEONBitwiseImmPats<v2i64, v2s64, V128, 16, BICv8i16, ORRv8i16>;
+defm neon_bitwise_imm_v16i8_32 : NEONBitwiseImmPats<v16i8, v16s8, V128, 32, BICv4i32, ORRv4i32>;
+defm neon_bitwise_imm_v8i16_32 : NEONBitwiseImmPats<v8i16, v8s16, V128, 32, BICv4i32, ORRv4i32>;
+defm neon_bitwise_imm_v4i32_32 : NEONBitwiseImmPats<v4i32, v4s32, V128, 32, BICv4i32, ORRv4i32>;
+defm neon_bitwise_imm_v2i64_32 : NEONBitwiseImmPats<v2i64, v2s64, V128, 32, BICv4i32, ORRv4i32>;
+defm neon_bitwise_imm_v8i8_16 : NEONBitwiseImmPats<v8i8, v8s8, V64, 16, BICv4i16, ORRv4i16>;
+defm neon_bitwise_imm_v4i16_16 : NEONBitwiseImmPats<v4i16, v4s16, V64, 16, BICv4i16, ORRv4i16>;
+defm neon_bitwise_imm_v2i32_16 : NEONBitwiseImmPats<v2i32, v2s32, V64, 16, BICv4i16, ORRv4i16>;
+defm neon_bitwise_imm_v8i8_32 : NEONBitwiseImmPats<v8i8, v8s8, V64, 32, BICv2i32, ORRv2i32>;
+defm neon_bitwise_imm_v4i16_32 : NEONBitwiseImmPats<v4i16, v4s16, V64, 32, BICv2i32, ORRv2i32>;
+defm neon_bitwise_imm_v2i32_32 : NEONBitwiseImmPats<v2i32, v2s32, V64, 32, BICv2i32, ORRv2i32>;
+
 // AdvSIMD FMOV
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,

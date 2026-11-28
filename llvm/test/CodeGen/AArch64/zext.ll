@@ -467,16 +467,10 @@ entry:
 }
 
 define <4 x i16> @zext_v4i8_v4i16(<4 x i8> %a) {
-; CHECK-SD-LABEL: zext_v4i8_v4i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v4i8_v4i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v4i8_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %c = zext <4 x i8> %a to <4 x i16>
   ret <4 x i16> %c
@@ -571,16 +565,10 @@ entry:
 }
 
 define <4 x i16> @zext_v4i10_v4i16(<4 x i10> %a) {
-; CHECK-SD-LABEL: zext_v4i10_v4i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v0.4h, #252, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v4i10_v4i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.4h, #252, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v4i10_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bic v0.4h, #252, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %c = zext <4 x i10> %a to <4 x i16>
   ret <4 x i16> %c
@@ -753,16 +741,10 @@ entry:
 }
 
 define <8 x i16> @zext_v8i10_v8i16(<8 x i10> %a) {
-; CHECK-SD-LABEL: zext_v8i10_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v0.8h, #252, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v8i10_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.8h, #252, lsl #8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v8i10_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bic v0.8h, #252, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %c = zext <8 x i10> %a to <8 x i16>
   ret <8 x i16> %c

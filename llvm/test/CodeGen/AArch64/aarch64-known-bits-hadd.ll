@@ -84,22 +84,13 @@ define <8 x i16> @shaddu_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; ; negative tests
 
 define <8 x i16> @haddu_sext(<8 x i8> %a0, <8 x i8> %a1) {
-; CHECK-SD-LABEL: haddu_sext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    uhadd v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    bic v0.8h, #254, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: haddu_sext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mvni v2.8h, #254, lsl #8
-; CHECK-GI-NEXT:    uhadd v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: haddu_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #254, lsl #8
+; CHECK-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = sext <8 x i8> %a1 to <8 x i16>
   %hadd = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
@@ -108,22 +99,13 @@ define <8 x i16> @haddu_sext(<8 x i8> %a0, <8 x i8> %a1) {
 }
 
 define <8 x i16> @urhadd_sext(<8 x i8> %a0, <8 x i8> %a1) {
-; CHECK-SD-LABEL: urhadd_sext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    urhadd v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    bic v0.8h, #254, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: urhadd_sext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mvni v2.8h, #254, lsl #8
-; CHECK-GI-NEXT:    urhadd v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: urhadd_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #254, lsl #8
+; CHECK-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = sext <8 x i8> %a1 to <8 x i16>
   %hadd = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
@@ -143,9 +125,8 @@ define <8 x i16> @hadds_sext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mvni v2.8h, #254, lsl #8
 ; CHECK-GI-NEXT:    shadd v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-GI-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = sext <8 x i8> %a1 to <8 x i16>
@@ -166,9 +147,8 @@ define <8 x i16> @shaddu_sext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mvni v2.8h, #254, lsl #8
 ; CHECK-GI-NEXT:    srhadd v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-GI-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = sext <8 x i8> %a1 to <8 x i16>

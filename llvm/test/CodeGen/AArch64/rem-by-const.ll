@@ -1167,11 +1167,11 @@ define <4 x i8> @uv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv4i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    movi v2.8b, #37
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    movi v1.8b, #37
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-GI-NEXT:    mul v1.4h, v2.4h, v1.4h
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
@@ -1202,11 +1202,11 @@ define <4 x i8> @uv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv4i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    movi v2.8b, #41
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    movi v1.8b, #41
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-GI-NEXT:    mul v1.4h, v2.4h, v1.4h
 ; CHECK-GI-NEXT:    movi v2.4h, #100
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b

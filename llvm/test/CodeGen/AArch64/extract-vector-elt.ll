@@ -399,13 +399,12 @@ define float @extract_v4i32_copysign_build_vector(<4 x float> %a, <4 x float> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    and x8, x8, #0x3
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    bic v0.4s, #128, lsl #24
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    mov x8, sp
+; CHECK-GI-NEXT:    and x9, x9, #0x3
 ; CHECK-GI-NEXT:    str q0, [sp]
-; CHECK-GI-NEXT:    ldr s0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    ldr s0, [x8, x9, lsl #2]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -423,8 +422,7 @@ define float @extract_v4i32_copysign_build_vector_const(<4 x float> %a, <4 x flo
 ;
 ; CHECK-GI-LABEL: extract_v4i32_copysign_build_vector_const:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    bic v0.4s, #128, lsl #24
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:

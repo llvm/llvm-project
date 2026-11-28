@@ -23,9 +23,9 @@ define <4 x i16> @and_extract_sext_idx0(<8 x i8> %vec) nounwind {
 ;
 ; CHECK-GI-LABEL: and_extract_sext_idx0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %sext = sext <8 x i8> %vec to <8 x i16>
   %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 0)
@@ -55,9 +55,8 @@ define <4 x i16> @and_extract_sext_idx4(<8 x i8> %vec) nounwind {
 ; CHECK-GI-LABEL: and_extract_sext_idx4:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    ret
   %sext = sext <8 x i8> %vec to <8 x i16>
   %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 4)

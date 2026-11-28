@@ -533,6 +533,10 @@ private:
   // Match `<NEON Splat> SVEImm` (where <NEON Splat> could be fmov, movi, etc).
   bool SelectNEONSplatOfSVELogicalImm(SDValue N, SDValue &Imm);
   bool SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift);
+  // Match a NEON splat constant that a single BIC (Invert) or ORR with an
+  // immediate on EltBits lanes can apply.
+  template <unsigned EltBits, bool Invert>
+  bool SelectNEONBitwiseImm(SDValue N, SDValue &Imm, SDValue &Shift);
   bool SelectNEONSplatOfSVEArithSImm(SDValue N, SDValue &Imm);
   bool SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm);
   bool SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm);
@@ -686,6 +690,37 @@ GetNEONSplatValue(SDValue N, const AArch64Subtarget *Subtarget) {
       return SplatVal->trunc(SplatWidth);
   }
   return std::nullopt;
+}
+
+template <unsigned EltBits, bool Invert>
+bool AArch64DAGToDAGISel::SelectNEONBitwiseImm(SDValue N, SDValue &Imm,
+                                               SDValue &Shift) {
+  // Find the bits of the constant, repeated to 64 bits.
+  uint64_t Value;
+  APInt SplatValue, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  auto *BVN = dyn_cast<BuildVectorSDNode>(N);
+  if (BVN &&
+      BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                           HasAnyUndefs) &&
+      SplatBitSize <= 64)
+    Value = APInt::getSplat(64, SplatValue.trunc(SplatBitSize)).getZExtValue();
+  else if (std::optional<APInt> SplatVal = GetNEONSplatValue(N, Subtarget))
+    Value = APInt::getSplat(64, *SplatVal).getZExtValue();
+  else
+    return false;
+  // BIC clears the bits that are set in its immediate.
+  if (Invert)
+    Value = ~Value;
+  uint8_t Imm8;
+  unsigned ShiftAmt;
+  if (!AArch64_AM::isAdvSIMDModImmShifted(Value, EltBits, Imm8, ShiftAmt))
+    return false;
+  SDLoc DL(N);
+  Imm = CurDAG->getTargetConstant(Imm8, DL, MVT::i32);
+  Shift = CurDAG->getTargetConstant(ShiftAmt, DL, MVT::i32);
+  return true;
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,

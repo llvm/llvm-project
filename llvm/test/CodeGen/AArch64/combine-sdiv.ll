@@ -1817,48 +1817,26 @@ define <16 x i16> @combine_vec_sdiv_nonuniform_v16i16(<16 x i16> %x) {
 }
 
 define <32 x i8> @combine_vec_sdiv_nonuniform_v32i8(<32 x i8> %x) {
-; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform_v32i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI63_0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI63_0]
-; CHECK-SD-NEXT:    smull2 v3.8h, v0.16b, v2.16b
-; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v2.8b
-; CHECK-SD-NEXT:    smull2 v5.8h, v1.16b, v2.16b
-; CHECK-SD-NEXT:    smull v2.8h, v1.8b, v2.8b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    bic v1.8h, #255, lsl #8
-; CHECK-SD-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    movi v4.8h, #254
-; CHECK-SD-NEXT:    uzp2 v2.16b, v2.16b, v5.16b
-; CHECK-SD-NEXT:    add v0.16b, v3.16b, v0.16b
-; CHECK-SD-NEXT:    add v1.16b, v2.16b, v1.16b
-; CHECK-SD-NEXT:    sshl v0.16b, v0.16b, v4.16b
-; CHECK-SD-NEXT:    sshl v1.16b, v1.16b, v4.16b
-; CHECK-SD-NEXT:    usra v0.16b, v0.16b, #7
-; CHECK-SD-NEXT:    usra v1.16b, v1.16b, #7
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v32i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI63_0
-; CHECK-GI-NEXT:    movi v6.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI63_0]
-; CHECK-GI-NEXT:    smull2 v3.8h, v0.16b, v2.16b
-; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v2.8b
-; CHECK-GI-NEXT:    smull2 v5.8h, v1.16b, v2.16b
-; CHECK-GI-NEXT:    smull v2.8h, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v6.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v6.16b
-; CHECK-GI-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
-; CHECK-GI-NEXT:    movi v4.8h, #254
-; CHECK-GI-NEXT:    uzp2 v2.16b, v2.16b, v5.16b
-; CHECK-GI-NEXT:    add v0.16b, v3.16b, v0.16b
-; CHECK-GI-NEXT:    add v1.16b, v2.16b, v1.16b
-; CHECK-GI-NEXT:    sshl v0.16b, v0.16b, v4.16b
-; CHECK-GI-NEXT:    sshl v1.16b, v1.16b, v4.16b
-; CHECK-GI-NEXT:    usra v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    usra v1.16b, v1.16b, #7
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_vec_sdiv_nonuniform_v32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI63_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI63_0]
+; CHECK-NEXT:    smull2 v3.8h, v0.16b, v2.16b
+; CHECK-NEXT:    smull v4.8h, v0.8b, v2.8b
+; CHECK-NEXT:    smull2 v5.8h, v1.16b, v2.16b
+; CHECK-NEXT:    smull v2.8h, v1.8b, v2.8b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    movi v4.8h, #254
+; CHECK-NEXT:    uzp2 v2.16b, v2.16b, v5.16b
+; CHECK-NEXT:    add v0.16b, v3.16b, v0.16b
+; CHECK-NEXT:    add v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    sshl v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    sshl v1.16b, v1.16b, v4.16b
+; CHECK-NEXT:    usra v0.16b, v0.16b, #7
+; CHECK-NEXT:    usra v1.16b, v1.16b, #7
+; CHECK-NEXT:    ret
   %r = sdiv <32 x i8> %x, <i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6>
   ret <32 x i8> %r
 }

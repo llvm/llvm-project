@@ -475,8 +475,7 @@ define i32 @add_v4i8_v4i32_zext(<4 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i32_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
@@ -733,8 +732,7 @@ define i64 @add_v4i8_v4i64_zext(<4 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and x0, x8, #0xffff
@@ -1299,8 +1297,7 @@ define i32 @add_v4i8_v4i32_acc_zext(<4 x i8> %x, i32 %a) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i32_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w0, w8, uxth
@@ -1554,8 +1551,7 @@ define i64 @add_v4i8_v4i64_acc_zext(<4 x i8> %x, i64 %a) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i64_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add x0, x0, w8, uxth
@@ -2940,9 +2936,8 @@ define i32 @add_pair_v4i8_v4i32_zext(<4 x i8> %x, <4 x i8> %y) {
 ;
 ; CHECK-GI-LABEL: add_pair_v4i8_v4i32_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s1, v1.4h
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s1
@@ -3321,9 +3316,8 @@ define i64 @add_pair_v4i8_v4i64_zext(<4 x i8> %x, <4 x i8> %y) {
 ;
 ; CHECK-GI-LABEL: add_pair_v4i8_v4i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-GI-NEXT:    uaddlv s1, v1.4h
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s1

@@ -64,18 +64,11 @@ entry:
 }
 
 define <8 x i16> @test_vaddl_a8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-SD-LABEL: test_vaddl_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddl_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddl_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
   %vmovl.i2.i = zext <8 x i8> %b to <8 x i16>
@@ -199,18 +192,11 @@ entry:
 }
 
 define <8 x i16> @test_vaddl_high_a8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: test_vaddl_high_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddl_high_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddl_high_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %0 = zext <8 x i8> %shuffle.i.i.i to <8 x i16>
@@ -322,18 +308,11 @@ entry:
 }
 
 define <8 x i16> @test_vaddw_a8(<8 x i16> %a, <8 x i8> %b) {
-; CHECK-SD-LABEL: test_vaddw_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddw_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddw_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %b to <8 x i16>
   %add.i = add <8 x i16> %vmovl.i.i, %a
@@ -442,18 +421,11 @@ entry:
 }
 
 define <8 x i16> @test_vaddw_high_a8(<8 x i16> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: test_vaddw_high_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddw2 v0.8h, v0.8h, v1.16b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vaddw_high_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    uaddw2 v0.8h, v0.8h, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vaddw_high_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddw2 v0.8h, v0.8h, v1.16b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %0 = zext <8 x i8> %shuffle.i.i.i to <8 x i16>
@@ -565,18 +537,11 @@ entry:
 }
 
 define <8 x i16> @test_vsubl_a8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-SD-LABEL: test_vsubl_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    usubl v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubl_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    usubl v0.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubl_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    usubl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
   %vmovl.i2.i = zext <8 x i8> %b to <8 x i16>
@@ -700,18 +665,11 @@ entry:
 }
 
 define <8 x i16> @test_vsubl_high_a8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: test_vsubl_high_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    usubl2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubl_high_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    usubl2 v0.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubl_high_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    usubl2 v0.8h, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %0 = zext <8 x i8> %shuffle.i.i.i to <8 x i16>
@@ -823,18 +781,11 @@ entry:
 }
 
 define <8 x i16> @test_vsubw_a8(<8 x i16> %a, <8 x i8> %b) {
-; CHECK-SD-LABEL: test_vsubw_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    usubw v0.8h, v0.8h, v1.8b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubw_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    usubw v0.8h, v0.8h, v1.8b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubw_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    usubw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %b to <8 x i16>
   %sub.i = sub <8 x i16> %a, %vmovl.i.i
@@ -943,18 +894,11 @@ entry:
 }
 
 define <8 x i16> @test_vsubw_high_a8(<8 x i16> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: test_vsubw_high_a8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    usubw2 v0.8h, v0.8h, v1.16b
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vsubw_high_a8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    usubw2 v0.8h, v0.8h, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vsubw_high_a8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    usubw2 v0.8h, v0.8h, v1.16b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %0 = zext <8 x i8> %shuffle.i.i.i to <8 x i16>

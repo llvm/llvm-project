@@ -378,6 +378,8 @@ private:
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns select12BitValueWithLeftShift(uint64_t Immed) const;
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
+  template <unsigned EltBits, bool Invert>
+  ComplexRendererFns selectNEONBitwiseImm(MachineOperand &Root) const;
   ComplexRendererFns selectNegArithImmed(MachineOperand &Root) const;
 
   ComplexRendererFns selectAddrModeUnscaled(MachineOperand &Root,
@@ -7196,6 +7198,62 @@ AArch64InstructionSelector::select12BitValueWithLeftShift(
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Immed); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(ShVal); },
+  }};
+}
+
+/// \returns the bits of the constant vector \p Reg, with lane 0 in the low
+/// bits, or std::nullopt if it isn't a constant vector.
+static std::optional<APInt>
+getConstantVectorBits(Register Reg, const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Reg);
+  unsigned EltBits = Ty.getScalarSizeInBits();
+  MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+  if (Def->getOpcode() == TargetOpcode::G_SPLAT_VECTOR) {
+    auto C =
+        getIConstantVRegValWithLookThrough(Def->getOperand(1).getReg(), MRI);
+    if (!C)
+      return std::nullopt;
+    return APInt::getSplat(Ty.getSizeInBits(), C->Value.zextOrTrunc(EltBits));
+  }
+  auto *BV = dyn_cast<GBuildVector>(Def);
+  if (!BV)
+    return std::nullopt;
+  APInt Bits(Ty.getSizeInBits(), 0);
+  for (unsigned I = 0, E = BV->getNumSources(); I != E; ++I) {
+    auto C = getIConstantVRegValWithLookThrough(BV->getSourceReg(I), MRI);
+    if (!C)
+      return std::nullopt;
+    Bits.insertBits(C->Value.zextOrTrunc(EltBits), I * EltBits);
+  }
+  return Bits;
+}
+
+/// Select a constant vector that a single BIC (Invert) or ORR with an immediate
+/// on EltBits lanes can apply, rendering the 8-bit immediate and the shift.
+template <unsigned EltBits, bool Invert>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectNEONBitwiseImm(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+  std::optional<APInt> Bits = getConstantVectorBits(Root.getReg(), MRI);
+  if (!Bits)
+    return std::nullopt;
+  // The immediate forms repeat every 64 bits.
+  if (Bits->getBitWidth() == 128 &&
+      Bits->extractBits(64, 64) != Bits->trunc(64))
+    return std::nullopt;
+  uint64_t Value = Bits->trunc(64).getZExtValue();
+  // BIC clears the bits that are set in its immediate.
+  if (Invert)
+    Value = ~Value;
+  uint8_t Imm8;
+  unsigned ShiftAmt;
+  if (!AArch64_AM::isAdvSIMDModImmShifted(Value, EltBits, Imm8, ShiftAmt))
+    return std::nullopt;
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Imm8); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ShiftAmt); },
   }};
 }
 
