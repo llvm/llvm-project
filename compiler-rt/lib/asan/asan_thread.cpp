@@ -369,7 +369,11 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
   }
 
   uptr *ptr = (uptr *)(mem_ptr + ASAN_SHADOW_GRANULARITY);
-  CHECK(ptr[0] == kCurrentStackFrameMagic);
+  // The first word of the frame is not the magic number: the redzone was left
+  // by control flow that AddressSanitizer did not see, the frame is being torn
+  // down (possibly in another thread), or the header was overwritten.
+  if (ptr[0] != kCurrentStackFrameMagic)
+    return false;
   access->offset = addr - (uptr)ptr;
   access->frame_pc = ptr[2];
   access->frame_descr = (const char *)ptr[1];
