@@ -806,6 +806,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::SETCC,
                        ISD::SRL,
                        ISD::SRA,
+                       ISD::ADD,
                        ISD::MUL,
                        ISD::SDIV,
                        ISD::UDIV,
@@ -9601,6 +9602,48 @@ SDValue SystemZTargetLowering::combineMUL(
   return SDValue();
 }
 
+// Return true if Op is an i128 multiplication of two values that fit in 64
+// bits, and set X and Y to the truncated i64 operands.
+static bool isWideningMul64(SelectionDAG &DAG, SDValue Op, SDValue &X,
+                            SDValue &Y) {
+  if (Op.getOpcode() != ISD::MUL || !Op.hasOneUse())
+    return false;
+  APInt HighBits = APInt::getHighBitsSet(128, 64);
+  if (!DAG.MaskedValueIsZero(Op.getOperand(0), HighBits) ||
+      !DAG.MaskedValueIsZero(Op.getOperand(1), HighBits))
+    return false;
+  SDLoc DL(Op);
+  X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Op.getOperand(0));
+  Y = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Op.getOperand(1));
+  return true;
+}
+
+// Combine (add (add (mul x0, y0), (mul x1, y1)), c) for i128 values with
+// 64-bit x and y into VECTOR MULTIPLY SUM LOGICAL.
+SDValue SystemZTargetLowering::combineADD(SDNode *N,
+                                          DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  if (N->getValueType(0) != MVT::i128 || !Subtarget.hasVectorEnhancements1())
+    return SDValue();
+
+  for (unsigned I = 0; I < 2; ++I) {
+    SDValue Sum = N->getOperand(I);
+    SDValue X0, Y0, X1, Y1;
+    if (Sum.getOpcode() == ISD::ADD && Sum.hasOneUse() &&
+        isWideningMul64(DAG, Sum.getOperand(0), X0, Y0) &&
+        isWideningMul64(DAG, Sum.getOperand(1), X1, Y1)) {
+      SDLoc DL(N);
+      SDValue X = DAG.getNode(SystemZISD::JOIN_DWORDS, DL, MVT::v2i64, X0, X1);
+      SDValue Y = DAG.getNode(SystemZISD::JOIN_DWORDS, DL, MVT::v2i64, Y0, Y1);
+      return DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i128,
+          DAG.getTargetConstant(Intrinsic::s390_vmslg, DL, MVT::i32), X, Y,
+          N->getOperand(1 - I), DAG.getTargetConstant(0, DL, MVT::i32));
+    }
+  }
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::combineINTRINSIC(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9663,6 +9706,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
   case ISD::SRL:
   case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
+  case ISD::ADD:                return combineADD(N, DCI);
   case ISD::MUL:                return combineMUL(N, DCI);
   case ISD::SDIV:
   case ISD::UDIV:
