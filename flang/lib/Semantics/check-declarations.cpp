@@ -1744,6 +1744,10 @@ void CheckHelper::CheckSubprogram(
           "A statement function definition may not appear in a BLOCK construct"_err_en_US);
     }
   }
+  if (details.isDummy() && InElemental()) { // F2023 C15118
+    messages_.Say(
+        "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);
+  }
   if (IsElementalProcedure(symbol)) {
     // See comment on the similar check in CheckProcEntity()
     if (details.isDummy()) {
