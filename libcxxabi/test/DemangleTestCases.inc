@@ -29878,6 +29878,12 @@
 // Inheriting constructors:
 {"_ZN1BCI21AEi", "B::B(int)"},
 {"_ZN1DCI21CIiEET_", "D::D(int)"},
+// The inherited-from class is a <type> and a substitution candidate, so the
+// substitutions that follow it (S6_ below) are numbered after it.
+{"_ZN2ns4DataINS_1BEECI1NS_4ImplIS1_EEIiNS_5inner1WINS_1CEEEEEPT_OT0_PNS6_1XE",
+ "ns::Data<ns::B>::Data<int, ns::inner::W<ns::C>>(int*, ns::inner::W<ns::C>&&, ns::inner::X*)"},
+{"_ZNSt4dataIN4llvm3orc3GNTESt3delIS2_ELb1EECI1St4implIS2_S4_EIS3_INS1_5Impl2INS1_3EPC1HEEEEEEPS2_OT_PSB_",
+ "std::data<llvm::orc::GNT, std::del<llvm::orc::GNT>, true>::data<std::del<llvm::orc::Impl2<llvm::orc::EPC::H>>>(llvm::orc::GNT*, std::del<llvm::orc::Impl2<llvm::orc::EPC::H>>&&, llvm::orc::EPC::H*)"},
 
 // Exception specifiers:
 {"_Z1bPDoFivE", "b(int (*)() noexcept)"},

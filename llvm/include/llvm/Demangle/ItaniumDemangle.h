@@ -3586,8 +3586,20 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
     ++First;
     if (State) State->CtorDtorConversion = true;
     if (IsInherited) {
-      if (getDerived().parseName(State) == nullptr)
+      // The inherited-from class is a <type>, so it is a substitution
+      // candidate in its own right, unless it is itself a substitution. The
+      // constructor may have template arguments of its own, e.g.
+      // CI1St4implIiEIS1_E, so the arguments of a template-id that is not
+      // followed by another template-args list cannot be told apart from
+      // them, and the type is not pushed in that case.
+      bool IsNested = look() == 'N';
+      bool IsSubst = look() == 'S' && look(1) != 't';
+      Node *Base = getDerived().parseName(State);
+      if (Base == nullptr)
         return nullptr;
+      bool IsTemplateId = Base->getKind() == Node::KNameWithTemplateArgs;
+      if (IsTemplateId ? (IsNested || look() == 'I') : !IsSubst)
+        Subs.push_back(Base);
     }
     return make<CtorDtorName>(SoFar, /*IsDtor=*/false, Variant);
   }
