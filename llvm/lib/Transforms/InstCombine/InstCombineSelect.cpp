@@ -2511,6 +2511,73 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
   return BinaryOperator::CreateAnd(Or, MSBConst);
 }
 
+/// (X >  Y) ? X : max(X, Y) --> max(X, Y)
+/// (X >= Y) ? X : max(X, Y) --> max(X, Y)
+/// (X <  Y) ? X : min(X, Y) --> min(X, Y)
+/// (X <= Y) ? X : min(X, Y) --> min(X, Y)
+/// (X == Y) ? X : max/min(X, Y) --> max/min(X, Y)
+///
+/// The min/max call may carry a range attribute (or other poison-generating
+/// annotations) that is only known to hold on the path where the select picks
+/// the call. Reusing the call for the whole select would propagate poison that
+/// the select was keeping off the live path, so drop those annotations first.
+static Instruction *foldSelectOfMinMax(SelectInst &SI, ICmpInst *ICI,
+                                       InstCombinerImpl &IC) {
+  Value *CmpLHS = ICI->getOperand(0);
+  Value *CmpRHS = ICI->getOperand(1);
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+  Value *TVal = SI.getTrueValue();
+  Value *FVal = SI.getFalseValue();
+
+  // Canonicalize the common cmp+sel operand as CmpLHS.
+  if (CmpRHS == TVal || CmpRHS == FVal) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Canonicalize the common cmp+sel operand as TVal.
+  if (CmpLHS == FVal) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+
+  // A vector select may be shuffling together elements that are equivalent
+  // based on the max/min/select relationship. Ex:
+  // (X > Y) ? X : (Z ? max(X, Y) : Y)
+  // If Z is true, this reduces as below, and if Z is false:
+  // (X > Y) ? X : Y --> max(X, Y)
+  Value *X = CmpLHS, *Y = CmpRHS;
+  bool PeekedThroughSelectShuffle = false;
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(FVal);
+  if (Shuf && Shuf->isSelect()) {
+    if (Shuf->getOperand(0) == Y)
+      FVal = Shuf->getOperand(1);
+    else if (Shuf->getOperand(1) == Y)
+      FVal = Shuf->getOperand(0);
+    else
+      return nullptr;
+    PeekedThroughSelectShuffle = true;
+  }
+
+  // (X pred Y) ? X : max/min(X, Y)
+  auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal);
+  if (!MMI || TVal != X ||
+      !match(FVal, m_c_MaxOrMin(m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  // The select is only equivalent to the min/max call when the condition
+  // agrees with the call, or when the operands are known equal. The latter is
+  // not valid once a select shuffle has been peeled off.
+  ICmpInst::Predicate MMPred = MMI->getPredicate();
+  if (MMPred != CmpInst::getStrictPredicate(Pred) &&
+      (PeekedThroughSelectShuffle || Pred != CmpInst::ICMP_EQ))
+    return nullptr;
+
+  MMI->dropPoisonGeneratingAnnotations();
+  IC.addToWorklist(MMI);
+  return IC.replaceInstUsesWith(SI, MMI);
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -2588,6 +2655,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))
     return replaceInstUsesWith(SI, V);
+
+  if (Instruction *I = foldSelectOfMinMax(SI, ICI, *this))
+    return I;
 
   return Changed ? &SI : nullptr;
 }
