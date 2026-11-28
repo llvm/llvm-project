@@ -3267,12 +3267,34 @@ metadata.
 ### '`amdgpu.last.use`' Metadata
 
 Sets TH_LOAD_LU temporal hint on load instructions that support it.
-Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+Takes priority over the nontemporal hint (TH_LOAD_NT) and over the
+{ref}`amdgpu.temporality <amdgpu_temporality>` cache hint. This takes no
 arguments.
 
 ```llvm
 %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
 ```
+
+(amdgpu_temporality)=
+
+### '`amdgpu.temporality`' Cache Hint
+
+A target-specific key carried inside the generic `!mem.cache_hint` metadata
+node. It describes the expected reuse pattern of the accessed memory as a set
+of levels that may vary by memory scope, and generalizes `!nontemporal`.
+
+```llvm
+%val = load i32, ptr addrspace(1) %in, align 4, !mem.cache_hint !0
+
+!0 = !{ i32 0, !1 }
+!1 = !{ !"amdgpu.temporality", !"workgroup:low:agent:high" }
+```
+
+The same hint node can also carry the `amdgpu.write_back` key, which asks
+for stored lines to be kept dirty in the cache rather than written to memory
+early.
+
+See {doc}`AMDGPUTemporality` for the full specification.
 
 ### '`amdgpu.no.remote.memory`' Metadata
 
