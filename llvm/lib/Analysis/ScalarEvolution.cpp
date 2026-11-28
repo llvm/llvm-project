@@ -15898,6 +15898,23 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       append_range(Worklist, S->operands());
     };
 
+    // Clamp RHS to the range of From on the side not bounded by the guard, so
+    // the range of the rewrite is at least as precise as the range of From.
+    // Don't if RHS is known to be beyond the bound, to keep the information
+    // that the guard cannot hold.
+    auto ClampRHS = [&](SCEVTypes Kind, CmpInst::Predicate Beyond,
+                        const APInt &Bound) -> const SCEV * {
+      if (RHS->getType()->isPointerTy())
+        return RHS;
+      ConstantRange RHSRange = ICmpInst::isSigned(Beyond)
+                                   ? SE.getSignedRange(RHS)
+                                   : SE.getUnsignedRange(RHS);
+      if (RHSRange.icmp(Beyond, ConstantRange(Bound)))
+        return RHS;
+      SmallVector<SCEVUse> Ops = {RHS, SE.getConstant(Bound)};
+      return SE.getMinMaxExpr(Kind, Ops);
+    };
+
     while (!Worklist.empty()) {
       const SCEV *From = Worklist.pop_back_val();
       if (isa<SCEVConstant>(From))
@@ -15910,19 +15927,25 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       switch (Predicate) {
       case CmpInst::ICMP_ULT:
       case CmpInst::ICMP_ULE:
-        To = SE.getUMinExpr(FromRewritten, RHS);
+        To = SE.getUMinExpr(FromRewritten,
+                            ClampRHS(scUMaxExpr, ICmpInst::ICMP_ULT,
+                                     SE.getUnsignedRangeMin(FromRewritten)));
         if (auto *UMax = dyn_cast<SCEVUMaxExpr>(FromRewritten))
           EnqueueOperands(UMax);
         break;
       case CmpInst::ICMP_SLT:
       case CmpInst::ICMP_SLE:
-        To = SE.getSMinExpr(FromRewritten, RHS);
+        To = SE.getSMinExpr(FromRewritten,
+                            ClampRHS(scSMaxExpr, ICmpInst::ICMP_SLT,
+                                     SE.getSignedRangeMin(FromRewritten)));
         if (auto *SMax = dyn_cast<SCEVSMaxExpr>(FromRewritten))
           EnqueueOperands(SMax);
         break;
       case CmpInst::ICMP_UGT:
       case CmpInst::ICMP_UGE:
-        To = SE.getUMaxExpr(FromRewritten, RHS);
+        To = SE.getUMaxExpr(FromRewritten,
+                            ClampRHS(scUMinExpr, ICmpInst::ICMP_UGT,
+                                     SE.getUnsignedRangeMax(FromRewritten)));
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
         break;
@@ -15937,7 +15960,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
                   m_scev_UMax(m_scev_APInt(C), m_scev_Specific(From))) &&
             C->ule(*RHSC))
           FromRewritten = From;
-        To = SE.getSMaxExpr(FromRewritten, RHS);
+        To = SE.getSMaxExpr(FromRewritten,
+                            ClampRHS(scSMinExpr, ICmpInst::ICMP_SGT,
+                                     SE.getSignedRangeMax(FromRewritten)));
         if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
           EnqueueOperands(SMin);
         break;

@@ -350,17 +350,11 @@ exit:
   ret void
 }
 
-; TODO Should be able to determine no-dep, same as @nodep_via_logical_and_2.
 define void @nodep_via_logical_and_1(ptr %A, i32 %index, i32 %n) {
 ; CHECK-LABEL: 'nodep_via_logical_and_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %0 = load double, ptr %gep.load, align 8 ->
-; CHECK-NEXT:            store double %0, ptr %gep.store, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
