@@ -1343,27 +1343,10 @@ define amdgpu_ps <2 x float> @test_cvt_pk_f32_bf8_word0_s(i32 inreg %a) {
 }
 
 define amdgpu_ps <2 x float> @test_cvt_pk_f32_bf8_word1_s(i32 inreg %a) {
-; GFX942-SDAG-LABEL: test_cvt_pk_f32_bf8_word1_s:
-; GFX942-SDAG:       ; %bb.0:
-; GFX942-SDAG-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX942-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX942-GISEL-LABEL: test_cvt_pk_f32_bf8_word1_s:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], v0 src0_sel:WORD_1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX950-SDAG-LABEL: test_cvt_pk_f32_bf8_word1_s:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_cvt_pk_f32_bf8_word1_s:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-GISEL-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], v0 src0_sel:WORD_1
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX9X-LABEL: test_cvt_pk_f32_bf8_word1_s:
+; GFX9X:       ; %bb.0:
+; GFX9X-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
+; GFX9X-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_cvt_pk_f32_bf8_word1_s:
 ; GFX1170:       ; %bb.0:
@@ -1416,27 +1399,10 @@ define amdgpu_ps <2 x float> @test_cvt_pk_f32_fp8_word0_s(i32 inreg %a) {
 }
 
 define amdgpu_ps <2 x float> @test_cvt_pk_f32_fp8_word1_s(i32 inreg %a) {
-; GFX942-SDAG-LABEL: test_cvt_pk_f32_fp8_word1_s:
-; GFX942-SDAG:       ; %bb.0:
-; GFX942-SDAG-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX942-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX942-GISEL-LABEL: test_cvt_pk_f32_fp8_word1_s:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], v0 src0_sel:WORD_1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX950-SDAG-LABEL: test_cvt_pk_f32_fp8_word1_s:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_cvt_pk_f32_fp8_word1_s:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-GISEL-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], v0 src0_sel:WORD_1
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX9X-LABEL: test_cvt_pk_f32_fp8_word1_s:
+; GFX9X:       ; %bb.0:
+; GFX9X-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
+; GFX9X-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_cvt_pk_f32_fp8_word1_s:
 ; GFX1170:       ; %bb.0:
@@ -1461,16 +1427,10 @@ define amdgpu_ps <2 x float> @test_cvt_pk_f32_fp8_word1_s(i32 inreg %a) {
 }
 
 define amdgpu_ps float @test_cvt_f32_bf8_byte0_s(i32 inreg %a) {
-; GFX942-SDAG-LABEL: test_cvt_f32_bf8_byte0_s:
-; GFX942-SDAG:       ; %bb.0:
-; GFX942-SDAG-NEXT:    v_cvt_f32_bf8_sdwa v0, s0 src0_sel:BYTE_0
-; GFX942-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX942-GISEL-LABEL: test_cvt_f32_bf8_byte0_s:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_0
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
+; GFX942-LABEL: test_cvt_f32_bf8_byte0_s:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    v_cvt_f32_bf8_sdwa v0, s0 src0_sel:BYTE_0
+; GFX942-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-LABEL: test_cvt_f32_bf8_byte0_s:
 ; GFX950:       ; %bb.0:
@@ -1500,16 +1460,10 @@ define amdgpu_ps float @test_cvt_f32_bf8_byte0_s(i32 inreg %a) {
 }
 
 define amdgpu_ps float @test_cvt_f32_fp8_byte0_s(i32 inreg %a) {
-; GFX942-SDAG-LABEL: test_cvt_f32_fp8_byte0_s:
-; GFX942-SDAG:       ; %bb.0:
-; GFX942-SDAG-NEXT:    v_cvt_f32_fp8_sdwa v0, s0 src0_sel:BYTE_0
-; GFX942-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX942-GISEL-LABEL: test_cvt_f32_fp8_byte0_s:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_0
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
+; GFX942-LABEL: test_cvt_f32_fp8_byte0_s:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    v_cvt_f32_fp8_sdwa v0, s0 src0_sel:BYTE_0
+; GFX942-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-LABEL: test_cvt_f32_fp8_byte0_s:
 ; GFX950:       ; %bb.0:
