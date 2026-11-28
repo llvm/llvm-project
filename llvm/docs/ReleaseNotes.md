@@ -399,6 +399,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the BPF Backend
 
+* Added `-bpf-stack-spilling` to pass arguments beyond the first five in
+  upward-growing, fixed-size frames using `r10`, following the sBPF v3 stack
+  layout. Outgoing arguments start at `r10 + 0`; incoming arguments, locals,
+  and register spills start at `r10 - frame-size`. This mode defaults to
+  4096-byte frames, configurable with `-bpf-stack-size` in multiples of 64
+  up to 32768 bytes. The runtime must provide this frame layout, and callers
+  and callees must use matching settings. The default Linux BPF ABI is
+  unchanged. With Clang, pass these options through `-mllvm`.
+
 * Added `-mcpu=v5`, which includes the v4 instruction set and enables unsigned
   and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
   `-disable-hmul` to disable their generation.

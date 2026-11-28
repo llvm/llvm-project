@@ -110,6 +110,9 @@ public:
   bool hasGotox() const { return HasGotox; }
   bool hasHmul() const { return HasHmul; }
 
+  bool useStackSpilling() const;
+  int getStackSizeLimit() const;
+
   bool isLittleEndian() const { return IsLittleEndian; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }

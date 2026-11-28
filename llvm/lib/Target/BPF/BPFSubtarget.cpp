@@ -17,6 +17,8 @@
 #include "GISel/BPFLegalizerInfo.h"
 #include "GISel/BPFRegisterBankInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -49,6 +51,23 @@ static cl::opt<bool>
     Disable_hmul("disable-hmul", cl::Hidden, cl::init(false),
                  cl::desc("Disable high-half multiply (UHMUL/SHMUL) insns"));
 
+static cl::opt<bool> BPFStackSpilling(
+    "bpf-stack-spilling", cl::init(false),
+    cl::desc("Pass extra BPF arguments in upward-growing r10 stack frames"));
+
+static cl::opt<int>
+    BPFStackSizeOption("bpf-stack-size",
+                       cl::desc("Specify the BPF stack size limit"),
+                       cl::init(512));
+
+bool BPFSubtarget::useStackSpilling() const { return BPFStackSpilling; }
+
+int BPFSubtarget::getStackSizeLimit() const {
+  if (useStackSpilling() && !BPFStackSizeOption.getNumOccurrences())
+    return 4096;
+  return BPFStackSizeOption;
+}
+
 void BPFSubtarget::anchor() {}
 
 BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -56,6 +75,15 @@ BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
   initializeEnvironment();
   initSubtargetFeatures(CPU, FS);
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
+  // Stack spilling accesses the bottom of the frame at r10 - frame_size.
+  // Load/store offsets are signed 16-bit, so frame_size must not exceed 32768.
+  // Larger frames would require materializing an adjusted base register, which
+  // frame index elimination does not currently support.
+  if (useStackSpilling() &&
+      (getStackSizeLimit() < 64 || getStackSizeLimit() > 32768 ||
+       getStackSizeLimit() % 64))
+    report_fatal_error("BPF stack spilling requires a stack size that is a "
+                       "multiple of 64 between 64 and 32768 bytes");
   return *this;
 }
 

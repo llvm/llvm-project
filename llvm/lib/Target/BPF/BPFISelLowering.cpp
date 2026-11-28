@@ -73,7 +73,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setStackPointerRegisterToSaveRestore(BPF::R11);
+  setStackPointerRegisterToSaveRestore(STI.useStackSpilling() ? BPF::R10
+                                                              : BPF::R11);
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, STI.hasGotox() ? Custom : Expand);
@@ -465,6 +466,17 @@ SDValue BPFTargetLowering::LowerFormalArguments(
     }
 
     if (VA.isMemLoc()) {
+      if (MF.getSubtarget<BPFSubtarget>().useStackSpilling()) {
+        // Incoming arguments occupy the bottom of this function's frame.
+        int FI =
+            MF.getFrameInfo().CreateFixedObject(8, VA.getLocMemOffset(), true);
+        SDValue Ptr = DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout()));
+        SDValue Load = DAG.getLoad(MVT::i64, DL, Chain, Ptr,
+                                   MachinePointerInfo::getFixedStack(MF, FI));
+        Chain = Load.getValue(1);
+        InVals.push_back(convertLocValType(DAG, DL, VA, MVT::i64, Load));
+        continue;
+      }
       // For example, two stack arguments,
       //   arg1:  Off = 8
       //   arg2:  off = 16
@@ -536,6 +548,14 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(Outs, getHasAlu32() ? CC_BPF32 : CC_BPF64);
 
   unsigned NumBytes = CCInfo.getStackSize();
+  bool StackSpilling = MF.getSubtarget<BPFSubtarget>().useStackSpilling();
+  if (StackSpilling) {
+    if (NumBytes > static_cast<unsigned>(
+                       MF.getSubtarget<BPFSubtarget>().getStackSizeLimit()))
+      fail(CLI.DL, DAG, "stack arguments exceed the BPF stack size limit");
+    // Outgoing arguments are in the callee's frame, not the caller's.
+    NumBytes = 0;
+  }
 
   for (auto &Arg : Outs) {
     ISD::ArgFlagsTy Flags = Arg.Flags;
@@ -579,6 +599,17 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
 
     if (VA.isMemLoc()) {
+      if (StackSpilling) {
+        // Encode outgoing arguments as negative fixed objects so frame
+        // layout does not allocate space for them in the caller's frame.
+        // Frame index elimination maps these to r10 + argument offset.
+        int FI = MF.getFrameInfo().CreateFixedObject(
+            8, -8 - VA.getLocMemOffset(), false);
+        SDValue Ptr = DAG.getFrameIndex(FI, PtrVT);
+        Chain = DAG.getStore(Chain, CLI.DL, Arg, Ptr,
+                             MachinePointerInfo::getFixedStack(MF, FI));
+        continue;
+      }
       int Off = -8 - VA.getLocMemOffset();
       if (Off < INT16_MIN) {
         fail(CLI.DL, DAG, "extra parameter stack depth exceeded limit");

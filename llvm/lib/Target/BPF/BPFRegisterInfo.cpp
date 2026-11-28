@@ -19,17 +19,11 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_REGINFO_TARGET_DESC
 #include "BPFGenRegisterInfo.inc"
 using namespace llvm;
-
-static cl::opt<int>
-    BPFStackSizeOption("bpf-stack-size",
-                       cl::desc("Specify the BPF stack size limit"),
-                       cl::init(512));
 
 BPFRegisterInfo::BPFRegisterInfo()
     : BPFGenRegisterInfo(BPF::R0) {}
@@ -57,9 +51,13 @@ BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL,
-                     MachineBasicBlock& MBB) {
-  if (Offset <= -BPFStackSizeOption) {
+static void WarnSize(int64_t Offset, MachineFunction &MF, DebugLoc &DL,
+                     MachineBasicBlock &MBB) {
+  const BPFSubtarget &STI = MF.getSubtarget<BPFSubtarget>();
+  // Upward-growing frames are checked as a whole in emitPrologue, including
+  // incoming arguments and spills, even if an access folds an interior offset.
+  if (!STI.useStackSpilling() &&
+      Offset <= -static_cast<int64_t>(STI.getStackSizeLimit())) {
     if (!DL)
       /* try harder to get some debug loc */
       for (auto &I : MBB)
@@ -98,9 +96,13 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(i).getIndex();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  int64_t FrameOffset = MF.getSubtarget()
+                            .getFrameLowering()
+                            ->getFrameIndexReference(MF, FrameIndex, FrameReg)
+                            .getFixed();
 
   if (MI.getOpcode() == BPF::MOV_rr) {
-    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+    int64_t Offset = FrameOffset;
 
     WarnSize(Offset, MF, DL, MBB);
     MI.getOperand(i).ChangeToRegister(FrameReg, false);
@@ -111,8 +113,7 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return false;
   }
 
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-               MI.getOperand(i + 1).getImm();
+  int64_t Offset = FrameOffset + MI.getOperand(i + 1).getImm();
 
   if (!isInt<32>(Offset))
     llvm_unreachable("bug in frame offset");

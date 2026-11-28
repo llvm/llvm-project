@@ -14,15 +14,29 @@
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 using namespace llvm;
+
+BPFFrameLowering::BPFFrameLowering(const BPFSubtarget &STI)
+    : TargetFrameLowering(STI.useStackSpilling() ? StackGrowsUp
+                                                 : StackGrowsDown,
+                          STI.useStackSpilling() ? Align(64) : Align(8), 0,
+                          STI.useStackSpilling() ? Align(64) : Align(1)) {}
 
 bool BPFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return true;
 }
 
 void BPFFrameLowering::emitPrologue(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const {}
+                                    MachineBasicBlock &MBB) const {
+  const BPFSubtarget &STI = MF.getSubtarget<BPFSubtarget>();
+  if (STI.useStackSpilling() &&
+      MF.getFrameInfo().getStackSize() >
+          static_cast<uint64_t>(STI.getStackSizeLimit()))
+    MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+        MF.getFunction(), "BPF stack frame exceeds the stack size limit"));
+}
 
 void BPFFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {}
@@ -45,5 +59,18 @@ StackOffset BPFFrameLowering::getFrameIndexReference(const MachineFunction &MF,
 
   FrameReg = RI->getFrameRegister(MF);
 
-  return StackOffset::getFixed(MFI.getObjectOffset(FI));
+  int64_t Offset = MFI.getObjectOffset(FI);
+  const BPFSubtarget &STI = MF.getSubtarget<BPFSubtarget>();
+  if (STI.useStackSpilling()) {
+    if (MFI.isFixedObjectIndex(FI) && Offset < 0) {
+      // Outgoing arguments belong to the next frame. Their negative fixed
+      // offsets keep them out of this function's upward-growing frame.
+      Offset = -Offset - MFI.getObjectSize(FI);
+    } else {
+      // Incoming arguments, locals and register spills grow upwards from
+      // the bottom of the fixed-size frame supplied by the runtime.
+      Offset -= STI.getStackSizeLimit();
+    }
+  }
+  return StackOffset::getFixed(Offset);
 }

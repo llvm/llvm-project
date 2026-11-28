@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 #include <set>
 
@@ -657,37 +658,55 @@ static int64_t computeMinFixedObjOffset(MachineFrameInfo &MFI,
 
 bool BPFMIPreEmitPeepholeImpl::insertMissingCallerSavedSpills() {
   MachineFrameInfo &MFI = MF->getFrameInfo();
+  const BPFSubtarget &STI = MF->getSubtarget<BPFSubtarget>();
+  bool StackSpilling = STI.useStackSpilling();
   SmallVector<BPFFastCall, 8> Calls;
   LivePhysRegs LiveRegs;
   const unsigned SlotSize = 8;
   int64_t MinFixedObjOffset = computeMinFixedObjOffset(MFI, SlotSize);
+  // Frame layout has already run. Append late spills after incoming arguments
+  // and locals in upward-growing frames, reusing the slots across call sites.
+  int64_t SpillStart = alignTo(MFI.getStackSize(), Align(SlotSize));
   bool Changed = false;
   for (MachineBasicBlock &BB : *MF) {
     collectBPFFastCalls(TRI, LiveRegs, BB, Calls);
     Changed |= !Calls.empty();
     for (BPFFastCall &Call : Calls) {
-      int64_t CurOffset = MinFixedObjOffset;
+      int64_t CurOffset = StackSpilling ? SpillStart : MinFixedObjOffset;
       for (MCRegister Reg : CallerSavedRegs) {
         if (((1 << Reg) & Call.LiveCallerSavedRegs) == 0)
           continue;
         // Allocate stack object
-        CurOffset -= SlotSize;
+        if (!StackSpilling)
+          CurOffset -= SlotSize;
         MFI.CreateFixedSpillStackObject(SlotSize, CurOffset);
+        int64_t Offset = CurOffset;
+        if (StackSpilling) {
+          Offset -= STI.getStackSizeLimit();
+          CurOffset += SlotSize;
+        }
         // Generate spill
         BuildMI(BB, Call.MI->getIterator(), Call.MI->getDebugLoc(),
                 TII->get(BPF::STD))
             .addReg(Reg, RegState::Kill)
             .addReg(BPF::R10)
-            .addImm(CurOffset);
+            .addImm(Offset);
         // Generate fill
         BuildMI(BB, ++Call.MI->getIterator(), Call.MI->getDebugLoc(),
                 TII->get(BPF::LDD))
             .addReg(Reg, RegState::Define)
             .addReg(BPF::R10)
-            .addImm(CurOffset);
+            .addImm(Offset);
       }
+      if (StackSpilling)
+        MFI.setStackSize(std::max(MFI.getStackSize(),
+                                  alignTo(uint64_t(CurOffset), Align(64))));
     }
   }
+  if (StackSpilling &&
+      MFI.getStackSize() > static_cast<uint64_t>(STI.getStackSizeLimit()))
+    MF->getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+        MF->getFunction(), "BPF stack frame exceeds the stack size limit"));
   return Changed;
 }
 
