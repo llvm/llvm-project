@@ -2406,8 +2406,19 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
-  if (!isInt<11>(MFI.estimateStackSize(MF)))
+  if (!isInt<11>(MFI.estimateStackSize(MF))) {
     ScavSlotsNum = 1;
+
+    // Each inline asm frame index operand may need its own scratch register,
+    // all live at once, so reserve a slot per operand.
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        if (MI.isInlineAsm())
+          ScavSlotsNum = std::max<unsigned>(
+              ScavSlotsNum,
+              count_if(MI.operands(),
+                       [](const MachineOperand &MO) { return MO.isFI(); }));
+  }
 
   // Far branches over 20-bit offset require a spill slot for scratch register.
   bool IsLargeFunction = !isInt<20>(estimateFunctionSizeInBytes(MF, *TII));
