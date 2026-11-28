@@ -1181,4 +1181,278 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
   ret <2 x i32> %result.1
 }
 
+; The fraction type is legal but the exponent type has to be split.
+define { <8 x half>, <8 x i32> } @test_frexp_v8f16_v8i32(<8 x half> %a) nounwind {
+; CHECK-LABEL: test_frexp_v8f16_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #128
+; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    add x0, sp, #44
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    fcvt s0, h1
+; CHECK-NEXT:    stp x20, x19, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    add x19, sp, #44
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    add x0, sp, #40
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #48
+; CHECK-NEXT:    add x20, sp, #48
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    mov h0, v0.h[2]
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #52
+; CHECK-NEXT:    add x21, sp, #52
+; CHECK-NEXT:    mov v1.h[2], v0.h[0]
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    mov h0, v0.h[3]
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #56
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    fcvt h1, s0
+; CHECK-NEXT:    str q2, [sp] // 16-byte Spill
+; CHECK-NEXT:    fcvt s0, h2
+; CHECK-NEXT:    ldr q2, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    mov v2.h[3], v1.h[0]
+; CHECK-NEXT:    str q2, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    fcvt h2, s0
+; CHECK-NEXT:    add x0, sp, #60
+; CHECK-NEXT:    add x22, sp, #60
+; CHECK-NEXT:    mov h1, v1.h[1]
+; CHECK-NEXT:    fcvt s0, h1
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    mov v1.h[4], v2.h[0]
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    fcvt h2, s0
+; CHECK-NEXT:    add x0, sp, #72
+; CHECK-NEXT:    add x23, sp, #72
+; CHECK-NEXT:    mov h1, v1.h[2]
+; CHECK-NEXT:    fcvt s0, h1
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    mov v1.h[5], v2.h[0]
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    fcvt h2, s0
+; CHECK-NEXT:    add x0, sp, #76
+; CHECK-NEXT:    add x24, sp, #76
+; CHECK-NEXT:    mov h1, v1.h[3]
+; CHECK-NEXT:    fcvt s0, h1
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    mov v1.h[6], v2.h[0]
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr s1, [sp, #40]
+; CHECK-NEXT:    ldr s2, [sp, #56]
+; CHECK-NEXT:    fcvt h3, s0
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    ld1 { v1.s }[1], [x19]
+; CHECK-NEXT:    ld1 { v2.s }[1], [x22]
+; CHECK-NEXT:    mov v0.h[7], v3.h[0]
+; CHECK-NEXT:    ld1 { v1.s }[2], [x20]
+; CHECK-NEXT:    ld1 { v2.s }[2], [x23]
+; CHECK-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEXT:    ld1 { v1.s }[3], [x21]
+; CHECK-NEXT:    ld1 { v2.s }[3], [x24]
+; CHECK-NEXT:    ldp x22, x21, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #128
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_v8f16_v8i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    sub sp, sp, #128
+; WINDOWS-NEXT:    mov h1, v0.h[1]
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    add x0, sp, #44
+; WINDOWS-NEXT:    stp x19, x20, [sp, #64] // 16-byte Folded Spill
+; WINDOWS-NEXT:    add x19, sp, #44
+; WINDOWS-NEXT:    stp x21, x22, [sp, #80] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x23, x24, [sp, #96] // 16-byte Folded Spill
+; WINDOWS-NEXT:    fcvt d0, h1
+; WINDOWS-NEXT:    str x30, [sp, #112] // 8-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    fcvt h0, d0
+; WINDOWS-NEXT:    add x0, sp, #40
+; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    fcvt d0, h0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    fcvt h0, d0
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #48
+; WINDOWS-NEXT:    add x20, sp, #48
+; WINDOWS-NEXT:    mov v0.h[1], v1.h[0]
+; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    mov h0, v0.h[2]
+; WINDOWS-NEXT:    fcvt d0, h0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    fcvt h0, d0
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #52
+; WINDOWS-NEXT:    add x21, sp, #52
+; WINDOWS-NEXT:    mov v1.h[2], v0.h[0]
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    mov h0, v0.h[3]
+; WINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    fcvt d0, h0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #56
+; WINDOWS-NEXT:    mov d2, v1.d[1]
+; WINDOWS-NEXT:    fcvt h1, d0
+; WINDOWS-NEXT:    str q2, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    fcvt d0, h2
+; WINDOWS-NEXT:    ldr q2, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    mov v2.h[3], v1.h[0]
+; WINDOWS-NEXT:    str q2, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    fcvt h2, d0
+; WINDOWS-NEXT:    add x0, sp, #60
+; WINDOWS-NEXT:    add x22, sp, #60
+; WINDOWS-NEXT:    mov h1, v1.h[1]
+; WINDOWS-NEXT:    fcvt d0, h1
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    mov v1.h[4], v2.h[0]
+; WINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    fcvt h2, d0
+; WINDOWS-NEXT:    add x0, sp, #120
+; WINDOWS-NEXT:    add x23, sp, #120
+; WINDOWS-NEXT:    mov h1, v1.h[2]
+; WINDOWS-NEXT:    fcvt d0, h1
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    mov v1.h[5], v2.h[0]
+; WINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    fcvt h2, d0
+; WINDOWS-NEXT:    add x0, sp, #124
+; WINDOWS-NEXT:    add x24, sp, #124
+; WINDOWS-NEXT:    mov h1, v1.h[3]
+; WINDOWS-NEXT:    fcvt d0, h1
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    mov v1.h[6], v2.h[0]
+; WINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr s1, [sp, #40]
+; WINDOWS-NEXT:    ldr s2, [sp, #56]
+; WINDOWS-NEXT:    fcvt h3, d0
+; WINDOWS-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    ldr x30, [sp, #112] // 8-byte Reload
+; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
+; WINDOWS-NEXT:    ld1 { v2.s }[1], [x22]
+; WINDOWS-NEXT:    mov v0.h[7], v3.h[0]
+; WINDOWS-NEXT:    ld1 { v1.s }[2], [x20]
+; WINDOWS-NEXT:    ld1 { v2.s }[2], [x23]
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #64] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ld1 { v1.s }[3], [x21]
+; WINDOWS-NEXT:    ld1 { v2.s }[3], [x24]
+; WINDOWS-NEXT:    ldp x23, x24, [sp, #96] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x21, x22, [sp, #80] // 16-byte Folded Reload
+; WINDOWS-NEXT:    add sp, sp, #128
+; WINDOWS-NEXT:    ret
+  %result = call { <8 x half>, <8 x i32> } @llvm.frexp.v8f16.v8i32(<8 x half> %a)
+  ret { <8 x half>, <8 x i32> } %result
+}
+
+define <4 x i64> @test_frexp_v4f32_v4i64_only_use_exp(<4 x float> %a) nounwind {
+; CHECK-LABEL: test_frexp_v4f32_v4i64_only_use_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    add x0, sp, #32
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #24
+; CHECK-NEXT:    add x19, sp, #24
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #56
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    add x0, sp, #40
+; CHECK-NEXT:    add x20, sp, #40
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr d0, [sp, #32]
+; CHECK-NEXT:    ldr d1, [sp, #56]
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
+; CHECK-NEXT:    ld1 { v0.d }[1], [x19]
+; CHECK-NEXT:    ld1 { v1.d }[1], [x20]
+; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_v4f32_v4i64_only_use_exp:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    sub sp, sp, #80
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    fcvt d0, s0
+; WINDOWS-NEXT:    add x0, sp, #40
+; WINDOWS-NEXT:    stp x19, x20, [sp, #48] // 16-byte Folded Spill
+; WINDOWS-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #72
+; WINDOWS-NEXT:    add x19, sp, #72
+; WINDOWS-NEXT:    mov s0, v0.s[1]
+; WINDOWS-NEXT:    fcvt d0, s0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #24
+; WINDOWS-NEXT:    mov d0, v0.d[1]
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    fcvt d0, s0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    add x0, sp, #32
+; WINDOWS-NEXT:    add x20, sp, #32
+; WINDOWS-NEXT:    mov s0, v0.s[1]
+; WINDOWS-NEXT:    fcvt d0, s0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    ldr d0, [sp, #40]
+; WINDOWS-NEXT:    ldr d1, [sp, #24]
+; WINDOWS-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; WINDOWS-NEXT:    ld1 { v0.d }[1], [x19]
+; WINDOWS-NEXT:    ld1 { v1.d }[1], [x20]
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    add sp, sp, #80
+; WINDOWS-NEXT:    ret
+  %result = call { <4 x float>, <4 x i64> } @llvm.frexp.v4f32.v4i64(<4 x float> %a)
+  %result.1 = extractvalue { <4 x float>, <4 x i64> } %result, 1
+  ret <4 x i64> %result.1
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
