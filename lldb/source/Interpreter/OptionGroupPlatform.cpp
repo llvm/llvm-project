@@ -86,10 +86,7 @@ OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
                                     llvm::StringRef option_arg,
                                     ExecutionContext *execution_context) {
   Status error;
-  if (!m_include_platform_option)
-    ++option_idx;
-
-  const int short_option = g_platform_options[option_idx].short_option;
+  const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
   case 'p':
