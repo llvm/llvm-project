@@ -1204,6 +1204,16 @@ func.func @subview_invalid_strides_rank_reduction(%m: memref<7x22x333x4444xi32>)
 
 // -----
 
+func.func @subview_invalid_strides_rank_reduction_dropped_dim(
+    %m: memref<1x4x1xf32, strided<[100, 10, 1]>>) {
+  // expected-error @below{{expected result type to be 'memref<1x4x1xf32, strided<[100, 10, 1]>>' or a rank-reduced version. (mismatch of result layout)}}
+  %subview = memref.subview %m[0, 0, 0] [1, 4, 1] [1, 1, 1]
+      : memref<1x4x1xf32, strided<[100, 10, 1]>> to memref<4x1xf32, strided<[100, 10]>>
+  return
+}
+
+// -----
+
 func.func @expand_shape_invalid_output_shape(
     %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
   // expected-error @+1 {{invalid output shape provided at pos 2}}
