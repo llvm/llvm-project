@@ -548,6 +548,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Fixed an infinite loop in CodeGenPrepare when GEP unmerging across an
+  `indirectbr` and address sinking repeatedly rewrote addresses based on a
+  static alloca.
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
   tests which wish to opt out of liveness tracking should set
   `tracksRegLiveness: false` explicitly.

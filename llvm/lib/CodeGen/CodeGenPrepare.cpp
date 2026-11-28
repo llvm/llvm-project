@@ -8563,6 +8563,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   // Check that GEPIOp is also defined in SrcBlock.
   if (GEPIOp->getParent() != SrcBlock)
     return false;
+  // Address sinking considers static allocas to be always live, so unmerging
+  // cannot reduce their liveness. Sinking can fold the new GEPs back to the
+  // alloca, causing the two transforms to oscillate.
+  if (auto *AI = dyn_cast<AllocaInst>(GEPIOp); AI && AI->isStaticAlloca())
+    return false;
   // Check that GEP is used outside the block, meaning it's alive on the
   // IndirectBr edge(s).
   if (llvm::none_of(GEPI->users(), [&](User *Usr) {
