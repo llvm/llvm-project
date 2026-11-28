@@ -90,6 +90,33 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_end();
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_on_thread_idle();
 
+// Run a test function under simulation, exploring thread interleavings.
+// The callback is invoked repeatedly (controlled by TSAN_OPTIONS flags
+// simulate_iterations, simulate_max_depth, simulate_scheduler). It is invoked
+// only once if simulate_scheduler is empty (no simulation) or if the first
+// iteration creates no threads.
+// The callback should create threads, exercise concurrent data structures,
+// and assert correctness. The simulator ensures exactly one thread runs at
+// a time and randomly varies the interleaving at each sync point.
+//
+// Returns:
+//   0 - Success (all iterations completed without errors)
+//  -1 - Failure (pre-existing threads, unknown simulate_scheduler, nested
+//       call, invalid simulate_iterations, simulate_start_iteration or
+//       simulate_schedule_probability, race detected, or thread leak)
+//
+// Note: Calls Die() and does not return on deadlock, on a call to an
+// unsupported interceptor, if an iteration exceeds simulate_max_depth
+// scheduling points, or if an iteration uses more than 64 threads, including
+// the callback thread.
+//
+// LIMITATIONS:
+// - No other threads must be running when __tsan_simulate is called.
+// - Only pthread_mutex, pthread_cond, pthread_create/join, and atomics
+//   are supported. Other pthread primitives will fail the simulation.
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_simulate(void (*callback)(void* arg), void* arg);
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_external_register_tag(const char *object_type);
 SANITIZER_INTERFACE_ATTRIBUTE
