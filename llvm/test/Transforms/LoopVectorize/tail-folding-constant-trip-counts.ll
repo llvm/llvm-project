@@ -338,9 +338,8 @@ define i32 @tc_253_i8_iv_live_out(ptr %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 252, [[INDEX]]
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
