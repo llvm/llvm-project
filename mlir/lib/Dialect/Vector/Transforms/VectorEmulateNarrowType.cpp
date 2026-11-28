@@ -37,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
+#include <type_traits>
 
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 
@@ -2074,6 +2075,24 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
          bcr.precomputeMetadata(shuffledElementType)) {
       runningResult = bcr.genericRewriteStep(
           rewriter, bitCastOp->getLoc(), sourceValue, runningResult, metadata);
+    }
+
+    // Sign-extend each zero-extended lane from the target element width.
+    if constexpr (std::is_same_v<ExtOpType, arith::ExtSIOp>) {
+      int64_t shiftAmount = shuffledElementType.getIntOrFloatBitWidth() -
+                            targetVectorType.getElementTypeBitWidth();
+      if (shiftAmount > 0) {
+        auto laneVectorType = cast<VectorType>(runningResult.getType());
+        Value shiftCst = arith::ConstantOp::create(
+            rewriter, bitCastOp.getLoc(),
+            SplatElementsAttr::get(
+                laneVectorType,
+                rewriter.getIntegerAttr(shuffledElementType, shiftAmount)));
+        runningResult = arith::ShLIOp::create(rewriter, bitCastOp.getLoc(),
+                                              runningResult, shiftCst);
+        runningResult = arith::ShRSIOp::create(rewriter, bitCastOp.getLoc(),
+                                               runningResult, shiftCst);
+      }
     }
 
     // Finalize the rewrite.
