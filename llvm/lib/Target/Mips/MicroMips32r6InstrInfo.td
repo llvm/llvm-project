@@ -806,13 +806,13 @@ class FARITH_MMR6_DESC_BASE<string instr_asm, RegisterOperand RC,
   bit isCommutable = isComm;
 }
 class FADD_S_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"add.s", FGR32Opnd, 1, fadd>;
+  : FARITH_MMR6_DESC_BASE<"add.s", FGR32Opnd, 1, any_fadd>;
 class FSUB_S_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"sub.s", FGR32Opnd, 0, fsub>;
+  : FARITH_MMR6_DESC_BASE<"sub.s", FGR32Opnd, 0, any_fsub>;
 class FMUL_S_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"mul.s", FGR32Opnd, 1, fmul>;
+  : FARITH_MMR6_DESC_BASE<"mul.s", FGR32Opnd, 1, any_fmul>;
 class FDIV_S_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"div.s", FGR32Opnd, 0, fdiv>;
+  : FARITH_MMR6_DESC_BASE<"div.s", FGR32Opnd, 0, any_fdiv>;
 class MADDF_S_MMR6_DESC : COP1_4R_DESC_BASE<"maddf.s", FGR32Opnd>, HARDFLOAT;
 class MADDF_D_MMR6_DESC : COP1_4R_DESC_BASE<"maddf.d", FGR64Opnd>, HARDFLOAT;
 class MSUBF_S_MMR6_DESC : COP1_4R_DESC_BASE<"msubf.s", FGR32Opnd>, HARDFLOAT;

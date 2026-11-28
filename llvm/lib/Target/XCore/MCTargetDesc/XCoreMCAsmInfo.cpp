@@ -12,7 +12,7 @@ using namespace llvm;
 void XCoreMCAsmInfo::anchor() { }
 
 XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   SupportsDebugInformation = true;
   Data16bitsDirective = "\t.short\t";
   Data32bitsDirective = "\t.long\t";
@@ -30,4 +30,7 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }

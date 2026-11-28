@@ -4229,8 +4229,8 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         A.deleteAfterManifest(*I);
         for (size_t i = 0; i < AssumeOnlyInst.size(); ++i) {
           Instruction *AOI = AssumeOnlyInst[i];
-          for (auto *Usr : AOI->users())
-            AssumeOnlyInst.insert(cast<Instruction>(Usr));
+          for (Instruction *Usr : AOI->users())
+            AssumeOnlyInst.insert(Usr);
           A.deleteAfterManifest(*AOI);
         }
         return ChangeStatus::CHANGED;
@@ -6628,9 +6628,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   void initialize(Attributor &A) override {
     AAHeapToStack::initialize(A);
 
-    const Function *F = getAnchorScope();
-    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
-
     auto AllocationIdentifierCB = [&](Instruction &I) {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB)
@@ -6642,9 +6639,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       // To do heap to stack, we need to know that the allocation itself is
       // removable once uses are rewritten, and that we can initialize the
       // alloca to the same pattern as the original allocation result.
-      if (isRemovableAlloc(CB, TLI)) {
+      if (isRemovableAlloc(CB)) {
         auto *I8Ty = Type::getInt8Ty(CB->getParent()->getContext());
-        if (nullptr != getInitialValueOfAllocation(CB, TLI, I8Ty)) {
+        if (nullptr != getInitialValueOfAllocation(CB, I8Ty)) {
           AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
           AllocationInfos[CB] = AI;
           AI->IsGlobalizedLocal = isGlobalizedLocal(*CB);
@@ -6741,6 +6738,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       for (CallBase *FreeCall : AI.PotentialFreeCalls) {
         LLVM_DEBUG(dbgs() << "H2S: Removing free call: " << *FreeCall << "\n");
+        if (!FreeCall->use_empty())
+          A.changeAfterManifest(IRPosition::callsite_returned(*FreeCall),
+                                *getElidedFreeResult(FreeCall));
         A.deleteAfterManifest(*FreeCall);
         HasChanged = ChangeStatus::CHANGED;
       }
@@ -6779,7 +6779,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
         Alignment = std::max(Alignment, *RetAlign);
-      if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+      if (Value *Align = getAllocAlignment(AI.CB)) {
         std::optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
         assert(AlignmentAPI && AlignmentAPI->getZExtValue() > 0 &&
                "Expected an alignment during manifest!");
@@ -6798,7 +6798,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
             Alloca, AI.CB->getType(), "malloc_cast", AI.CB->getIterator());
 
       auto *I8Ty = Type::getInt8Ty(F->getContext());
-      auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
+      auto *InitVal = getInitialValueOfAllocation(AI.CB, I8Ty);
       assert(InitVal &&
              "Must be able to materialize initial memory state of allocation");
 
@@ -6871,7 +6871,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
   const Function *F = getAnchorScope();
-  const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
   const auto *LivenessAA =
       A.getAAFor<AAIsDead>(*this, IRPosition::function(*F), DepClassTy::NONE);
@@ -7111,7 +7110,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.Status == AllocationInfo::INVALID)
       continue;
 
-    if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+    if (Value *Align = getAllocAlignment(AI.CB)) {
       std::optional<APInt> APAlign = getAPInt(A, *this, *Align);
       if (!APAlign) {
         // Can't generate an alloca which respects the required alignment

@@ -60,6 +60,7 @@ public:
 } // namespace
 
 Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
+  copyRel = R_HEX_COPY;
   pltRel = R_HEX_JMP_SLOT;
   relativeRel = R_HEX_RELATIVE;
   gotRel = R_HEX_GLOB_DAT;

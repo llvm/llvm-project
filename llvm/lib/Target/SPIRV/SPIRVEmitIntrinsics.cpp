@@ -1224,8 +1224,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
-        for (User *U : II->users()) {
-          Ty = cast<Instruction>(U)->getAccessType();
+        for (Instruction *U : II->users()) {
+          Ty = U->getAccessType();
           if (Ty)
             break;
         }
@@ -2850,7 +2850,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitLoadInst(LoadInst &I) {
   SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt16(Flags)};
   if (!I.isAtomic()) {
     IntrinsicId = Intrinsic::spv_load;
-    Args.push_back(B.getInt32(I.getAlign().value()));
+    Args.push_back(B.getInt32(getMemoryAccessAlignment(I.getAlign())));
   } else {
     IntrinsicId = Intrinsic::spv_atomic_load;
     Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
@@ -2890,7 +2890,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitStoreInst(StoreInst &I) {
                                   B.getInt16(Flags)};
   if (!I.isAtomic()) {
     IntrinsicId = Intrinsic::spv_store;
-    Args.push_back(B.getInt32(I.getAlign().value()));
+    Args.push_back(B.getInt32(getMemoryAccessAlignment(I.getAlign())));
   } else {
     IntrinsicId = Intrinsic::spv_atomic_store;
     Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));

@@ -18,11 +18,10 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i16>
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP8:%.*]] = ashr <4 x i32> [[TMP7]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i16> @llvm.umax.v4i16(<4 x i16> [[TMP5]], <4 x i16> splat (i16 1))
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP17]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[TMP6]], <4 x i16> [[TMP5]], <4 x i32> <i32 0, i32 poison, i32 2, i32 4>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> poison, i16 [[TM1]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>
@@ -30,18 +29,15 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub <4 x i16> [[TMP9]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext <4 x i16> [[TMP14]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt <4 x i32> [[TMP8]], [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = zext i1 [[TMP24]] to i16
+; CHECK-NEXT:    [[TMP17:%.*]] = and <4 x i16> [[TMP6]], splat (i16 1)
+; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP16]], <4 x i16> [[TMP17]], <4 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i16> [[TMP18]], i64 0
 ; CHECK-NEXT:    store i16 [[TMP19]], ptr [[B]], align 2
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP18]], i64 1
-; CHECK-NEXT:    [[TMP20:%.*]] = zext i1 [[TMP26]] to i16
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i16> [[TMP18]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP20]], ptr [[B1]], align 2
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP18]], i64 2
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i1 [[TMP23]] to i16
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i16> [[TMP18]], i64 2
 ; CHECK-NEXT:    store i16 [[TMP21]], ptr [[B2]], align 2
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP18]], i64 3
-; CHECK-NEXT:    [[TMP22:%.*]] = zext i1 [[TMP25]] to i16
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[TMP18]], i64 3
 ; CHECK-NEXT:    store i16 [[TMP22]], ptr [[B]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -222,7 +218,7 @@ define void @test_shared_partial_demote(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TM1:%.*]] = trunc i32 [[M1]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr <4 x i32> [[TMP3]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
@@ -230,7 +226,7 @@ define void @test_shared_partial_demote(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i16> @llvm.umax.v4i16(<4 x i16> [[TMP8]], <4 x i16> splat (i16 1))
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP10]], <4 x i16> [[TMP8]], <4 x i32> <i32 0, i32 poison, i32 2, i32 4>
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> poison, i16 [[TM1]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i16> [[TMP12]], <4 x i16> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>
@@ -240,18 +236,19 @@ define void @test_shared_partial_demote(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i16> [[TMP16]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP17]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp slt <4 x i32> [[TMP4]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP20]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = zext i1 [[TMP21]] to i16
+; CHECK-NEXT:    [[TMP20:%.*]] = and <4 x i8> [[TMP2]], splat (i8 1)
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP19]], <4 x i8> [[TMP20]], <4 x i8> zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i8> [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = zext i8 [[TMP22]] to i16
 ; CHECK-NEXT:    store i16 [[TMP23]], ptr [[B]], align 2
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP20]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = zext i1 [[TMP24]] to i16
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i8> [[TMP21]], i64 1
+; CHECK-NEXT:    [[TMP25:%.*]] = zext i8 [[TMP24]] to i16
 ; CHECK-NEXT:    store i16 [[TMP25]], ptr [[B1]], align 2
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP20]], i64 2
-; CHECK-NEXT:    [[TMP27:%.*]] = zext i1 [[TMP26]] to i16
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i8> [[TMP21]], i64 2
+; CHECK-NEXT:    [[TMP27:%.*]] = zext i8 [[TMP26]] to i16
 ; CHECK-NEXT:    store i16 [[TMP27]], ptr [[B2]], align 2
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP20]], i64 3
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i1 [[TMP28]] to i16
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i8> [[TMP21]], i64 3
+; CHECK-NEXT:    [[TMP29:%.*]] = zext i8 [[TMP28]] to i16
 ; CHECK-NEXT:    store i16 [[TMP29]], ptr [[B]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -330,18 +327,18 @@ define void @test_wider_demoted_disjoint_user(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-NEXT:    [[D1:%.*]] = getelementptr i8, ptr [[D]], i64 16
 ; CHECK-NEXT:    [[K3:%.*]] = load i32, ptr [[D1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[C]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i16> [[TMP3]], splat (i16 -256)
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[K1]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i16> [[TMP5]], i16 [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[K3]] to i16
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i16> [[TMP7]], i16 [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint <4 x i16> [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i8> [[TMP1]], splat (i8 1)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i8> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i32> [[TMP1]], splat (i32 1)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i32> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i1> [[TMP12]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor <4 x i16> [[TMP10]], [[TMP13]]
 ; CHECK-NEXT:    store <4 x i16> [[TMP14]], ptr [[B]], align 2

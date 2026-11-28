@@ -28,6 +28,17 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  string_length
+  HDRS
+    string_length.h
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.type_traits
+)
+
 add_entrypoint_object(
   memccpy
   SRCS
@@ -92,6 +103,11 @@ add_entrypoint_object(
     stpncpy.h
   DEPENDS
     .memory_utils.inline_bzero
+    .memory_utils.inline_memcpy
+    .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

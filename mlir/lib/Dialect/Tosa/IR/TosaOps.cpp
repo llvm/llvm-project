@@ -4792,6 +4792,24 @@ LogicalResult TransposeConv2DOp::verify() {
   return success();
 }
 
+void RescaleOp::build(OpBuilder &builder, OperationState &state, Type output,
+                      Value input, Value multiplier, Value shift, Value inputZp,
+                      Value outputZp, bool scale32, RoundingMode roundingMode,
+                      bool perChannel) {
+  build(builder, state, output, input, multiplier, shift, inputZp, outputZp,
+        scale32, roundingMode, perChannel,
+        getStorageElementTypeOrSelf(input).isUnsignedInteger(),
+        getStorageElementTypeOrSelf(output).isUnsignedInteger());
+}
+
+void RescaleOp::build(OpBuilder &builder, OperationState &state, Type output,
+                      Value input, Value multiplier, Value shift, Value inputZp,
+                      Value outputZp, BoolAttr scale32,
+                      RoundingModeAttr roundingMode, BoolAttr perChannel) {
+  build(builder, state, output, input, multiplier, shift, inputZp, outputZp,
+        scale32.getValue(), roundingMode.getValue(), perChannel.getValue());
+}
+
 LogicalResult RescaleOp::verify() {
   const auto inputType = llvm::cast<ShapedType>(getInput().getType());
   auto inputElementType =
@@ -4810,6 +4828,17 @@ LogicalResult RescaleOp::verify() {
         << outputElementType;
     return failure();
   }
+
+  if (inputElementType.isUnsignedInteger() && !getInputUnsigned())
+    return emitOpError("requires input_unsigned to be true for unsigned input "
+                       "type, got ")
+           << inputElementType;
+
+  if (outputElementType.isUnsignedInteger() && !getOutputUnsigned())
+    return emitOpError(
+               "requires output_unsigned to be true for unsigned output "
+               "type, got ")
+           << outputElementType;
 
   if (verifyRescaleValueAndZpTypes(*this, getInput(), getInputZp(), "input")
           .failed())
@@ -4894,6 +4923,18 @@ LogicalResult RescaleOp::inferReturnTypeComponents(
   return success();
 }
 
+void CastOp::build(OpBuilder &builder, OperationState &state, Type output,
+                   Value input) {
+  const Type inputType = getStorageElementTypeOrSelf(input);
+  build(builder, state, output, input,
+        inputType.isUnsignedInteger() && !inputType.isInteger(1));
+}
+
+void CastOp::build(OpBuilder &builder, OperationState &state, Type output,
+                   Value input, bool inputUnsigned) {
+  build(builder, state, output, input, builder.getBoolAttr(inputUnsigned));
+}
+
 LogicalResult CastOp::verify() {
   const ShapedType inputType = llvm::cast<ShapedType>(getInput().getType());
   const ShapedType outputType = llvm::cast<ShapedType>(getType());
@@ -4906,12 +4947,18 @@ LogicalResult CastOp::verify() {
 
   const bool isUnsigned = this->getInputUnsigned();
   const Type inputDataType = getStorageElementTypeOrSelf(inputType);
+  const bool isBoolType = inputDataType.isInteger(1);
 
   if (isUnsigned)
-    if (!inputDataType.isInteger() || inputDataType.isInteger(1))
+    if (!inputDataType.isInteger() || isBoolType)
       return emitOpError()
              << "attribute input_unsigned requires integer type inputs. Got: "
              << inputDataType;
+
+  if (inputDataType.isUnsignedInteger() && !isBoolType && !isUnsigned)
+    return emitOpError("requires input_unsigned to be true for unsigned input "
+                       "type, got ")
+           << inputDataType;
 
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();

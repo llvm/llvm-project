@@ -836,7 +836,7 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 CallInst *OpenMPIRBuilder::createRuntimeFunctionCall(FunctionCallee Callee,
                                                      ArrayRef<Value *> Args,
-                                                     StringRef Name) {
+                                                     const Twine &Name) {
   CallInst *Call = Builder.CreateCall(Callee, Args, Name);
   Call->setCallingConv(Config.getRuntimeCC());
   return Call;
@@ -1389,8 +1389,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInReduction(
         OrigPtrTy && OrigPtrTy->getAddressSpace() != 0)
       OrigPtr = Builder.CreateAddrSpaceCast(OrigPtr, PtrTy);
 
-    Value *Priv = Builder.CreateCall(GetThData, {Gtid, NullDesc, OrigPtr},
-                                     "omp.inred.priv");
+    Value *Priv = createRuntimeFunctionCall(
+        GetThData, {Gtid, NullDesc, OrigPtr}, "omp.inred.priv");
 
     // Cast the returned private pointer back to the requested address space
     // when it differs.
@@ -1740,7 +1740,7 @@ static Function *createTargetParallelWrapper(OpenMPIRBuilder *OMPIRBuilder,
   Builder.CreateStore(WrapperFn->getArg(1), AddrAlloca);
   Builder.CreateStore(Builder.getInt32(0), ZeroAlloca);
   if (UseArgStruct) {
-    Builder.CreateCall(
+    OMPIRBuilder->createRuntimeFunctionCall(
         OMPIRBuilder->getOrCreateRuntimeFunctionPtr(
             llvm::omp::RuntimeFunction::OMPRTL___kmpc_get_shared_variables),
         {ArgsAlloca});
@@ -2733,7 +2733,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       // Emit runtime call for @__kmpc_taskgroup
       Function *TaskgroupFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
-      Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+      createRuntimeFunctionCall(TaskgroupFn, {Ident, ThreadID});
     }
 
     // `flags` Argument Configuration
@@ -2774,7 +2774,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
     // variables must be copied before the task is run (TaskData)
-    CallInst *TaskData = Builder.CreateCall(
+    CallInst *TaskData = createRuntimeFunctionCall(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
@@ -2816,14 +2816,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // taskloop runtime call
     Function *TaskloopFn =
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskloop);
-    Builder.CreateCall(TaskloopFn, Args);
+    createRuntimeFunctionCall(TaskloopFn, Args);
 
     // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup if
     // nogroup is not defined
     if (!NoGroup) {
       Function *EndTaskgroupFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
-      Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+      createRuntimeFunctionCall(EndTaskgroupFn, {Ident, ThreadID});
     }
 
     StaleCI->eraseFromParent();
@@ -8543,7 +8543,7 @@ CallInst *OpenMPIRBuilder::createOMPAlignedAlloc(const LocationDescription &Loc,
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_aligned_alloc);
 
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
@@ -8570,7 +8570,7 @@ CallInst *OpenMPIRBuilder::createOMPAllocShared(const LocationDescription &Loc,
 
   Value *Args[] = {Size};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc_shared);
-  CallInst *Call = Builder.CreateCall(Fn, Args, Name);
+  CallInst *Call = createRuntimeFunctionCall(Fn, Args, Name);
   Call->addRetAttr(Attribute::getWithAlignment(
       M.getContext(), M.getDataLayout().getPrefTypeAlign(Int64)));
   return Call;
@@ -8591,7 +8591,7 @@ CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,
 
   Value *Args[] = {Addr, Size};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free_shared);
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,

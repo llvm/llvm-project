@@ -1220,6 +1220,12 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   if (Ptr->isSwiftError())
     return true;
 
+  // Ignore Swift async context addresses. On WebAssembly they lower to a
+  // local, which cannot have regular uses like an instrumentation function.
+  if (auto *II = dyn_cast<IntrinsicInst>(Ptr);
+      II && II->getIntrinsicID() == Intrinsic::swift_async_context_addr)
+    return true;
+
   // Treat memory accesses to promotable allocas as non-interesting since they
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
@@ -3718,8 +3724,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   Value *NewAddressPtr = IRB.CreateIntToPtr(NewAddress, AI->getType());
 
   // Remove lifetime markers now that this is no longer an alloca.
-  for (User *U : make_early_inc_range(AI->users())) {
-    auto *I = cast<Instruction>(U);
+  for (Instruction *I : make_early_inc_range(AI->users())) {
     if (I->isLifetimeStartOrEnd())
       I->eraseFromParent();
   }

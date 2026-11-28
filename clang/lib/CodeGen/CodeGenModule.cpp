@@ -22,6 +22,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGOpenMPRuntimeGPU.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
@@ -72,7 +73,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -90,10 +90,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-
-static llvm::cl::opt<bool> LimitedCoverage(
-    "limited-coverage-experimental", llvm::cl::Hidden,
-    llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
@@ -603,7 +599,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              const CodeGenOptions &CGO, llvm::Module &M,
                              DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
-    : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
+    : CLOpts(getCodeGenCLOptions(M.getContext())), Context(C),
+      LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
@@ -8441,9 +8438,10 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
     if (!cast<FunctionDecl>(D)->doesThisDeclarationHaveABody())
       break;
     SourceManager &SM = getContext().getSourceManager();
-    if (LimitedCoverage && SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
+    if (CLOpts.limited_coverage_experimental &&
+        SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
       break;
-    if (!llvm::coverage::SystemHeadersCoverage &&
+    if (!CLOpts.system_headers_coverage &&
         SM.isInSystemHeader(D->getBeginLoc()))
       break;
     DeferredEmptyCoverageMappingDecls.try_emplace(D, true);

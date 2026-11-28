@@ -16,50 +16,19 @@
 
 using namespace llvm;
 
-MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
-    : MCAsmInfo(Options) {
-  IsAIX = true;
-  IsLittleEndian = false;
-
-  InternalSymbolPrefix = "L..";
-  SupportsQuotedNames = false;
-  if (getMCCLOptions(Options).use_leb128_directives == BoolOrDefault::Default)
-    HasLEB128Directives = false;
-  ZeroDirective = "\t.space\t";
-  AsciiDirective = nullptr; // not supported
-  AscizDirective = nullptr; // not supported
-  CharacterLiteralSyntax = ACLS_SingleQuotePrefix;
-
-  // Use .vbyte for data definition to avoid directives that apply an implicit
-  // alignment.
-  Data16bitsDirective = "\t.vbyte\t2, ";
-  Data32bitsDirective = "\t.vbyte\t4, ";
-
-  COMMDirectiveAlignmentIsInBytes = false;
-  LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
-  HasDotTypeDotSizeDirective = false;
-  ParseInlineAsmUsingAsmParser = true;
+static void printCsectDirective(const MCSectionXCOFF &Sec, raw_ostream &OS) {
+  OS << "\t.csect " << Sec.getQualNameSymbol()->getName() << ","
+     << Log2(Sec.getAlign()) << '\n';
 }
 
-bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {
-  return static_cast<const MCSectionXCOFF &>(Sec).getKind().isText();
-}
-
-MCSectionXCOFF::~MCSectionXCOFF() = default;
-
-void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
-  OS << "\t.csect " << QualName->getName() << "," << Log2(getAlign()) << '\n';
-}
-
-void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
-                                          const Triple &T,
-                                          raw_ostream &OS) const {
+static void printSwitchToSection(const MCAsmInfo &MAI, const MCSection &Section,
+                                 uint32_t, const Triple &T, raw_ostream &OS) {
   auto &Sec = static_cast<const MCSectionXCOFF &>(Section);
   if (Sec.getKind().isText()) {
     if (Sec.getMappingClass() != XCOFF::XMC_PR)
       report_fatal_error("Unhandled storage-mapping class for .text csect");
 
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
 
@@ -67,7 +36,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
     if (Sec.getMappingClass() != XCOFF::XMC_RO &&
         Sec.getMappingClass() != XCOFF::XMC_TD)
       report_fatal_error("Unhandled storage-mapping class for .rodata csect.");
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
 
@@ -77,7 +46,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
         Sec.getMappingClass() != XCOFF::XMC_TD)
       report_fatal_error(
           "Unexepected storage-mapping class for ReadOnlyWithRel kind");
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
 
@@ -86,7 +55,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
     // We only expect XMC_TL here for initialized TLS data.
     if (Sec.getMappingClass() != XCOFF::XMC_TL)
       report_fatal_error("Unhandled storage-mapping class for .tdata csect.");
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
 
@@ -95,7 +64,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
     case XCOFF::XMC_RW:
     case XCOFF::XMC_DS:
     case XCOFF::XMC_TD:
-      Sec.printCsectDirective(OS);
+      printCsectDirective(Sec, OS);
       break;
     case XCOFF::XMC_TC:
     case XCOFF::XMC_TE:
@@ -116,7 +85,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
       return;
 
     assert(Sec.getKind().isBSS() && "Unexpected section kind for toc-data");
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
   // Common csect type (uninitialized storage) does not have to print csect
@@ -144,7 +113,7 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
   // Zero-initialized TLS data with weak or external linkage are not eligible to
   // be put into common csect.
   if (Sec.getKind().isThreadBSS()) {
-    Sec.printCsectDirective(OS);
+    printCsectDirective(Sec, OS);
     return;
   }
 
@@ -158,3 +127,32 @@ void MCAsmInfoXCOFF::printSwitchToSection(const MCSection &Section, uint32_t,
 
   report_fatal_error("Printing for this SectionKind is unimplemented.");
 }
+
+MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
+  IsAIX = true;
+  IsLittleEndian = false;
+
+  InternalSymbolPrefix = "L..";
+  SupportsQuotedNames = false;
+  if (getMCCLOptions(Options).use_leb128_directives == BoolOrDefault::Default)
+    HasLEB128Directives = false;
+  ZeroDirective = "\t.space\t";
+  AsciiDirective = nullptr; // not supported
+  AscizDirective = nullptr; // not supported
+  CharacterLiteralSyntax = ACLS_SingleQuotePrefix;
+
+  // Use .vbyte for data definition to avoid directives that apply an implicit
+  // alignment.
+  Data16bitsDirective = "\t.vbyte\t2, ";
+  Data32bitsDirective = "\t.vbyte\t4, ";
+
+  COMMDirectiveAlignmentIsInBytes = false;
+  LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
+  HasDotTypeDotSizeDirective = false;
+  ParseInlineAsmUsingAsmParser = true;
+
+  PrintSwitchToSectionFn = ::printSwitchToSection;
+}
+
+MCSectionXCOFF::~MCSectionXCOFF() = default;

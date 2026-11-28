@@ -1,10 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,VI %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 %s
-
-; R600: {{^}}s_mad_zext_i32_to_i64:
-; R600: MEM_RAT_CACHELESS STORE_RAW
-; R600: MEM_RAT_CACHELESS STORE_RAW
 
 ; GCN: {{^}}s_mad_zext_i32_to_i64:
 ; GCN: v_mov_b32_e32 v[[V_ZERO:[0-9]]], 0{{$}}
