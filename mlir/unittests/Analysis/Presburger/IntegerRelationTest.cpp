@@ -777,3 +777,35 @@ TEST(IntegerRelationTest, isFullDim) {
   rel = parseRelationFromSet("(x): (-1 >= 0)", 1);
   EXPECT_FALSE(rel.isFullDim());
 }
+
+namespace {
+/// Exposes the protected Fourier-Motzkin elimination so that the dark shadow
+/// variant can be tested.
+class DarkShadowTestRelation : public IntegerRelation {
+public:
+  DarkShadowTestRelation(const IntegerRelation &rel) : IntegerRelation(rel) {}
+  using IntegerRelation::fourierMotzkinEliminate;
+};
+} // namespace
+
+TEST(IntegerRelationTest, fourierMotzkinDarkShadow) {
+  // The dark shadow is a convex integer subset of the exact integer shadow.
+  //
+  // Consider the relation 2*i == j + 1, i.e. j + 1 <= 2i <= j + 1.
+  // Eliminating i, the rational shadow is the entire j-line, but the exact
+  // integer shadow is "j is odd".
+  IntegerRelation parsed =
+      parseRelationFromSet("(j, i) : (2*i - j - 1 >= 0, -2*i + j + 1 >= 0)", 2);
+
+  // The rational shadow should contain j = 0.
+  DarkShadowTestRelation rationalShadow = parsed;
+  rationalShadow.fourierMotzkinEliminate(/*pos=*/1, /*darkShadow=*/false);
+  rationalShadow.addEquality({1, 0});
+  EXPECT_FALSE(rationalShadow.isIntegerEmpty());
+
+  // The dark shadow must not contain j = 0.
+  DarkShadowTestRelation darkShadow = parsed;
+  darkShadow.fourierMotzkinEliminate(/*pos=*/1, /*darkShadow=*/true);
+  darkShadow.addEquality({1, 0});
+  EXPECT_TRUE(darkShadow.isIntegerEmpty());
+}
