@@ -253,7 +253,8 @@ FunctionPass *createX86LowerTileCopyLegacyPass();
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
 /// ensures that the open interval of function start and end PCs contains all
-/// return addresses for the benefit of the Windows x64 unwinder.
+/// return addresses for the benefit of the Windows x64 unwinder. Also inserts
+/// padding where a call's return address would cross an EH boundary.
 class X86AvoidTrailingCallPass
     : public RequiredPassInfoMixin<X86AvoidTrailingCallPass> {
 public:

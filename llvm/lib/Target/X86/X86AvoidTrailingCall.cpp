@@ -14,8 +14,9 @@
 // call instruction for the unwinder to decode. LLVM must maintain the invariant
 // that the last instruction of a function or funclet is not a call, or the
 // unwinder may decode into the next function. Similarly, a call may not
-// immediately precede an epilogue code pattern. As of this writing, the
-// SEH_Epilogue pseudo instruction takes care of that.
+// immediately precede an epilogue code pattern, or return across an IP2State
+// boundary. In both cases the return address must stay in the call's EH
+// region, so insert padding before the boundary.
 //
 // Second, all non-tail call jump targets must be within the *half-open*
 // interval of the bounds of the function. The unwinder distinguishes between
@@ -24,8 +25,8 @@
 // means that the last regular MBB of an LLVM function must not be empty if
 // there are regular jumps targeting it.
 //
-// This pass upholds these invariants by ensuring that blocks at the end of a
-// function or funclet are a) not empty and b) do not end in a CALL instruction.
+// This pass inserts padding after calls and ensures that blocks at the end of
+// a function or funclet are not empty.
 //
 // Unwinder implementation for reference:
 // https://github.com/dotnet/coreclr/blob/a9f3fc16483eecfc47fb79c362811d870be02249/src/unwinder/amd64/unwinder_amd64.cpp#L1015
@@ -38,6 +39,9 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include <optional>
 
 #define AVOIDCALL_DESC "X86 avoid trailing call pass"
 #define AVOIDCALL_NAME "x86-avoid-trailing-call"
@@ -81,19 +85,70 @@ static bool isCallInstruction(const MachineInstr &MI) {
   return MI.isCall() && !MI.isReturn();
 }
 
-bool UpdatedOnX86AvoidTrailingCallPass(MachineFunction &MF) {
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86InstrInfo &TII = *STI.getInstrInfo();
-  assert(STI.isTargetWin64() && "pass only runs on Win64");
+static bool isUnwindingInlineAsm(const MachineInstr &MI) {
+  // Empty inline asm emits no instructions, even if marked as unwinding.
+  return MI.isInlineAsm() &&
+         MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName()[0] != '\0' &&
+         (MI.getOperand(InlineAsm::MIOp_ExtraInfo).getImm() &
+          InlineAsm::Extra_MayUnwind);
+}
 
-  // We don't need to worry about any of the invariants described above if there
-  // is no unwind info (CFI).
-  if (!MF.hasWinCFI())
-    return false;
+static std::optional<unsigned> getWinEHCallPadding(const MachineInstr &MI) {
+  // During a call, the "current address" for the calling frame is the return
+  // address from that call. This can cause issues with Win x64 unwinding if
+  // the instruction immediately following the call is in a different IP2State
+  // (that is EH) region than the call instruction itself. To workaround this,
+  // we may need to insert padding after the call instruction.
 
-  // FIXME: Perhaps this pass should also replace SEH_Epilogue by inserting nops
-  // before epilogues.
+  const MachineBasicBlock &CallMBB = *MI.getParent();
+  const MachineFunction &MF = *CallMBB.getParent();
 
+  // This padding is only needed for table-based Win64 unwinding.
+  if (MF.getFunction().getParent()->getExceptionModel() !=
+          ExceptionHandling::WinEH ||
+      MF.getTarget().getMCAsmInfo().getWinEHEncodingType() !=
+          WinEH::EncodingType::Itanium)
+    return std::nullopt;
+
+  // Start from the instruction after the call and check if padding is needed.
+  bool HasEHPersonality = MF.getWinEHFuncInfo() != nullptr;
+  auto MBBI = CallMBB.getIterator();
+  auto I = std::next(MI.getIterator());
+  while (true) {
+    for (; I != MBBI->instr_end(); ++I) {
+      // Keep the return address outside the epilogue, even without an EH
+      // personality.
+      if (I->getOpcode() == X86::SEH_BeginEpilogue)
+        return X86::NOOP;
+
+      // Keep the return address in the call's IP2State range.
+      if (I->isEHLabel()) {
+        if (HasEHPersonality)
+          return X86::NOOP;
+        continue;
+      }
+
+      // A real instruction already provides a return address in the same
+      // range. Keep looking past pseudos, which may emit no bytes.
+      if (!I->isPseudo() && !I->isMetaInstruction())
+        return std::nullopt;
+    }
+    if (++MBBI == MF.end())
+      break;
+    I = MBBI->instr_begin();
+  }
+
+  // At function end, there is no IP2State range to extend without an EH
+  // personality.
+  if (!HasEHPersonality)
+    return std::nullopt;
+
+  // Trap if the call's block has no successors; otherwise use a NOP so
+  // execution can continue if the call returns.
+  return CallMBB.succ_empty() ? X86::INT3 : X86::NOOP;
+}
+
+static bool padFuncletEnds(MachineFunction &MF, const X86InstrInfo &TII) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     // Look for basic blocks that precede funclet entries or are at the end of
@@ -137,14 +192,43 @@ bool UpdatedOnX86AvoidTrailingCallPass(MachineFunction &MF) {
   return Changed;
 }
 
+static bool updateX86AvoidTrailingCall(MachineFunction &MF) {
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
+  const X86InstrInfo &TII = *STI.getInstrInfo();
+  bool Changed =
+      STI.isTargetWin64() && MF.hasWinCFI() && padFuncletEnds(MF, TII);
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // Pad statepoints even if they reserve patch bytes instead of emitting a
+      // call. The runtime can replace those bytes with a call, so the WinEH
+      // padding must be outside the patch region.
+      if (!(isCallInstruction(MI) && !MI.isPseudo()) &&
+          MI.getOpcode() != TargetOpcode::STATEPOINT &&
+          !isUnwindingInlineAsm(MI))
+        continue;
+
+      if (auto Padding = getWinEHCallPadding(MI)) {
+        // Insert in the call's block, before any following EH labels.
+        // Post-instruction symbols and statepoint stack map labels will point
+        // to the start of the padding.
+        BuildMI(MBB, std::next(MI.getIterator()), DebugLoc(),
+                TII.get(*Padding));
+        Changed = true;
+      }
+    }
+  }
+  return Changed;
+}
+
 bool X86AvoidTrailingCallLegacyPass::runOnMachineFunction(MachineFunction &MF) {
-  return UpdatedOnX86AvoidTrailingCallPass(MF);
+  return updateX86AvoidTrailingCall(MF);
 }
 
 PreservedAnalyses
 X86AvoidTrailingCallPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = UpdatedOnX86AvoidTrailingCallPass(MF);
+  bool Changed = updateX86AvoidTrailingCall(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 

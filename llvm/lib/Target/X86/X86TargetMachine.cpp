@@ -591,11 +591,6 @@ void X86PassConfig::addPreEmitPass2() {
   addPass(createX86IndirectThunksLegacyPass());
   addPass(createX86ReturnThunksLegacyPass());
 
-  // Insert extra int3 instructions after trailing call instructions to avoid
-  // issues in the unwinder.
-  if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86AvoidTrailingCallLegacyPass());
-
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
   // instructions. CFIInstrInserter self-skips targets that do not use DWARF
@@ -626,6 +621,11 @@ void X86PassConfig::addPreEmitPass2() {
             (M->getFunction("objc_retainAutoreleasedReturnValue") ||
              M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
   }));
+
+  // Insert call padding after layout and bundle expansion, before the unwind
+  // passes inspect the final instructions.
+  if (TT.isOSWindowsOrUEFI() && TT.isX86_64())
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
