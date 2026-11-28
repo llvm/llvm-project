@@ -42,7 +42,6 @@ class MlirLexer(RegexLexer):
 
     tokens = {
         "root": [
-            (r"\s+", Text),
             # Comments
             (r"//.*?$", Comment.Single),
             # operation name with assignment: %... = op.name
@@ -52,6 +51,12 @@ class MlirLexer(RegexLexer):
             ),
             # operation name without result
             (r"^(\s*)([A-Za-z0-9_\.\$\-]+)\b(?=[^<:])", bygroups(Text, Name.Builtin)),
+            # Whitespace. Must come after the anchored operation-name rules
+            # above and be split at the newline: a single `\s+` swallowing a
+            # newline plus the next line's indent leaves the position
+            # mid-line, so `^`-anchored rules never fire again.
+            (r"\n", Text),
+            (r"[ \t]+", Text),
             # Attribute alias definition:  #name =
             (
                 r"^(\s*)(#[_A-Za-z0-9\$\-\.]+)(\b)(\s*=)",
@@ -73,7 +78,12 @@ class MlirLexer(RegexLexer):
             # types by exclamation or builtin names
             (r"![_A-Za-z0-9\$\-\.]+\b", Keyword.Type),
             # NOTE: please sync changes to corresponding builtin type rule in "angled-type"
-            (r"\b(bf16|f16|f32|f64|f80|f128|index|none|(u|s)?i[0-9]+)\b", Keyword.Type),
+            (
+                r"\b(bf16|f16|f32|f64|f80|f128|tf32|index|none"
+                r"|f[0-9]+E[0-9]+M[0-9]+(B[0-9]+)?(FN(UZ|U)?)?"
+                r"|(u|s)?i[0-9]+)\b",
+                Keyword.Type,
+            ),
             # container-like dialect types (tensor<...>, memref<...>, vector<...>)
             (
                 r"\b(complex|memref|tensor|tuple|vector)\s*(<)",
@@ -121,7 +131,9 @@ class MlirLexer(RegexLexer):
             # element / builtin types inside angle brackets (no word-boundary)
             # NOTE: please sync changes to corresponding builtin type rule in "root"
             (
-                r"(?:bf16|f16|f32|f64|f80|f128|index|none|(?:[us]?i[0-9]+))",
+                r"(?:bf16|f16|f32|f64|f80|f128|tf32|index|none"
+                r"|f[0-9]+E[0-9]+M[0-9]+(?:B[0-9]+)?(?:FN(?:UZ|U)?)?"
+                r"|(?:[us]?i[0-9]+))",
                 Keyword.Type,
             ),
             # also allow nested container-like types to be recognized
