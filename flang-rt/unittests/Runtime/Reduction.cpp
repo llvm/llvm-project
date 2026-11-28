@@ -623,6 +623,127 @@ TEST(Reductions, DotProduct) {
       *logicalVector2, *logicalVector1, __FILE__, __LINE__));
 }
 
+// The C entry points in lib/runtime/complex-reduction.c are thin wrappers
+// around the CppXXXComplexN functions that return C _Complex values. They
+// declare the C++ functions themselves, so a mismatch between those
+// declarations and the C++ definitions (return type, argument list) is only
+// visible when the wrappers are actually called.
+//
+// The declarations below restate the C API from complex-reduction.h, which
+// cannot be included from C++ (it uses _Bool). MSVC is excluded because its
+// C++ front end has no C99 _Complex.
+#if !defined(_MSC_VER)
+namespace {
+using CFloatComplex = float _Complex;
+using CDoubleComplex = double _Complex;
+using CFloatComplexRefOp = CFloatComplex (*)(
+    const CFloatComplex *, const CFloatComplex *);
+using CFloatComplexValueOp = CFloatComplex (*)(CFloatComplex, CFloatComplex);
+using CDoubleComplexRefOp = CDoubleComplex (*)(
+    const CDoubleComplex *, const CDoubleComplex *);
+using CDoubleComplexValueOp = CDoubleComplex (*)(
+    CDoubleComplex, CDoubleComplex);
+} // namespace
+
+extern "C" {
+CFloatComplex RTNAME(SumComplex4)(const Descriptor *x, const char *source,
+    int line, int dim, const Descriptor *mask);
+CDoubleComplex RTNAME(SumComplex8)(const Descriptor *x, const char *source,
+    int line, int dim, const Descriptor *mask);
+CFloatComplex RTNAME(ProductComplex4)(const Descriptor *x, const char *source,
+    int line, int dim, const Descriptor *mask);
+CDoubleComplex RTNAME(ProductComplex8)(const Descriptor *x, const char *source,
+    int line, int dim, const Descriptor *mask);
+CFloatComplex RTNAME(DotProductComplex4)(
+    const Descriptor *x, const Descriptor *y, const char *source, int line);
+CDoubleComplex RTNAME(DotProductComplex8)(
+    const Descriptor *x, const Descriptor *y, const char *source, int line);
+CFloatComplex RTNAME(ReduceComplex4Ref)(const Descriptor *array,
+    CFloatComplexRefOp operation, const char *source, int line, int dim,
+    const Descriptor *mask, const CFloatComplex *identity, bool ordered);
+CFloatComplex RTNAME(ReduceComplex4Value)(const Descriptor *array,
+    CFloatComplexValueOp operation, const char *source, int line, int dim,
+    const Descriptor *mask, const CFloatComplex *identity, bool ordered);
+CDoubleComplex RTNAME(ReduceComplex8Ref)(const Descriptor *array,
+    CDoubleComplexRefOp operation, const char *source, int line, int dim,
+    const Descriptor *mask, const CDoubleComplex *identity, bool ordered);
+CDoubleComplex RTNAME(ReduceComplex8Value)(const Descriptor *array,
+    CDoubleComplexValueOp operation, const char *source, int line, int dim,
+    const Descriptor *mask, const CDoubleComplex *identity, bool ordered);
+}
+
+namespace {
+CFloatComplex CAdd4Ref(const CFloatComplex *x, const CFloatComplex *y) {
+  return *x + *y;
+}
+CFloatComplex CAdd4Value(CFloatComplex x, CFloatComplex y) { return x + y; }
+CDoubleComplex CMul8Ref(const CDoubleComplex *x, const CDoubleComplex *y) {
+  return *x * *y;
+}
+CDoubleComplex CMul8Value(CDoubleComplex x, CDoubleComplex y) { return x * y; }
+
+template <typename C> double Re(C c) { return __real__ c; }
+template <typename C> double Im(C c) { return __imag__ c; }
+} // namespace
+
+TEST(Reductions, ComplexCEntryPoints) {
+  auto vec4{MakeArray<TypeCategory::Complex, 4>(std::vector<int>{3},
+      std::vector<std::complex<float>>{
+          {1.0f, 2.0f}, {3.0f, -1.0f}, {0.5f, 4.0f}})};
+  auto vec8{MakeArray<TypeCategory::Complex, 8>(std::vector<int>{3},
+      std::vector<std::complex<double>>{{1.0, 2.0}, {3.0, -1.0}, {0.5, 4.0}})};
+  // Imaginary-heavy operands so that a swapped or ignored argument is visible.
+  auto other4{MakeArray<TypeCategory::Complex, 4>(std::vector<int>{3},
+      std::vector<std::complex<float>>{
+          {0.0f, 1.0f}, {2.0f, 0.0f}, {1.0f, 1.0f}})};
+  auto other8{MakeArray<TypeCategory::Complex, 8>(std::vector<int>{3},
+      std::vector<std::complex<double>>{{0.0, 1.0}, {2.0, 0.0}, {1.0, 1.0}})};
+
+  // SUM = 4.5+5i
+  // PRODUCT: (1+2i)(3-i) = 5+5i; (5+5i)(0.5+4i) = -17.5+22.5i
+  auto s4{RTNAME(SumComplex4)(&*vec4, __FILE__, __LINE__, 0, nullptr)};
+  EXPECT_EQ(Re(s4), 4.5);
+  EXPECT_EQ(Im(s4), 5.0);
+  auto s8{RTNAME(SumComplex8)(&*vec8, __FILE__, __LINE__, 0, nullptr)};
+  EXPECT_EQ(Re(s8), 4.5);
+  EXPECT_EQ(Im(s8), 5.0);
+  auto p4{RTNAME(ProductComplex4)(&*vec4, __FILE__, __LINE__, 0, nullptr)};
+  EXPECT_EQ(Re(p4), -17.5);
+  EXPECT_EQ(Im(p4), 22.5);
+  auto p8{RTNAME(ProductComplex8)(&*vec8, __FILE__, __LINE__, 0, nullptr)};
+  EXPECT_EQ(Re(p8), -17.5);
+  EXPECT_EQ(Im(p8), 22.5);
+
+  // DOT_PRODUCT(x, y) = SUM(CONJG(x) * y)
+  //   (1-2i)(i) = 2+i; (3+i)(2) = 6+2i; (0.5-4i)(1+i) = 4.5-3.5i
+  //   total = 12.5-0.5i
+  auto d4{RTNAME(DotProductComplex4)(&*vec4, &*other4, __FILE__, __LINE__)};
+  EXPECT_EQ(Re(d4), 12.5);
+  EXPECT_EQ(Im(d4), -0.5);
+  auto d8{RTNAME(DotProductComplex8)(&*vec8, &*other8, __FILE__, __LINE__)};
+  EXPECT_EQ(Re(d8), 12.5);
+  EXPECT_EQ(Im(d8), -0.5);
+
+  // REDUCE with a complex add or multiply, by reference and by value.
+  auto r4r{RTNAME(ReduceComplex4Ref)(&*vec4, CAdd4Ref, __FILE__, __LINE__,
+      /*DIM=*/0, /*MASK=*/nullptr, /*IDENTITY=*/nullptr, /*ORDERED=*/true)};
+  EXPECT_EQ(Re(r4r), 4.5);
+  EXPECT_EQ(Im(r4r), 5.0);
+  auto r4v{RTNAME(ReduceComplex4Value)(&*vec4, CAdd4Value, __FILE__, __LINE__,
+      /*DIM=*/0, /*MASK=*/nullptr, /*IDENTITY=*/nullptr, /*ORDERED=*/true)};
+  EXPECT_EQ(Re(r4v), 4.5);
+  EXPECT_EQ(Im(r4v), 5.0);
+  auto r8r{RTNAME(ReduceComplex8Ref)(&*vec8, CMul8Ref, __FILE__, __LINE__,
+      /*DIM=*/0, /*MASK=*/nullptr, /*IDENTITY=*/nullptr, /*ORDERED=*/true)};
+  EXPECT_EQ(Re(r8r), -17.5);
+  EXPECT_EQ(Im(r8r), 22.5);
+  auto r8v{RTNAME(ReduceComplex8Value)(&*vec8, CMul8Value, __FILE__, __LINE__,
+      /*DIM=*/0, /*MASK=*/nullptr, /*IDENTITY=*/nullptr, /*ORDERED=*/true)};
+  EXPECT_EQ(Re(r8v), -17.5);
+  EXPECT_EQ(Im(r8v), 22.5);
+}
+#endif // !defined(_MSC_VER)
+
 #if HAS_LDBL128 || HAS_FLOAT128
 TEST(Reductions, ExtremaReal16) {
   // The identity value for Min/Maxval for REAL(16) was mistakenly
