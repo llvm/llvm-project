@@ -19,3 +19,16 @@ cir.func @bad_block_func() -> () {
     cir.label "label"
     cir.return
 }
+
+// -----
+
+!void = !cir.void
+
+// expected-error@+1 {{expects the label of a block address to be address_taken}}
+cir.func @unmarked_label() -> () {
+    %0 = cir.block_address <@unmarked_label, "label"> : !cir.ptr<!void>
+    cir.br ^bb1
+  ^bb1:
+    cir.label "label"
+    cir.return
+}

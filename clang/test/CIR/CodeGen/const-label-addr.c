@@ -29,7 +29,7 @@ A:;
 // CIR: cir.func{{.*}} @a()
 // CIR:   cir.br ^[[A_BLOCK:bb[0-9]+]]
 // CIR: ^[[A_BLOCK]]:
-// CIR:   cir.label "A"
+// CIR:   cir.label "A" address_taken
 // CIR:   %[[STATIC_A:.*]] = cir.get_global @a.a : !cir.ptr<!cir.ptr<!void>>
 // CIR:   cir.return
 
@@ -50,9 +50,9 @@ l2:
 // CIR: cir.func{{.*}} @b
 // CIR:   %[[B_AR:.*]] = cir.get_global @b.ar
 // CIR: [[LABEL_L1:.*]]:
-// CIR:   cir.label "l1"
+// CIR:   cir.label "l1" address_taken
 // CIR: [[LABEL_L2:.*]]:
-// CIR:   cir.label "l2"
+// CIR:   cir.label "l2" address_taken
 
 // LLVM: define dso_local i32 @b()
 // LLVM:   br label %[[LABEL_L1]]
@@ -70,10 +70,10 @@ B:
 // CIR: cir.func{{.*}} @c
 // CIR:   %[[C_TBL:.*]] = cir.get_global @c.tbl
 // CIR: [[LABEL_A:.*]]:
-// CIR:   cir.label "A"
+// CIR:   cir.label "A" address_taken
 // CIR:   %[[P:.*]] = cir.get_element inbounds %[[C_TBL]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!cir.ptr<!void> x 3>> -> !cir.ptr<!cir.ptr<!void>>
 // CIR: [[LABEL_B:.*]]:
-// CIR:   cir.label "B"
+// CIR:   cir.label "B" address_taken
 
 // LLVM: define dso_local void @c(i32 noundef %{{.*}})
 // LLVM:   br label %[[C_A]]
@@ -93,9 +93,9 @@ B:;
 
 // CIR: cir.func{{.*}} @d
 // CIR: [[LABEL_A:.*]]:
-// CIR:   cir.label "A"
+// CIR:   cir.label "A" address_taken
 // CIR: [[LABEL_B:.*]]:
-// CIR:   cir.label "B"
+// CIR:   cir.label "B" address_taken
 // CIR:   %[[S:.*]] = cir.get_global @d.s
 // CIR:   cir.return
 
@@ -119,11 +119,11 @@ l3:
 // CIR: cir.func{{.*}} @e
 // CIR:   %[[E_ARR:.*]] = cir.get_global @e.arr
 // CIR: [[E_L1:.*]]:
-// CIR:   cir.label "l1"
+// CIR:   cir.label "l1" address_taken
 // CIR: [[E_L2:.*]]:
-// CIR:   cir.label "l2"
+// CIR:   cir.label "l2" address_taken
 // CIR: [[E_L3:.*]]:
-// CIR:   cir.label "l3"
+// CIR:   cir.label "l3" address_taken
 
 // LLVM: define dso_local i32 @e()
 // LLVM:   br label %[[E_L1]]
@@ -140,9 +140,9 @@ B:;
 
 // CIR: cir.func{{.*}} @f
 // CIR: [[F_A:.*]]:
-// CIR:   cir.label "A"
+// CIR:   cir.label "A" address_taken
 // CIR: [[F_B:.*]]:
-// CIR:   cir.label "B"
+// CIR:   cir.label "B" address_taken
 // CIR:   %[[S2:.*]] = cir.get_global @f.s
 // CIR:   cir.return
 
@@ -164,9 +164,9 @@ l2:
 // CIR: cir.func{{.*}} @g
 // CIR:   %[[G_AR:.*]] = cir.get_global @g.ar
 // CIR: [[LABEL_GL1:.*]]:
-// CIR:   cir.label "l1"
+// CIR:   cir.label "l1" address_taken
 // CIR: [[LABEL_GL2:.*]]:
-// CIR:   cir.label "l2"
+// CIR:   cir.label "l2" address_taken
 
 // LLVM: define dso_local i32 @g()
 // LLVM:   br label %[[LABEL_GL1]]

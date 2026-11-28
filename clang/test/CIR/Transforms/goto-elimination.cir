@@ -1,0 +1,81 @@
+// RUN: cir-opt %s -cir-goto-elimination -o - | FileCheck %s
+// RUN: cir-opt %s -cir-goto-elimination -cir-goto-elimination -o - \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+cir.func private @g()
+
+// A goto to a label in the same region becomes a branch, and the label goes.
+// CHECK-LABEL: cir.func @same_region(
+// CHECK:         cir.br ^[[L:bb[0-9]+]]
+// CHECK:       ^[[L]]:
+// CHECK-NOT:     cir.label
+// CHECK:         cir.return
+cir.func @same_region() {
+  cir.goto "out"
+^bb1:
+  cir.call @g() : () -> ()
+  cir.br ^bb2
+^bb2:
+  cir.label "out"
+  cir.return
+}
+
+// A backward goto in the same region becomes a back edge.
+// CHECK-LABEL: cir.func @backward(
+// CHECK:       ^[[LOOP:bb[0-9]+]]:
+// CHECK-NOT:     cir.label
+// CHECK:         cir.call @g()
+// CHECK-NEXT:    cir.br ^[[LOOP]]
+cir.func @backward() {
+  cir.br ^bb1
+^bb1:
+  cir.label "again"
+  cir.call @g() : () -> ()
+  cir.goto "again"
+}
+
+// A goto nested in a region keeps its label; the label's other same-region
+// goto still becomes a branch.
+// CHECK-LABEL: cir.func @cross_region(
+// CHECK:         cir.scope {
+// CHECK:           cir.goto "out"
+// CHECK:         cir.br ^[[L:bb[0-9]+]]
+// CHECK:       ^[[L]]:
+// CHECK-NEXT:    cir.label "out"
+cir.func @cross_region(%arg0: !cir.bool) {
+  cir.scope {
+    cir.if %arg0 {
+      cir.goto "out"
+    }
+    cir.yield
+  }
+  cir.goto "out"
+^bb1:
+  cir.label "out"
+  cir.return
+}
+
+// A label whose address is taken stays, even with no goto.
+// CHECK-LABEL: cir.func @address_taken(
+// CHECK:         cir.label "taken" address_taken
+cir.func @address_taken() -> !cir.ptr<!void> {
+  %0 = cir.block_address <@address_taken, "taken"> : !cir.ptr<!void>
+  cir.br ^bb1
+^bb1:
+  cir.label "taken" address_taken
+  cir.return %0 : !cir.ptr<!void>
+}
+
+// A label whose address is taken only in a global initializer stays.
+cir.global external @table = #cir.const_array<[#cir.block_addr_info<@from_global, "entry"> : !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 1>
+// CHECK-LABEL: cir.func @from_global(
+// CHECK:         cir.label "entry" address_taken
+cir.func @from_global() {
+  cir.br ^bb1
+^bb1:
+  cir.label "entry" address_taken
+  cir.return
+}

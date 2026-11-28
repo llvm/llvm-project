@@ -10,7 +10,7 @@ cir.func @a(){
   cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   cir.br ^bb1
 ^bb1:
-  cir.label "label1"
+  cir.label "label1" address_taken
   cir.br ^bb2
 ^bb2:
   // This label is not referenced by any blockaddressOp, so it should be removed
@@ -32,7 +32,7 @@ cir.func @b(){
   cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   cir.goto "label2"
 ^bb1:
-  cir.label "label1"
+  cir.label "label1" address_taken
   cir.br ^bb2
 ^bb2:
   // This label is not referenced by any blockaddressOp, so it should be removed
@@ -51,7 +51,7 @@ cir.func @b(){
 // CHECK-NOT: cir.label "label2"
 
 cir.func @c() {
-  cir.label "label1"
+  cir.label "label1" address_taken
   %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
   %1 = cir.block_address <@c, "label1"> : !cir.ptr<!void>
   cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
@@ -70,7 +70,7 @@ cir.func @d() {
   %2 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   cir.indirect_goto %2 : !cir.ptr<!void>
 ^bb1:
-  cir.label "label1"
+  cir.label "label1" address_taken
   cir.return
 ^bb2:
   // Not address-taken, so this label is removed.
@@ -100,10 +100,10 @@ cir.func @e() {
   %3 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   cir.indirect_goto %3 : !cir.ptr<!void>
 ^bb1:
-  cir.label "a"
+  cir.label "a" address_taken
   cir.return
 ^bb2:
-  cir.label "b"
+  cir.label "b" address_taken
   cir.return
 }
 
@@ -128,13 +128,13 @@ cir.func @f() {
   %t = cir.load align(8) %m : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   cir.indirect_goto %t : !cir.ptr<!void>
 ^bb1:
-  cir.label "a"
+  cir.label "a" address_taken
   cir.return
 ^bb2:
-  cir.label "b"
+  cir.label "b" address_taken
   cir.return
 ^bb3:
-  cir.label "c"
+  cir.label "c" address_taken
   cir.return
 }
 

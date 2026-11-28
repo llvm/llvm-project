@@ -11,15 +11,10 @@ labelA:
 }
 
 // CIR:  cir.func {{.*}} @label
-// CIR:     cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "labelA"
-// CIR:    cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM:define dso_local void @label
-// LLVM:   br label %1
-// LLVM: 1:
-// LLVM:  ret void
+// LLVM-NEXT:  ret void
 
 // OGCG: define dso_local void @label
 // OGCG:   br label %labelA
@@ -33,18 +28,10 @@ labelC:
 }
 
 // CIR:  cir.func {{.*}} @multiple_labels
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "labelB"
-// CIR:    cir.br ^bb2
-// CIR:  ^bb2:
-// CIR:    cir.label "labelC"
-// CIR:    cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM: define dso_local void @multiple_labels(){{.*}}
-// LLVM:   br label %1
-// LLVM: 1:
-// LLVM:   ret void
+// LLVM-NEXT:   ret void
 
 // OGCG: define dso_local void @multiple_labels
 // OGCG:   br label %labelB
@@ -62,9 +49,7 @@ labelD:
 
 // CIR:  cir.func {{.*}} @label_in_if
 // CIR:      cir.if {{.*}} {
-// CIR:        cir.br ^bb1
-// CIR:      ^bb1:
-// CIR:        cir.label "labelD"
+// CIR-NOT:    cir.label
 // CIR:        [[LOAD:%.*]] = cir.load align(4) [[COND:%.*]] : !cir.ptr<!s32i>, !s32i
 // CIR:        [[INC:%.*]] = cir.inc nsw %3 : !s32i
 // CIR:        cir.store align(4) [[INC]], [[COND]] : !s32i, !cir.ptr<!s32i>
@@ -104,8 +89,7 @@ void after_return() {
 // CIR:  cir.func {{.*}} @after_return
 // CIR:    cir.return
 // CIR:  ^bb1:  // no predecessors
-// CIR:    cir.label "label"
-// CIR:    cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM: define dso_local void @after_return{{.*}}
 // LLVM:   ret void
@@ -126,8 +110,7 @@ void after_unreachable() {
 // CIR:  cir.func {{.*}} @after_unreachable
 // CIR:    cir.unreachable
 // CIR:  ^bb1:
-// CIR:    cir.label "label"
-// CIR:    cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM: define dso_local void @after_unreachable{{.*}}
 // LLVM:   unreachable
@@ -144,16 +127,11 @@ end:
   return;
 }
 // CIR:  cir.func {{.*}} @labelWithoutMatch
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "end"
-// CIR:    cir.return
-// CIR:  }
+// CIR-NEXT:    cir.return
+// CIR-NEXT:  }
 
 // LLVM: define dso_local void @labelWithoutMatch
-// LLVM:   br label %1
-// LLVM: 1:
-// LLVM:   ret void
+// LLVM-NEXT:   ret void
 
 // OGCG: define dso_local void @labelWithoutMatch
 // OGCG:   br label %end
@@ -174,9 +152,8 @@ void foo() {
 // CIR: cir.func {{.*}} @foo
 // CIR:   cir.scope {
 // CIR:     %0 = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_S>
-// CIR:      cir.br ^bb1
-// CIR:    ^bb1:
-// CIR:     cir.label "label"
+// CIR-NOT:  cir.label
+// CIR:      cir.call @bar()
 
 // LLVM: define dso_local void @foo(){{.*}} {
 // LLVM:  %{{.*}} = alloca %struct.S, align 1

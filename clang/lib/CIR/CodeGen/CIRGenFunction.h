@@ -311,6 +311,11 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Labels whose address is taken (`&&label`). A label op emitted before its
+  /// address is taken is marked when the address is taken.
+  llvm::SmallPtrSet<const clang::LabelDecl *, 4> addressTakenLabels;
+  llvm::DenseMap<const clang::LabelDecl *, cir::LabelOp> emittedLabels;
+
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
 
@@ -2463,6 +2468,8 @@ public:
   LValue emitPointerToDataMemberBinaryExpr(const BinaryOperator *e);
 
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
+  /// Mark `d` as a label whose address is taken, so passes keep it.
+  void markLabelAddressTaken(const clang::LabelDecl *d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);

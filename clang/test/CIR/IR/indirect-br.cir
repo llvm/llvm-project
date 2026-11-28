@@ -21,20 +21,20 @@ cir.func @E() {
   ^bb2
   ]
 ^bb2:  // pred: ^bb1
-  cir.label "A"
+  cir.label "A" address_taken
   cir.br ^bb3
 ^bb3:  // 2 preds: ^bb1, ^bb2
-  cir.label "B"
+  cir.label "B" address_taken
   %8 = cir.block_address <@E, "B"> : !cir.ptr<!void>
   cir.store align(8) %8, %2 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   %9 = cir.block_address <@E, "A"> : !cir.ptr<!void>
   cir.store align(8) %9, %3 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   cir.br ^bb4
 ^bb4:  // 2 preds: ^bb1, ^bb3
-  cir.label "C"
+  cir.label "C" address_taken
   cir.br ^bb5
 ^bb5:  // 2 preds: ^bb1, ^bb4
-  cir.label "D"
+  cir.label "D" address_taken
   cir.return
 }
 

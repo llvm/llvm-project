@@ -839,7 +839,9 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
+  emittedLabels[&d] =
+      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName(),
+                           addressTakenLabels.contains(&d));
   // In a coroutine, the label makes the end of the body reachable again even
   // after a co_return, so the implicit `co_return;` must not be left out.
   if (curLexScope)
@@ -848,6 +850,13 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
   return mlir::success();
+}
+
+void CIRGenFunction::markLabelAddressTaken(const clang::LabelDecl *d) {
+  if (!addressTakenLabels.insert(d).second)
+    return;
+  if (cir::LabelOp label = emittedLabels.lookup(d))
+    label.setAddressTaken(true);
 }
 
 mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {

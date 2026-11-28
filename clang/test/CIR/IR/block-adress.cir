@@ -7,7 +7,7 @@ module {
     %0 = cir.block_address <@block_address, "label"> : !cir.ptr<!void>
     cir.br ^bb1
   ^bb1:
-    cir.label "label"
+    cir.label "label" address_taken
     cir.return
   }
 // CHECK: cir.func @block_address
@@ -23,7 +23,7 @@ cir.func @block_address_inside_scope() -> () {
   }
   cir.br ^bb1
 ^bb1:
-  cir.label "label"
+  cir.label "label" address_taken
   cir.return
 }
 // CHECK: cir.func @block_address_inside_scope

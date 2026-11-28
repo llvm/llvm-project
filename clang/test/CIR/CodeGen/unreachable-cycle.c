@@ -21,9 +21,12 @@ end:;
 
 // CIR-DAG: cir.global "private" external{{.*}} @x
 // CIR:     cir.func{{.*}} @f
-// CIR:       cir.goto "end"
-// CIR:       cir.label "lab"
+// CIR:       cir.br ^[[END:bb[0-9]+]]
+// CIR:     ^bb{{[0-9]+}}:  // no predecessors
 // CIR:       cir.get_global @x
+// CIR:       cir.br ^[[END]]
+// CIR:     ^[[END]]:
+// CIR-NEXT:  cir.return
 
 // LLVM:     @x = external {{(dso_local )?}}global i32
 // LLVM:     define dso_local void @f

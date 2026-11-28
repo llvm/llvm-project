@@ -27,8 +27,8 @@ L2:
 // CIR-LABEL: cir.func {{.*}} @f
 // CIR:   %[[TBL:.*]] = cir.get_global @f.tbl
 // CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
-// CIR:   cir.label "L1"
-// CIR:   cir.label "L2"
+// CIR:   cir.label "L1" address_taken
+// CIR:   cir.label "L2" address_taken
 
 // LLVM-LABEL: define dso_local i32 @f(
 // LLVM:   indirectbr ptr %{{.*}}, [label %[[FL1]], label %[[FL2]]]
@@ -46,8 +46,8 @@ B:
 
 // CIR-LABEL: cir.func {{.*}} @g
 // CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
-// CIR:   cir.label "A"
-// CIR:   cir.label "B"
+// CIR:   cir.label "A" address_taken
+// CIR:   cir.label "B" address_taken
 
 // LLVM-LABEL: define dso_local i32 @g(
 // LLVMCIR:   indirectbr ptr %{{.*}}, [label %[[GA]], label %[[GB]]]
@@ -87,8 +87,8 @@ B2:
 // CIR-LABEL: cir.func {{.*}} @m
 // CIR:   cir.block_address <@m, "B2">
 // CIR:   cir.indirect_goto
-// CIR-DAG:   cir.label "A2"
-// CIR-DAG:   cir.label "B2"
+// CIR-DAG:   cir.label "A2" address_taken
+// CIR-DAG:   cir.label "B2" address_taken
 
 // LLVM-LABEL: define dso_local i32 @m(
 // LLVM:   indirectbr ptr %{{.*}}, [label %[[MA2]], label %{{.+}}]

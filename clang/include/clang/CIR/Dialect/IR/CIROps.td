@@ -2085,10 +2085,17 @@ def CIR_IndirectGotoOp : CIR_Op<"indirect_goto", [Terminator]> {
 // by canonicalizer
 def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let description = [{
-    An identifier which may be referred by cir.goto operation
+    An identifier which may be referred by cir.goto operation.
+
+    The `address_taken` attribute marks a label whose address is taken
+    (`&&label`), by a `cir.block_address` op or by a `#cir.block_addr_info` or
+    `#cir.block_addr_diff` attribute anywhere in the module. Such a label must
+    stay even when no `cir.goto` names it.
   }];
-  let arguments = (ins StrAttr:$label);
-  let assemblyFormat = [{ $label attr-dict }];
+  let arguments = (ins StrAttr:$label, UnitAttr:$address_taken);
+  let assemblyFormat = [{
+    $label (`address_taken` $address_taken^)? attr-dict
+  }];
   let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =

@@ -88,6 +88,26 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def GotoElimination : Pass<"cir-goto-elimination", "cir::FuncOp"> {
+  let summary = "Replace symbolic gotos with control-flow edges";
+  let description = [{
+    Rewrites `cir.goto` into control flow that the CFG and region-branch
+    interfaces describe. A goto whose `cir.label` is in the same region becomes
+    a `cir.br` to the label's block.
+
+    Gotos this cannot route yet are left for `cir-goto-solver`. A label that no
+    remaining goto names and that is not `address_taken` is erased.
+  }];
+  let constructor = "mlir::createGotoEliminationPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+  let statistics = [
+    Statistic<"numSameRegionGotos", "same-region-gotos",
+              "Gotos replaced with a branch in the same region">,
+    Statistic<"numErasedLabels", "erased-labels",
+              "Labels erased because nothing refers to them">,
+  ];
+}
+
 def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{
