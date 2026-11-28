@@ -427,6 +427,10 @@ let TargetPrefix = "spv" in {
       : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty],
                               [IntrConvergent, IntrNoMem]>;
 
+  def int_spv_quad_read_lane_at
+      : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem]>;
+
   def int_spv_quad_read_across_x
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,

@@ -1405,6 +1405,24 @@ def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
   let Availability = SM6_0;
 }
 
+// Returns the value from the lane with the specified index in the quad.
+def hlsl_quad_read_lane_at : HLSLBuiltin<"QuadReadLaneAt", "__builtin_hlsl_quad_read_lane_at"> {
+  let Doc = [{
+\brief Returns the value from the lane with the specified index in the quad.
+\param Val The value to read.
+\param Index The lane index.
+}];
+  let ReturnType = Varying;
+  let Args = [Varying, UIntTy];
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
+  let VaryingMatDims = [];
+  let IsConvergent = 1;
+  let Availability = SM6_0;
+}
+
 // Reads the value from the lane across the X axis of the quad.
 def hlsl_quad_read_across_x :
     HLSLOneArgBuiltin<"QuadReadAcrossX",
@@ -1416,6 +1434,7 @@ def hlsl_quad_read_across_x :
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let VaryingMatDims = [];
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane across the Y axis of the quad.
@@ -1429,6 +1448,7 @@ def hlsl_quad_read_across_y :
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let VaryingMatDims = [];
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane diagonally opposite from the current lane in the quad.
@@ -1440,6 +1460,7 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let VaryingMatDims = [];
+  let Availability = SM6_0;
 }
 
 // Converts the specified value from degrees to radians.
