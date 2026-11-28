@@ -1767,6 +1767,56 @@ func.func @do_not_hoist_divsi_from_scf_if(%a: i32, %b: i32,
 
 // -----
 
+// The condition guards the index of tensor.extract against being out of
+// bounds: when %tid == 2, %cond is false and %idx == 5.
+
+// CHECK-LABEL: func @do_not_hoist_tensor_extract_from_scf_if(
+//       CHECK:   scf.for
+//       CHECK:     scf.if
+//       CHECK:       tensor.extract
+func.func @do_not_hoist_tensor_extract_from_scf_if(
+    %t: tensor<5xi8>, %tid: index, %lb: index, %ub: index,
+    %step: index) -> i8 {
+  %c0 = arith.constant 0 : i8
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cond = arith.cmpi sle, %tid, %c1 : index
+  %res = scf.for %i = %lb to %ub step %step iter_args(%acc = %c0) -> (i8) {
+    %if_res = scf.if %cond -> (i8) {
+      %mul = arith.muli %tid, %c2 : index
+      %idx = arith.addi %mul, %c1 : index
+      %val = tensor.extract %t[%idx] : tensor<5xi8>
+      scf.yield %val : i8
+    } else {
+      scf.yield %acc : i8
+    }
+    scf.yield %if_res : i8
+  }
+  return %res : i8
+}
+
+// -----
+
+// tensor.extract with indices that are known to be in bounds is speculatable.
+
+// CHECK-LABEL: func @hoist_in_bounds_tensor_extract_from_scf_if(
+//       CHECK:   tensor.extract
+//       CHECK:   scf.for
+func.func @hoist_in_bounds_tensor_extract_from_scf_if(
+    %t: tensor<5xi8>, %cond: i1, %buf: memref<?xi8>, %lb: index, %ub: index,
+    %step: index) {
+  %c4 = arith.constant 4 : index
+  scf.for %i = %lb to %ub step %step {
+    scf.if %cond {
+      %v = tensor.extract %t[%c4] : tensor<5xi8>
+      memref.store %v, %buf[%i] : memref<?xi8>
+    }
+  }
+  return
+}
+
+// -----
+
 // linalg.index depends on the enclosing linalg.generic and must stay in it.
 
 // CHECK-LABEL: func @do_not_hoist_linalg_index(
