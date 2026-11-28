@@ -163,6 +163,9 @@ struct FunctionData {
   static_assert(sizeof(Mutex) == 1);
 };
 
+// Exposed for unit testing.
+extern ::__sanitizer::SpinMutex FlatCtxArenaMutex;
+
 /// This API is exposed for testing. See the APIs below about the contract with
 /// LLVM.
 inline bool isScratch(const void *Ctx) {

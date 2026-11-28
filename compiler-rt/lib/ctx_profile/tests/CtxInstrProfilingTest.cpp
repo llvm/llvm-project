@@ -1,8 +1,31 @@
 #include "../CtxInstrProfiling.h"
 #include "gtest/gtest.h"
 #include <thread>
+#include <utility>
+#include <vector>
 
 using namespace __ctx_profile;
+
+namespace {
+class FlatCounterWriter : public ProfileWriter {
+public:
+  int FlatsWritten = 0;
+  std::vector<std::pair<GUID, std::vector<uint64_t>>> FlatProfiles;
+
+  void startContextSection() override {}
+  void writeContextual(const ContextNode &, const ContextNode *,
+                       uint64_t) override {}
+  void endContextSection() override {}
+  void startFlatSection() override {}
+  void writeFlat(GUID Guid, const uint64_t *Buffer,
+                 size_t BufferSize) override {
+    ++FlatsWritten;
+    FlatProfiles.emplace_back(
+        Guid, std::vector<uint64_t>(Buffer, Buffer + BufferSize));
+  }
+  void endFlatSection() override {}
+};
+} // namespace
 
 class ContextTest : public ::testing::Test {
   void SetUp() override { Root.getOrAllocateContextRoot(); }
@@ -516,4 +539,134 @@ TEST_F(ContextTest, FlatProfileUnderRecursiveAndNestedContendedRoots) {
   ReleaseHolders.Post(2);
   Holder1.join();
   Holder2.join();
+}
+
+TEST_F(ContextTest, FlatProfileSkipsWhenMutexLocked) {
+  __llvm_ctx_profile_start_collection();
+  FunctionData FData;
+  int FakeCalleeAddress = 0;
+  {
+    __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> Lock(
+        &FData.Mutex);
+    auto *Ctx =
+        __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+    EXPECT_TRUE(isScratch(Ctx));
+    EXPECT_EQ(FData.FlatCtx, nullptr);
+  }
+
+  FlatCounterWriter W1;
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W1));
+  std::string FetchErr1 = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(W1.FlatsWritten, 0);
+  EXPECT_NE(FetchErr1.find("would have waited for a lock: 1\n"),
+            std::string::npos);
+
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx =
+      __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+  EXPECT_TRUE(isScratch(Ctx));
+  ASSERT_NE(FData.FlatCtx, nullptr);
+  EXPECT_EQ(FData.FlatCtx->entrycount(), 1U);
+
+  // Once FlatCtx is allocated, callers read it without locking FData.Mutex.
+  {
+    __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> Lock(
+        &FData.Mutex);
+    Ctx = __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+    EXPECT_TRUE(isScratch(Ctx));
+    EXPECT_EQ(FData.FlatCtx->entrycount(), 2U);
+  }
+
+  FlatCounterWriter W2;
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W2));
+  std::string FetchErr2 = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(W2.FlatsWritten, 1);
+  EXPECT_EQ(FetchErr2.find("would have waited for a lock"), std::string::npos);
+}
+
+TEST_F(ContextTest, FlatProfileSkipsWhenArenaMutexLocked) {
+  __llvm_ctx_profile_start_collection();
+  FunctionData FData;
+  int FakeCalleeAddress = 0;
+  {
+    __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
+        &FlatCtxArenaMutex);
+    auto *Ctx =
+        __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+    EXPECT_TRUE(isScratch(Ctx));
+    EXPECT_EQ(FData.FlatCtx, nullptr);
+    // Failing to lock FlatCtxArenaMutex must release FData.Mutex.
+    if (FData.Mutex.TryLock())
+      FData.Mutex.Unlock();
+    else
+      ADD_FAILURE() << "FData.Mutex remained locked";
+  }
+
+  FlatCounterWriter W1;
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W1));
+  std::string FetchErr1 = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(W1.FlatsWritten, 0);
+  EXPECT_NE(FetchErr1.find("would have waited for a lock: 1\n"),
+            std::string::npos);
+
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx =
+      __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+  EXPECT_TRUE(isScratch(Ctx));
+  ASSERT_NE(FData.FlatCtx, nullptr);
+  EXPECT_EQ(FData.FlatCtx->entrycount(), 1U);
+
+  FlatCounterWriter W2;
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W2));
+  std::string FetchErr2 = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(W2.FlatsWritten, 1);
+  EXPECT_EQ(FetchErr2.find("would have waited for a lock"), std::string::npos);
+}
+
+TEST_F(ContextTest, FlatProfileConcurrentAllocation) {
+  __llvm_ctx_profile_start_collection();
+  constexpr int NumThreads = 4;
+  constexpr int NumFuncs = 16;
+  FunctionData SharedFuncs[NumFuncs];
+  int FakeAddrs[NumFuncs] = {};
+
+  std::thread Threads[NumThreads];
+  for (int T = 0; T < NumThreads; ++T) {
+    Threads[T] = std::thread([&]() {
+      for (int Iter = 0; Iter < 8; ++Iter) {
+        for (int F = 0; F < NumFuncs; ++F) {
+          auto *Ctx = __llvm_ctx_profile_get_context(
+              &SharedFuncs[F], &FakeAddrs[F], 100 + F, 2, 0);
+          EXPECT_TRUE(isScratch(Ctx));
+        }
+      }
+    });
+  }
+  for (auto &T : Threads)
+    T.join();
+
+  // Verify no function mutex was left locked after concurrent misses, and
+  // allocate any function whose initial attempts were skipped under contention.
+  for (int F = 0; F < NumFuncs; ++F) {
+    if (SharedFuncs[F].Mutex.TryLock())
+      SharedFuncs[F].Mutex.Unlock();
+    else
+      ADD_FAILURE() << "SharedFuncs[" << F << "].Mutex remained locked";
+    auto *Ctx = __llvm_ctx_profile_get_context(&SharedFuncs[F], &FakeAddrs[F],
+                                               100 + F, 2, 0);
+    EXPECT_TRUE(isScratch(Ctx));
+    ASSERT_NE(SharedFuncs[F].FlatCtx, nullptr);
+  }
+
+  FlatCounterWriter W;
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W));
+  EXPECT_EQ(W.FlatsWritten, NumFuncs);
+  for (const auto &Entry : W.FlatProfiles) {
+    EXPECT_EQ(Entry.second.size(), 2U);
+    EXPECT_GE(Entry.second[0], 1U);
+  }
 }

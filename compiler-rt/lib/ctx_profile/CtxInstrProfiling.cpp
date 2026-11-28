@@ -33,11 +33,14 @@ __sanitizer::Vector<ContextRoot *> AllContextRoots;
 __sanitizer::atomic_uintptr_t AllFunctionsData = {};
 
 // Keep all the functions for which we collect a flat profile in a linked list.
-__sanitizer::SpinMutex FlatCtxArenaMutex;
 SANITIZER_GUARDED_BY(FlatCtxArenaMutex)
 Arena *FlatCtxArenaHead = nullptr;
 SANITIZER_GUARDED_BY(FlatCtxArenaMutex)
 Arena *FlatCtxArena = nullptr;
+
+// Function activations that got no flat profile because its allocation would
+// have waited for a lock. See getFlatProfile.
+__sanitizer::atomic_uint64_t FlatProfileLockMisses = {};
 
 // Depth of active root entries on this thread, regardless of whether this
 // thread collects a contextual profile for those roots.
@@ -139,6 +142,10 @@ ContextNode *onContextEnter(ContextNode &Node) {
 
 } // namespace
 
+namespace __ctx_profile {
+__sanitizer::SpinMutex FlatCtxArenaMutex;
+} // namespace __ctx_profile
+
 // the scratch buffer - what we give when we can't produce a real context (the
 // scratch isn't "real" in that it's expected to be clobbered carelessly - we
 // don't read it). The other important thing is that the callees from a scratch
@@ -208,48 +215,60 @@ ContextNode *getCallsiteSlow(GUID Guid, ContextNode **InsertionPoint,
   return Ret;
 }
 
+// Returns nullptr if the flat profile of this function doesn't exist yet and
+// couldn't be allocated without waiting, see below.
 ContextNode *getFlatProfile(FunctionData &Data, void *Callee, GUID Guid,
                             uint32_t NumCounters) {
   if (ContextNode *Existing = Data.FlatCtx)
     return Existing;
-  {
-    // We could instead try to take the lock and, if that fails, return
-    // TheScratchContext. But that could leave message pump loops more sparsely
-    // profiled than everything else. Maybe that doesn't matter, and we can
-    // optimize this later.
-    __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Data.Mutex);
-    if (ContextNode *Existing = Data.FlatCtx)
-      return Existing;
-
-    auto NeededSize = ContextNode::getAllocSize(NumCounters, 0);
-    char *AllocBuff = nullptr;
-    {
-      __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> FL(
-          &FlatCtxArenaMutex);
-      if (FlatCtxArena)
-        AllocBuff = FlatCtxArena->tryBumpAllocate(NeededSize);
-      if (!AllocBuff) {
-        FlatCtxArena = Arena::allocateNewArena(getArenaAllocSize(NeededSize),
-                                               FlatCtxArena);
-        AllocBuff = FlatCtxArena->tryBumpAllocate(NeededSize);
-      }
-      if (!FlatCtxArenaHead)
-        FlatCtxArenaHead = FlatCtxArena;
-    }
-    auto *Ret = allocContextNode(AllocBuff, Guid, NumCounters, 0);
-    Data.FlatCtx = Ret;
-
-    Data.EntryAddress = Callee;
-    Data.Next = reinterpret_cast<FunctionData *>(
-        __sanitizer::atomic_load_relaxed(&AllFunctionsData));
-    while (!__sanitizer::atomic_compare_exchange_strong(
-        &AllFunctionsData, reinterpret_cast<uintptr_t *>(&Data.Next),
-        reinterpret_cast<uintptr_t>(&Data),
-        __sanitizer::memory_order_release)) {
-    }
+  // Don't wait for the locks: when threads are scheduled in user space (e.g.
+  // fibers), a thread spinning on a lock can keep the thread holding it from
+  // running, and a signal handler may interrupt the thread holding it.
+  // Trade-off: if a lock is contended on first allocation, this activation
+  // falls back to the scratch context and goes uncounted; for a long-lived
+  // single activation (e.g. a worker loop or message pump), the whole
+  // activation runs on scratch while FlatProfileLockMisses increments only
+  // once.
+  if (!Data.Mutex.TryLock()) {
+    __sanitizer::atomic_fetch_add(&FlatProfileLockMisses, 1,
+                                  __sanitizer::memory_order_relaxed);
+    return nullptr;
   }
+  if (ContextNode *Existing = Data.FlatCtx) {
+    Data.Mutex.Unlock();
+    return Existing;
+  }
+  if (!FlatCtxArenaMutex.TryLock()) {
+    Data.Mutex.Unlock();
+    __sanitizer::atomic_fetch_add(&FlatProfileLockMisses, 1,
+                                  __sanitizer::memory_order_relaxed);
+    return nullptr;
+  }
+  auto NeededSize = ContextNode::getAllocSize(NumCounters, 0);
+  char *AllocBuff = nullptr;
+  if (FlatCtxArena)
+    AllocBuff = FlatCtxArena->tryBumpAllocate(NeededSize);
+  if (!AllocBuff) {
+    FlatCtxArena =
+        Arena::allocateNewArena(getArenaAllocSize(NeededSize), FlatCtxArena);
+    AllocBuff = FlatCtxArena->tryBumpAllocate(NeededSize);
+  }
+  if (!FlatCtxArenaHead)
+    FlatCtxArenaHead = FlatCtxArena;
+  FlatCtxArenaMutex.Unlock();
 
-  return Data.FlatCtx;
+  auto *Ret = allocContextNode(AllocBuff, Guid, NumCounters, 0);
+  Data.FlatCtx = Ret;
+
+  Data.EntryAddress = Callee;
+  Data.Next = reinterpret_cast<FunctionData *>(
+      __sanitizer::atomic_load_relaxed(&AllFunctionsData));
+  while (!__sanitizer::atomic_compare_exchange_strong(
+      &AllFunctionsData, reinterpret_cast<uintptr_t *>(&Data.Next),
+      reinterpret_cast<uintptr_t>(&Data), __sanitizer::memory_order_release)) {
+  }
+  Data.Mutex.Unlock();
+  return Ret;
 }
 
 // This should be called once for a Root. Allocate the first arena, set up the
@@ -338,9 +357,10 @@ ContextNode *getUnhandledContext(FunctionData &Data, void *Callee, GUID Guid,
     if (UnderContextDepth > 0 ||
         !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
       return TheScratchContext;
-    else
-      return markAsScratch(
-          onContextEnter(*getFlatProfile(Data, Callee, Guid, NumCounters)));
+    auto *Flat = getFlatProfile(Data, Callee, Guid, NumCounters);
+    if (!Flat)
+      return TheScratchContext;
+    return markAsScratch(onContextEnter(*Flat));
   }
   auto [Iter, Ins] = CtxRoot->Unhandled.insert({Guid, nullptr});
   if (Ins)
@@ -463,6 +483,7 @@ void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration) {
   } else {
     __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
   }
+  __sanitizer::atomic_store_relaxed(&FlatProfileLockMisses, 0);
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, true);
 }
 
@@ -505,11 +526,19 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
     }
   }
   Writer.endFlatSection();
+  if (auto LockMisses =
+          __sanitizer::atomic_load_relaxed(&FlatProfileLockMisses)) {
+    __sanitizer::Printf(
+        "[ctxprof] Activations without a flat profile, because its allocation "
+        "would have waited for a lock: %llu\n",
+        LockMisses);
+  }
   return true;
 }
 
 void __llvm_ctx_profile_free() {
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, false);
+  __sanitizer::atomic_store_relaxed(&FlatProfileLockMisses, 0);
   // Reset TLS state for the calling thread (other threads are expected to have
   // exited their active contexts before freeing).
   __llvm_ctx_profile_current_context_root = nullptr;
