@@ -362,6 +362,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  timespec_getres_test
+  SUITE
+    libc-time-tests
+  SRCS
+    timespec_getres_test.cpp
+  DEPENDS
+    libc.src.time.timespec_getres
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   clock_test
   SUITE
     libc-time-tests
