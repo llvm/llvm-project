@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
@@ -15,10 +14,11 @@
 #include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
@@ -65,9 +65,9 @@ class PrepareForOMPOffloadPrivatizationPass
     if (offloadModuleInterface && offloadModuleInterface.getIsTargetDevice())
       return;
 
-    getOperation()->walk([&](omp::TargetOp targetOp) {
+    WalkResult walkResult = getOperation()->walk([&](omp::TargetOp targetOp) {
       if (!hasPrivateVars(targetOp) || !isTargetTaskDeferred(targetOp))
-        return;
+        return WalkResult::advance();
       IRRewriter rewriter(&getContext());
       OperandRange privateVars = targetOp.getPrivateVars();
       SmallVector<mlir::Value> newPrivVars;
@@ -136,13 +136,14 @@ class PrepareForOMPOffloadPrivatizationPass
             !isa<LLVM::LLVMPointerType>(privVar.getType());
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
-        Value heapMem =
-            allocateHeapMem(targetOp, varPtr, varType, mod, rewriter);
-        if (!heapMem)
+        Value heapMem = allocateHeapMem(targetOp, varType, mod, rewriter);
+        if (!heapMem) {
           targetOp.emitError(
               "Unable to allocate heap memory when trying to move "
               "a private variable out of the stack and into the "
               "heap for use by a deferred target task");
+          return WalkResult::interrupt();
+        }
 
         if (needsCleanupTask && !fakeDependVar)
           fakeDependVar = heapMem;
@@ -158,50 +159,11 @@ class PrepareForOMPOffloadPrivatizationPass
         if (!isPrivatizedByValue)
           newPrivVars.push_back(heapMem);
 
-        // We now need to copy the original private variable into the newly
-        // allocated location in the heap.
-        // Find the earliest insertion point for the copy. This will be before
-        // the first in the list of omp::MapInfoOp instances that use varPtr.
-        // After the copy these omp::MapInfoOp instances will refer to heapMem
-        // instead.
-        Operation *varPtrDefiningOp = varPtr.getDefiningOp();
-        DenseSet<Operation *> users;
-        if (varPtrDefiningOp) {
-          users.insert(varPtrDefiningOp->user_begin(),
-                       varPtrDefiningOp->user_end());
-        } else {
-          auto blockArg = cast<BlockArgument>(varPtr);
-          users.insert(blockArg.user_begin(), blockArg.user_end());
-        }
-        auto usesVarPtr = [&users](Operation *op) -> bool {
-          return users.count(op);
-        };
-
-        SmallVector<Operation *> chainOfOps;
-        chainOfOps.push_back(mapInfoOp);
-        for (auto member : mapInfoOp.getMembers()) {
-          omp::MapInfoOp memberMap =
-              cast<omp::MapInfoOp>(member.getDefiningOp());
-          if (usesVarPtr(memberMap))
-            chainOfOps.push_back(memberMap);
-          if (memberMap.getVarPtrPtr()) {
-            Operation *defOp = memberMap.getVarPtrPtr().getDefiningOp();
-            if (defOp && usesVarPtr(defOp))
-              chainOfOps.push_back(defOp);
-          }
-        }
-
-        DominanceInfo dom;
-        llvm::sort(chainOfOps, [&](Operation *l, Operation *r) {
-          if (l == r)
-            return false;
-          return dom.properlyDominates(l, r);
-        });
-
-        rewriter.setInsertionPoint(chainOfOps.front());
-
-        Operation *firstOp = chainOfOps.front();
-        Location loc = firstOp->getLoc();
+        // Capture the original variable at the target encounter. Address
+        // calculations may have been hoisted before its initialization or
+        // shared with intervening host accesses.
+        rewriter.setInsertionPoint(targetOp);
+        Location loc = targetOp.getLoc();
 
         // Create a llvm.func for 'region' that is marked always_inline and call
         // it.
@@ -242,40 +204,83 @@ class PrepareForOMPOffloadPrivatizationPass
         if (isPrivatizedByValue)
           (void)LLVM::StoreOp::create(rewriter, loc, initializedVal, heapMem);
 
-        // clone origOp, replace all uses of varPtr with heapMem and
-        // erase origOp.
-        auto cloneModifyAndErase = [&](Operation *origOp) -> Operation * {
-          Operation *clonedOp = rewriter.clone(*origOp);
-          rewriter.replaceAllOpUsesWith(origOp, clonedOp);
-          rewriter.modifyOpInPlace(clonedOp, [&]() {
-            clonedOp->replaceUsesOfWith(varPtr, heapMem);
-          });
-          rewriter.eraseOp(origOp);
-          return clonedOp;
-        };
-
-        // Now that we have set up the heap-allocated copy of the private
-        // variable, rewrite all the uses of the original variable with
-        // the heap-allocated variable.
+        // Clone the target's maps in dependency order, including attachment
+        // maps that are not members of the descriptor map. Map address
+        // calculations can be shared with other maps or ordinary host code,
+        // so remap only the cloned operations and this target's map operands.
         rewriter.setInsertionPoint(targetOp);
-        mapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(mapInfoOp));
-        rewriter.setInsertionPoint(mapInfoOp);
+        IRMapping mapper;
+        mapper.map(varPtr, heapMem);
+        SmallVector<Operation *> originalOps;
+        auto cloneAndRemap = [&](Operation *op) {
+          rewriter.clone(*op, mapper);
+          originalOps.push_back(op);
+        };
+        DenseSet<Operation *> visitedAddressOps;
+        auto remapAddress = [&](auto &&self, Value address) -> LogicalResult {
+          if (mapper.contains(address))
+            return success();
+          Operation *defOp = address.getDefiningOp();
+          if (!defOp || !visitedAddressOps.insert(defOp).second)
+            return success();
 
-        // Fix any members that may use varPtr to now use heapMem
-        for (auto member : mapInfoOp.getMembers()) {
-          auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
-          if (!usesVarPtr(memberMapInfoOp))
-            continue;
-          memberMapInfoOp =
-              cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
-          rewriter.setInsertionPoint(memberMapInfoOp);
-
-          if (memberMapInfoOp.getVarPtrPtr()) {
-            Operation *varPtrPtrdefOp =
-                memberMapInfoOp.getVarPtrPtr().getDefiningOp();
-            rewriter.setInsertionPoint(cloneModifyAndErase(varPtrPtrdefOp));
+          bool needsRemapping = false;
+          for (Value operand : defOp->getOperands()) {
+            if (failed(self(self, operand)))
+              return failure();
+            needsRemapping |= mapper.contains(operand);
           }
-        }
+          if (!needsRemapping)
+            return success();
+          // Only clone address computations that can safely be re-executed.
+          // Independent operands, including values produced by calls or
+          // loads, retain their original evaluation.
+          if (!isPure(defOp))
+            return defOp->emitError("cannot safely remap address computation "
+                                    "for a deferred target private variable");
+          cloneAndRemap(defOp);
+          return success();
+        };
+        auto remapMap = [&](auto &&self, omp::MapInfoOp map) -> LogicalResult {
+          if (mapper.contains(map.getOperation()))
+            return success();
+          for (Value member : map.getMembers())
+            if (failed(
+                    self(self, cast<omp::MapInfoOp>(member.getDefiningOp()))))
+              return failure();
+
+          if (map.getVarPtr() == varPtr) {
+            if (Value varPtrPtr = map.getVarPtrPtr()) {
+              if (failed(remapAddress(remapAddress, varPtrPtr)))
+                return failure();
+              if (!mapper.contains(varPtrPtr))
+                return map.emitError("cannot remap private variable address "
+                                     "not derived from its descriptor");
+            }
+          }
+
+          if (llvm::any_of(map->getOperands(), [&](Value operand) {
+                return mapper.contains(operand);
+              }))
+            cloneAndRemap(map);
+          return success();
+        };
+        for (Value map : targetOp.getMapVars())
+          if (failed(remapMap(remapMap,
+                              cast<omp::MapInfoOp>(map.getDefiningOp()))))
+            return WalkResult::interrupt();
+
+        SmallVector<Value> newMapVars;
+        for (Value map : targetOp.getMapVars())
+          newMapVars.push_back(mapper.lookupOrDefault(map));
+        rewriter.modifyOpInPlace(targetOp, [&]() {
+          targetOp.getMapVarsMutable().assign(newMapVars);
+        });
+        mapInfoOp =
+            cast<omp::MapInfoOp>(mapper.lookup(mapInfoOp.getOperation()));
+        for (Operation *op : llvm::reverse(originalOps))
+          if (op->use_empty())
+            rewriter.eraseOp(op);
 
         // If the type of the private variable is not a pointer,
         // which is typically the case with !fir.boxchar types, then
@@ -341,7 +346,10 @@ class PrepareForOMPOffloadPrivatizationPass
       rewriter.setInsertionPoint(targetOp);
       targetOp.getPrivateVarsMutable().clear();
       targetOp.getPrivateVarsMutable().assign(newPrivVars);
+      return WalkResult::advance();
     });
+    if (walkResult.wasInterrupted())
+      signalPassFailure();
   }
 
 private:
@@ -376,19 +384,13 @@ private:
     return mallocCall.value();
   }
 
-  Value allocateHeapMem(omp::TargetOp targetOp, Value privVar, Type varType,
-                        ModuleOp mod, IRRewriter &rewriter) const {
+  Value allocateHeapMem(omp::TargetOp targetOp, Type varType, ModuleOp mod,
+                        IRRewriter &rewriter) const {
     OpBuilder::InsertionGuard guard(rewriter);
-    Value varPtr = privVar;
-    Operation *definingOp = varPtr.getDefiningOp();
-    BlockArgument blockArg;
-    if (!definingOp) {
-      blockArg = mlir::dyn_cast<BlockArgument>(varPtr);
-      rewriter.setInsertionPointToStart(blockArg.getParentBlock());
-    } else {
-      rewriter.setInsertionPoint(definingOp);
-    }
-    Location loc = definingOp ? definingOp->getLoc() : blockArg.getLoc();
+    // Each dynamic target task needs its own storage, including when the
+    // descriptor allocation dominates a loop containing the target.
+    rewriter.setInsertionPoint(targetOp);
+    Location loc = targetOp.getLoc();
     LLVM::LLVMFuncOp mallocFn = getMalloc(mod, rewriter);
 
     assert(mod.getDataLayoutSpec() &&
