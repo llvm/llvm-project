@@ -2910,7 +2910,8 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
 }
 
 void CodeGenFunction::EmitKCFIOperandBundle(
-    const CGCallee &Callee, SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+    const CGCallee &Callee, SmallVectorImpl<llvm::OperandBundleDef> &Bundles,
+    SourceLocation /*Loc*/) {
   const CGCalleeInfo &CI = Callee.getAbstractInfo();
   const FunctionProtoType *FP = CI.getCalleeFunctionProtoType();
   if (!FP)
