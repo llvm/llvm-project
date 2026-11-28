@@ -755,7 +755,6 @@ if.end:                                           ; preds = %if.then, %lor.lhs.f
 define void @test15(i128 %x) nounwind {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  if.end:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i128 [[X:%.*]], 2
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp ugt i128 %x, 2

@@ -850,22 +850,6 @@ private:
 
 } // end anonymous namespace
 
-static void eraseTerminatorAndDCECond(Instruction *TI,
-                                      MemorySSAUpdater *MSSAU = nullptr) {
-  Instruction *Cond = nullptr;
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-    Cond = dyn_cast<Instruction>(SI->getCondition());
-  } else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
-    Cond = dyn_cast<Instruction>(BI->getCondition());
-  } else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(TI)) {
-    Cond = dyn_cast<Instruction>(IBI->getAddress());
-  }
-
-  TI->eraseFromParent();
-  if (Cond)
-    RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
-}
-
 /// If the terminator is an integer value check, return the value being checked.
 Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   Value *CV = nullptr;

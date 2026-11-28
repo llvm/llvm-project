@@ -42,7 +42,6 @@ define i64 @two_else_predecessors(i1 %r0, i1 %r1, i32 %a, i64 %b) {
 ; FOLD-NEXT:    [[MODIFIED:%.*]] = add i64 [[B]], 1
 ; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[R1]], i64 [[UNCHANGED]], i64 [[MODIFIED]]
 ; FOLD-NEXT:    [[TMP0:%.*]] = select i1 [[R0]], i64 [[UNCHANGED]], i64 [[SPEC_SELECT]]
-; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[R0]], i1 true, i1 [[R1]]
 ; FOLD-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -109,7 +108,6 @@ define i64 @three_else_predecessors(i1 %r0, i1 %r1, i1 %r2, i32 %a, i64 %b) {
 ; FOLD-NEXT:    [[MODIFIED:%.*]] = add i64 [[B]], 1
 ; FOLD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[R2]], i64 poison, i64 [[MODIFIED]]
 ; FOLD-NEXT:    [[TMP0:%.*]] = select i1 [[BRMERGE]], i64 [[UNCHANGED]], i64 [[SPEC_SELECT]]
-; FOLD-NEXT:    [[TMP1:%.*]] = select i1 [[BRMERGE]], i1 true, i1 [[R2]]
 ; FOLD-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -187,13 +185,11 @@ define i64 @store_index(i1 %active, i1 %zero_xy, i1 %range_xy, i1 %above_hi, i1 
 ; FOLD-LABEL: define i64 @store_index(
 ; FOLD-SAME: i1 [[ACTIVE:%.*]], i1 [[ZERO_XY:%.*]], i1 [[RANGE_XY:%.*]], i1 [[ABOVE_HI:%.*]], i1 [[BELOW_LO:%.*]], i32 [[LINEAR:%.*]]) {
 ; FOLD-NEXT:  [[ENTRY:.*]]:
-; FOLD-NEXT:    [[RANGE_XY_INV:%.*]] = xor i1 [[RANGE_XY]], true
 ; FOLD-NEXT:    br i1 [[ACTIVE]], label %[[START:.*]], label %[[EXIT:.*]]
 ; FOLD:       [[START]]:
 ; FOLD-NEXT:    [[ZERO_INDEX:%.*]] = zext i32 [[LINEAR]] to i64
 ; FOLD-NEXT:    [[RANGE_XY_NOT:%.*]] = xor i1 [[RANGE_XY]], true
 ; FOLD-NEXT:    [[BRMERGE:%.*]] = select i1 [[ZERO_XY]], i1 true, i1 [[RANGE_XY_NOT]]
-; FOLD-NEXT:    [[DOTMUX:%.*]] = select i1 [[ZERO_XY]], i1 true, i1 [[RANGE_XY_INV]]
 ; FOLD-NEXT:    [[BRMERGE5:%.*]] = select i1 [[BRMERGE]], i1 true, i1 [[ABOVE_HI]]
 ; FOLD-NEXT:    [[ZERO_INDEX_MUX:%.*]] = select i1 [[BRMERGE]], i64 [[ZERO_INDEX]], i64 poison
 ; FOLD-NEXT:    br i1 [[BRMERGE5]], label %[[EXIT]], label %[[CHECK_LO:.*]]
