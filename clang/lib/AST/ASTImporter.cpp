@@ -8355,7 +8355,7 @@ ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
     return CXXFunctionalCastExpr::Create(
         Importer.getToContext(), ToType, E->getValueKind(), ToTypeInfoAsWritten,
         E->getCastKind(), ToSubExpr, ToBasePath, FCE->getFPFeatures(),
-        *ToLParenLocOrErr, *ToRParenLocOrErr);
+        SourceRange(*ToLParenLocOrErr, *ToRParenLocOrErr));
   }
 
   case Stmt::ObjCBridgedCastExprClass: {
