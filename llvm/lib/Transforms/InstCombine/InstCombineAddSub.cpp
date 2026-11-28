@@ -1587,6 +1587,44 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
   return BinaryOperator::CreateUDiv(NUWAdd, Y);
 }
 
+/// Given (X >> C) & M, returns {X, M << C} (the source and a mask of what bits
+/// of the source are in \p V).
+static std::pair<Value *, APInt> matchMaskedBits(Value *V) {
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  APInt Mask = APInt::getAllOnes(BitWidth);
+  Value *Src;
+  const APInt *M;
+  uint64_t ShAmt;
+  if (match(V, m_And(m_Value(Src), m_APInt(M)))) {
+    V = Src;
+    Mask = *M;
+  }
+  if (match(V, m_LShrOrSelf(m_Value(Src), ShAmt)) && ShAmt < BitWidth) {
+    V = Src;
+    Mask <<= ShAmt;
+  }
+  return {V, Mask};
+}
+
+/// ctpop((X >> C1) & M1) + ctpop((X >> C2) & M2)
+/// =>
+/// ctpop(X & ((M1 << C1) | (M2 << C2))) if M1 << C1 and M2 << C2 are disjoint
+static Value *foldAddOfMaskedCtpops(BinaryOperator &I,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *A, *B;
+  if (!match(I.getOperand(0), m_OneUse(m_Ctpop(m_Value(A)))) ||
+      !match(I.getOperand(1), m_OneUse(m_Ctpop(m_Value(B)))))
+    return nullptr;
+
+  auto [XA, MaskA] = matchMaskedBits(A);
+  auto [XB, MaskB] = matchMaskedBits(B);
+  if (XA != XB || MaskA.intersects(MaskB))
+    return nullptr;
+
+  Value *Masked = Builder.CreateAnd(XA, MaskA | MaskB);
+  return Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Masked);
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1995,6 +2033,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateDisjointOr(A, B)}));
+
+  // Fold the ctpop chain idiom:
+  // ctpop(X & 0x0f) + ctpop((X >> 4) & 0x0f)
+  // -->
+  // ctpop(X & 0xff)
+  if (Value *V = foldAddOfMaskedCtpops(I, Builder))
+    return replaceInstUsesWith(I, V);
 
   // Fold the log2_ceil idiom:
   // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
