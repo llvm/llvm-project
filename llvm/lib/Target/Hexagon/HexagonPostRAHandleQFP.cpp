@@ -960,9 +960,23 @@ void HexagonPostRAHandleQFP::collectConvQFInstr(NodeAddr<DefNode *> &RegDef) {
         if (QFNonSatMIs.contains(QFConvInstr))
           Op = QFNonSatMIs[QFConvInstr];
 
-        // Def is double type
-        if (Hexagon::HvxWRRegClass.contains(DefReg))
-          Op = ConvOperand::HiLo;
+        // Def is double type.
+        if (Hexagon::HvxWRRegClass.contains(DefReg)) {
+          // Don't convert lo or hi parts if they were re-defined after the def.
+          unsigned Redef = ConvOperand::Undefined;
+          for (NodeAddr<UseNode *> U :
+               UseStmt.Addr->members_if(DFG->IsUse, *DFG)) {
+            NodeId RD = U.Addr->getReachingDef();
+            if (RD == 0 || RD == RegDef.Id)
+              continue;
+            RegisterId R = DFG->addr<DefNode *>(RD).Addr->getRegRef(*DFG).Id;
+            if (R == HRI->getSubReg(UseReg, Hexagon::vsub_lo))
+              Redef |= ConvOperand::Lo;
+            else if (R == HRI->getSubReg(UseReg, Hexagon::vsub_hi))
+              Redef |= ConvOperand::Hi;
+          }
+          Op |= ConvOperand::HiLo & ~Redef;
+        }
         // Def is lo of double type
         else if (DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo))
           Op |= ConvOperand::Lo;
