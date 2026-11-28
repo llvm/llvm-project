@@ -153,7 +153,8 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
 
   using __int_type = __conditional_t<is_pointer<__libcpp_thread_id>::value, uintptr_t, __libcpp_thread_id>;
 
-  static const size_t __buffer_size = numeric_limits<__int_type>::digits10 + 2;
+  static const size_t __buffer_size =
+      numeric_limits<__int_type>::digits10 + 2 + numeric_limits<__int_type>::is_signed;
   char __buffer[__buffer_size];
   auto __ret =
       std::__to_chars_integral(__buffer, __buffer + __buffer_size - 1, reinterpret_cast<__int_type>(__id.__id_), 10);
