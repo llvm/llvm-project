@@ -529,10 +529,10 @@ private:
         Deleter(Ctx);
     }
 
-    ContextAndDeleter &operator[](GDMKey Key) { return Contexts[Key]; }
+    ContextAndDeleter &operator[](ConstGDMKey Key) { return Contexts[Key]; }
 
   private:
-    llvm::DenseMap<GDMKey, ContextAndDeleter> Contexts;
+    llvm::DenseMap<ConstGDMKey, ContextAndDeleter> Contexts;
   };
   GDMContextsTy GDMContexts;
 
