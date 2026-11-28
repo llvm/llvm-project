@@ -33,6 +33,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Serialization/JSONFormatTest/VirtualMethodFamilyFormatTest.cpp
   SourceTransformation/CppBoundedBuffersTest.cpp
   SourceTransformation/EmitterTest.cpp
+  SourceTransformation/EntityLookupTest.cpp
   SourceTransformation/RegistryTest.cpp
   SourceTransformation/SARIFFormatTest.cpp
   SourceTransformation/YAMLFormatTest.cpp
