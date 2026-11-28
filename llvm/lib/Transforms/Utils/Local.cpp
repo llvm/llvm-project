@@ -2332,11 +2332,10 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
   // Push any Constant Int operand onto the expression stack.
   if (ConstInt) {
     if (Icmp->isSigned())
-      Opcodes.push_back(dwarf::DW_OP_consts);
+      Opcodes.append({dwarf::DW_OP_consts,
+                      static_cast<uint64_t>(ConstInt->getSExtValue())});
     else
-      Opcodes.push_back(dwarf::DW_OP_constu);
-    uint64_t Val = ConstInt->getSExtValue();
-    Opcodes.push_back(Val);
+      Opcodes.append({dwarf::DW_OP_constu, ConstInt->getZExtValue()});
   } else {
     handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, Icmp);
   }
