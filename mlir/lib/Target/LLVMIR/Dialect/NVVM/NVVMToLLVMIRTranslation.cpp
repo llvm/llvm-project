@@ -634,6 +634,23 @@ void NVVM::SparseCompressOp::lowerToLLVMIR(Operation &op,
   mt.mapValue(compressedData) = builder.CreateExtractValue(result, 1);
 }
 
+// Emits a call to a tcgen05.ld{.red}.spcompress intrinsic. The intrinsics are
+// overloaded on their result types, so the result struct is built from the
+// op's results: {metadata, data[, redVal]}. A single-register metadata bundle
+// is always returned as i32 by the intrinsic.
+static llvm::Value *createTcgen05LdSPCompressCall(
+    llvm::Intrinsic::ID id, ArrayRef<llvm::Value *> args, Operation &op,
+    LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  SmallVector<llvm::Type *, 3> resultTys = {
+      getSPMetadataType(op.getResult(0).getType(), builder)};
+  for (Type type : llvm::drop_begin(op.getResultTypes()))
+    resultTys.push_back(mt.convertType(type));
+
+  return createIntrinsicCall(
+      builder, id, llvm::StructType::get(builder.getContext(), resultTys),
+      args);
+}
+
 void NVVM::SparseDecompressOp::lowerToLLVMIR(Operation &op,
                                              LLVM::ModuleTranslation &mt,
                                              llvm::IRBuilderBase &builder) {
