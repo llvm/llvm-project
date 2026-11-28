@@ -372,6 +372,22 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
       AddrDisc);
 }
 
+// Scalar PEXT and PDEP without BEXT and BDEP. Where there is a carry-less
+// multiply for the type (PMUL for i8, PMULL for the wider ones), each parallel
+// prefix is one multiply and the chain of masks stays in vector registers.
+// Otherwise every shift-and-XOR step of the whole-word network is one EOR
+// with a shifted register.
+static SDValue expandScalarPEXTPDEP(const AArch64TargetLowering &TLI, SDNode *N,
+                                    SelectionDAG &DAG) {
+  bool IsPEXT = N->getOpcode() == ISD::PEXT;
+  if (TLI.getOperationAction(ISD::CLMUL, N->getValueType(0)) !=
+      TargetLowering::Expand)
+    return IsPEXT ? TLI.expandPEXTWithCLMUL(N, DAG)
+                  : TLI.expandPDEPWithCLMUL(N, DAG);
+  return IsPEXT ? TLI.expandPEXTWholeWord(N, DAG)
+                : TLI.expandPDEPWholeWord(N, DAG);
+}
+
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
@@ -2166,6 +2182,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::nxv8bf16, Legal);
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
+
+  // Without BEXT/BDEP, pick the expansion of scalar PEXT/PDEP here. i8 and i16
+  // are expanded in place rather than promoted.
+  if (!Subtarget->isSVEBitPermAvailable())
+    setOperationAction({ISD::PEXT, ISD::PDEP},
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, Custom);
 
   if (Subtarget->isSVEAvailable() ||
       (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
@@ -9139,6 +9161,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerCLMUL(Op, DAG);
   case ISD::PEXT:
   case ISD::PDEP: {
+    if (Op.getValueType().isScalarInteger() &&
+        !Subtarget->isSVEBitPermAvailable())
+      return expandScalarPEXTPDEP(*this, Op.getNode(), DAG);
+
     // Lower generic PEXT/PDEP to SVE2 intrinsics.
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
@@ -33362,6 +33388,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::BITCAST:
     ReplaceBITCASTResults(N, Results, DAG);
+    return;
+  case ISD::PEXT:
+  case ISD::PDEP:
+    Results.push_back(expandScalarPEXTPDEP(*this, N, DAG));
     return;
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:

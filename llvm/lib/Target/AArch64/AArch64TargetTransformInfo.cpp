@@ -1005,6 +1005,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                              nullptr, nullptr);
       return Cost;
     }
+    // Without BEXT and BDEP, scalars expand through carry-less multiplies
+    // where there is one for the type, else to the whole-word network.
+    if (!RetTy->isVectorTy() && BW <= 64) {
+      EVT VT = TLI->getValueType(DL, RetTy);
+      Type *Ty = RetTy;
+      if (!VT.isSimple()) {
+        VT = getTypeLegalizationCost(RetTy).second;
+        Ty = IntegerType::get(RetTy->getContext(), VT.getSizeInBits());
+      }
+      if (TLI->getOperationAction(ISD::CLMUL, VT) != TargetLowering::Expand)
+        return getPEXTPDEPCLMULCost(Ty, CostKind);
+      return getPEXTPDEPNetworkCost(ICA.getID(), Ty, /*Bytewise=*/false,
+                                    CostKind);
+    }
     break;
   }
   case Intrinsic::ctpop: {
