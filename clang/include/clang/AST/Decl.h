@@ -2848,6 +2848,10 @@ public:
   /// through an `analyzer_noreturn` attribute on its declaration.
   bool isAnalyzerNoReturn() const;
 
+  /// Determines whether this function is known not to throw, through
+  /// a non-throwing exception specification or a 'nothrow' attribute.
+  bool isNothrow() const;
+
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
   void setHasSkippedBody(bool Skipped = true) {
