@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=amdgpu-postlegalizer-combiner %s -o - | FileCheck %s
+#
+# The shift amount must have the type the legalizer expects, not the type of
+# the multiply.  AMDGPU legalizes G_SHL of an i64 to an s32 amount, so building
+# the constant with the result type leaves behind an instruction the legalizer
+# would have rejected; the register-bank legalizer then asserts on the
+# mismatch (AMDGPURegBankLegalizeHelper.cpp, applyMappingSrc).
+---
+name:            mul_i64_by_pow2
+tracksRegLiveness: true
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: mul_i64_by_pow2
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](i64)
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = G_CONSTANT i64 4
+    %2:_(i64) = G_MUL %0, %1
+    $vgpr0_vgpr1 = COPY %2
+    SI_RETURN implicit $vgpr0_vgpr1
+...

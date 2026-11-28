@@ -2155,7 +2155,16 @@ bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
     return false;
 
   ShiftVal = MaybeImmVal->Value.exactLogBase2();
-  return (static_cast<int32_t>(ShiftVal) != -1);
+  if (static_cast<int32_t>(ShiftVal) == -1)
+    return false;
+
+  // The shift amount need not be the multiplicand's type: the target
+  // legalizer picks it (AMDGPU wants s32 for an i64 shift). Building the
+  // constant with the result type produces a G_SHL the legalizer would have
+  // rejected, which a post-legalize combiner must never do.
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_SHL, {Ty, ShiftAmtTy}});
 }
 
 void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
@@ -2163,7 +2172,8 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
   MachineIRBuilder MIB(MI);
   LLT ShiftTy = MRI.getType(MI.getOperand(0).getReg());
-  auto ShiftCst = MIB.buildConstant(ShiftTy, ShiftVal);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(ShiftTy);
+  auto ShiftCst = MIB.buildConstant(ShiftAmtTy, ShiftVal);
   Observer.changingInstr(MI);
   MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
   MI.getOperand(2).setReg(ShiftCst.getReg(0));
