@@ -117,8 +117,7 @@ namespace fs {
     (defined(__OpenBSD__) && !defined(HAVE_GETEXECPATH)) ||                    \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
-    defined(__GNU__) ||                                                        \
-    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__)) ||           \
+    defined(__GNU__) || (defined(__sun__) && defined(__svr4__)) ||             \
     defined(__managarm__)
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
@@ -285,11 +284,6 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #endif
-#elif defined(__HAIKU__)
-  char exe_path[PATH_MAX];
-  // argv[0] only
-  if (getprogpath(exe_path, argv0) != NULL)
-    return exe_path;
 #elif defined(__sun__) && defined(__svr4__)
   char exe_path[PATH_MAX];
   const char *aPath = "/proc/self/execname";
