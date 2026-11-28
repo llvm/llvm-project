@@ -6542,6 +6542,20 @@ TEST_F(FormatTest, LayoutMacroDefinitionsStatementsSpanningBlocks) {
                getLLVMStyleWithColumns(11));
 }
 
+TEST_F(FormatTest, RejectsIncludeGuardFollowedByAnotherDirective) {
+  auto Style = getLLVMStyle();
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("#ifndef HEADER_H\n"
+               "  #define HEADER_H\n"
+               "#endif\n"
+               "#define OTHER",
+               "#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "#endif\n"
+               "#define OTHER",
+               Style);
+}
+
 TEST_F(FormatTest, IndentPreprocessorDirectives) {
   FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
