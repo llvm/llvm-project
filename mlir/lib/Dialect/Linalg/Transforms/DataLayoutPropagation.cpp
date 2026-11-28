@@ -1425,7 +1425,9 @@ getPartialSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand) {
     if (!isa<AffineDimExpr>(expr)) {
       return failure();
     }
-    SliceDimInfo sliceDimInfo{offsets[idx], sizes[idx], shape[idx]};
+    // The full extent of the dim may be dynamic, so it is materialized by the
+    // caller once the pattern is known to apply.
+    SliceDimInfo sliceDimInfo{offsets[idx], sizes[idx], /*outputSize=*/{}};
     int64_t dimPos = cast<AffineDimExpr>(expr).getPosition();
     partialSliceDimMap[dimPos] = sliceDimInfo;
   }
@@ -1528,6 +1530,21 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
 
   // Store the padding information as (dimPos, lowPad, highPad, PaddedShape).
   Location loc = genericOp->getLoc();
+  // Use the runtime size of the slice source for the full extent of each
+  // sliced dim, as it may be dynamic. Walk the indexing map rather than
+  // `partialSliceDimMap` so that the order of the created ops is deterministic.
+  for (auto [idx, expr] : llvm::enumerate(
+           genericOp.getMatchingIndexingMap(sliceOperand).getResults())) {
+    auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+    if (!dimExpr)
+      continue;
+    auto it = partialSliceDimMap.find(dimExpr.getPosition());
+    if (it == partialSliceDimMap.end())
+      continue;
+    it->second.outputSize =
+        tensor::getMixedSize(rewriter, loc, producerSliceOp.getSource(), idx);
+  }
+
   AffineExpr dim0, dim1;
   bindDims(rewriter.getContext(), dim0, dim1);
   auto subMap = AffineMap::get(2, 0, {dim0 - dim1});
@@ -1576,12 +1593,9 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
   AffineMap outputIndexingMap =
       genericOp.getMatchingIndexingMap(genericOp.getDpsInitOperand(0));
 
-  auto outputShapeType =
-      llvm::cast<ShapedType>(genericOp.getDpsInitOperand(0)->get().getType());
-  SmallVector<OpFoldResult> OutputShape = llvm::map_to_vector(
-      outputShapeType.getShape(),
-      [&](int64_t sz) -> OpFoldResult { return rewriter.getIndexAttr(sz); });
-  SmallVector<OpFoldResult> newSizes = OutputShape;
+  Value init = genericOp.getDpsInitOperand(0)->get();
+  SmallVector<OpFoldResult> OutputShape(outputIndexingMap.getNumResults());
+  SmallVector<OpFoldResult> newSizes(outputIndexingMap.getNumResults());
   SmallVector<OpFoldResult> outputLowPads(outputIndexingMap.getNumResults(),
                                           getAsIndexOpFoldResult(ctx, 0));
   SmallVector<OpFoldResult> outputHighPads(outputIndexingMap.getNumResults(),
@@ -1589,11 +1603,11 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> newStrides(outputIndexingMap.getNumResults(),
                                        getAsIndexOpFoldResult(ctx, 1));
   for (auto [idx, expr] : llvm::enumerate(outputIndexingMap.getResults())) {
-    if (!isa<AffineDimExpr>(expr)) {
-      continue;
-    }
-    AffineDimExpr dimExpr = cast<AffineDimExpr>(expr);
-    if (!partialSliceDimMap.contains(dimExpr.getPosition())) {
+    auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+    if (!dimExpr || !partialSliceDimMap.contains(dimExpr.getPosition())) {
+      // Dims that are not sliced keep the (possibly dynamic) size of the init.
+      OutputShape[idx] = tensor::getMixedSize(rewriter, loc, init, idx);
+      newSizes[idx] = OutputShape[idx];
       continue;
     }
     SliceDimInfo sliceDimInfo = partialSliceDimMap[dimExpr.getPosition()];
