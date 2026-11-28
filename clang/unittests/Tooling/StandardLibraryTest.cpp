@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -172,6 +173,49 @@ TEST(StdlibTest, Recognizer) {
   EXPECT_TRUE(DivT);
   EXPECT_EQ(Recognizer(CDivT), DivT);
   EXPECT_EQ(Recognizer(Sec), std::nullopt);
+}
+
+TEST(StdlibTest, LiteralOperatorMappings) {
+  auto Chrono = stdlib::Header::named("<chrono>");
+  auto Str = stdlib::Header::named("<string>");
+  ASSERT_TRUE(Chrono);
+  ASSERT_TRUE(Str);
+
+  auto Ms = stdlib::Symbol::named("std::", "operator\"\"ms");
+  ASSERT_TRUE(Ms);
+  EXPECT_EQ(Ms->qualifiedName(), "std::operator\"\"ms");
+  EXPECT_EQ(Ms->header(), *Chrono);
+
+  auto S = stdlib::Symbol::named("std::", "operator\"\"s");
+  ASSERT_TRUE(S);
+  EXPECT_THAT(S->headers(), ElementsAre(*Chrono, *Str));
+
+  EXPECT_EQ(stdlib::Symbol::named("std::", "operator\"\"sv")->header(),
+            stdlib::Header::named("<string_view>"));
+}
+
+TEST(StdlibTest, RecognizerLiteralOperator) {
+  TestAST AST(R"cpp(
+    namespace std {
+    inline namespace literals {
+    inline namespace chrono_literals {
+      struct dur {};
+      dur operator"" ms(unsigned long long);
+    } // chrono_literals
+    } // literals
+    } // std
+
+    using namespace std::chrono_literals;
+    auto x = 5ms;
+  )cpp");
+
+  const VarDecl &X = cast<VarDecl>(lookup(AST, "x"));
+  const auto *UDL = cast<UserDefinedLiteral>(X.getInit()->IgnoreImplicit());
+  const FunctionDecl *Op = UDL->getDirectCallee();
+  ASSERT_TRUE(Op);
+
+  stdlib::Recognizer Recognizer;
+  EXPECT_EQ(Recognizer(Op), stdlib::Symbol::named("std::", "operator\"\"ms"));
 }
 
 TEST(StdlibTest, RecognizerForC99) {
