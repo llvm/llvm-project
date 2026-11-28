@@ -12579,8 +12579,8 @@ private:
 namespace {
 
 struct AAInvariantLoadPointerImpl
-    : public StateWrapper<BitIntegerState<uint8_t, 15>,
-                          AAInvariantLoadPointer> {
+    : public StateWrapper<BitIntegerState<uint8_t, 15>, AAInvariantLoadPointer,
+                          uint8_t> {
 
   enum {
     // pointer does not alias within the bounds of the function
@@ -12598,13 +12598,15 @@ struct AAInvariantLoadPointerImpl
   };
   static_assert(getBestState() == IS_BEST_STATE, "Unexpected best state");
 
-  using Base =
-      StateWrapper<BitIntegerState<uint8_t, 15>, AAInvariantLoadPointer>;
+  // Optimistic about noalias/noeffect only. Neither local invariance nor
+  // constrained lifetime starts assumed: optimistic fixpoint must not invent
+  // either bit. CONSTRAINED becomes known only via explicit proofs
+  // (e.g. non-callable CC arguments, or Path 1 from known-invariant objects).
+  using Base = StateWrapper<BitIntegerState<uint8_t, 15>,
+                            AAInvariantLoadPointer, uint8_t>;
 
-  // the BitIntegerState is optimistic about IS_NOALIAS and IS_NOEFFECT, but
-  // pessimistic about IS_KNOWN_INVARIANT
   AAInvariantLoadPointerImpl(const IRPosition &IRP, Attributor &A)
-      : Base(IRP) {}
+      : Base(IRP, IS_NOALIAS | IS_NOEFFECT) {}
 
   bool isKnownInvariant() const final {
     return isKnownLocallyInvariant() && isKnown(IS_LOCALLY_CONSTRAINED);
@@ -12797,53 +12799,71 @@ private:
   }
 
   ChangeStatus updateLocalInvariance(Attributor &A) {
-    if (isKnown(IS_LOCALLY_INVARIANT) || !isAssumed(IS_LOCALLY_INVARIANT))
+    if (isKnown(IS_LOCALLY_INVARIANT))
       return ChangeStatus::UNCHANGED;
 
-    // try to infer invariance from underlying objects
+    // Positively establish IS_LOCALLY_INVARIANT from known-invariant underlying
+    // objects. Unlike the optimistic-init model, this bit does not start
+    // assumed, so failure to prove it must not indicate a pessimistic fixpoint
+    // for the whole state (that would incorrectly drop NOALIAS/NOEFFECT).
     const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
         getIRPosition(), this, DepClassTy::REQUIRED);
     if (!AUO)
       return ChangeStatus::UNCHANGED;
 
     bool UsedAssumedInformation = false;
-    const auto IsLocallyInvariantLoadIfPointer = [&](const Value &V) {
+    bool SawPointerObject = false;
+    const Value *Self = &getAssociatedValue();
+    // Require known invariance of underlying objects, including
+    // IS_LOCALLY_CONSTRAINED. isKnownLocallyInvariant alone is insufficient:
+    // a noalias argument of an escaping ordinary function is not constrained,
+    // and deriving invariance for a returned GEP of that argument is unsound.
+    const auto IsInvariantIfPointer = [&](const Value &V) {
       if (!V.getType()->isPointerTy())
         return true;
-      const auto *IsInvariantLoadPointer =
-          A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
-                                                     DepClassTy::REQUIRED);
-      // Conservatively fail if invariance cannot be inferred.
-      if (!IsInvariantLoadPointer)
+      SawPointerObject = true;
+      // Opaque pointer sources (loads/calls) report themselves as the
+      // underlying object. A circular self-reference must not count as a proof.
+      if (&V == Self)
+        return false;
+      const auto *Inv = A.getOrCreateAAFor<AAInvariantLoadPointer>(
+          IRPosition::value(V), this, DepClassTy::REQUIRED);
+      if (!Inv)
         return false;
 
-      if (IsInvariantLoadPointer->isKnownLocallyInvariant())
+      if (Inv->isKnownInvariant())
         return true;
-      if (!IsInvariantLoadPointer->isAssumedLocallyInvariant())
+      if (!Inv->isAssumedInvariant())
         return false;
 
       UsedAssumedInformation = true;
       return true;
     };
-    if (!AUO->forallUnderlyingObjects(IsLocallyInvariantLoadIfPointer))
-      return indicatePessimisticFixpoint();
+    if (!AUO->forallUnderlyingObjects(IsInvariantIfPointer))
+      return ChangeStatus::UNCHANGED;
 
     if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
               CB, /*MustPreserveOffset=*/false)) {
         for (const Value *Arg : CB->args()) {
-          if (!IsLocallyInvariantLoadIfPointer(*Arg))
-            return indicatePessimisticFixpoint();
+          if (!IsInvariantIfPointer(*Arg))
+            return ChangeStatus::UNCHANGED;
         }
       }
     }
 
+    if (!SawPointerObject)
+      return ChangeStatus::UNCHANGED;
+
     if (!UsedAssumedInformation) {
-      // Pointer is known and not just assumed to be locally invariant.
-      addKnownBits(IS_LOCALLY_INVARIANT);
+      // Underlying objects are known invariant (incl. constrained lifetime).
+      // Propagate both bits so derived pointers do not rely on optimistic
+      // fixpoint alone for IS_LOCALLY_CONSTRAINED.
+      addKnownBits(IS_LOCALLY_INVARIANT | IS_LOCALLY_CONSTRAINED);
       return ChangeStatus::CHANGED;
     }
 
+    // Underlying objects are only assumed invariant; keep waiting for known.
     return ChangeStatus::UNCHANGED;
   }
 };

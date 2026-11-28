@@ -21,14 +21,15 @@ define i32 @load_store_through_loaded_pointer(ptr %p) {
   ret i32 0
 }
 
-; Nothing writes through the loaded pointer %q, so the load through it can
-; still be invariant.
+; The load of %q from noalias readonly %p may keep !invariant.load (pointer
+; cell). Use-local readonly on %q is not enough to prove LangRef invariance for
+; loads through %q/%f, so %v must not gain !invariant.load from Attributor.
 define i32 @load_through_loaded_pointer(ptr noalias readonly %p) {
 ; CHECK-LABEL: define i32 @load_through_loaded_pointer(
 ; CHECK-SAME: ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[P:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[P]], align 8, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[F:%.*]] = getelementptr i8, ptr [[Q]], i64 128
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[F]], align 8, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[F]], align 8{{$}}
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %q = load ptr, ptr %p, align 8, !invariant.load !0
