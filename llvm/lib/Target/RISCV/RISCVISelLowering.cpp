@@ -19455,17 +19455,26 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   if (SrcVecVT.getScalarSizeInBits() > Subtarget.getELen())
     return SDValue();
 
-  // match binop (extract_vector_elt V, 0), (extract_vector_elt V, 1) to
-  // reduce_op (extract_subvector [2 x VT] from V).  This will form the
-  // root of our reduction tree. TODO: We could extend this to any two
-  // adjacent aligned constant indices if desired.
+  // Match a binop of adjacent, pair-aligned extracts to a reduction of that
+  // pair. This forms the root of a reduction tree.
   if (LHS.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       LHS.getOperand(0) == SrcVec && isa<ConstantSDNode>(LHS.getOperand(1))) {
     uint64_t LHSIdx =
-      cast<ConstantSDNode>(LHS.getOperand(1))->getLimitedValue();
-    if (0 == std::min(LHSIdx, RHSIdx) && 1 == std::max(LHSIdx, RHSIdx)) {
+        cast<ConstantSDNode>(LHS.getOperand(1))->getLimitedValue();
+    uint64_t FirstIdx = std::min(LHSIdx, RHSIdx);
+    if (FirstIdx != 0) {
+      // Narrower and floating-point pairs can lose compressed instructions
+      // or require extra VTYPE changes. On RV64, only replace extracts that
+      // exceed LMUL2 and fall back to the stack; exact VLEN uses M1 extracts.
+      if (VT != MVT::i64 || (Subtarget.is64Bit() &&
+                             (Subtarget.getRealVLen() ||
+                              FirstIdx < 2 * Subtarget.getRealMinVLen() / 64)))
+        return SDValue();
+    }
+    if (FirstIdx % 2 == 0 && std::max(LHSIdx, RHSIdx) == FirstIdx + 1 &&
+        FirstIdx + 1 < SrcVecVT.getVectorNumElements()) {
       EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, 2);
-      SDValue Vec = DAG.getExtractSubvector(DL, ReduceVT, SrcVec, 0);
+      SDValue Vec = DAG.getExtractSubvector(DL, ReduceVT, SrcVec, FirstIdx);
       return DAG.getNode(ReduceOpc, DL, VT, Vec, N->getFlags());
     }
   }
