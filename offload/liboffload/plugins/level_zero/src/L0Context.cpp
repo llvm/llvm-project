@@ -96,20 +96,4 @@ Error LevelZeroPluginContextTy::deallocateImpl(
   return It->second->dealloc(Ptr);
 }
 
-Expected<PluginAllocInfoTy>
-LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
-  void *Raw = const_cast<void *>(Ptr);
-  for (const auto &[Device, Allocator] : DeviceAllocators) {
-    if (auto *Info = Allocator->getAllocInfo(Raw))
-      return PluginAllocInfoTy{Device, static_cast<ol_alloc_type_t>(Info->Kind),
-                               Info->Base, Info->ReqSize};
-  }
-  if (auto *Info = HostAllocator.getAllocInfo(Raw))
-    return PluginAllocInfoTy{nullptr, static_cast<ol_alloc_type_t>(Info->Kind),
-                             Info->Base, Info->ReqSize};
-
-  return Plugin::error(error::ErrorCode::NOT_FOUND,
-                       "pointer is not a known allocation in this context");
-}
-
 } // namespace llvm::offload::plugin

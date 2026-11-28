@@ -689,12 +689,59 @@ public:
   }
 };
 
-/// Description of an allocation: owning device, kind, base address and size.
+/// Description of an allocation made through a plugin context, as recorded by
+/// the context when it handed the allocation out. It describes the allocation
+/// as the user sees it, not as the backend or a memory pool served it.
 struct PluginAllocInfoTy {
+  /// The device the allocation was requested on.
   GenericDeviceTy *Device;
+  /// The kind of the allocation, as requested when it was made.
   ol_alloc_type_t Kind;
+  /// The address the allocation was returned at. This holds for pooled and
+  /// padded allocations too, which may lie inside a larger native allocation
+  /// (e.g. a pool slab, or a chunk padded for alignment) whose base is what a
+  /// native pointer query would report instead.
   void *Base;
+  /// The size the allocation was requested with. [Base, Base + Size) is the
+  /// range handed to the user; it excludes any padding and the rest of any
+  /// larger native allocation it lies in, which a native pointer query would
+  /// include.
   size_t Size;
+};
+
+/// Registry of the live allocations of a plugin context, keyed by base
+/// address. Only allocations made through the context are found, so queries
+/// and frees are isolated from other contexts, and an allocation is described
+/// by what was requested, regardless of how a backend or a memory pool served
+/// it.
+class AllocationRegistryTy {
+public:
+  /// Add the allocation of \p Size bytes of \p Kind memory at \p Ptr,
+  /// requested on \p Device. Must be called once per allocation, pooled or
+  /// not.
+  void add(void *Ptr, size_t Size, ol_alloc_type_t Kind,
+           GenericDeviceTy *Device);
+
+  /// Remove the allocation at \p Ptr and return it. Fails with NOT_FOUND when
+  /// \p Ptr is not the base of a live allocation. Must be called before the
+  /// deallocation is served, as serving it may hand \p Ptr back out to another
+  /// thread.
+  llvm::Expected<PluginAllocInfoTy> remove(void *Ptr);
+
+  /// Look up the live allocation containing \p Ptr, which may point anywhere
+  /// inside it. Fails with NOT_FOUND when there is none.
+  llvm::Expected<PluginAllocInfoTy> find(const void *Ptr) const;
+
+private:
+  struct EntryTy {
+    size_t Size;
+    ol_alloc_type_t Kind;
+    /// The device the allocation was requested on.
+    GenericDeviceTy *Device;
+  };
+
+  std::map<void *, EntryTy, std::less<>> Allocs;
+  mutable std::mutex Mutex;
 };
 
 /// Memory manager that allocates through a plugin context, so that pooled
@@ -713,7 +760,9 @@ private:
   GenericDeviceTy &Device;
 };
 
-/// A plugin-side context grouping a set of devices.
+/// A plugin-side context grouping a set of devices. A context owns the
+/// allocations made through it: it keeps a registry of them, which answers
+/// allocation queries and routes frees.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
                   llvm::ArrayRef<GenericDeviceTy *> Devices)
@@ -749,36 +798,21 @@ struct PluginContextTy {
   allocateImpl(GenericDeviceTy &Device, int64_t Size, ol_alloc_type_t Kind,
                size_t Alignment, GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Free a pointer returned by allocate; resolves owner/kind via
-  /// getAllocInfo. Requires a non-empty device set, so this is only valid on
-  /// user-created contexts (not on the per-plugin default context, which
-  /// carries no devices).
+  /// Free an allocation made through allocate. \p Ptr must be the address the
+  /// allocation was returned at; returns NOT_FOUND when it is not that of a
+  /// live allocation of this context.
   llvm::Error deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Free a pointer when the caller already knows the owning device and kind.
-  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                         ol_alloc_type_t Kind,
-                         GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Serve the deallocation requested through deallocate.
   virtual llvm::Error deallocateImpl(GenericDeviceTy &Device, void *Ptr,
                                      ol_alloc_type_t Kind,
                                      GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Record that \p Ptr is a live allocation of \p Size bytes of \p Kind
-  /// memory on \p Device. Called once per allocation served through allocate,
-  /// pooled or not, so that an implementation's registry tracks what the user
-  /// asked for and not how it was served.
-  virtual void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                               ol_alloc_type_t Kind) {}
-
-  /// Record that \p Ptr is no longer live. Called before the deallocation is
-  /// served, as serving it may hand \p Ptr back out to another thread.
-  virtual void untrackAllocation(void *Ptr) {}
-
-  /// Look up the allocation containing Ptr. Returns NOT_FOUND when Ptr is not
-  /// known to this context. Only valid on user-created contexts.
-  virtual llvm::Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) = 0;
+  /// Look up the live allocation of this context containing \p Ptr, which may
+  /// point anywhere inside it. Returns NOT_FOUND when there is none.
+  llvm::Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) const {
+    return AllocsRegistry.find(Ptr);
+  }
 
   /// Return the backend-native handle of this context, reinterpreted as a
   /// void pointer.
@@ -814,6 +848,9 @@ private:
       DeviceMemoryManagers;
   MemoryPoolTy HostMemoryManager;
   std::mutex MemoryManagersMutex;
+
+  /// The live allocations of this context.
+  AllocationRegistryTy AllocsRegistry;
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin

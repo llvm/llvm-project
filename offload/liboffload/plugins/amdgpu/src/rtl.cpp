@@ -4421,30 +4421,6 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
     // TODO: Implement this function.
     return Plugin::success();
   }
-
-  void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                       ol_alloc_type_t Kind) override {
-    std::lock_guard<std::mutex> Lock(AllocationsMutex);
-    Allocations[Ptr] = {Kind, &Device};
-  }
-
-  void untrackAllocation(void *Ptr) override {
-    std::lock_guard<std::mutex> Lock(AllocationsMutex);
-    Allocations.erase(Ptr);
-  }
-
-  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
-
-private:
-  // Track each allocation's Kind so we can tell HOST from SHARED — HSA
-  // backs both with the same host fine-grained pool.
-  // TODO: drop once OL_ALLOC_TYPE_MANAGED has its own backing pool.
-  struct AllocInfo {
-    ol_alloc_type_t Kind;
-    GenericDeviceTy *Device;
-  };
-  llvm::DenseMap<const void *, AllocInfo> Allocations;
-  std::mutex AllocationsMutex;
 };
 
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
@@ -4772,32 +4748,6 @@ private:
   /// The host devices, one per HSA host agent.
   llvm::SmallVector<AMDHostDeviceTy *> HostDevices;
 };
-
-Expected<PluginAllocInfoTy>
-AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
-  // HSA gives the base of the region containing Ptr, so interior pointers
-  // resolve to the same tracker entry.
-  hsa_amd_pointer_info_t HsaInfo{};
-  HsaInfo.size = sizeof(hsa_amd_pointer_info_t);
-  hsa_status_t Status = hsa_amd_pointer_info(
-      const_cast<void *>(Ptr), &HsaInfo, /*Allocator=*/nullptr,
-      /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
-  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
-    return std::move(Err);
-
-  AllocInfo Info;
-  {
-    std::lock_guard<std::mutex> Lock(AllocationsMutex);
-    auto It = Allocations.find(HsaInfo.agentBaseAddress);
-    if (It == Allocations.end())
-      return Plugin::error(ErrorCode::NOT_FOUND,
-                           "pointer is not a known allocation in this context");
-    Info = It->second;
-  }
-
-  return PluginAllocInfoTy{Info.Device, Info.Kind, HsaInfo.agentBaseAddress,
-                           HsaInfo.sizeInBytes};
-}
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],

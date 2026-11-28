@@ -854,7 +854,7 @@ Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
     return AllocOrErr.takeError();
 
   if (*AllocOrErr) {
-    trackAllocation(Device, *AllocOrErr, Size, Kind);
+    AllocsRegistry.add(*AllocOrErr, Size, Kind, &Device);
     Device.recordAllocation(*AllocOrErr, Size, Kind);
   }
 
@@ -870,21 +870,23 @@ Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
 }
 
 Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
-  assert(!Devices.empty() && "context constructed without devices");
-  auto InfoOrErr = getAllocInfo(Ptr);
+  // If allocation tracing is enabled, record the deallocation first.
+  // This way, concurrent frees of the same pointer will hit
+  // reportDeallocationOfDeallocatedPtr as expected.
+  // TODO: remove this once trace info is moved out of the device.
+  if (auto LiveOrErr = AllocsRegistry.find(Ptr); !LiveOrErr)
+    consumeError(LiveOrErr.takeError());
+  else if (LiveOrErr->Base == Ptr)
+    LiveOrErr->Device->recordDeallocation(Ptr, LiveOrErr->Kind);
+
+  auto InfoOrErr = AllocsRegistry.remove(Ptr);
   if (!InfoOrErr)
     return InfoOrErr.takeError();
-  GenericDeviceTy *OwnerDevice = InfoOrErr->Device;
-  if (!OwnerDevice)
-    OwnerDevice = Devices.front();
-  return deallocate(*OwnerDevice, Ptr, InfoOrErr->Kind, ProfilerPtr);
-}
 
-Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                  ol_alloc_type_t Kind,
-                                  GenericProfilerTy *ProfilerPtr) {
-  Device.recordDeallocation(Ptr, Kind);
-  untrackAllocation(Ptr);
+  // Every allocation is freed through the device it was requested on, host
+  // allocations included.
+  GenericDeviceTy &Device = *InfoOrErr->Device;
+  ol_alloc_type_t Kind = InfoOrErr->Kind;
 
   if (MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind))
     return Manager->free(Ptr);
@@ -896,6 +898,46 @@ Error PluginContextTy::deallocateImpl(GenericDeviceTy &Device, void *Ptr,
                                       ol_alloc_type_t Kind,
                                       GenericProfilerTy *ProfilerPtr) {
   return Device.dataDelete(Ptr, Kind, ProfilerPtr);
+}
+
+/// The error returned for a pointer that is not a live allocation of a
+/// context.
+static Error createAllocationNotFoundError() {
+  return Plugin::error(ErrorCode::NOT_FOUND,
+                       "pointer is not a known allocation in this context");
+}
+
+void AllocationRegistryTy::add(void *Ptr, size_t Size, ol_alloc_type_t Kind,
+                               GenericDeviceTy *Device) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  [[maybe_unused]] bool Inserted =
+      Allocs.try_emplace(Ptr, EntryTy{Size, Kind, Device}).second;
+  assert(Inserted && "allocator handed out a live allocation");
+}
+
+Expected<PluginAllocInfoTy> AllocationRegistryTy::remove(void *Ptr) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  auto It = Allocs.find(Ptr);
+  if (It == Allocs.end())
+    return createAllocationNotFoundError();
+  const EntryTy &Entry = It->second;
+  PluginAllocInfoTy Info{Entry.Device, Entry.Kind, Ptr, Entry.Size};
+  Allocs.erase(It);
+  return Info;
+}
+
+Expected<PluginAllocInfoTy> AllocationRegistryTy::find(const void *Ptr) const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  // Find the last allocation based at or before Ptr; Ptr belongs to it only
+  // if it falls within its size.
+  auto It = Allocs.upper_bound(Ptr);
+  if (It == Allocs.begin())
+    return createAllocationNotFoundError();
+  --It;
+  const auto &[Base, Entry] = *It;
+  if (utils::advancePtr(Base, Entry.Size) <= Ptr)
+    return createAllocationNotFoundError();
+  return PluginAllocInfoTy{Entry.Device, Entry.Kind, Base, Entry.Size};
 }
 
 Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,

@@ -388,12 +388,6 @@ public:
     return AllocInfo.contains(Ptr, Size);
   }
 
-  /// Get allocation information for the specified memory location.
-  const MemAllocInfoTy *getAllocInfo(void *Ptr) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    return AllocInfo.find(Ptr);
-  }
-
   /// Get kernel indirect access flags using implicit argument info.
   ze_kernel_indirect_access_flags_t getIndirectFlags() {
     std::lock_guard<std::mutex> Lock(Mtx);

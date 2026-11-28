@@ -154,8 +154,8 @@ def olMemFree : Function {
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
   let returns = [
-    Return<"OL_ERRC_INVALID_CONTEXT", [
-      "The allocation was not made in `Context`"
+    Return<"OL_ERRC_NOT_FOUND", [
+      "`Address` is not the base address of a live allocation made in `Context`"
     ]>
   ];
 }
