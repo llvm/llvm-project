@@ -2317,6 +2317,37 @@ func.func @const_fold_vector_bxor() -> vector<3xi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.SpecConstantOperation
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @spec_constant_operation_fold_to_constant
+func.func @spec_constant_operation_fold_to_constant() -> i32 {
+  %0 = spirv.Constant 1 : i32
+
+  // CHECK: %[[CST:.*]] = spirv.Constant 2 : i32
+  // CHECK-NOT: spirv.SpecConstantOperation
+  %1 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%0, %0) : (i32, i32) -> i32
+
+  // CHECK: return %[[CST]]
+  return %1 : i32
+}
+
+// CHECK-LABEL: @spec_constant_operation_fold_to_operand
+func.func @spec_constant_operation_fold_to_operand() -> i32 {
+  // CHECK: %[[CST:.*]] = spirv.Constant 42 : i32
+  %0 = spirv.Constant 42 : i32
+  %zero = spirv.Constant 0 : i32
+
+  // CHECK-NOT: spirv.SpecConstantOperation
+  %1 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%0, %zero) : (i32, i32) -> i32
+
+  // CHECK: return %[[CST]]
+  return %1 : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.selection
 //===----------------------------------------------------------------------===//
 
