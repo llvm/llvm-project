@@ -11,6 +11,7 @@ add_lldb_unittest(LLDBCoreTests
   ModuleListTest.cpp
   ModuleSpecTest.cpp
   ModuleTest.cpp
+  OpcodeTest.cpp
   PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
