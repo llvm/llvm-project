@@ -19,6 +19,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
@@ -51,27 +52,23 @@ private:
   LifetimeSafetyStats &LSStats;
 };
 
-class LifetimeAnnotatedOriginTypeCollector
-    : public RecursiveASTVisitor<LifetimeAnnotatedOriginTypeCollector> {
+/// Collects the types that need origins because of the lifetime annotations of
+/// the functions and constructors called in the CFG.
+class LifetimeAnnotatedOriginTypeCollector {
 public:
-  bool VisitCallExpr(const CallExpr *CE) {
-    // Indirect calls (e.g., function pointers) are skipped because lifetime
-    // annotations currently apply to declarations, not types.
-    if (const auto *FD = CE->getDirectCallee()) {
-      collect(FD, FD->getReturnType());
-      collectCaptureBy(FD);
+  void visit(const Stmt *S) {
+    if (const auto *CE = dyn_cast<CallExpr>(S)) {
+      // Indirect calls (e.g., function pointers) are skipped because lifetime
+      // annotations currently apply to declarations, not types.
+      if (const auto *FD = CE->getDirectCallee()) {
+        collect(FD, FD->getReturnType());
+        collectCaptureBy(FD);
+      }
+    } else if (const auto *CCE = dyn_cast<CXXConstructExpr>(S)) {
+      collect(CCE->getConstructor(), CCE->getType());
+      collectCaptureBy(CCE->getConstructor());
     }
-    return true;
   }
-
-  bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
-    collect(CCE->getConstructor(), CCE->getType());
-    collectCaptureBy(CCE->getConstructor());
-    return true;
-  }
-
-  bool shouldVisitLambdaBody() const { return false; }
-  bool shouldVisitTemplateInstantiations() const { return true; }
 
   const llvm::SmallVector<QualType> &getCollectedTypes() const {
     return CollectedTypes;
@@ -198,10 +195,10 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(const AnalysisDeclContext &AC,
+OriginManager::OriginManager(const AnalysisDeclContext &AC, const CFG &Cfg,
                              llvm::BumpPtrAllocator &Alloc)
     : AST(AC.getASTContext()), ListAllocator(Alloc) {
-  collectLifetimeAnnotatedOriginTypes(AC);
+  collectLifetimeAnnotatedOriginTypes(Cfg);
   initializeThisOrigins(AC.getDecl());
 }
 
@@ -396,14 +393,16 @@ void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
-void OriginManager::collectLifetimeAnnotatedOriginTypes(
-    const AnalysisDeclContext &AC) {
+void OriginManager::collectLifetimeAnnotatedOriginTypes(const CFG &Cfg) {
+  // The CFG has every evaluated statement as an element, including the
+  // constructor initializers and the default member initializers they use (see
+  // setLifetimeSafetyCFGBuildOptions), so these are the calls the facts are
+  // generated for.
   LifetimeAnnotatedOriginTypeCollector Collector;
-  if (Stmt *Body = AC.getBody())
-    Collector.TraverseStmt(Body);
-  if (const auto *CD = dyn_cast<CXXConstructorDecl>(AC.getDecl()))
-    for (const auto *Init : CD->inits())
-      Collector.TraverseStmt(Init->getInit());
+  for (const CFGBlock *Block : Cfg)
+    for (const CFGElement &Elt : *Block)
+      if (std::optional<CFGStmt> S = Elt.getAs<CFGStmt>())
+        Collector.visit(S->getStmt());
   for (QualType QT : Collector.getCollectedTypes())
     registerLifetimeAnnotatedOriginType(QT);
 }

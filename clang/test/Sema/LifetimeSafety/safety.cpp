@@ -3367,6 +3367,28 @@ DefaultedOuter nested_defaulted_outer_with_user_defined_inner() {
   return copy; // expected-note {{returned here}}
 }
 
+// Only evaluated lifetimebound calls make their return type tracked.
+namespace unevaluated_lifetimebound_call {
+struct View {
+  const int *p;
+};
+View makeView(const int &x [[clang::lifetimebound]]);
+
+View sizeof_only() {
+  int x;
+  (void)sizeof(makeView(x));
+  View v{&x};
+  return v; // no-warning
+}
+
+View evaluated() {
+  int x;
+  (void)makeView(x);
+  View v{&x}; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  return v;   // expected-note {{returned here}}
+}
+} // namespace unevaluated_lifetimebound_call
+
 std::string_view getSV(S s [[clang::lifetimebound]]);
 
 // FIXME: False negative. Non-pointer/ref/gsl::Pointer parameter types marked

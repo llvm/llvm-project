@@ -456,7 +456,7 @@ class FactManager {
 public:
   FactManager(const AnalysisDeclContext &AC, const CFG &Cfg,
               llvm::BumpPtrAllocator &Alloc)
-      : LoanMgr(Alloc), OriginMgr(AC, Alloc), FactAllocator(Alloc) {
+      : LoanMgr(Alloc), OriginMgr(AC, Cfg, Alloc), FactAllocator(Alloc) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 
