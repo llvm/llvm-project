@@ -2707,6 +2707,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     The iglp_opt intrinsic cannot be combined with sched_barrier or sched_group_barrier.
 
     The iglp_opt strategy implementations are subject to change.
+* - llvm.amdgcn.pad.waitcnt
+  - Optional hint to add counter events on the opposite edge of a conditional branch. Used to balance waitcnts across branches so that conditioned operations can be left outstanding. Both i32 arguments are immediate: counter 0 selects LOAD/VM and count selects the number of extra events. The current implementation emits BUFFER_INV 0 on targets supporting that instruction and accepts counts 1 through the hardware wait limit minus one (1..62 on gfx942/gfx950).
 * - llvm.amdgcn.s.getpc
   - Provides access to the s_getpc_b64 instruction, but with the return value sign-extended from the width of the underlying PC hardware register even on processors where the s_getpc_b64 instruction returns a zero-extended value.
 * - llvm.amdgcn.implicit.buffer.ptr

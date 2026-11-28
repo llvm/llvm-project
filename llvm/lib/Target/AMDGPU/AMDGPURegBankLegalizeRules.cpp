@@ -1825,6 +1825,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
   addRulesForIOpcs({amdgcn_asyncmark,
                     amdgcn_endpgm,
                     amdgcn_iglp_opt,
+                    amdgcn_pad_waitcnt,
                     amdgcn_init_exec,
                     amdgcn_s_barrier,
                     amdgcn_s_barrier_leave,

@@ -1050,3 +1050,24 @@ to instruction memory, with the length specified by ``len``, which should be
 0-31 (1-32 chunks, units of 128 bytes).
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// Pseudo-Instruction/Hint Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatAMDGPUHints : DocumentationCategory<"Pseudo-Instruction/Hint Builtins"> {
+  let Content = [{
+These builtins do not correspond to a hardware instruction. They provide hints
+to configure code generation. The backend may ignore them, and they emit at most
+an assembly comment themselves.
+}];
+}
+
+def DocPadWaitcnt : Documentation {
+  let Category = DocCatAMDGPUHints;
+  let Content = [{
+Optional hint to request ``count`` counter events on the opposite edge of the
+branch whose arm contains this call. Supported counters are platform dependent.
+Currently only passing 0 to select VMcnt on gfx942/gfx950 is supported.
+}];
+}

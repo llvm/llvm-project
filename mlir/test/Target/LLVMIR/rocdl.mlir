@@ -247,6 +247,13 @@ llvm.func @rocdl.s.waitcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.pad.waitcnt() {
+  // CHECK-LABEL: rocdl.pad.waitcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.pad.waitcnt(i32 0, i32 2)
+  rocdl.pad.waitcnt load, 2
+  llvm.return
+}
+
 llvm.func @rocdl.s.sleep() {
   // CHECK-LABEL: rocdl.s.sleep
   // CHECK-NEXT: call void @llvm.amdgcn.s.sleep(i32 0)

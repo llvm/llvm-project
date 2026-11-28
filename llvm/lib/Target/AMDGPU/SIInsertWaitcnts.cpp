@@ -28,8 +28,10 @@
 #include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIWaitcntPadding.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -354,9 +356,11 @@ class SIInsertWaitcnts {
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
   DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
   MachineLoopInfo &MLI;
+  MachineDominatorTree *MDT;
   MachinePostDominatorTree &PDT;
   AliasAnalysis *AA = nullptr;
   MachineFunction &MF;
+  bool SkipPadding;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -383,6 +387,7 @@ class SIInsertWaitcnts {
   DenseMap<MachineInstr *, bool> EndPgmInsts;
 
   AMDGPU::HardwareLimits Limits;
+  bool ChangedCFG = false;
 
 public:
   const GCNSubtarget &ST;
@@ -394,15 +399,17 @@ public:
   bool IsExpertMode = false;
   const bool TgSplit;
 
-  SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
-                   AliasAnalysis *AA, MachineFunction &MF)
-      : MLI(MLI), PDT(PDT), AA(AA), MF(MF), ST(MF.getSubtarget<GCNSubtarget>()),
-        TII(*ST.getInstrInfo()), TRI(TII.getRegisterInfo()),
-        MRI(MF.getRegInfo()),
+  SIInsertWaitcnts(MachineLoopInfo &MLI, MachineDominatorTree *MDT,
+                   MachinePostDominatorTree &PDT, AliasAnalysis *AA,
+                   MachineFunction &MF, bool SkipPadding)
+      : MLI(MLI), MDT(MDT), PDT(PDT), AA(AA), MF(MF), SkipPadding(SkipPadding),
+        ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
+        TRI(TII.getRegisterInfo()), MRI(MF.getRegInfo()),
         TgSplit(ST.hasTgSplitSupport() &&
                 AMDGPU::isTgSplitEnabled(MF.getFunction())) {}
 
   const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
+  bool changedCFG() const { return ChangedCFG; }
 
   PreheaderFlushFlags getPreheaderFlushFlags(MachineLoop *ML,
                                              const WaitcntBrackets &Brackets);
@@ -866,9 +873,12 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -3569,30 +3579,44 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
 
 bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   auto &PDT =
       getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   AliasAnalysis *AA = nullptr;
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
 
-  return SIInsertWaitcnts(MLI, PDT, AA, MF).run();
+  // Waitcnt insertion is required, but counter padding is an optimization.
+  bool SkipPadding = skipFunction(MF.getFunction());
+  return SIInsertWaitcnts(MLI, MDT, PDT, AA, MF, SkipPadding).run();
 }
 
 PreservedAnalyses
 SIInsertWaitcntsPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
   auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto &PDT = MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
 
-  if (!SIInsertWaitcnts(MLI, PDT, AA, MF).run())
+  // Waitcnt insertion is required, but counter padding is an optimization.
+  const Function &F = MF.getFunction();
+  bool SkipPadding = F.hasOptNone() || shouldSkipOptimizationForOptBisect(F);
+  SIInsertWaitcnts Impl(MLI, MDT, PDT, AA, MF, SkipPadding);
+  if (!Impl.run())
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<AAManager>();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  if (Impl.changedCFG())
+    PA.preserve<MachineLoopAnalysis>()
+        .preserve<MachineDominatorTreeAnalysis>()
+        .preserve<MachinePostDominatorTreeAnalysis>();
+  else
+    PA.preserveSet<CFGAnalyses>();
+  return PA.preserve<AAManager>();
 }
 
 bool SIInsertWaitcnts::run() {
@@ -3619,7 +3643,16 @@ bool SIInsertWaitcnts::run() {
 
   SmemAccessCounter = getCounterFromEvent(HWEvents::SMEM_ACCESS);
 
+  // Materialize padding before taking any entry or exit score snapshots, so the
+  // ordinary solver sees every real counter event from its first sweep. When
+  // padding is skipped or unsupported, hints stay as meta instructions.
   bool Modified = false;
+  if (!SkipPadding && ST.hasBufferInvInst()) {
+    AMDGPU::CounterPaddingResult Padding =
+        AMDGPU::expandCounterPaddingHints(MF, MLI, MDT, PDT, Limits);
+    ChangedCFG |= Padding.ChangedCFG;
+    Modified |= Padding.Changed;
+  }
 
   MachineBasicBlock &EntryBB = MF.front();
 
