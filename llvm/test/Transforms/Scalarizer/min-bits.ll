@@ -1311,6 +1311,52 @@ define noundef <2 x half> @frexp_v2f16(<2 x half> noundef %h) {
   ret <2 x half> %e0
 }
 
+define i32 @test_frexp_v3half_with_minbits(ptr %buf) local_unnamed_addr {
+; MIN16-LABEL: @test_frexp_v3half_with_minbits(
+; MIN16-NEXT:  .entry:
+; MIN16-NEXT:    [[BUF_I2:%.*]] = getelementptr half, ptr [[BUF:%.*]], i32 2
+; MIN16-NEXT:    [[IN_I2:%.*]] = load half, ptr [[BUF_I2]], align 4
+; MIN16-NEXT:    [[FREXP_I2:%.*]] = call { half, i16 } @llvm.frexp.f16.i16(half [[IN_I2]])
+; MIN16-NEXT:    [[EXP_ELEM14:%.*]] = extractvalue { half, i16 } [[FREXP_I2]], 1
+; MIN16-NEXT:    [[EXP_2_I32:%.*]] = sext i16 [[EXP_ELEM14]] to i32
+; MIN16-NEXT:    ret i32 [[EXP_2_I32]]
+;
+; MIN32-LABEL: @test_frexp_v3half_with_minbits(
+; MIN32-NEXT:  .entry:
+; MIN32-NEXT:    [[IN_I0:%.*]] = load <2 x half>, ptr [[BUF:%.*]], align 8
+; MIN32-NEXT:    [[BUF_I1:%.*]] = getelementptr <2 x half>, ptr [[BUF]], i32 1
+; MIN32-NEXT:    [[IN_I1:%.*]] = load <2 x half>, ptr [[BUF_I1]], align 4
+; MIN32-NEXT:    [[TMP0:%.*]] = shufflevector <2 x half> [[IN_I0]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[IN_I1]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[IN:%.*]] = shufflevector <4 x half> [[TMP0]], <4 x half> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; MIN32-NEXT:    [[VEC:%.*]] = shufflevector <4 x half> [[IN]], <4 x half> poison, <3 x i32> <i32 0, i32 3, i32 2>
+; MIN32-NEXT:    [[VEC_I1:%.*]] = extractelement <3 x half> [[VEC]], i64 2
+; MIN32-NEXT:    [[FREXP_I1:%.*]] = call { half, i16 } @llvm.frexp.f16.i16(half [[VEC_I1]])
+; MIN32-NEXT:    [[EXP_ELEM12:%.*]] = extractvalue { half, i16 } [[FREXP_I1]], 1
+; MIN32-NEXT:    [[EXP_2_I32:%.*]] = sext i16 [[EXP_ELEM12]] to i32
+; MIN32-NEXT:    ret i32 [[EXP_2_I32]]
+;
+; MIN64-LABEL: @test_frexp_v3half_with_minbits(
+; MIN64-NEXT:  .entry:
+; MIN64-NEXT:    [[IN:%.*]] = load <4 x half>, ptr [[BUF:%.*]], align 8
+; MIN64-NEXT:    [[VEC:%.*]] = shufflevector <4 x half> [[IN]], <4 x half> poison, <3 x i32> <i32 0, i32 3, i32 2>
+; MIN64-NEXT:    [[FREXP:%.*]] = call { <3 x half>, <3 x i16> } @llvm.frexp.v3f16.v3i16(<3 x half> [[VEC]])
+; MIN64-NEXT:    [[EXP:%.*]] = extractvalue { <3 x half>, <3 x i16> } [[FREXP]], 1
+; MIN64-NEXT:    [[EXP_2:%.*]] = extractelement <3 x i16> [[EXP]], i64 2
+; MIN64-NEXT:    [[EXP_2_I32:%.*]] = sext i16 [[EXP_2]] to i32
+; MIN64-NEXT:    ret i32 [[EXP_2_I32]]
+;
+.entry:
+  %in = load <4 x half>, ptr %buf
+  %vec = shufflevector <4 x half> %in, <4 x half> poison, <3 x i32> <i32 0, i32 3, i32 2>
+  %frexp = call { <3 x half>, <3 x i16> } @llvm.frexp.v3f16.v3i16(<3 x half> %vec)
+  %frac = extractvalue { <3 x half>, <3 x i16> } %frexp, 0
+  %exp = extractvalue { <3 x half>, <3 x i16> } %frexp, 1
+  %exp.2 = extractelement <3 x i16> %exp, i64 2
+  %exp.2.i32 = sext i16 %exp.2 to i32
+  ret i32 %exp.2.i32
+}
+
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>)
 declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
