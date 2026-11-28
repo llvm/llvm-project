@@ -1486,6 +1486,51 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float, [
   }];
 }
 
+// -----
+
+def SPIRV_GLRefractOp : SPIRV_GLOp<"Refract", 72, [
+    Pure,
+    AllTypesMatch<["i", "n", "result"]>
+  ]> {
+  let summary = "Calculate refraction direction vector";
+
+  let description = [{
+    For the incident vector I, surface normal N, and ratio of indices of
+    refraction eta, let k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I)).
+    Result is 0.0 if k < 0.0, else eta * I - (eta * dot(N, I) + sqrt(k)) * N.
+
+    I and N must already be normalized in order to achieve the desired result.
+
+    I and N must be a scalar or vector whose component type is floating-point.
+    eta must be a floating-point scalar.
+
+    Result Type and the types of I and N must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.GL.Refract %i, %n, %eta : f32, f32, f32 -> f32
+    %1 = spirv.GL.Refract %i, %n, %eta : vector<3xf32>, vector<3xf32>, f32 -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$i,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$n,
+    SPIRV_Float:$eta
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($i) `,` type($n) `,` type($eta) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
 // ----
 
 def SPIRV_GLStepOp : SPIRV_GLBinaryArithmeticOp<"Step", 48, SPIRV_Float, [AlwaysSpeculatable]> {

@@ -840,6 +840,62 @@ func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Refract
+//===----------------------------------------------------------------------===//
+
+func.func @refract_scalar(%arg0 : f32, %arg1 : f32, %arg2 : f32) {
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : f32, f32, f32 -> f32
+  // CHECK: %{{.+}} = spirv.GL.Refract %{{.+}}, %{{.+}}, %{{.+}} : f32, f32, f32 -> f32
+  return
+}
+
+func.func @refract_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : f32) {
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : vector<3xf32>, vector<3xf32>, f32 -> vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Refract %{{.+}}, %{{.+}}, %{{.+}} : vector<3xf32>, vector<3xf32>, f32 -> vector<3xf32>
+  return
+}
+
+func.func @refract_vector_different_eta_width(%arg0 : vector<3xf64>, %arg1 : vector<3xf64>, %arg2 : f32) {
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : vector<3xf64>, vector<3xf64>, f32 -> vector<3xf64>
+  // CHECK: %{{.+}} = spirv.GL.Refract %{{.+}}, %{{.+}}, %{{.+}} : vector<3xf64>, vector<3xf64>, f32 -> vector<3xf64>
+  return
+}
+
+// -----
+
+func.func @refract_invalid_type(%arg0 : i32, %arg1 : i32, %arg2 : f32) {
+  // expected-error @+1 {{'spirv.GL.Refract' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : i32, i32, f32 -> i32
+  return
+}
+
+// -----
+
+func.func @refract_invalid_eta_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) {
+  // expected-error @+1 {{'spirv.GL.Refract' op operand #2 must be 16/32/64-bit float}}
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : vector<3xf32>, vector<3xf32>, vector<3xf32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @refract_arg_mismatch(%arg0 : vector<3xf32>, %arg1 : vector<4xf32>, %arg2 : f32) {
+  // expected-error @+1 {{'spirv.GL.Refract' op failed to verify that all of {i, n, result} have same type}}
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : vector<3xf32>, vector<4xf32>, f32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @refract_result_mismatch(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : f32) {
+  // expected-error @+1 {{'spirv.GL.Refract' op failed to verify that all of {i, n, result} have same type}}
+  %0 = spirv.GL.Refract %arg0, %arg1, %arg2 : vector<3xf32>, vector<3xf32>, f32 -> vector<4xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Step
 //===----------------------------------------------------------------------===//
 

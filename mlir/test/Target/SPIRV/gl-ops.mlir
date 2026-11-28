@@ -175,6 +175,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int16, 
     %10 = spirv.GL.Length %arg0 : f32 -> f32
     // CHECK: {{%.*}} = spirv.GL.Length {{%.*}} : vector<3xf32> -> f32
     %11 = spirv.GL.Length %arg1 : vector<3xf32> -> f32
+    // CHECK: {{%.*}} = spirv.GL.Refract {{%.*}}, {{%.*}}, {{%.*}} : f32, f32, f32 -> f32
+    %12 = spirv.GL.Refract %arg0, %arg0, %arg0 : f32, f32, f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Refract {{%.*}}, {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xf32>, f32 -> vector<3xf32>
+    %13 = spirv.GL.Refract %arg1, %arg2, %arg0 : vector<3xf32>, vector<3xf32>, f32 -> vector<3xf32>
     spirv.Return
   }
 
