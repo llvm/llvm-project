@@ -301,3 +301,59 @@ define float @multi_use(float %x) {
   %r = fadd float %a, %b
   ret float %r
 }
+
+declare float @func(float)
+
+; nsz allows the sign of a zero input to be flipped.
+
+define float @nsz_call(float %x) {
+; CHECK-LABEL: define float @nsz_call(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @func(float [[X]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fadd float %x, 0.000000e+00
+  %r = call nsz float @func(float %z)
+  ret float %r
+}
+
+; For the min/max intrinsics nsz only makes the order of zeros with opposite
+; signs non-deterministic. If both operands have the same sign the result must
+; have it too: maximum(-0.0 + 0.0, +0.0) is +0.0, maximum(-0.0, +0.0) may be
+; -0.0.
+
+define float @nsz_maximum(float %x, float %y) {
+; CHECK-LABEL: define float @nsz_maximum(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[Z:%.*]] = fadd float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.maximum.f32(float [[Z]], float [[Y]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fadd float %x, 0.000000e+00
+  %r = call nsz float @llvm.maximum.f32(float %z, float %y)
+  ret float %r
+}
+
+define float @nsz_minnum(float %x, float %y) {
+; CHECK-LABEL: define float @nsz_minnum(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[Z:%.*]] = fadd float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.minnum.f32(float [[Y]], float [[Z]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fadd float %x, 0.000000e+00
+  %r = call nsz float @llvm.minnum.f32(float %y, float %z)
+  ret float %r
+}
+
+define float @nsz_vector_reduce_fmax(<4 x float> %x) {
+; CHECK-LABEL: define float @nsz_vector_reduce_fmax(
+; CHECK-SAME: <4 x float> [[X:%.*]]) {
+; CHECK-NEXT:    [[Z:%.*]] = fadd <4 x float> [[X]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[Z]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fadd <4 x float> %x, zeroinitializer
+  %r = call nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> %z)
+  ret float %r
+}

@@ -4708,8 +4708,28 @@ static Instruction *foldSelectAndOrPowerOfTwo(SelectInst &SI,
   return nullptr;
 }
 
+// Return true if \p I is a floating-point min/max intrinsic. Flipping the sign
+// of a zero operand of these can only flip the sign of a zero result.
+static bool isFPMinMaxIntrinsic(const Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Return true if no use can observe the sign of zero of the select result,
-// looking through phis, selects and the loop back edge to the select itself.
+// looking through phis, selects, FP min/max intrinsics and the loop back edge
+// to the select itself.
 static bool isSelectZeroSignInsignificant(SelectInst &SI) {
   // Bound the number of uses to look through to keep the compile time in
   // check.
@@ -4726,7 +4746,7 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
         continue;
       if (canIgnoreSignBitOfZero(U))
         continue;
-      if (isa<PHINode, SelectInst>(User)) {
+      if (isa<PHINode, SelectInst>(User) || isFPMinMaxIntrinsic(User)) {
         if (Visited.insert(User).second)
           Worklist.push_back(User);
         continue;
