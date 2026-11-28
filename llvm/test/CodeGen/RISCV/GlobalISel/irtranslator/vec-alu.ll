@@ -22,6 +22,16 @@ define void @sub_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
   ret void
 }
 
+define void @mul_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+  ; CHECK-LABEL: name: mul_nxv2i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $v8, $v9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   PseudoRET
+  %c = mul <vscale x 2 x i32> %a, %b
+  ret void
+}
+
 define void @and_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
   ; CHECK-LABEL: name: and_nxv2i32
   ; CHECK: bb.1 (%ir-block.0):
