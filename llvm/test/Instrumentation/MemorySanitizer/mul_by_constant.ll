@@ -115,3 +115,14 @@ define <2 x i64> @MulNonIntegerVectorConst(<2 x i64> %a) sanitize_memory {
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
 ; CHECK: [[B:%.*]] = mul <2 x i64> [[A]], <i64 1024, i64 1>
 ; CHECK: store <2 x i64> [[B]], {{.*}}@__msan_retval_tls
+
+; A vector constant expression, whose elements cannot be inspected.
+define <4 x i32> @MulVectorConstExpr(<4 x i32> %a) sanitize_memory {
+  %mul = mul <4 x i32> %a, bitcast (i128 ptrtoint (ptr @X to i128) to <4 x i32>)
+  ret <4 x i32> %mul
+}
+
+; CHECK-LABEL: @MulVectorConstExpr(
+; CHECK: [[A:%.*]] = load {{.*}} @__msan_param_tls
+; CHECK: [[B:%.*]] = mul <4 x i32> [[A]], splat (i32 1)
+; CHECK: store <4 x i32> [[B]], {{.*}}@__msan_retval_tls
