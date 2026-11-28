@@ -1273,7 +1273,7 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
 
 #endif
 
-#if SANITIZER_GLIBC && __GLIBC_PREREQ(2, 31)
+#if __GLIBC_PREREQ(2, 31)
 TSAN_INTERCEPTOR(int, pthread_clockjoin_np, void* th, void** ret,
                  __sanitizer_clockid_t clock, const struct timespec* abstime) {
   SCOPED_INTERCEPTOR_RAW(pthread_clockjoin_np, th, ret, clock, abstime);
@@ -3197,6 +3197,8 @@ void InitializeInterceptors() {
 #if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
+#endif
+#if __GLIBC_PREREQ(2, 31)
   TSAN_INTERCEPT(pthread_clockjoin_np);
 #endif
 #if SANITIZER_INTERCEPT_C11_THREADS
