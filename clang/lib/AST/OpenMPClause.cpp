@@ -1180,34 +1180,26 @@ OMPClauseMappableExprCommon::findAttachPtrExpr(
 
   // Only check for non-contiguous sections on target_update, since we can
   // assume array-sections are contiguous on maps on other constructs, even if
-  // we are not sure of it at compile-time, like for a[1:x][2]. For a shaped
-  // non-contiguous section, only look past the shaping expression for the
-  // shaped base pointer itself.
-  size_t StartIdx = 1;
-  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update) {
-    auto It = llvm::find_if(Components, [](const MappableComponent &Component) {
-      return isa<OMPArrayShapingExpr>(Component.getAssociatedExpression());
-    });
-    if (It == Components.end())
-      return {nullptr, std::nullopt};
-    StartIdx = std::distance(Components.begin(), It) + 1;
-  }
+  // we are not sure of it at compile-time, like for a[1:x][2].
+  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update)
+    return {nullptr, std::nullopt};
 
   // To find the attach base-pointer, we start with the second component,
   // stripping away one component at a time, until we reach a pointer Expr
   // (that is not a binary operator). The first such pointer should be the
   // attach base-pointer for the component list.
   for (auto [I, Component] : llvm::enumerate(Components)) {
-    if (I < StartIdx)
+    // Skip past the first component.
+    if (I == 0)
       continue;
 
     const Expr *CurExpr = Component.getAssociatedExpression();
     if (!CurExpr)
       break;
 
-    // If CurExpr is something like `p + 10` or `([n])p`, we need to ignore it,
-    // since we are looking for `p`.
-    if (isa<BinaryOperator, OMPArrayShapingExpr>(CurExpr))
+    // If CurExpr is something like `p + 10`, we need to ignore it, since
+    // we are looking for `p`.
+    if (isa<BinaryOperator>(CurExpr))
       continue;
 
     // Keep going until we reach an Expr of pointer type.

@@ -1,7 +1,16 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":apinotes-test" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("apinotes-test") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/lib/APINotes",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "APINotesTest.cpp" ]

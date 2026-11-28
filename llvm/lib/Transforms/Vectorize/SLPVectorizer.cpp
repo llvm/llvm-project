@@ -190,6 +190,8 @@ static std::pair<size_t, size_t> generateKeySubkey(
     function_ref<hash_code(size_t, LoadInst *)> LoadsSubkeyGenerator,
     bool AllowAlternate);
 
+struct SLPGraphView;
+
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
   class TreeEntry;
@@ -3793,6 +3795,8 @@ private:
   /// refers to its graph.
   class CandidateState {
     friend class BoUpSLP;
+    friend struct GraphTraits<SLPGraphView>;
+    friend struct DOTGraphTraits<SLPGraphView>;
 
     CandidateState() = default;
     CandidateState(const CandidateState &) = delete;
@@ -3800,7 +3804,6 @@ private:
     CandidateState(CandidateState &&) = delete;
     CandidateState &operator=(CandidateState &&) = delete;
 
-  private:
     /// Holds all of the tree entries. Declared first so entries are destroyed
     /// after the candidate state that refers to them.
     TreeEntry::VecTreeTy VectorizableTree;
@@ -3999,11 +4002,6 @@ private:
   // Destroy shared and scheduler references before candidate entries.
   CandidateState Candidate;
   SharedGraphState Shared;
-
-  /// Candidate views used by graph traits.
-  ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
-    return Candidate.VectorizableTree;
-  }
 
   /// Returns the external uses for graph visualization.
   ArrayRef<ExternalUser> getExternalUses() const { return Shared.ExternalUses; }
@@ -4622,8 +4620,9 @@ private:
   }
 #endif
 
-  friend struct GraphTraits<BoUpSLP *>;
-  friend struct DOTGraphTraits<BoUpSLP *>;
+  friend struct ::SLPGraphView;
+  friend struct GraphTraits<SLPGraphView>;
+  friend struct DOTGraphTraits<SLPGraphView>;
   friend class ::HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
@@ -5874,29 +5873,42 @@ template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   }
 };
 
-template <> struct llvm::GraphTraits<BoUpSLP *> {
+/// Helper struct for -view-slp-tree flow, contains state needed for displaying
+/// a single SLP tree.
+struct SLPGraphView {
+  SLPGraphView(const BoUpSLP &R, const BoUpSLP::CandidateState &Candidate)
+      : R(R), Candidate(Candidate) {}
+
+  const BoUpSLP &R;
+  const BoUpSLP::CandidateState &Candidate;
+};
+
+template <> struct llvm::GraphTraits<SLPGraphView> {
   using TreeEntry = BoUpSLP::TreeEntry;
 
   /// NodeRef has to be a pointer per the GraphWriter.
-  using NodeRef = TreeEntry *;
+  using NodeRef = const TreeEntry *;
 
-  using ContainerTy = BoUpSLP::TreeEntry::VecTreeTy;
+  using ContainerTy = const BoUpSLP::TreeEntry::VecTreeTy;
 
   /// Add the VectorizableTree to the index iterator to be able to return
   /// TreeEntry pointers.
   struct ChildIteratorType
       : public iterator_adaptor_base<
-            ChildIteratorType, SmallVector<BoUpSLP::EdgeInfo, 1>::iterator> {
+            ChildIteratorType,
+            SmallVector<BoUpSLP::EdgeInfo, 1>::const_iterator> {
     ContainerTy &VectorizableTree;
 
-    ChildIteratorType(SmallVector<BoUpSLP::EdgeInfo, 1>::iterator W,
+    ChildIteratorType(SmallVector<BoUpSLP::EdgeInfo, 1>::const_iterator W,
                       ContainerTy &VT)
         : ChildIteratorType::iterator_adaptor_base(W), VectorizableTree(VT) {}
 
     NodeRef operator*() { return I->UserTE; }
   };
 
-  static NodeRef getEntryNode(BoUpSLP &R) { return &R.getRootNode(); }
+  static NodeRef getEntryNode(const SLPGraphView &G) {
+    return &G.Candidate.getRootNode();
+  }
 
   static ChildIteratorType child_begin(NodeRef N) {
     return {&N->UserTreeIndex, N->Container};
@@ -5922,24 +5934,26 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
     bool operator!=(const nodes_iterator &N2) const { return N2.It != It; }
   };
 
-  static nodes_iterator nodes_begin(BoUpSLP *R) {
-    return nodes_iterator(R->getTreeEntries().begin());
+  static nodes_iterator nodes_begin(const SLPGraphView &G) {
+    return nodes_iterator(G.Candidate.VectorizableTree.begin());
   }
 
-  static nodes_iterator nodes_end(BoUpSLP *R) {
-    return nodes_iterator(R->getTreeEntries().end());
+  static nodes_iterator nodes_end(const SLPGraphView &G) {
+    return nodes_iterator(G.Candidate.VectorizableTree.end());
   }
 
-  static unsigned size(BoUpSLP *R) { return R->getTreeSize(); }
+  static unsigned size(const SLPGraphView &G) {
+    return G.Candidate.VectorizableTree.size();
+  }
 };
 
 template <>
-struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
+struct llvm::DOTGraphTraits<SLPGraphView> : public DefaultDOTGraphTraits {
   using TreeEntry = BoUpSLP::TreeEntry;
 
   DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
-  std::string getNodeLabel(const TreeEntry *Entry, const BoUpSLP *R) {
+  std::string getNodeLabel(const TreeEntry *Entry, const SLPGraphView &G) {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << Entry->Idx << ".\n";
@@ -5948,7 +5962,7 @@ struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(
-              R->getExternalUses(),
+              G.R.getExternalUses(),
               [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
         OS << " <extract>";
       OS << "\n";
@@ -5957,7 +5971,7 @@ struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeAttributes(const TreeEntry *Entry,
-                                       const BoUpSLP *) {
+                                       const SLPGraphView &) {
     if (Entry->isGather())
       return "color=red";
     if (Entry->State == TreeEntry::ScatterVectorize ||
@@ -9077,8 +9091,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 continue;
               if (LI->hasNUsesOrMore(UsesLimit))
                 return false;
-              for (User *U : LI->users()) {
-                if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
+              for (Instruction *U : LI->users()) {
+                if (isDeleted(U))
                   continue;
                 for (const TreeEntry *UTE : getTreeEntries(U)) {
                   for (int I : seq<int>(UTE->getNumOperands())) {
@@ -13732,8 +13746,8 @@ bool BoUpSLP::canVectorStoreInsertValue(const TreeEntry *E) const {
       return false;
 
     bool HasExternalUser = false;
-    for (User *U : IV->users()) {
-      if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
+    for (Instruction *U : IV->users()) {
+      if (isDeleted(U))
         continue;
       if (is_contained(E->Scalars, U))
         continue;
@@ -22010,8 +22024,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     OS << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
-  if (Opts.view_slp_tree)
-    ViewGraph(this, "SLP" + F->getName(), false, Str);
+  if (Opts.view_slp_tree) {
+    SLPGraphView G(*this, Candidate);
+    ViewGraph(G, "SLP" + F->getName(), false, Str);
+  }
 #endif
 
   return Cost;
@@ -27611,11 +27627,10 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
-      for (User *U : PrevVec->users()) {
-        if (U == UserI)
+      for (Instruction *UI : PrevVec->users()) {
+        if (UI == UserI)
           continue;
-        auto *UI = dyn_cast<Instruction>(U);
-        if (!UI || isa<PHINode>(UI) || UI->getParent() != InsertPt->getParent())
+        if (isa<PHINode>(UI) || UI->getParent() != InsertPt->getParent())
           continue;
         if (UI->comesBefore(InsertPt))
           InsertPt = UI;
@@ -29505,15 +29520,14 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     BundleMember->resetUnscheduledDeps();
     // Handle def-use chain dependencies.
     SmallDenseMap<Value *, unsigned> UserToNumOps;
-    for (User *U : BundleMember->getInst()->users()) {
+    for (Instruction *U : BundleMember->getInst()->users()) {
       if (isa<PHINode>(U))
         continue;
       if (ScheduleData *UseSD = getScheduleData(U)) {
         // The operand is a copyable element - skip.
         if (!ScheduleCopyableDataMap.empty() &&
-            areAllOperandsReplacedByCopyableData(cast<Instruction>(U),
-                                                 BundleMember->getInst(), *SLP,
-                                                 ++UserToNumOps[U]))
+            areAllOperandsReplacedByCopyableData(U, BundleMember->getInst(),
+                                                 *SLP, ++UserToNumOps[U]))
           continue;
         unsigned ExtraDeps = 1;
         // Increment twice, since the operand was expanded in binop.
@@ -30979,10 +30993,9 @@ void BoUpSLP::computeMinimumValueSizes() {
       SmallPtrSet<Instruction *, 8> Visited;
       int NumUsers = 0;
       while (!Worklist.empty()) {
-        for (User *U : Worklist.pop_back_val()->users()) {
+        for (Instruction *UI : Worklist.pop_back_val()->users()) {
           if (++NumUsers > UsesLimit)
             return true;
-          auto *UI = cast<Instruction>(U);
           if (Candidate.UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
               !Visited.insert(UI).second || IsDemotedUser(UI))
@@ -31390,13 +31403,13 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
         return true;
       unsigned Outside = 0;
       bool HasNonBenign = false;
-      for (User *U : I->users()) {
+      for (Instruction *U : I->users()) {
         if (Stores.contains(U))
           continue;
         ++Outside;
         if (Outside > 2)
           return true;
-        if (!IsBenignOutsideUser(cast<Instruction>(U)))
+        if (!IsBenignOutsideUser(U))
           HasNonBenign = true;
         if (Outside == 2 && HasNonBenign)
           return true;
@@ -35844,8 +35857,7 @@ private:
               continue;
             }
             InstructionCost ScalarCost = 0;
-            for (User *U : RdxVal->users()) {
-              auto *RdxOp = cast<Instruction>(U);
+            for (Instruction *RdxOp : RdxVal->users()) {
               // The loop-carried root is not removed: the horizontal form
               // folds the accumulator phi back through it, the accumulator
               // form replaces it with the lane-wise operation, costed by

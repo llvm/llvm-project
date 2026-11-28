@@ -1155,8 +1155,8 @@ private:
       // broadcast their values to them.
       for (Instruction &I : *SeqStartBB) {
         SmallPtrSet<Instruction *, 4> OutsideUsers;
-        for (User *Usr : I.users()) {
-          Instruction &UsrI = *cast<Instruction>(Usr);
+        for (Instruction *Usr : I.users()) {
+          Instruction &UsrI = *Usr;
           // Ignore outputs to LT intrinsics, code extraction for the merged
           // parallel region will fix them.
           if (UsrI.isLifetimeStartOrEnd())

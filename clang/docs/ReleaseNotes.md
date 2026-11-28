@@ -615,6 +615,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
 
+- `-Wuninitialized` no longer warns about an uninitialized variable passed to
+  `__builtin_classify_type`, `__builtin_constant_p`,
+  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
+  none of which depends on its arguments' values.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -1708,6 +1713,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- The analyzer is faster and uses less memory. On a random sample of 20 LLVM
+  and Clang source files, analyzed with the default checkers of
+  `clang --analyze` on an Apple M2 Max, analysis takes 25% less time and 7%
+  less peak memory on average (geometric mean; 9-40% less time and 2-14% less
+  memory per file), with unchanged results. (#GH244626, #GH244655, #GH244659,
+  #GH244748, #GH244771, #GH244841, #GH244843, #GH244845, #GH244848, #GH244849,
+  #GH244863, #GH244865, #GH244866, #GH245070, #GH245071, #GH245166, #GH245167,
+  #GH245630, #GH245674, #GH245795, #GH245798, #GH246072, #GH246313, #GH246433,
+  #GH246441, #GH246446, #GH246458)
+
 - The user can opt in to analyze functions coming from files participating in
   unity or jumbo builds as analysis entry points with
   `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
@@ -1800,8 +1815,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   this release.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
-- Array shaping expressions can now be the base of array sections in the `to`
-  and `from` clauses of `target update`. (#GH136294)
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.

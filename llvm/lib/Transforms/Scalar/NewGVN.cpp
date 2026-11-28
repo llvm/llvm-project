@@ -74,6 +74,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1591,7 +1592,8 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
     AdditionallyUsedValue = CmpOp1;
   }
 
-  if (Predicate == CmpInst::ICMP_EQ)
+  if (Predicate == CmpInst::ICMP_EQ &&
+      canReplacePointersIfEqual(I, FirstOp, DL))
     return ExprResult::some(createVariableOrConstant(FirstOp),
                             AdditionallyUsedValue, PI);
 
@@ -2572,9 +2574,8 @@ void NewGVN::addPhiOfOps(PHINode *Op, BasicBlock *BB,
   RealToTemp[ExistingValue] = Op;
   // Add all users to phi node use, as they are now uses of the phi of ops phis
   // and may themselves be phi of ops.
-  for (auto *U : ExistingValue->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      PHINodeUses.insert(UI);
+  for (Instruction *UI : ExistingValue->users())
+    PHINodeUses.insert(UI);
 }
 
 static bool okayForPHIOfOps(const ScalarOptions &Opts, const Instruction *I) {
@@ -2913,10 +2914,9 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
     // all the operands already.
     for (auto &I : *BB) {
       if (isa<PHINode>(&I))
-        for (auto *U : I.users())
-          if (auto *UInst = dyn_cast<Instruction>(U))
-            if (InstrToDFSNum(UInst) != 0 && okayForPHIOfOps(Opts, UInst))
-              PHINodeUses.insert(UInst);
+        for (Instruction *UInst : I.users())
+          if (InstrToDFSNum(UInst) != 0 && okayForPHIOfOps(Opts, UInst))
+            PHINodeUses.insert(UInst);
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.
       if (I.isTerminator() && I.getType()->isVoidTy())

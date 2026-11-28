@@ -80,6 +80,8 @@ public:
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
 class SymbolConjured final : public SymbolData {
+  // May be invalid when a symbol is conjured while evaluating e.g. the
+  // terminator of the block.
   ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
@@ -95,8 +97,18 @@ class SymbolConjured final : public SymbolData {
     assert(isValidTypeForSymbol(t));
   }
 
+  bool hasValidElem() const {
+    const CFGBlock *P = Elem.getParent();
+    if (P && Elem.getIndexInBlock() < P->size())
+      return true;
+    assert(Elem.getIndexInBlock() == UINT_MAX && "No other sentinel allowed!");
+    return false;
+  }
+
 public:
-  ConstCFGElementRef getCFGElementRef() const { return Elem; }
+  std::optional<ConstCFGElementRef> getCFGElementRef() const {
+    return hasValidElem() ? std::optional(Elem) : std::nullopt;
+  }
 
   // It might return null.
   const Stmt *getStmt() const;

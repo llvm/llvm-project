@@ -355,7 +355,7 @@ private:
   // record Type.
   llvm::DenseMap<QualType, std::unique_ptr<FieldSet>> CachedModeledFields;
 
-  std::unique_ptr<Logger> LogOwner; // If created via flags.
+  std::unique_ptr<Logger> LogOwner; // If created from CLANG_DATAFLOW_LOG.
 
   std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
 

@@ -370,7 +370,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // stay the same within a single call to dispatchWorkItem.
   resetCurrStackFrameAndBlock();
   setCurrStackFrameAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
-  SaveAndRestore CBISave(currStmtIdx, CalleeSF->getIndex());
+  SaveAndRestore CalleeStmtIDSave{CurrStmtIdx,
+                                  std::optional(CalleeSF->getIndex())};
 
   for (ExplodedNode *N : CleanedNodes) {
     // Step 4: Generate the CallExitEnd node.
@@ -533,7 +534,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
   const StackFrame *CalleeSF = CalleeADC->getStackFrame(
       CallerSF, BlockInvocationData, CallE, getCurrBlock(),
-      getNumVisitedCurrent(), currStmtIdx);
+      getNumVisitedCurrent(), *CurrStmtIdx);
 
   CallEnter Loc(CallE, CalleeSF, CallerSF);
 

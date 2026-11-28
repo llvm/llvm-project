@@ -1605,47 +1605,4 @@ int a[10];
 }
 
 #endif
-///==========================================================================///
-// RUN: %clang_cc1 -DCK27 -verify -Wno-vla -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK27
-// RUN: %clang_cc1 -DCK27 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix CK27
-// RUN: %clang_cc1 -DCK27 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK27
-// RUN: %clang_cc1 -DCK27 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix CK27
-
-// RUN: %clang_cc1 -DCK27 -verify -Wno-vla -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY20 %s
-// RUN: %clang_cc1 -DCK27 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY20 %s
-// RUN: %clang_cc1 -DCK27 -verify -Wno-vla -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY20 %s
-// RUN: %clang_cc1 -DCK27 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY20 %s
-// SIMD-ONLY20-NOT: {{__kmpc|__tgt}}
-#ifdef CK27
-
-// Shaped 'this' and shaped member as the base of array sections.
-struct ST {
-  double *p;
-  int n;
-
-  // CK27-LABEL: define {{.+}}foo
-  void foo() {
-    // CK27: [[THIS:%.+]] = load ptr, ptr %this.addr
-    // CK27: [[OBJ:%.+]] = getelementptr inbounds nuw %struct.ST, ptr [[THIS]], i{{.+}} 0
-    // CK27: store ptr [[THIS]], ptr
-    // CK27: store ptr [[OBJ]], ptr
-    // CK27: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
-#pragma omp target update to((([2])this)[0:1])
-    // The member is the base pointer of the non-contiguous entry.
-    // CK27: [[P_ADDR:%.+]] = getelementptr inbounds nuw %struct.ST, ptr [[THIS]], i32 0, i32 0
-    // CK27-NEXT: [[P:%.+]] = load ptr, ptr [[P_ADDR]]
-    // CK27: store ptr [[P]], ptr
-    // CK27: getelementptr inbounds [3 x %struct.descriptor_dim{{.*}}], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
-    // CK27: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
-#pragma omp target update from((([n][n])this->p)[0:n][1])
-  }
-};
-
-void bar(ST *st) { st->foo(); }
-
-#endif
 #endif

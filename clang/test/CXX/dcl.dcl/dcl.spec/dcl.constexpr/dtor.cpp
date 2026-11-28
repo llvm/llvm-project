@@ -41,7 +41,11 @@ namespace contents {
   struct E {
     constexpr ~E() {
       return;
+#ifdef __MVS__
+      thread_local int e; // expected-error {{thread-local storage is not supported for the current target}}
+#else
       thread_local int e; // cxx2a-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
+#endif
     }
   };
   struct F {

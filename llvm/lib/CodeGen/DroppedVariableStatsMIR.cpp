@@ -12,7 +12,6 @@
 ///===---------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DroppedVariableStatsMIR.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 

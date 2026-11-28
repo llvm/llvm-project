@@ -364,10 +364,9 @@ bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
     return false;
 
   // No uses outside of the loop
-  for (User *U : AuxIndVar.users())
-    if (const Instruction *I = dyn_cast<Instruction>(U))
-      if (!contains(I))
-        return false;
+  for (Instruction *I : AuxIndVar.users())
+    if (!contains(I))
+      return false;
 
   InductionDescriptor IndDesc;
   if (!InductionDescriptor::isInductionPHI(&AuxIndVar, this, &SE, IndDesc))

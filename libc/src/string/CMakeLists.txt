@@ -103,6 +103,11 @@ add_entrypoint_object(
     stpncpy.h
   DEPENDS
     .memory_utils.inline_bzero
+    .memory_utils.inline_memcpy
+    .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

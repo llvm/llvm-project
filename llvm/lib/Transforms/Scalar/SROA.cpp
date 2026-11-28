@@ -1352,9 +1352,9 @@ private:
         return I;
       }
 
-      for (User *U : I->users())
-        if (Visited.insert(cast<Instruction>(U)).second)
-          Uses.push_back(std::make_pair(I, cast<Instruction>(U)));
+      for (Instruction *U : I->users())
+        if (Visited.insert(U).second)
+          Uses.push_back(std::make_pair(I, U));
     } while (!Uses.empty());
 
     return nullptr;
@@ -4253,9 +4253,9 @@ private:
       assert(isa<BitCastInst>(I) || isa<AddrSpaceCastInst>(I) ||
              isa<PHINode>(I) || isa<SelectInst>(I) ||
              isa<GetElementPtrInst>(I));
-      for (User *U : I->users())
-        if (Visited.insert(cast<Instruction>(U)).second)
-          Uses.push_back(cast<Instruction>(U));
+      for (Instruction *U : I->users())
+        if (Visited.insert(U).second)
+          Uses.push_back(U);
     } while (!Uses.empty());
   }
 

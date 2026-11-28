@@ -707,12 +707,10 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   // shuffled.
   auto getAliveChildren = [&AliveInstsLookup](Instruction *I) {
     SmallSetVector<size_t, 8> Children;
-    for (Value *U : I->users()) {
-      if (Instruction *P = dyn_cast<Instruction>(U)) {
-        auto It = AliveInstsLookup.find(P);
-        if (It != AliveInstsLookup.end())
-          Children.insert(It->second);
-      }
+    for (Instruction *P : I->users()) {
+      auto It = AliveInstsLookup.find(P);
+      if (It != AliveInstsLookup.end())
+        Children.insert(It->second);
     }
     return Children;
   };

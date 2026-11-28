@@ -742,6 +742,14 @@ void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
 }
 
 LLVMErrorRef
+LLVMOrcThreadSafeContextWithContextDo(LLVMOrcThreadSafeContextRef TSCtx,
+                                      LLVMOrcGenericContextOperationFunction F,
+                                      void *Ctx) {
+  return wrap(unwrap(TSCtx)->withContextDo(
+      [&](LLVMContext *C) { return unwrap(F(Ctx, wrap(C))); }));
+}
+
+LLVMErrorRef
 LLVMOrcThreadSafeModuleWithModuleDo(LLVMOrcThreadSafeModuleRef TSM,
                                     LLVMOrcGenericIRModuleOperationFunction F,
                                     void *Ctx) {

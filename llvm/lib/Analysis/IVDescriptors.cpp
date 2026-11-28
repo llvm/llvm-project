@@ -694,9 +694,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     // nodes once we get to them.
     SmallVector<Instruction *, 8> NonPHIs;
     SmallVector<Instruction *, 8> PHIs;
-    for (User *U : Cur->users()) {
-      Instruction *UI = cast<Instruction>(U);
-
+    for (Instruction *UI : Cur->users()) {
       // If the user is a call to llvm.fmuladd then the instruction can only be
       // the final operand.
       if (isFMulAddIntrinsic(UI))
@@ -1247,8 +1245,8 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // Try to recursively sink instructions and their users after Previous.
   while (!WorkList.empty()) {
     Instruction *Current = WorkList.pop_back_val();
-    for (User *User : Current->users()) {
-      if (!TryToPushSinkCandidate(cast<Instruction>(User)))
+    for (Instruction *User : Current->users()) {
+      if (!TryToPushSinkCandidate(User))
         return false;
     }
   }
@@ -1326,8 +1324,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     ExpectedUses = 2;
 
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
-    for (auto *User : Cur->users()) {
-      Instruction *UI = cast<Instruction>(User);
+    for (Instruction *UI : Cur->users()) {
       if (isa<PHINode>(UI))
         continue;
       if (IsMinMax) {
@@ -1758,8 +1755,7 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
 
   // Ensure the only users of the backedge PHI are outside the loop or the
   // header PHI (PN).
-  for (User *U : BackedgePHI->users()) {
-    auto *UI = cast<Instruction>(U);
+  for (Instruction *UI : BackedgePHI->users()) {
     if (UI != PN && L->contains(UI))
       return false;
   }

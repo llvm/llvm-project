@@ -1311,19 +1311,19 @@ define void @deinterleave5_v16bf16(ptr %src, ptr %dst) {
 define void @interleave5_v2i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #32]
-; CHECK-NEXT:    ldp d1, d2, [x0]
-; CHECK-NEXT:    mov v3.16b, v0.16b
-; CHECK-NEXT:    mov v3.s[1], v1.s[1]
-; CHECK-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-NEXT:    mov v3.s[2], v2.s[1]
-; CHECK-NEXT:    ldp d4, d2, [x0, #16]
-; CHECK-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-NEXT:    trn2 v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    mov v3.s[3], v4.s[1]
-; CHECK-NEXT:    mov v1.s[3], v2.s[0]
+; CHECK-NEXT:    ldr d4, [x0, #32]
+; CHECK-NEXT:    ldp d0, d1, [x0]
+; CHECK-NEXT:    ldp d2, d3, [x0, #16]
+; CHECK-NEXT:    mov v5.16b, v4.16b
+; CHECK-NEXT:    zip1 v7.2s, v0.2s, v1.2s
+; CHECK-NEXT:    zip1 v6.2s, v2.2s, v3.2s
+; CHECK-NEXT:    zip2 v1.2s, v1.2s, v2.2s
+; CHECK-NEXT:    mov v5.s[1], v0.s[1]
+; CHECK-NEXT:    zip2 v0.2s, v3.2s, v4.2s
+; CHECK-NEXT:    mov v7.d[1], v6.d[0]
+; CHECK-NEXT:    mov v5.d[1], v1.d[0]
 ; CHECK-NEXT:    str d0, [x1, #32]
-; CHECK-NEXT:    stp q1, q3, [x1]
+; CHECK-NEXT:    stp q7, q5, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 8
   %p2 = getelementptr i8, ptr %src, i64 16
@@ -1342,20 +1342,20 @@ define void @interleave5_v2i32(ptr %src, ptr %dst) {
 define void @deinterleave5_v2i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldr d6, [x0, #32]
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    dup v3.2s, v0.s[1]
-; CHECK-NEXT:    mov d4, v0.d[1]
-; CHECK-NEXT:    dup v5.2s, v0.s[3]
-; CHECK-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-NEXT:    mov v1.s[1], v6.s[1]
-; CHECK-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-NEXT:    mov v4.s[1], v2.s[1]
-; CHECK-NEXT:    mov v5.s[1], v6.s[0]
-; CHECK-NEXT:    stp d0, d3, [x1]
-; CHECK-NEXT:    stp d4, d5, [x1, #16]
-; CHECK-NEXT:    str d1, [x1, #32]
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ldr x8, [x0, #32]
+; CHECK-NEXT:    fmov d4, x8
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    ext v4.16b, v1.16b, v4.16b, #12
+; CHECK-NEXT:    ext v5.8b, v1.8b, v2.8b, #4
+; CHECK-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-NEXT:    mov v3.s[1], v2.s[1]
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    stp d1, d5, [x1]
+; CHECK-NEXT:    stp d3, d4, [x1, #16]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %wide = load <10 x i32>, ptr %src, align 8
   %parts = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave5.v10i32(<10 x i32> %wide)
@@ -1653,19 +1653,17 @@ define void @deinterleave5_v1i64(ptr %src, ptr %dst) {
 define void @interleave5_v2i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x0, #16]
-; CHECK-NEXT:    ldr q5, [x0]
-; CHECK-NEXT:    ldp q1, q6, [x0, #48]
-; CHECK-NEXT:    dup v2.2d, v0.d[1]
-; CHECK-NEXT:    dup v4.2d, v1.d[1]
-; CHECK-NEXT:    mov v2.d[1], v3.d[1]
-; CHECK-NEXT:    mov v3.d[1], v1.d[0]
-; CHECK-NEXT:    mov v4.d[1], v6.d[1]
-; CHECK-NEXT:    mov v6.d[1], v5.d[1]
-; CHECK-NEXT:    mov v5.d[1], v0.d[0]
-; CHECK-NEXT:    stp q5, q3, [x1]
-; CHECK-NEXT:    stp q2, q4, [x1, #48]
-; CHECK-NEXT:    str q6, [x1, #32]
+; CHECK-NEXT:    ldp q1, q0, [x0, #48]
+; CHECK-NEXT:    ldr q4, [x0]
+; CHECK-NEXT:    ldp q3, q2, [x0, #16]
+; CHECK-NEXT:    zip2 v5.2d, v1.2d, v0.2d
+; CHECK-NEXT:    mov v0.d[1], v4.d[1]
+; CHECK-NEXT:    zip2 v6.2d, v3.2d, v2.2d
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v1.2d
+; CHECK-NEXT:    zip1 v2.2d, v4.2d, v3.2d
+; CHECK-NEXT:    stp q1, q0, [x1, #16]
+; CHECK-NEXT:    stp q6, q5, [x1, #48]
+; CHECK-NEXT:    str q2, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 16
   %p2 = getelementptr i8, ptr %src, i64 32
@@ -1684,19 +1682,17 @@ define void @interleave5_v2i64(ptr %src, ptr %dst) {
 define void @deinterleave5_v2i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldr q6, [x0, #64]
-; CHECK-NEXT:    ldp q3, q4, [x0, #32]
-; CHECK-NEXT:    dup v2.2d, v0.d[1]
-; CHECK-NEXT:    dup v5.2d, v1.d[1]
-; CHECK-NEXT:    mov v0.d[1], v3.d[1]
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    ldr q4, [x0, #64]
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    ext v5.16b, v2.16b, v0.16b, #8
+; CHECK-NEXT:    mov v2.d[1], v1.d[1]
+; CHECK-NEXT:    ext v6.16b, v3.16b, v4.16b, #8
+; CHECK-NEXT:    mov v3.d[1], v0.d[1]
 ; CHECK-NEXT:    mov v1.d[1], v4.d[1]
-; CHECK-NEXT:    mov v3.d[1], v6.d[1]
-; CHECK-NEXT:    mov v2.d[1], v4.d[0]
-; CHECK-NEXT:    mov v5.d[1], v6.d[0]
-; CHECK-NEXT:    stp q0, q2, [x1]
-; CHECK-NEXT:    stp q1, q5, [x1, #32]
-; CHECK-NEXT:    str q3, [x1, #64]
+; CHECK-NEXT:    stp q2, q5, [x1]
+; CHECK-NEXT:    stp q3, q6, [x1, #32]
+; CHECK-NEXT:    str q1, [x1, #64]
 ; CHECK-NEXT:    ret
   %wide = load <10 x i64>, ptr %src, align 16
   %parts = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave5.v10i64(<10 x i64> %wide)
@@ -1720,30 +1716,27 @@ define void @deinterleave5_v2i64(ptr %src, ptr %dst) {
 define void @interleave5_v4i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q5, [x0, #96]
-; CHECK-NEXT:    ldp q3, q4, [x0, #32]
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    dup v6.2d, v0.d[1]
-; CHECK-NEXT:    ldp q7, q16, [x0, #64]
-; CHECK-NEXT:    dup v17.2d, v3.d[1]
-; CHECK-NEXT:    ldp q18, q19, [x0, #128]
-; CHECK-NEXT:    dup v20.2d, v5.d[1]
-; CHECK-NEXT:    dup v21.2d, v4.d[1]
-; CHECK-NEXT:    mov v6.d[1], v18.d[1]
-; CHECK-NEXT:    mov v18.d[1], v1.d[1]
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v17.d[1], v7.d[1]
-; CHECK-NEXT:    mov v7.d[1], v0.d[0]
-; CHECK-NEXT:    mov v21.d[1], v16.d[1]
-; CHECK-NEXT:    mov v16.d[1], v5.d[0]
-; CHECK-NEXT:    mov v20.d[1], v19.d[1]
+; CHECK-NEXT:    ldp q2, q0, [x0, #16]
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldp q5, q3, [x0, #48]
+; CHECK-NEXT:    ldr q19, [x0, #144]
+; CHECK-NEXT:    ldp q16, q4, [x0, #80]
+; CHECK-NEXT:    zip1 v7.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ldp q17, q6, [x0, #112]
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v18.2d, v3.2d, v4.2d
+; CHECK-NEXT:    zip2 v4.2d, v4.2d, v6.2d
+; CHECK-NEXT:    mov v6.d[1], v1.d[1]
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip1 v3.2d, v16.2d, v17.2d
+; CHECK-NEXT:    stp q7, q18, [x1]
+; CHECK-NEXT:    stp q6, q0, [x1, #32]
+; CHECK-NEXT:    zip2 v6.2d, v17.2d, v19.2d
 ; CHECK-NEXT:    mov v19.d[1], v2.d[1]
-; CHECK-NEXT:    mov v2.d[1], v4.d[0]
-; CHECK-NEXT:    stp q1, q7, [x1]
-; CHECK-NEXT:    stp q18, q17, [x1, #32]
-; CHECK-NEXT:    stp q6, q2, [x1, #64]
-; CHECK-NEXT:    stp q16, q19, [x1, #96]
-; CHECK-NEXT:    stp q21, q20, [x1, #128]
+; CHECK-NEXT:    zip2 v0.2d, v5.2d, v16.2d
+; CHECK-NEXT:    stp q4, q1, [x1, #64]
+; CHECK-NEXT:    stp q3, q19, [x1, #96]
+; CHECK-NEXT:    stp q0, q6, [x1, #128]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 32
   %p2 = getelementptr i8, ptr %src, i64 64
@@ -1762,32 +1755,27 @@ define void @interleave5_v4i64(ptr %src, ptr %dst) {
 define void @deinterleave5_v4i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q6, [x0]
-; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldp q5, q0, [x0, #112]
+; CHECK-NEXT:    ldr q17, [x0, #144]
 ; CHECK-NEXT:    ldp q2, q1, [x0, #32]
-; CHECK-NEXT:    ldr q20, [x0, #144]
-; CHECK-NEXT:    ldp q3, q4, [x0, #80]
-; CHECK-NEXT:    dup v7.2d, v0.d[1]
-; CHECK-NEXT:    dup v18.2d, v6.d[1]
-; CHECK-NEXT:    ldp q5, q19, [x0, #112]
-; CHECK-NEXT:    mov v6.d[1], v1.d[1]
-; CHECK-NEXT:    dup v17.2d, v3.d[1]
-; CHECK-NEXT:    mov v0.d[1], v2.d[1]
-; CHECK-NEXT:    mov v2.d[1], v16.d[1]
-; CHECK-NEXT:    mov v7.d[1], v1.d[0]
-; CHECK-NEXT:    dup v1.2d, v4.d[1]
-; CHECK-NEXT:    mov v18.d[1], v16.d[0]
-; CHECK-NEXT:    mov v3.d[1], v5.d[1]
-; CHECK-NEXT:    mov v4.d[1], v19.d[1]
-; CHECK-NEXT:    mov v5.d[1], v20.d[1]
-; CHECK-NEXT:    mov v17.d[1], v19.d[0]
-; CHECK-NEXT:    mov v1.d[1], v20.d[0]
-; CHECK-NEXT:    str q7, [x1, #32]
-; CHECK-NEXT:    stp q0, q3, [x1]
-; CHECK-NEXT:    stp q17, q6, [x1, #48]
-; CHECK-NEXT:    stp q4, q18, [x1, #80]
-; CHECK-NEXT:    stp q1, q2, [x1, #112]
-; CHECK-NEXT:    str q5, [x1, #144]
+; CHECK-NEXT:    ldr q19, [x0, #96]
+; CHECK-NEXT:    ldp q3, q4, [x0]
+; CHECK-NEXT:    ldp q7, q6, [x0, #64]
+; CHECK-NEXT:    ext v16.16b, v3.16b, v1.16b, #8
+; CHECK-NEXT:    mov v3.d[1], v2.d[1]
+; CHECK-NEXT:    ext v18.16b, v6.16b, v0.16b, #8
+; CHECK-NEXT:    mov v6.d[1], v5.d[1]
+; CHECK-NEXT:    ext v20.16b, v4.16b, v7.16b, #8
+; CHECK-NEXT:    mov v4.d[1], v1.d[1]
+; CHECK-NEXT:    ext v1.16b, v19.16b, v17.16b, #8
+; CHECK-NEXT:    mov v19.d[1], v0.d[1]
+; CHECK-NEXT:    mov v2.d[1], v7.d[1]
+; CHECK-NEXT:    mov v5.d[1], v17.d[1]
+; CHECK-NEXT:    stp q3, q6, [x1]
+; CHECK-NEXT:    stp q16, q18, [x1, #32]
+; CHECK-NEXT:    stp q4, q19, [x1, #64]
+; CHECK-NEXT:    stp q20, q1, [x1, #96]
+; CHECK-NEXT:    stp q2, q5, [x1, #128]
 ; CHECK-NEXT:    ret
   %wide = load <20 x i64>, ptr %src, align 32
   %parts = call { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } @llvm.vector.deinterleave5.v20i64(<20 x i64> %wide)

@@ -53,8 +53,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
   // Initialize the worklist with eligible direct users.
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 16> WorkList;
-  for (User *JU : I->users()) {
-    auto *J = cast<Instruction>(JU);
+  for (Instruction *J : I->users()) {
     if (J->getType()->isIntOrIntVectorTy()) {
       Visited.insert(J);
       WorkList.push_back(J);
@@ -85,8 +84,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     if (DB.getDemandedBits(J).isAllOnes())
       continue;
 
-    for (User *KU : J->users()) {
-      auto *K = cast<Instruction>(KU);
+    for (Instruction *K : J->users()) {
       if (Visited.insert(K).second && K->getType()->isIntOrIntVectorTy())
         WorkList.push_back(K);
     }

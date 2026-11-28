@@ -160,9 +160,8 @@ public:
 
     // Check users for profitable conditions (across block user which can
     // natively handle the illegal vector).
-    for (User *V : II->users())
-      if (auto *UseInst = dyn_cast<Instruction>(V))
-        UserList.push_back(UseInst);
+    for (Instruction *UseInst : II->users())
+      UserList.push_back(UseInst);
 
     auto IsLookThru = [](Instruction *II) {
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
@@ -186,9 +185,8 @@ public:
         return true;
 
       if (IsLookThru(CII))
-        for (User *V : CII->users())
-          if (auto *UseInst = dyn_cast<Instruction>(V))
-            UserList.push_back(UseInst);
+        for (Instruction *UseInst : CII->users())
+          UserList.push_back(UseInst);
     }
     return false;
   }
@@ -354,15 +352,14 @@ bool LiveRegOptimizer::optimizeLiveType(
     }
 
     // Collect all relevant uses.
-    for (User *V : II->users()) {
+    for (Instruction *UseInst : II->users()) {
       // Repeat the collection process for problematic PHI nodes.
-      if (PHINode *OpPhi = dyn_cast<PHINode>(V)) {
+      if (PHINode *OpPhi = dyn_cast<PHINode>(UseInst)) {
         if (!PhiNodes.count(OpPhi) && !Visited.count(OpPhi))
           Worklist.push_back(OpPhi);
         continue;
       }
 
-      Instruction *UseInst = cast<Instruction>(V);
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
