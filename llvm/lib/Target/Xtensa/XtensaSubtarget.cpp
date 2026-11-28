@@ -41,7 +41,7 @@ XtensaSubtarget::XtensaSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     : XtensaGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       FrameLowering(*this) {
-  TSInfo = std::make_unique<SelectionDAGTargetInfo>();
+  TSInfo = std::make_unique<XtensaSelectionDAGInfo>();
 }
 
 XtensaSubtarget::~XtensaSubtarget() = default;
