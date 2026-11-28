@@ -161,6 +161,44 @@ define half @test_ui_ui_i8_sub_C_fail_overflow(i8 noundef %x_in) {
   ret half %r
 }
 
+; This is based on code from FFmpeg's AMR-WB decoder.
+define float @test_C_sub_ui_i32(i32 %x_in) {
+; CHECK-LABEL: @test_C_sub_ui_i32(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_IN:%.*]], 65535
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 32768, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = and i32 %x_in, 65535
+  %xf = uitofp i32 %x to float
+  %r = fsub nsz float 32768.0, %xf
+  ret float %r
+}
+
+define float @test_C_sub_ui_i32_fail_no_repr(i32 %x_in) {
+; CHECK-LABEL: @test_C_sub_ui_i32_fail_no_repr(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_IN:%.*]], 65535
+; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i32 [[X]] to float
+; CHECK-NEXT:    [[R:%.*]] = fsub float 3.276850e+04, [[XF]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = and i32 %x_in, 65535
+  %xf = uitofp i32 %x to float
+  %r = fsub float 32768.5, %xf
+  ret float %r
+}
+
+define half @test_C_sub_si_i8_fail_overflow(i8 %x) {
+; CHECK-LABEL: @test_C_sub_si_i8_fail_overflow(
+; CHECK-NEXT:    [[XF:%.*]] = sitofp i8 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fsub half 1.270000e+02, [[XF]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %xf = sitofp i8 %x to half
+  %r = fsub half 127.0, %xf
+  ret half %r
+}
+
 define half @test_si_si_i8_sub(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-LABEL: @test_si_si_i8_sub(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 63
