@@ -26,7 +26,7 @@
   define amdgpu_kernel void @mfma_waw_xdl_8pass_ds_raw_between() #0 { ret void }
   define amdgpu_kernel void @mfma_waw_xdl_8pass_valu_raw_between() #0 { ret void }
 
-  attributes #0 = { nounwind "amdgpu-agpr-alloc"="0" "frame-pointer"="none" }
+  attributes #0 = { nounwind "amdgpu-agpr-alloc"="0,0" "frame-pointer"="none" }
 ...
 
 ---
