@@ -45,6 +45,12 @@
   define amdgpu_ps void @kill_f32_cond_imm_vcc_regunit() {
     ret void
   }
+  define amdgpu_cs void @strict_def_in_tuple_with_non_strict_def() {
+    ret void
+  }
+  define amdgpu_cs void @strict_value_with_implicit_def() {
+    ret void
+  }
 ...
 
 ---
@@ -604,4 +610,81 @@ body:             |
   bb.1:
     $exec = S_AND_B64 $exec, %1, implicit-def $scc
     S_ENDPGM 0
+...
+
+---
+name:            strict_def_in_tuple_with_non_strict_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: strict_def_in_tuple_with_non_strict_def
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    ; CHECK-NEXT: [[DS_BPERMUTE_B32_:%[0-9]+]]:vgpr_32 = DS_BPERMUTE_B32 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY]], 0, implicit $exec
+    ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
+    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0:vreg_64 = COPY [[V_MBCNT_LO_U32_B32_e64_]]
+    ; CHECK-NEXT: early-clobber [[COPY1]].sub1:vreg_64 = V_MOV_B32_e32 [[DS_BPERMUTE_B32_]], implicit $exec
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[COPY1]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0_vgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    undef %1.sub0:vreg_64 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    %2:vgpr_32 = DS_BPERMUTE_B32 %1.sub0, %0, 0, implicit $exec
+    early-clobber %1.sub1:vreg_64 = STRICT_WWM %2, implicit $exec
+    $vgpr0_vgpr1 = COPY %1
+    SI_RETURN_TO_EPILOG $vgpr0_vgpr1
+...
+
+---
+name:            strict_value_with_implicit_def
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: strict_value_with_implicit_def
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+  ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM1:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[DS_BPERMUTE_B32_:%[0-9]+]]:vgpr_32 = DS_BPERMUTE_B32 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY]], 0, implicit $exec
+  ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM1]]
+  ; CHECK-NEXT:   dead early-clobber %3:vgpr_32 = V_MOV_B32_e32 [[DS_BPERMUTE_B32_]], implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM2:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[DS_BPERMUTE_B32_1:%[0-9]+]]:vgpr_32 = DS_BPERMUTE_B32 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY]], 0, implicit $exec
+  ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM2]]
+  ; CHECK-NEXT:   early-clobber $vgpr0 = V_MOV_B32_e32 [[DS_BPERMUTE_B32_1]], implicit $exec
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    successors: %bb.2
+
+    %2:vgpr_32 = DS_BPERMUTE_B32 %1, %0, 0, implicit $exec
+    early-clobber %3:vgpr_32 = STRICT_WWM %2, implicit $exec
+    %1:vgpr_32 = IMPLICIT_DEF
+
+  bb.2:
+    %4:vgpr_32 = DS_BPERMUTE_B32 %1, %0, 0, implicit $exec
+    early-clobber $vgpr0 = STRICT_WWM %4, implicit $exec
+    SI_RETURN_TO_EPILOG $vgpr0
 ...

@@ -199,6 +199,14 @@ private:
   void propagateBlock(MachineBasicBlock &MBB, std::vector<WorkItem> &Worklist);
   char analyzeFunction(MachineFunction &MF);
 
+  bool isStrictInstr(const MachineInstr &MI) const;
+  LaneBitmask getOperandLaneMask(const MachineOperand &MO) const;
+  bool dropImplicitDefs(const MachineOperand &Def,
+                        ArrayRef<MachineInstr *> ImplicitDefs);
+  bool isolateStrictSubRegDef(MachineOperand &Def);
+  bool fixStrictDefLiveness(MachineOperand &Def);
+  bool fixStrictLiveness(MachineFunction &MF);
+
   MachineBasicBlock::iterator saveSCC(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator Before);
   MachineBasicBlock::iterator
@@ -242,6 +250,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -755,6 +764,153 @@ char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
   return GlobalFlags;
 }
 
+bool SIWholeQuadMode::isStrictInstr(const MachineInstr &MI) const {
+  if (MI.isMetaInstruction())
+    return false;
+  auto It = Instructions.find(&MI);
+  return It != Instructions.end() && (It->second.Needs & StateStrict);
+}
+
+LaneBitmask
+SIWholeQuadMode::getOperandLaneMask(const MachineOperand &MO) const {
+  if (unsigned SubReg = MO.getSubReg())
+    return TRI->getSubRegIndexLaneMask(SubReg);
+  return MRI->getMaxLaneMaskForVReg(MO.getReg());
+}
+
+/// Drop the IMPLICIT_DEFs in \p ImplicitDefs if the strict \p Def dominates all
+/// of them, so the value stays live wherever a strict use may read it.
+bool SIWholeQuadMode::dropImplicitDefs(const MachineOperand &Def,
+                                       ArrayRef<MachineInstr *> ImplicitDefs) {
+  // TODO: Handle IMPLICIT_DEFs that are not dominated by the strict def.
+  if (!llvm::all_of(ImplicitDefs, [&](const MachineInstr *ImplicitDef) {
+        return MDT->dominates(Def.getParent(), ImplicitDef);
+      }))
+    return false;
+
+  const Register Reg = Def.getReg();
+  LLVM_DEBUG(dbgs() << "Dropping IMPLICIT_DEFs of strict value "
+                    << printReg(Reg, TRI) << '\n');
+  for (MachineInstr *ImplicitDef : ImplicitDefs) {
+    Instructions.erase(ImplicitDef);
+    LIS->RemoveMachineInstrFromMaps(*ImplicitDef);
+    ImplicitDef->eraseFromParent();
+  }
+  MRI->clearKillFlags(Reg);
+  LIS->removeInterval(Reg);
+  LIS->createAndComputeVirtRegInterval(Reg);
+  return true;
+}
+
+/// Pull a sub-reg \p Def into a separate virtual register, so the wider
+/// register is not allocated as a WWM register. The wider register receives
+/// the value through a copy after the strict region.
+bool SIWholeQuadMode::isolateStrictSubRegDef(MachineOperand &Def) {
+  MachineInstr &MI = *Def.getParent();
+  const Register Reg = Def.getReg();
+  const unsigned SubReg = Def.getSubReg();
+  const LaneBitmask DefLanes = getOperandLaneMask(Def);
+  const TargetRegisterClass *NewRC =
+      TRI->getSubRegisterClass(MRI->getRegClass(Reg), SubReg);
+  // TODO: Support tied strict defs.
+  if (Def.isTied() || !NewRC)
+    return false;
+  SmallVector<MachineOperand *> StrictUses;
+  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    if (!isStrictInstr(*MO.getParent()) ||
+        (getOperandLaneMask(MO) & DefLanes).none())
+      continue;
+    // TODO: Support tied and partially overlapping strict uses.
+    if (MO.getSubReg() != SubReg || MO.isTied())
+      return false;
+    StrictUses.push_back(&MO);
+  }
+
+  const Register NewReg = MRI->createVirtualRegister(NewRC);
+  LLVM_DEBUG(dbgs() << "Isolating strict def of " << printReg(Reg, TRI, SubReg)
+                    << " into " << printReg(NewReg, TRI) << '\n');
+  const bool IsUndef = Def.isUndef();
+  Def.setReg(NewReg);
+  Def.setSubReg(0);
+  Def.setIsUndef(false);
+  for (MachineOperand *MO : StrictUses) {
+    MO->setReg(NewReg);
+    MO->setSubReg(0);
+  }
+  MRI->clearKillFlags(NewReg);
+
+  // Place the copy after the strict sequence, so it does not split it.
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::iterator I = std::next(MI.getIterator());
+  MachineBasicBlock::iterator E = MBB.getFirstTerminator();
+  while (I != E && (isStrictInstr(*I) || !TII->mayReadEXEC(*MRI, *I)))
+    ++I;
+  MachineInstr *Copy =
+      BuildMI(MBB, I, MI.getDebugLoc(), TII->get(AMDGPU::COPY))
+          .addReg(Reg, RegState::Define | getUndefRegState(IsUndef), SubReg)
+          .addReg(NewReg);
+  LIS->InsertMachineInstrInMaps(*Copy);
+  LIS->removeInterval(Reg);
+  LIS->createAndComputeVirtRegInterval(Reg);
+  LIS->createAndComputeVirtRegInterval(NewReg);
+  return true;
+}
+
+/// A register written in a strict mode is allocated as a WWM register using
+/// per-thread liveness. That is only sound if no other definition of the
+/// register writes just the active lanes.
+bool SIWholeQuadMode::fixStrictDefLiveness(MachineOperand &Def) {
+  const Register Reg = Def.getReg();
+  if (MRI->hasOneDef(Reg))
+    return false;
+
+  const LaneBitmask DefLanes = getOperandLaneMask(Def);
+  SmallVector<MachineInstr *> ImplicitDefs;
+  bool HasRealNonStrictDefs = false;
+  bool HasOverlappingNonStrictDefs = false;
+  for (MachineOperand &MO : MRI->def_operands(Reg)) {
+    if (&MO == &Def)
+      continue;
+    MachineInstr &DefMI = *MO.getParent();
+    // TODO: Handle more than one strict definition.
+    if (isStrictInstr(DefMI))
+      return false;
+    if (DefMI.isImplicitDef())
+      ImplicitDefs.push_back(&DefMI);
+    else
+      HasRealNonStrictDefs = true;
+    HasOverlappingNonStrictDefs |= (getOperandLaneMask(MO) & DefLanes).any();
+  }
+
+  // TODO: Handle sub-register strict defs with overlapping non-strict defs.
+  if (Def.getSubReg())
+    return !HasOverlappingNonStrictDefs && isolateStrictSubRegDef(Def);
+  // TODO: Handle full-register strict defs with other non-strict defs.
+  return !HasRealNonStrictDefs && dropImplicitDefs(Def, ImplicitDefs);
+}
+
+bool SIWholeQuadMode::fixStrictLiveness(MachineFunction &MF) {
+  // The fixes rewrite operands in place but never add or remove them, so the
+  // collected operand pointers stay valid.
+  SmallVector<MachineOperand *> StrictDefs;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isStrictInstr(MI))
+        continue;
+      for (MachineOperand &MO : MI.defs()) {
+        const Register Reg = MO.getReg();
+        if (Reg.isVirtual() && SIRegisterInfo::hasVGPRs(MRI->getRegClass(Reg)))
+          StrictDefs.push_back(&MO);
+      }
+    }
+  }
+
+  bool Changed = false;
+  for (MachineOperand *Def : StrictDefs)
+    Changed |= fixStrictDefLiveness(*Def);
+  return Changed;
+}
+
 MachineBasicBlock::iterator
 SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator Before) {
@@ -821,8 +977,7 @@ void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
       DTUpdates.push_back({DomTreeT::Delete, BB, Succ});
     }
     DTUpdates.push_back({DomTreeT::Insert, BB, SplitBB});
-    if (MDT)
-      MDT->applyUpdates(DTUpdates);
+    MDT->applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
   }
@@ -1789,6 +1944,9 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
     }
   }
 
+  if (GlobalFlags & StateStrict)
+    Changed |= fixStrictLiveness(MF);
+
   LLVM_DEBUG(printInfo());
 
   Changed |= lowerLiveMaskQueries();
@@ -1837,8 +1995,8 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
 
 bool SIWholeQuadModeLegacy::runOnMachineFunction(MachineFunction &MF) {
   LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  MachineDominatorTree *MDT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto *PDTWrapper =
       getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachinePostDominatorTree *PDT =
@@ -1853,8 +2011,7 @@ SIWholeQuadModePass::run(MachineFunction &MF,
   MFPropsModifier _(*this, MF);
 
   LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  MachineDominatorTree *MDT =
-      MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachinePostDominatorTree *PDT =
       MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   SIWholeQuadMode Impl(MF, LIS, MDT, PDT);
