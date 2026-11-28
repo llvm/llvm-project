@@ -1,4 +1,9 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-macro-to-enum %t -- -- -I%S/Inputs/macro-to-enum -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later \
+// RUN:   -check-header %S/Inputs/macro-to-enum/modernize-macro-to-enum.h \
+// RUN:   -check-header %S/Inputs/macro-to-enum/modernize-macro-to-enum2.h \
+// RUN:   -check-header %S/Inputs/macro-to-enum/modernize-macro-to-enum3.h \
+// RUN:   %s modernize-macro-to-enum %t -- \
+// RUN:   -- -I%S/Inputs/macro-to-enum -fno-delayed-template-parsing
 // C++14 or later required for binary literals.
 
 #if 1
