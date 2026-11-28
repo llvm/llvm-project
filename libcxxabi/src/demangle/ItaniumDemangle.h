@@ -4196,8 +4196,17 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
   Node *Ty = getDerived().parseType();
   if (Ty == nullptr)
     return nullptr;
-  if (Quals != QualNone)
-    Ty = make<QualType>(Ty, Quals);
+  if (Quals != QualNone) {
+    // The type can already be qualified if it's a template parameter, e.g.,
+    // KT_ with T = int const is just int const.
+    if (Ty->getKind() == Node::KQualType) {
+      const auto *QT = static_cast<const QualType *>(Ty);
+      Quals |= QT->getQuals();
+      Ty = make<QualType>(QT->getChild(), Quals);
+    } else {
+      Ty = make<QualType>(Ty, Quals);
+    }
+  }
   return Ty;
 }
 
