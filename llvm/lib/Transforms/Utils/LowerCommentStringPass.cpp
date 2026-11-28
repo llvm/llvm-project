@@ -1,41 +1,46 @@
-//===-- LowerCommentStringPass.cpp - Lower Comment string metadata -------===//
+//===- LowerCommentStringPass.cpp - Lower loadtime comment strings --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
-// This pass processes copyright comment strings created by Clang for
-// #pragma comment(copyright, ...) implementation.
+// This pass keeps loadtime identifying strings alive through linking.
 //
-// Clang CodeGen creates weak_odr hidden constant string globals marked with
-// !loadtime_comment metadata and adds them to llvm.compiler.used. These globals
-// are placed in the __loadtime_comment section for better memory layout.
+// A loadtime identifying string is a global variable carrying
+// !loadtime_comment metadata. Clang produces such globals from two sources:
 //
-// This pass attaches !implicit.ref metadata from every defined function to
-// each copyright string global. The PowerPC AIX backend recognizes this
-// metadata and emits a .ref directive, creating a relocation that prevents
-// the linker from discarding the string as long as the function is kept.
+//  * #pragma comment(copyright, "..."): CodeGen creates a weak_odr hidden
+//    unnamed_addr constant named __loadtime_comment_str_<hash> in the
+//    __loadtime_comment section.
 //
-// This pass is currently enabled for AIX targets only.
+//  * -mloadtime-comment-vars=<names>: Sema attaches an implicit attribute to
+//    each listed string variable, and CodeGen tags the variable's ordinary
+//    definition. Its name, linkage, and section are unchanged.
 //
-// Input IR (created by Clang):
+// Both producers also add the global to llvm.compiler.used, which keeps it
+// through IR optimization but not through linking.
+//
+// This pass attaches !implicit.ref metadata naming every such global to each
+// function defined in the module. The PowerPC backend for XCOFF lowers the
+// metadata to a .ref directive, which creates a relocation from the function's
+// csect to the string's csect. The linker then retains the string for as long
+// as it retains any function from the module.
+//
+// The pass runs only for XCOFF targets; elsewhere it is a no-op.
+//
+// Input IR (the pragma producer is shown; a -mloadtime-comment-vars global
+// differs only in name, linkage, and section):
 //   @__loadtime_comment_str_HASH = weak_odr hidden unnamed_addr constant
 //     [N x i8] c"Copyright\00", section "__loadtime_comment", align 1,
 //     !loadtime_comment !0
 //   @llvm.compiler.used = appending global [1 x ptr]
 //     [ptr @__loadtime_comment_str_HASH], section "llvm.metadata"
 //
-//  Output IR:
-//   @__loadtime_comment_str_HASH = weak_odr hidden unnamed_addr constant
-//     [N x i8] c"Copyright\00", section "__loadtime_comment", align 1,
-//     !loadtime_comment !0
-//   @llvm.compiler.used = appending global [1 x ptr]
-//     [ptr @__loadtime_comment_str_HASH], section "llvm.metadata"
-//
-//     define i32 @func() !implicit.ref !1 { ... }
-//     !1 = !{ptr @__loadtime_comment_str_HASH}
+// Output IR: the globals are unchanged and every defined function gains
+//   define i32 @func() !implicit.ref !1 { ... }
+//   !1 = !{ptr @__loadtime_comment_str_HASH}
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,18 +68,19 @@
 using namespace llvm;
 
 static cl::opt<bool>
-    DisableCopyrightMetadata("disable-lower-comment-string", cl::ReallyHidden,
-                             cl::desc("Disable LowerCommentString pass."),
-                             cl::init(false));
+    DisableLowerCommentString("disable-lower-comment-string", cl::ReallyHidden,
+                              cl::desc("Disable LowerCommentString pass."),
+                              cl::init(false));
 
 static bool isSupportedTarget(const Module &M) {
+  // The pass runs only for XCOFF targets; elsewhere it is a no-op.
   Triple T{M.getTargetTriple()};
   return T.isOSAIX();
 }
 
 PreservedAnalyses LowerCommentStringPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
-  if (DisableCopyrightMetadata || !isSupportedTarget(M))
+  if (DisableLowerCommentString || !isSupportedTarget(M))
     return PreservedAnalyses::all();
 
   LLVMContext &Ctx = M.getContext();
