@@ -300,3 +300,71 @@ define float @cos_test(float %x) {
   %c = call float @llvm.cos(float %x)
   ret float %c
 }
+
+; negative. SPIR-V barriers synchronize with other invocations.
+declare void @llvm.spv.all.memory.barrier()
+declare void @llvm.spv.all.memory.barrier.with.group.sync()
+declare void @llvm.spv.device.memory.barrier()
+declare void @llvm.spv.device.memory.barrier.with.group.sync()
+declare void @llvm.spv.group.memory.barrier()
+declare void @llvm.spv.group.memory.barrier.with.group.sync()
+
+define void @spv_all_memory_barrier() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_all_memory_barrier(
+; CHECK-NEXT:    call void @llvm.spv.all.memory.barrier()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.all.memory.barrier()
+  ret void
+}
+
+define void @spv_all_memory_barrier_with_group_sync() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_all_memory_barrier_with_group_sync(
+; CHECK-NEXT:    call void @llvm.spv.all.memory.barrier.with.group.sync()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.all.memory.barrier.with.group.sync()
+  ret void
+}
+
+define void @spv_device_memory_barrier() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_device_memory_barrier(
+; CHECK-NEXT:    call void @llvm.spv.device.memory.barrier()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.device.memory.barrier()
+  ret void
+}
+
+define void @spv_device_memory_barrier_with_group_sync() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_device_memory_barrier_with_group_sync(
+; CHECK-NEXT:    call void @llvm.spv.device.memory.barrier.with.group.sync()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.device.memory.barrier.with.group.sync()
+  ret void
+}
+
+define void @spv_group_memory_barrier() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_group_memory_barrier(
+; CHECK-NEXT:    call void @llvm.spv.group.memory.barrier()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.group.memory.barrier()
+  ret void
+}
+
+define void @spv_group_memory_barrier_with_group_sync() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @spv_group_memory_barrier_with_group_sync(
+; CHECK-NEXT:    call void @llvm.spv.group.memory.barrier.with.group.sync()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.spv.group.memory.barrier.with.group.sync()
+  ret void
+}

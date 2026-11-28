@@ -450,24 +450,32 @@ let TargetPrefix = "spv" in {
       : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty],
                               [IntrNoMem, IntrTriviallyScalarizable]>;
 
+  // Barriers synchronize with other invocations, so they must not be
+  // IntrNoSync (a DefaultAttrsIntrinsic default).
   def int_spv_all_memory_barrier
-      : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+      : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_all_memory_barrier_with_group_sync
-      : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+      : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_device_memory_barrier
-      : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+      : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_device_memory_barrier_with_group_sync
-      : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+      : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_group_memory_barrier
-      : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+      : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_group_memory_barrier_with_group_sync
       : ClangBuiltin<"__builtin_spirv_group_barrier">,
-        DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+        Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree,
+                           IntrWillReturn]>;
 
   def int_spv_discard : DefaultAttrsIntrinsic<[], [], []>;
 
