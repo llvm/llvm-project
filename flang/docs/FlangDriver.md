@@ -594,6 +594,23 @@ generating LLVM IR. The registry is append-only and runs callbacks in
 registration order; a callback must not register further callbacks. Only the
 frontend driver runs the registry: `bbc`, `tco` and `fir-opt` do not.
 
+There is an example plugin in `flang/examples/HLFIRPipelinePlugin`, tested by
+`flang/test/Examples/hlfir-pipeline-plugin.f90`.
+
+### Loading MLIR Pass Plugins into `fir-opt`
+
+`fir-opt` is built on `MlirOptMain` and therefore accepts MLIR's
+`--load-pass-plugin` and `--load-dialect-plugin` options. As with `mlir-opt`,
+the plugin resolves the MLIR, FIR and HLFIR symbols it uses against the host
+tool, which therefore has to export them
+(`export_executable_symbols_for_plugins` in
+`flang/tools/fir-opt/CMakeLists.txt`):
+
+```bash
+fir-opt --load-pass-plugin=./MyPasses.so \
+        --pass-pipeline='builtin.module(my-hlfir-pass)' input.fir
+```
+
 ## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
