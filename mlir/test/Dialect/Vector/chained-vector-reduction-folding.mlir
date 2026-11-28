@@ -150,3 +150,32 @@ func.func @reduce_3x_first_stored_fp32(%arg0: vector<8xf32>, %arg1: vector<8xf32
   %2 = vector.reduction <add>, %arg2, %1 : vector<8xf32> into f32
   return %2 : f32
 }
+
+// Elementwise addition requires both vectors to have the same length.
+
+// CHECK-LABEL:   func.func @negative_reduce_different_lengths(
+// CHECK-SAME:     %[[A:.+]]: vector<1xi32>, %[[B:.+]]: vector<8xi32>, %[[INIT:.+]]: i32)
+// CHECK:            %[[FIRST:.+]] = vector.reduction <add>, %[[A]], %[[INIT]] : vector<1xi32> into i32
+// CHECK-NEXT:       %[[SECOND:.+]] = vector.reduction <add>, %[[B]], %[[FIRST]] : vector<8xi32> into i32
+// CHECK-NEXT:       return %[[SECOND]] : i32
+func.func @negative_reduce_different_lengths(
+    %a: vector<1xi32>, %b: vector<8xi32>, %init: i32) -> i32 {
+  %r0 = vector.reduction <add>, %a, %init : vector<1xi32> into i32
+  %r1 = vector.reduction <add>, %b, %r0 : vector<8xi32> into i32
+  return %r1 : i32
+}
+
+// The fixed vector length equals the scalable vector's minimum length, but
+// the vector types still differ.
+
+// CHECK-LABEL:   func.func @negative_reduce_different_scalability(
+// CHECK-SAME:     %[[A:.+]]: vector<[4]xi32>, %[[B:.+]]: vector<4xi32>, %[[INIT:.+]]: i32)
+// CHECK:            %[[FIRST:.+]] = vector.reduction <add>, %[[A]], %[[INIT]] : vector<[4]xi32> into i32
+// CHECK-NEXT:       %[[SECOND:.+]] = vector.reduction <add>, %[[B]], %[[FIRST]] : vector<4xi32> into i32
+// CHECK-NEXT:       return %[[SECOND]] : i32
+func.func @negative_reduce_different_scalability(
+    %a: vector<[4]xi32>, %b: vector<4xi32>, %init: i32) -> i32 {
+  %r0 = vector.reduction <add>, %a, %init : vector<[4]xi32> into i32
+  %r1 = vector.reduction <add>, %b, %r0 : vector<4xi32> into i32
+  return %r1 : i32
+}
