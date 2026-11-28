@@ -240,10 +240,8 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    movi d0, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    ldr d0, [x1]
-; CHECK-GI-NEXT:    smull v0.2d, v1.2s, v0.2s
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
   %load.A = load <2 x i16>, ptr %A
   %load.B = load <2 x i32>, ptr %B

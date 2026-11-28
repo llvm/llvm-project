@@ -3458,6 +3458,73 @@ void CombinerHelper::applyCombineBuildUnmerge(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+// This pattern aims to match the following shape to avoid extra mov
+// instructions
+// G_BUILD_VECTOR(
+//   G_UNMERGE_VALUES(src1, 0)
+//   G_UNMERGE_VALUES(src1, 1)
+//   G_IMPLICIT_DEF
+//   G_UNMERGE_VALUES(src2, 1)
+// )
+// ->
+// shuffle_vector(src1, src2, mask)
+bool CombinerHelper::matchCombineBuildUnmergeToShuffle(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    ShuffleRegsAndMask &ShuffleInfo) const {
+  auto &BV = cast<GBuildVector>(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+  if (!IsPreLegalize && !isLegal({TargetOpcode::G_SHUFFLE_VECTOR, {Ty, Ty}}))
+    return false;
+
+  unsigned RealLanes = 0;
+  for (unsigned I = 0; I < BV.getNumSources(); ++I) {
+    Register OpReg = BV.getSourceReg(I);
+    auto *Op = MRI.getVRegDef(OpReg);
+    if (Op->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      ShuffleInfo.Mask.push_back(PoisonMaskElem);
+      continue;
+    }
+
+    if (Op->getOpcode() != TargetOpcode::G_UNMERGE_VALUES ||
+        MRI.getType(Op->getOperand(Op->getNumOperands() - 1).getReg()) != Ty)
+      return false;
+
+    unsigned Idx = 0;
+    for (; Idx < Op->getNumOperands(); Idx++)
+      if (Op->getOperand(Idx).getReg() == OpReg)
+        break;
+
+    Register Src = Op->getOperand(Op->getNumOperands() - 1).getReg();
+    RealLanes++;
+
+    if (!ShuffleInfo.Src1.isValid() || ShuffleInfo.Src1 == Src) {
+      ShuffleInfo.Src1 = Src;
+      ShuffleInfo.Mask.push_back(Idx);
+    } else if (!ShuffleInfo.Src2.isValid() || ShuffleInfo.Src2 == Src) {
+      ShuffleInfo.Src2 = Src;
+      ShuffleInfo.Mask.push_back(Idx + Ty.getNumElements());
+    } else {
+      return false;
+    }
+  }
+
+  return RealLanes > 1 && ShuffleInfo.Src1.isValid();
+}
+
+void CombinerHelper::applyCombineBuildUnmergeToShuffle(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    ShuffleRegsAndMask &ShuffleInfo) const {
+  B.setInstrAndDebugLoc(MI);
+
+  if (!ShuffleInfo.Src2.isValid())
+    ShuffleInfo.Src2 = B.buildUndef(MRI.getType(ShuffleInfo.Src1)).getReg(0);
+  B.buildShuffleVector(MI.getOperand(0), ShuffleInfo.Src1, ShuffleInfo.Src2,
+                       ShuffleInfo.Mask);
+
+  MI.eraseFromParent();
+}
+
 // This combine tries to reduce the number of scalarised G_TRUNC instructions by
 // using vector truncates instead
 //

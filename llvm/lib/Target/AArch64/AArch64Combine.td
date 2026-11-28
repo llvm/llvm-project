@@ -102,6 +102,7 @@ def combine_mul_cmlt : GICombineRule<
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      combine_build_unmerge_to_shuffle,
                                       select_zero_true,
                                       combine_shuffle_vector,
                                       icmp_redundant_trunc,
@@ -484,7 +485,7 @@ def AArch64PostLegalizerCombiner
                         form_bitfield_extract, ubfx_sign_bit_to_lshr, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
                         select_combines, select_zero_true, select_zero_false, select_not,
-                        fold_merge_to_zext, merge_combines,
+                        fold_merge_to_zext, merge_combines, combine_build_unmerge_to_shuffle,
                         constant_fold_binops, constant_fold_cast_op, identity_combines,
                         ptr_add_immed_chain, shift_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,

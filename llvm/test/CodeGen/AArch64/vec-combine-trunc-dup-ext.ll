@@ -3,20 +3,12 @@
 ; RUN: llc -mtriple=aarch64 -global-isel < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define <4 x i32> @dup_trunc_sext_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> %y) {
-; CHECK-SD-LABEL: dup_trunc_sext_v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[2]
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_trunc_sext_v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_trunc_sext_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    dup v0.4s, v0.s[2]
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %cmp = icmp slt <4 x i32> %a, %b
   %splat = shufflevector <4 x i1> %cmp, <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %sel = select <4 x i1> %splat, <4 x i32> %x, <4 x i32> %y
@@ -37,20 +29,12 @@ define <2 x i64> @dup_trunc_sext_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %x,
 }
 
 define <4 x float> @dup_trunc_sext_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %x, <4 x float> %y) {
-; CHECK-SD-LABEL: dup_trunc_sext_v4f32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcmge v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[3]
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_trunc_sext_v4f32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_trunc_sext_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    dup v0.4s, v0.s[3]
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %cmp = fcmp ole <4 x float> %a, %b
   %splat = shufflevector <4 x i1> %cmp, <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %sel = select <4 x i1> %splat, <4 x float> %x, <4 x float> %y
@@ -58,20 +42,12 @@ define <4 x float> @dup_trunc_sext_v4f32(<4 x float> %a, <4 x float> %b, <4 x fl
 }
 
 define <2 x double> @dup_trunc_sext_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %x, <2 x double> %y) {
-; CHECK-SD-LABEL: dup_trunc_sext_v2f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcmge v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    dup v0.2d, v0.d[1]
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_trunc_sext_v2f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcmge v0.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_trunc_sext_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    dup v0.2d, v0.d[1]
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %cmp = fcmp ole <2 x double> %a, %b
   %splat = shufflevector <2 x i1> %cmp, <2 x i1> poison, <2 x i32> <i32 1, i32 1>
   %sel = select <2 x i1> %splat, <2 x double> %x, <2 x double> %y
