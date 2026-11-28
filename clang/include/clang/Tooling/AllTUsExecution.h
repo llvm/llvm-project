@@ -60,6 +60,10 @@ public:
     OverlayFiles[FilePath] = std::string(Content);
   }
 
+  void setInvocationWrapper(InvocationWrapper Wrapper) override {
+    InvocationWrap = std::move(Wrapper);
+  }
+
 private:
   // Used to store the parser when the executor is initialized with parser.
   std::optional<CommonOptionsParser> OptionsParser;
@@ -67,6 +71,7 @@ private:
   std::unique_ptr<ToolResults> Results;
   ExecutionContext Context;
   llvm::StringMap<std::string> OverlayFiles;
+  InvocationWrapper InvocationWrap;
   unsigned ThreadCount;
 };
 
