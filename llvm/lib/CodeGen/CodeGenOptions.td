@@ -591,6 +591,8 @@ def : AliasOf<"no-stack-slot-sharing", "stack-slot-sharing=false">;
 // TailDuplicator.cpp
 defm : ValueField<"tail-dup-indirect-size", "unsigned", "20",
   "Maximum instructions to consider tail duplicating blocks that end with indirect branches">;
+defm : ValueField<"tail-dup-indirect-tail-call-size", "unsigned", "10",
+  "Maximum instructions to consider tail duplicating blocks that end with indirect tail calls, after register allocation">;
 defm : ValueField<"tail-dup-limit", "unsigned", "~0U", "">;
 defm : ValueField<"tail-dup-pred-size", "unsigned", "16",
   "Maximum predecessors (maximum successors at the same time) to consider tail duplicating blocks">;

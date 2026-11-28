@@ -114,6 +114,7 @@ private:
                             SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                             SmallSetVector<MachineBasicBlock *, 8> &Succs);
   bool canCompletelyDuplicateBB(MachineBasicBlock &BB);
+  bool isIndirectTailCall(const MachineInstr &MI) const;
   bool duplicateSimpleBB(MachineBasicBlock *TailBB,
                          SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                          const DenseSet<Register> &RegsUsedByPhi);

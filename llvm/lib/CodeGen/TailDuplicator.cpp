@@ -570,9 +570,15 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
 
   bool HasIndirectbr = false;
   bool HasComputedGoto = false;
+  bool HasIndirectTailCall = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
     HasComputedGoto = TailBB.terminatorIsComputedGotoWithSuccessors();
+    // A block that calls something else first is not a dispatch.
+    HasIndirectTailCall =
+        isIndirectTailCall(TailBB.back()) &&
+        llvm::none_of(llvm::drop_end(TailBB),
+                      [](const MachineInstr &MI) { return MI.isCall(); });
   }
 
   if (HasIndirectbr && PreRegAlloc)
@@ -586,6 +592,19 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Therefore we do not restrict the computed gotos.
   if (HasComputedGoto && !PreRegAlloc)
     MaxDuplicateCount = std::max(MaxDuplicateCount, 10u);
+
+  // An indirect tail call through a table is the call-based counterpart of a
+  // computed goto: threaded interpreters that dispatch with musttail calls end
+  // every handler with one. When paths join just before it, the single shared
+  // indirect branch has to be predicted from the global history, and its target
+  // depends on the path; duplicating it gives each path its own branch. Only
+  // for blocks that make no other call, after register allocation (where the
+  // restrictions on calls and returns below do not apply), and not when
+  // optimizing for size.
+  if (HasIndirectTailCall && !PreRegAlloc &&
+      !llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI))
+    MaxDuplicateCount =
+        std::max(MaxDuplicateCount, Opts->tail_dup_indirect_tail_call_size);
 
   // Check the instructions in the block to determine whether tail-duplication
   // is invalid or unlikely to be profitable.
@@ -684,6 +703,32 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     return true;
 
   return canCompletelyDuplicateBB(TailBB);
+}
+
+/// True if \p MI is a tail call whose callee is not a symbol, i.e. a call
+/// through a register or through a memory location (for example an indirect
+/// tail call from a dispatch table).
+bool TailDuplicator::isIndirectTailCall(const MachineInstr &MI) const {
+  if (MI.isBundle() || !TII->isTailCall(MI))
+    return false;
+
+  auto IsSymbol = [](const MachineOperand &MO) {
+    return MO.isGlobal() || MO.isSymbol() || MO.isMCSymbol();
+  };
+
+  // A memory-indirect tail call loads its callee. Only the first operand of its
+  // memory operand can name the callee; the remaining operands are the
+  // addressing mode and may reference a symbol without naming the callee. X86
+  // encodes a memory operand as (base, scale, index, disp, segment), so the
+  // dispatch of a non-PIC `musttail` call through a global table
+  // (`jmpq *table(,%rax,8)`) carries @table as its displacement operand.
+  if (MI.mayLoad())
+    return MI.getNumExplicitOperands() == 0 || !IsSymbol(MI.getOperand(0));
+
+  // A register-indirect tail call names its callee with a register and has no
+  // symbol operand; a direct one names it with a global, external symbol or
+  // MCSymbol operand.
+  return llvm::none_of(MI.explicit_operands(), IsSymbol);
 }
 
 /// True if this BB has only one unconditional jump.
