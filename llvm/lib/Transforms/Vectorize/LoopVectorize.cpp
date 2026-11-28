@@ -7920,6 +7920,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Consider vectorizing the epilogue too if it's profitable.
   std::unique_ptr<VPlan> EpiPlan =
       LVP.selectBestEpiloguePlan(BestPlan, VF.Width, IC, ScalarEpilogueAllowed);
+  AddedRuntimeChecks |= Checks.hasChecks();
   bool HasBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   if (EpiPlan) {
@@ -8012,6 +8013,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
 LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   CFGChanged = false;
+  AddedRuntimeChecks = false;
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
@@ -8075,7 +8077,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
          "Invalid IR produced by LoopVectorize");
 
   // Process each loop nest in the function.
-  return LoopVectorizeResult(Changed, CFGChanged);
+  return LoopVectorizeResult(Changed, CFGChanged, AddedRuntimeChecks);
 }
 
 PreservedAnalyses LoopVectorizePass::run(Function &F,
@@ -8127,14 +8129,12 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<LoopAccessAnalysis>();
 
-  if (Result.MadeCFGChange) {
-    // Making CFG changes likely means a loop got vectorized. Indicate that
-    // extra simplification passes should be run.
-    // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
-    // be run if runtime checks have been added.
+  if (Result.AddedRuntimeChecks) {
+    // Clean up runtime checks inserted by the vectorizer.
     AM.getResult<ShouldRunExtraVectorPasses>(F);
     PA.preserve<ShouldRunExtraVectorPasses>();
-  } else {
+  }
+  if (!Result.MadeCFGChange) {
     PA.preserveSet<CFGAnalyses>();
   }
   return PA;

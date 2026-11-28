@@ -120,9 +120,12 @@ struct LoopVectorizeOptions {
 struct LoopVectorizeResult {
   bool MadeAnyChange;
   bool MadeCFGChange;
+  bool AddedRuntimeChecks;
 
-  LoopVectorizeResult(bool MadeAnyChange, bool MadeCFGChange)
-      : MadeAnyChange(MadeAnyChange), MadeCFGChange(MadeCFGChange) {}
+  LoopVectorizeResult(bool MadeAnyChange, bool MadeCFGChange,
+                      bool AddedRuntimeChecks = false)
+      : MadeAnyChange(MadeAnyChange), MadeCFGChange(MadeCFGChange),
+        AddedRuntimeChecks(AddedRuntimeChecks) {}
 };
 
 /// The LoopVectorize Pass.
@@ -154,6 +157,7 @@ public:
   AAResults *AA;
 
   bool CFGChanged = false;
+  bool AddedRuntimeChecks = false;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void
