@@ -125,18 +125,16 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
     // FIXME: This should be extended to include other unreachable markers,
     // such as llvm_unreachable.
     if (!CB->empty()) {
-      bool foundUnreachable = false;
-      for (CFGBlock::const_iterator ci = CB->begin(), ce = CB->end();
-           ci != ce; ++ci) {
-        if (std::optional<CFGStmt> S = (*ci).getAs<CFGStmt>())
-          if (const CallExpr *CE = dyn_cast<CallExpr>(S->getStmt())) {
-            if (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable ||
-                CE->isBuiltinAssumeFalse(Eng.getContext())) {
-              foundUnreachable = true;
-              break;
-            }
-          }
-      }
+      auto IsUnreachableMarker = [&](const CFGElement &Elem) {
+        std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
+        if (!S)
+          return false;
+        const auto *CE = dyn_cast<CallExpr>(S->getStmt());
+        return CE &&
+               (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable ||
+                CE->isBuiltinAssumeFalse(Eng.getContext()));
+      };
+      bool foundUnreachable = llvm::any_of(*CB, IsUnreachableMarker);
       if (foundUnreachable)
         continue;
     }

@@ -502,16 +502,14 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
       // Iterate through the parameter expressions and see if the symbol
       // was ever passed as an argument.
-      for (auto AI = CE->arg_begin(), AE = CE->arg_end(); AI != AE; ++AI) {
-
+      auto IsTrackedSymbol = [&](const Expr *Arg) {
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
-        if (CurrSt->getSValAsScalarOrLoc(*AI, SF).getAsLocSymbol() != Sym)
-          continue;
-
-        // We have an argument.  Get the effect!
+        return CurrSt->getSValAsScalarOrLoc(Arg, SF).getAsLocSymbol() == Sym;
+      };
+      // We have an argument.  Get the effect!
+      if (llvm::any_of(CE->arguments(), IsTrackedSymbol))
         DeallocSent = true;
-      }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
       if (const Expr *R = ME->getInstanceReceiver()) {
         if (CurrSt->getSValAsScalarOrLoc(R, SF).getAsLocSymbol() == Sym) {

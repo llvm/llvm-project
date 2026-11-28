@@ -238,16 +238,12 @@ static raw_ostream &printJsonContainer(const ContainerTy &Container,
 
   ++Space;
   Out << '[' << NL;
-  for (auto I = Container.begin(); I != Container.end(); ++I) {
-    const auto &Element = *I;
-
+  auto PrintElement = [&](const auto &Element) {
     Indent(Out, Space, IsDot) << "{ ";
     printJson(Element, Out, NL, Space, IsDot) << " }";
-
-    if (std::next(I) != Container.end())
-      Out << ',';
-    Out << NL;
-  }
+  };
+  llvm::interleave(Container, PrintElement, [&] { Out << ',' << NL; });
+  Out << NL;
 
   --Space;
   return Indent(Out, Space, IsDot) << "]";

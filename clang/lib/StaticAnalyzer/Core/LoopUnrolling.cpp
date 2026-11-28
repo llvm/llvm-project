@@ -195,11 +195,9 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
 
 static bool isFoundInStmt(const Stmt *S, const VarDecl *VD) {
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-    for (const Decl *D : DS->decls()) {
-      // Once we reach the declaration of the VD we can return.
-      if (D->getCanonicalDecl() == VD)
-        return true;
-    }
+    auto IsVD = [&](const Decl *D) { return D->getCanonicalDecl() == VD; };
+    // Once we reach the declaration of the VD we can return.
+    return llvm::any_of(DS->decls(), IsVD);
   }
   return false;
 }
@@ -239,10 +237,9 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
 
     if (const auto *SS = dyn_cast<SwitchStmt>(S)) {
       if (const auto *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
-        for (const Stmt *CB : CST->body()) {
-          if (isFoundInStmt(CB, VD))
-            return false;
-        }
+        auto DeclaresVD = [&](const Stmt *CB) { return isFoundInStmt(CB, VD); };
+        if (llvm::any_of(CST->body(), DeclaresVD))
+          return false;
       }
     }
 

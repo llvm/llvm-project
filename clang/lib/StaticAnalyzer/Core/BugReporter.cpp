@@ -2131,11 +2131,7 @@ void BugType::anchor() {}
 
 LLVM_ATTRIBUTE_USED static bool
 isDependency(const CheckerRegistryData &Registry, StringRef CheckerName) {
-  for (const std::pair<StringRef, StringRef> &Pair : Registry.Dependencies) {
-    if (Pair.second == CheckerName)
-      return true;
-  }
-  return false;
+  return is_contained(make_second_range(Registry.Dependencies), CheckerName);
 }
 
 LLVM_ATTRIBUTE_USED static bool isHidden(const CheckerRegistryData &Registry,
@@ -2714,8 +2710,7 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 
     // Find the next predeccessor node.  We choose the node that is marked
     // with the lowest BFS number.
-    OrigN = *std::min_element(OrigN->pred_begin(), OrigN->pred_end(),
-                              PriorityCompare<false>(PriorityMap));
+    OrigN = *min_element(OrigN->preds(), PriorityCompare<false>(PriorityMap));
   }
 
   CurrentBugPath.BugPath = std::move(GNew);

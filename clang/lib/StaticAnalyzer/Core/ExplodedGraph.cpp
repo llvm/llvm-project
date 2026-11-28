@@ -474,7 +474,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     }
 
     // Visit our predecessors and enqueue them.
-    WL1.append(N->Preds.begin(), N->Preds.end());
+    llvm::append_range(WL1, N->Preds);
   }
 
   // We didn't hit the root? Return with a null pointer for the new graph.

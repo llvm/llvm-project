@@ -802,14 +802,14 @@ class StdLibraryFunctionsChecker
     // Once we know the exact type of the function then do validation check on
     // all the given constraints.
     bool validateByConstraints(const FunctionDecl *FD) const {
-      for (const SummaryCase &Case : Cases)
-        for (const ValueConstraintPtr &Constraint : Case.getConstraints())
-          if (!Constraint->checkValidity(FD))
-            return false;
-      for (const ValueConstraintPtr &Constraint : ArgConstraints)
-        if (!Constraint->checkValidity(FD))
-          return false;
-      return true;
+      auto IsValid = [&](const ValueConstraintPtr &Constraint) {
+        return Constraint->checkValidity(FD);
+      };
+      auto IsCaseValid = [&](const SummaryCase &Case) {
+        return llvm::all_of(Case.getConstraints(), IsValid);
+      };
+      return llvm::all_of(Cases, IsCaseValid) &&
+             llvm::all_of(ArgConstraints, IsValid);
     }
   };
 

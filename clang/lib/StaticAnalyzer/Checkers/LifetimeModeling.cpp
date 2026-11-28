@@ -69,10 +69,10 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
     SVal Val, ProgramStateRef State, CheckerContext &C) {
   std::vector<const MemRegion *> Regions;
   if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
-    for (const MemRegion *Region : *SourceSet) {
-      if (isDanglingStackSource(Region, State, C))
-        Regions.push_back(Region);
-    }
+    auto IsDangling = [&](const MemRegion *Region) {
+      return isDanglingStackSource(Region, State, C);
+    };
+    llvm::copy_if(*SourceSet, std::back_inserter(Regions), IsDangling);
   }
   return Regions;
 }
