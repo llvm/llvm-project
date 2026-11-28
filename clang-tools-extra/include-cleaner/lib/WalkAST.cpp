@@ -101,10 +101,14 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   NamedDecl *getMemberProvider(QualType Base) {
     if (Base->isPointerType())
       return getMemberProvider(Base->getPointeeType());
-    if (const auto *TT = dyn_cast<TypedefType>(Base))
-      return TT->getDecl();
-    if (const auto *UT = dyn_cast<UsingType>(Base))
-      return UT->getDecl();
+    // An alias of an incomplete record does not provide the record definition.
+    if (const auto *RT = Base->getAs<RecordType>();
+        RT && RT->getDecl()->isCompleteDefinition()) {
+      if (const auto *TT = dyn_cast<TypedefType>(Base))
+        return TT->getDecl();
+      if (const auto *UT = dyn_cast<UsingType>(Base))
+        return UT->getDecl();
+    }
     // A heuristic: to resolve a template type to **only** its template name.
     // We're only using this method for the base type of MemberExpr, in general
     // the template provides the member, and the critical case `unique_ptr<Foo>`
@@ -245,6 +249,27 @@ public:
     // explicit syntax at all or there're only braces.
     report(E->getLocation(), getMemberProvider(E->getType()),
            RefType::Implicit);
+    return true;
+  }
+
+  bool VisitInitListExpr(InitListExpr *E) {
+    const InitListExpr *Sem = E->isSemanticForm() ? E : E->getSemanticForm();
+    QualType Type = Sem ? Sem->getType() : E->getType();
+    report(E->getBeginLoc(), getMemberProvider(Type), RefType::Implicit);
+    return true;
+  }
+
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    report(E->getBeginLoc(), getMemberProvider(E->getType()),
+           RefType::Implicit);
+    return true;
+  }
+
+  bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
+    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+      if (D.isFieldDesignator())
+        report(D.getFieldLoc(), D.getFieldDecl(), RefType::Implicit);
+    }
     return true;
   }
 
