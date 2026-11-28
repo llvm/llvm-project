@@ -274,6 +274,11 @@ bool SILateBranchLowering::run(MachineFunction &MF) {
         EpilogInstrs.push_back(&MI);
         break;
 
+      case AMDGPU::S_SETPRIO_BARRIER:
+        MI.setDesc(TII->get(AMDGPU::S_SETPRIO));
+        MadeChange = true;
+        break;
+
       default:
         break;
       }

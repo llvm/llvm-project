@@ -1041,6 +1041,15 @@ void test_s_setprio()
   __builtin_amdgcn_s_setprio(3);
 }
 
+// CHECK-LABEL: @test_s_setprio_relaxed
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setprio.relaxed(i16 0)
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setprio.relaxed(i16 3)
+void test_s_setprio_relaxed()
+{
+  __builtin_amdgcn_s_setprio_relaxed(0);
+  __builtin_amdgcn_s_setprio_relaxed(3);
+}
+
 // CHECK-LABEL: @test_read_exec(
 // CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 true)
 void test_read_exec(global ulong* out) {
