@@ -1501,6 +1501,35 @@ TEST_F(AArch64SelectionDAGTest, Combine_EXTRACT_VECTOR_ELT_ExtLoad) {
   EXPECT_EQ(Scalar->getPointerInfo().Offset, 4);
 }
 
+TEST_F(AArch64SelectionDAGTest, Combine_BUILD_VECTOR_ImplicitTruncation) {
+  FunctionLoweringInfo FLI;
+  FLI.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
+  MF->push_back(FLI.MBB);
+  DAG->setFunctionLoweringInfo(&FLI);
+
+  SDLoc Loc;
+  SDValue Lo = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                 Register::index2VirtReg(0), MVT::i32);
+  SDValue Hi = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                 Register::index2VirtReg(1), MVT::i32);
+
+  for (unsigned Opcode : {ISD::ANY_EXTEND, ISD::ZERO_EXTEND}) {
+    SCOPED_TRACE(Opcode);
+    SDValue Ops[] = {DAG->getNode(Opcode, Loc, MVT::i64, Lo),
+                     DAG->getNode(Opcode, Loc, MVT::i64, Hi)};
+    SDValue Original = DAG->getBuildVector(MVT::v2i32, Loc, Ops);
+    HandleSDNode BV(Original);
+
+    // BUILD_VECTOR implicitly truncates the i64 operands back to i32. The
+    // extension source is not narrower than the element, so it cannot be
+    // expanded into multiple smaller elements by reduceBuildVecExtToExtBuildVec.
+    DAG->Combine(AfterLegalizeTypes, /*BatchAA=*/nullptr,
+                 CodeGenOptLevel::Default);
+
+    EXPECT_EQ(BV.getValue(), Original);
+  }
+}
+
 TEST_F(AArch64SelectionDAGTest,
        computeKnownBits_AVGFLOORU_AVGFLOORS_AVGCEILU_AVGCEILS) {
   SDLoc Loc;
