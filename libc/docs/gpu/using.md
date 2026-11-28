@@ -124,6 +124,11 @@ $> clang id.c --target=amdgcn-amd-amdhsa -mcpu=native -nogpulib -flto -c
 $> clang id.c --target=nvptx64-nvidia-cuda -march=native -nogpulib -flto -c
 ```
 
+For NVPTX double-precision `sin`, pass `-gpulibc` when compiling code that will
+link against the GPU C library. This keeps the call visible for extraction
+from the GPU `libm.a` archive. The library must still be supplied to the device
+linker.
+
 We can also use this support to treat the GPU as a hosted environment by
 providing a C library and startup object just like a standard C library running
 on the host machine. Then, in order to execute these programs, we provide a

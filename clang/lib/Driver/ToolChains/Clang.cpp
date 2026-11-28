@@ -7543,6 +7543,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("--no-offloadlib");
 
+  if (Args.hasArg(options::OPT_gpulibc) && !Args.hasArg(options::OPT_nogpulibc))
+    CmdArgs.push_back("-gpulibc");
+
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));

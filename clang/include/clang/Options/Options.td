@@ -6783,6 +6783,7 @@ def : Flag<["-"], "nogpulib">,
       Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def : Flag<["-"], "nocudalib">, Alias<no_offloadlib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  MarshallingInfoFlag<LangOpts<"GPULibc">>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">,

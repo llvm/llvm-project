@@ -2828,6 +2828,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
           OptNone, IsOptimizationEnabled);
 
+  // Keep the libcall visible to GPU libc archive extraction.
+  if (getLangOpts().GPULibc &&
+      CGM.getTriple().getArch() == llvm::Triple::nvptx64 &&
+      (BuiltinIDIfNoAsmLabel == Builtin::BIsin ||
+       BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_sin))
+    GenerateFPMathIntrinsics = false;
+
   if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
     case Builtin::BIacos:
