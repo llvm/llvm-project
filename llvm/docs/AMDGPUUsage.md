@@ -3628,6 +3628,11 @@ The AMDGPU backend supports the following calling conventions:
 
     Arguments are passed in SGPRs, starting at s0, if they have the `inreg` attribute, and in VGPRs otherwise, starting at v8.
     Using more SGPRs or VGPRs than available in the subtarget is not allowed.
+    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
+    Referencing values on the caller's stack is undefined behaviour.
+    If needed, the frame pointer is s33 and the base pointer is s34.
+    `inreg` arguments are allocated in s0-s31 and then from s35 onwards, leaving s[32:34] reserved.
+    The gap is always present, irrespective of whether or not the function ends up using a frame or a base pointer.
     On subtargets that use a scratch buffer descriptor (as opposed to `scratch_{load,store}_*` instructions), the scratch buffer descriptor is passed in s\[48:51\].
     This limits the SGPR / `inreg` arguments to the equivalent of 48 dwords; using more than that is not allowed.
 
@@ -3637,9 +3642,6 @@ The AMDGPU backend supports the following calling conventions:
     Values in scalar registers as well as v0-v7 are not preserved.
     Values in VGPRs starting at v8 are not preserved for the active lanes, but must be saved by the callee for inactive lanes when using WWM (a notable exception is when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this case the backend assumes that there are no inactive lanes upon entry; any inactive lanes that need to be preserved must be explicitly present in the IR).
 
-    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
-    Referencing values on the caller's stack is undefined behaviour.
-    If needed, the frame pointer is s33 and the base pointer is s34.
     Calls to `amdgpu_gfx` functions are allowed and behave like they do in `amdgpu_cs` functions.
 
     A function may have multiple exits (e.g. one chain exit and one plain `ret void` for when the wave ends), but all `llvm.amdgcn.cs.chain` exits must be in uniform control flow.
