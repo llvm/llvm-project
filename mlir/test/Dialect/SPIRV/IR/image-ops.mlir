@@ -116,6 +116,47 @@ func.func @image_query_size_error_result2(%arg0 : !spirv.image<f32, Buffer, NoDe
 
 // -----
 
+// CHECK-LABEL: func @image_query_size_lod
+func.func @image_query_size_lod(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, %lod : i32) {
+  // CHECK: spirv.ImageQuerySizeLod %{{.*}}, %{{.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, i32 -> vector<2xi32>
+  %0 = spirv.ImageQuerySizeLod %arg0, %lod : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, i32 -> vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @image_query_size_lod_invalid_dim(%arg0 : !spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, %lod : i32) {
+  // expected-error @+1 {{image Dim must be 1D, 2D, 3D, or Cube}}
+  %0 = spirv.ImageQuerySizeLod %arg0, %lod : !spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, i32 -> i32
+  return
+}
+
+// -----
+
+func.func @image_query_size_lod_invalid_ms(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, MultiSampled, NeedSampler, Unknown>, %lod : i32) {
+  // expected-error @+1 {{image MS operand must be 0 (SingleSampled)}}
+  %0 = spirv.ImageQuerySizeLod %arg0, %lod : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, MultiSampled, NeedSampler, Unknown>, i32 -> vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @image_query_size_lod_invalid_sampled(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, %lod : i32) {
+  // expected-error @+1 {{image Sampled operand must be 0 or 1}}
+  %0 = spirv.ImageQuerySizeLod %arg0, %lod : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, i32 -> vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @image_query_size_lod_invalid_result(%arg0 : !spirv.image<f32, Dim2D, NoDepth, Arrayed, SingleSampled, NeedSampler, Unknown>, %lod : i32) {
+  // expected-error @+1 {{expected the result to have 3 component(s), but found 2 component(s)}}
+  %0 = spirv.ImageQuerySizeLod %arg0, %lod : !spirv.image<f32, Dim2D, NoDepth, Arrayed, SingleSampled, NeedSampler, Unknown>, i32 -> vector<2xi32>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.ImageRead
 //===----------------------------------------------------------------------===//

@@ -239,6 +239,31 @@ def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [Pure]> {
 
 // -----
 
+def SPIRV_ImageQuerySizeLodOp : SPIRV_Op<"ImageQuerySizeLod", [Pure]> {
+  let summary = "Query the dimensions of Image for mipmap level Level of Detail.";
+
+  let description = [{
+    Image must have Dim 1D, 2D, 3D, or Cube, MS of 0, and Sampled of 0 or 1.
+    Result Type must be an integer scalar or vector with 1 (1D), 2 (2D/Cube),
+    or 3 (3D) components, plus 1 if arrayed.
+
+    ```mlir
+    %0 = spirv.ImageQuerySizeLod %img, %lod : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, i32 -> vector<2xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>, Capability<[SPIRV_C_ImageQuery]>
+  ];
+
+  let arguments = (ins SPIRV_AnyImage:$image, SPIRV_Integer:$lod);
+  let results = (outs SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result);
+  let assemblyFormat = "$image `,` $lod attr-dict `:` type($image) `,` type($lod) `->` type($result)";
+}
+
+// -----
+
 def SPIRV_ImageReadOp : SPIRV_Op<"ImageRead",
     [SPIRV_SampledOperandIs<"image", ["SamplerUnknown", "NoSampler"]>,
      SPIRV_NoneOrElementMatchImage<"result", "image">]> {
