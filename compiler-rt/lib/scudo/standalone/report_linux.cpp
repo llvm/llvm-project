@@ -20,13 +20,38 @@
 #include <stdlib.h>
 #include <string.h>
 
+// __GLIBC_PREREQ is only defined by glibc, so it can't be used in the same #if
+// as the defined(__GLIBC__) check.
+#if defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 32)
+#define SCUDO_HAS_STRERRORDESC_NP 1
+#endif
+#endif
+
 namespace scudo {
+
+// glibc's strerror() translates the message through gettext, which may call
+// malloc(). If that happens while the allocator is being initialized (e.g. the
+// initial reservation fails because of RLIMIT_AS), malloc() re-enters the
+// allocator and deadlocks on the initialization mutex already held by the same
+// thread. glibc's strerrordesc_np() is documented as async-signal-safe (so it
+// can't allocate) and returns the untranslated message.
+const char *getErrorDescription(int Err) {
+#if defined(SCUDO_HAS_STRERRORDESC_NP)
+  const char *Desc = strerrordesc_np(Err);
+  return Desc ? Desc : "Unknown error";
+#else
+  // Other C libraries (e.g. musl, bionic) don't allocate in strerror().
+  return strerror(Err);
+#endif
+}
 
 // Fatal internal map() error (potentially OOM related).
 void NORETURN reportMapError(uptr SizeIfOOM) {
+  const int Err = errno;
   ScopedString Error;
   Error.append("Scudo ERROR: internal map failure (error desc=%s)",
-               strerror(errno));
+               getErrorDescription(Err));
   if (SizeIfOOM)
     Error.append(" requesting %zuKB", SizeIfOOM >> 10);
   Error.append("\n");
@@ -42,19 +67,21 @@ void NORETURN reportMapFixedError(uptr ExpectedAddr, uptr RequestedAddr) {
 }
 
 void NORETURN reportUnmapError(uptr Addr, uptr Size) {
+  const int Err = errno;
   ScopedString Error;
   Error.append("Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "
                "Size %zu\n",
-               strerror(errno), Addr, Size);
+               getErrorDescription(Err), Addr, Size);
   reportRawError(Error.data());
 }
 
 void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot) {
+  const int Err = errno;
   ScopedString Error;
   Error.append(
       "Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
       "Size %zu Prot %x\n",
-      strerror(errno), Addr, Size, Prot);
+      getErrorDescription(Err), Addr, Size, Prot);
   reportRawError(Error.data());
 }
 

@@ -151,7 +151,7 @@ s64 MemMapLinux::getResidentPagesImpl(uptr From, uptr Size) {
     if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
         -1) {
       ScopedString Str;
-      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.append("mincore failed: %s\n", getErrorDescription(errno));
       Str.output();
       return -1;
     }

@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "memtag.h"
+#include "report_linux.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
 
@@ -807,6 +808,23 @@ TEST_F(ScudoWrappersCDeathTest, MallocDisableDeadlock) {
         malloc_enable();
       },
       "");
+}
+
+// Reporting a map failure must not allocate, as it can happen while the
+// allocator holds its own locks, e.g. when the initial reservation fails under
+// a low RLIMIT_AS. glibc's strerror() allocates (through gettext), which used
+// to deadlock. With the allocator disabled, any allocation blocks until the
+// alarm kills the process, before the expected message is printed.
+TEST_F(ScudoWrappersCDeathTest, ReportMapErrorDoesNotAllocate) {
+  SCUDO_EXPECT_DEATH(
+      {
+        malloc_disable();
+        alarm(5);
+        errno = ENOMEM;
+        scudo::reportMapError(1U << 20);
+      },
+      "Scudo ERROR: internal map failure \\(error desc=.*\\) requesting "
+      "1024KB");
 }
 
 TEST_F(ScudoWrappersCTest, MallocInfo) {
