@@ -382,3 +382,52 @@ func.func @affine_min_scf_for_minui_remainder(%n: index) -> index {
   }
   return %ret : index
 }
+
+// -----
+
+// CHECK-LABEL: func @affine_for_mixed_iter_args(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
+//       CHECK:   "test.some_use"(%[[dim]])
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
+//       CHECK:   "test.some_use"(%[[dim]])
+func.func @affine_for_mixed_iter_args(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0:2 = affine.for %i = 0 to 4 iter_args(%n = %c0, %arg = %t) -> (index, tensor<?xf32>) {
+    %1 = "test.reify_bound"(%arg) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+    "test.some_use"(%1) : (index) -> ()
+    %n2 = arith.addi %n, %c1 : index
+    affine.yield %n2, %arg : index, tensor<?xf32>
+  }
+  %2 = "test.reify_bound"(%0#1) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+  "test.some_use"(%2) : (index) -> ()
+  return
+}
+
+// -----
+
+func.func @affine_for_swapping_yield(%t1: tensor<?xf32>, %t2: tensor<?xf32>) {
+  %r1, %r2 = affine.for %i = 0 to 4 iter_args(%a = %t1, %b = %t2) -> (tensor<?xf32>, tensor<?xf32>) {
+    affine.yield %b, %a : tensor<?xf32>, tensor<?xf32>
+  }
+  // expected-error @below{{could not reify bound}}
+  %0 = "test.reify_bound"(%r1) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+  "test.some_use"(%0) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_for_memref(
+//  CHECK-SAME:     %[[m:.*]]: memref<?xf32>
+//       CHECK:   %[[dim:.*]] = memref.dim %[[m]]
+//       CHECK:   "test.some_use"(%[[dim]])
+func.func @affine_for_memref(%m: memref<?xf32>) {
+  %0 = affine.for %i = 0 to 4 iter_args(%arg = %m) -> memref<?xf32> {
+    affine.yield %arg : memref<?xf32>
+  }
+  %1 = "test.reify_bound"(%0) {type = "EQ", dim = 0} : (memref<?xf32>) -> (index)
+  "test.some_use"(%1) : (index) -> ()
+  return
+}

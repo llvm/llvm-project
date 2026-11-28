@@ -106,6 +106,33 @@ struct AffineForOpInterface
     AffineExpr tripCount = (ub - lb).ceilDiv(step);
     cstr.bound(value) <= lb + (tripCount - 1) * step;
   }
+
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto forOp = cast<AffineForOp>(op);
+
+    // value is an iter_arg or OpResult
+    int64_t iterArgIdx;
+    if (auto blockArg = dyn_cast<BlockArgument>(value)) {
+      assert(blockArg.getOwner() == forOp.getBody() &&
+             blockArg.getArgNumber() > 0 &&
+             "expected an iter_arg of this loop");
+      iterArgIdx = blockArg.getArgNumber() - 1;
+    } else {
+      iterArgIdx = cast<OpResult>(value).getResultNumber();
+    }
+
+    Value yieldedValue = forOp.getYieldedValues()[iterArgIdx];
+    Value iterArg = forOp.getRegionIterArgs()[iterArgIdx];
+    Value initArg = forOp.getInits()[iterArgIdx];
+
+    // If the yielded value's dimension equals to
+    // iter_arg's dimension, the size is loop-invariant
+    if (cstr.populateAndCompare(
+            {yieldedValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::EQ, {iterArg, dim}))
+      cstr.bound(value)[dim] == cstr.getExpr(initArg, dim);
+  }
 };
 
 struct AffineMinOpInterface
