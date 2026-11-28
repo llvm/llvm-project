@@ -4344,6 +4344,8 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       // The ordered relationship and min/maxnum or min/maximumnum guarantee
       // that we do not have NaN constants, so ordered/unordered preds are
       // handled the same.
+      // FIXME: minnum/maxnum may return a NaN for an sNaN operand, so these
+      // folds may be inconsistent with other uses of the minnum/maxnum.
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_UEQ:
@@ -4373,8 +4375,12 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
         return ConstantInt::get(RetTy, !IsMax);
+      case FCmpInst::FCMP_ORD:
+      case FCmpInst::FCMP_UNO:
+        // Reachable because minnum/maxnum may return a NaN for an sNaN operand.
+        break;
       default:
-        // TRUE/FALSE/ORD/UNO should be handled before this.
+        // TRUE/FALSE should be handled before this.
         llvm_unreachable("Unexpected fcmp predicate");
       }
     }
