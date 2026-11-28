@@ -737,7 +737,12 @@ public:
     const MCPhysReg Reg = getADRReg(ADRInst);
     const MCSymbol *Target = getTargetSymbol(ADRInst);
     const uint64_t Addend = getTargetAddend(ADRInst);
-    return materializeAddress(Target, Ctx, Reg, Addend);
+    InstructionListType Insts = materializeAddress(Target, Ctx, Reg, Addend);
+
+    for (MCInst &NewInst : Insts)
+      NewInst.setLoc(ADRInst.getLoc());
+
+    return Insts;
   }
 
   InstructionListType createAdrpLdr(const MCInst &LDRInst,
@@ -781,6 +786,7 @@ public:
     Insts[0].clear();
     Insts[0].addOperand(MCOperand::createReg(AddrReg));
     Insts[0].addOperand(MCOperand::createImm(0));
+    Insts[0].setLoc(LDRInst.getLoc());
     setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, Addend, Ctx,
                           ELF::R_AARCH64_NONE);
     Insts[1].setOpcode(OpCode);
@@ -789,6 +795,7 @@ public:
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
+    Insts[1].setLoc(LDRInst.getLoc());
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
                           RelType);
     return Insts;
