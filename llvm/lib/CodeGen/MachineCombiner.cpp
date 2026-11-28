@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineCombiner.h"
 #include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -478,6 +479,28 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   // even if InsInstrs is not the better pattern.
   TII->finalizeInsInstrs(MI, Pattern, InsInstrs);
 
+  if (Pattern == MachineCombinerPattern::FMA_CHAIN) {
+    // Moved links are emitted at MI, so physical registers they read stay live
+    // past the instructions they move over.
+    assert(!DelInstrs.empty() && DelInstrs.back() == &MI &&
+           "expected moved chain ending at root");
+    const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
+    SmallSet<Register, 2> PhysUses;
+    auto NextDel = DelInstrs.begin();
+    for (MachineInstr &I :
+         llvm::make_range((*NextDel)->getIterator(), MI.getIterator())) {
+      if (NextDel != DelInstrs.end() && &I == *NextDel) {
+        ++NextDel;
+        for (const MachineOperand &MO : I.all_uses())
+          if (MO.getReg().isPhysical() && !MO.isUndef())
+            PhysUses.insert(MO.getReg());
+        continue;
+      }
+      for (Register Reg : PhysUses)
+        I.clearRegisterKills(Reg, TRI);
+    }
+  }
+
   for (auto *InstrPtr : InsInstrs)
     MBB->insert((MachineBasicBlock::iterator)&MI, InstrPtr);
 
@@ -527,6 +550,19 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
 
   bool DoRegPressureReduce =
       TII->shouldReduceRegisterPressure(MBB, RegClassInfo);
+
+  // A fused multiply-add may end an FP accumulation chain, so revisit it. The
+  // block resources are cached apart from the trace and are recomputed unless
+  // the trace is updated incrementally, which keeps large blocks linear.
+  auto RevisitFusedFMA = [&](MachineInstr &NewRoot) {
+    std::optional<TargetInstrInfo::FMAChainLinkInfo> Info =
+        TII->getFMAChainLinkInfo(NewRoot);
+    if (!Info || !Info->isFused())
+      return;
+    BlockIter = NewRoot.getIterator();
+    if (!IncrementalUpdate)
+      Traces->invalidate(MBB);
+  };
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
@@ -634,6 +670,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
+        RevisitFusedFMA(*InsInstrs.back());
         // Eagerly stop after the first pattern fires.
         Changed = true;
         break;
@@ -667,6 +704,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
 
           insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                    RegUnits, TII, P, IncrementalUpdate);
+          RevisitFusedFMA(*InsInstrs.back());
 
           // Eagerly stop after the first pattern fires.
           Changed = true;

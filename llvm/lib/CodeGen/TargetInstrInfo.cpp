@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1140,6 +1141,296 @@ void TargetInstrInfo::reduceAccumulatorTree(
   RegistersToReduce = std::move(NewRegs);
 }
 
+static bool isPlainVirtRegOperand(const MachineOperand &MO) {
+  return MO.isReg() && MO.getReg().isVirtual() && !MO.getSubReg() &&
+         !MO.isUndef();
+}
+
+static int getFMAChainAccOpIdx(const TargetInstrInfo::FMAChainLinkInfo &Info,
+                               const MachineInstr &Link,
+                               const MachineInstr &Prev) {
+  if (Info.isFused())
+    return Info.AccOpIdx;
+  // An unfused link accumulates the source defined by the previous link.
+  return Link.getOperand(1).getReg() == Prev.getOperand(0).getReg() ? 1 : 2;
+}
+
+// Collect the FP accumulation chain ending at Root, leaf first and Root last,
+// or return an empty chain if Root does not end a chain that can be split.
+static SmallVector<MachineInstr *, 16>
+collectFMAChain(const TargetInstrInfo &TII, MachineInstr &Root) {
+  MachineBasicBlock &MBB = *Root.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  // The split reorders the additions and rounds one product separately, which
+  // may change the result by a rounding and the sign of a zero.
+  auto GetInfo = [&](const MachineInstr &MI)
+      -> std::optional<TargetInstrInfo::FMAChainLinkInfo> {
+    if (!MI.getFlag(MachineInstr::MIFlag::FmReassoc) ||
+        !MI.getFlag(MachineInstr::MIFlag::FmNsz) || MI.mayRaiseFPException())
+      return std::nullopt;
+    return TII.getFMAChainLinkInfo(MI);
+  };
+
+  std::optional<TargetInstrInfo::FMAChainLinkInfo> RootInfo = GetInfo(Root);
+  if (!RootInfo || !isPlainVirtRegOperand(Root.getOperand(0)) ||
+      Root.getOperand(0).isDead())
+    return {};
+  Register RootReg = Root.getOperand(0).getReg();
+  if (MRI.use_nodbg_empty(RootReg))
+    return {};
+
+  // All links share the add joining the halves, which takes their results.
+  auto GetLinkInfo = [&](const MachineInstr &MI)
+      -> std::optional<TargetInstrInfo::FMAChainLinkInfo> {
+    std::optional<TargetInstrInfo::FMAChainLinkInfo> Info = GetInfo(MI);
+    if (Info && Info->AddOpc != RootInfo->AddOpc)
+      return std::nullopt;
+    return Info;
+  };
+
+  auto GetLinkDef = [&](const MachineOperand &MO) -> MachineInstr * {
+    if (!isPlainVirtRegOperand(MO) || !MRI.hasOneNonDBGUse(MO.getReg()))
+      return nullptr;
+    MachineInstr *Def = MRI.getUniqueVRegDef(MO.getReg());
+    if (!Def || Def->getParent() != &MBB ||
+        !isPlainVirtRegOperand(Def->getOperand(0)) ||
+        Def->getOperand(0).getReg() != MO.getReg() || !GetLinkInfo(*Def))
+      return nullptr;
+    return Def;
+  };
+
+  // Both sources of an unfused link must be renamable, as its increment
+  // becomes the accumulator of the next link when the link is dropped.
+  auto GetPrevLink = [&](const MachineInstr &MI) -> MachineInstr * {
+    std::optional<TargetInstrInfo::FMAChainLinkInfo> Info = GetLinkInfo(MI);
+    if (!Info)
+      return nullptr;
+    if (Info->isFused())
+      return GetLinkDef(MI.getOperand(Info->AccOpIdx));
+    if (!isPlainVirtRegOperand(MI.getOperand(1)) ||
+        !isPlainVirtRegOperand(MI.getOperand(2)))
+      return nullptr;
+    if (MachineInstr *Def = GetLinkDef(MI.getOperand(1)))
+      return Def;
+    return GetLinkDef(MI.getOperand(2));
+  };
+
+  // Split only at the chain end, as shorter prefixes are not worth splitting.
+  if (MRI.hasOneNonDBGUse(RootReg)) {
+    MachineInstr &User = *MRI.use_instr_nodbg_begin(RootReg);
+    if (User.getParent() == &MBB && GetPrevLink(User) == &Root)
+      return {};
+  }
+
+  SmallVector<MachineInstr *, 16> Chain = {&Root};
+  for (MachineInstr *Link = GetPrevLink(Root); Link; Link = GetPrevLink(*Link))
+    Chain.push_back(Link);
+  std::reverse(Chain.begin(), Chain.end());
+  // Each half needs at least two links to reduce the depth.
+  if (Chain.size() < 4)
+    return {};
+
+  // The upper half is re-emitted at Root, so moved links must be safe to
+  // relocate there without crossing conflicting memory or physical register
+  // accesses.
+  unsigned S = Chain.size() / 2;
+  SmallSet<Register, 2> ImplicitPhysRegs;
+  bool MovesLoad = false;
+  auto NextMoved = Chain.begin() + S;
+  for (MachineInstr &MI :
+       llvm::make_range(Chain[S]->getIterator(), MBB.instr_end())) {
+    if (NextMoved != Chain.end() && &MI == *NextMoved) {
+      ++NextMoved;
+      if (MI.isBundled() || MI.mayStore() || MI.isNotDuplicable() ||
+          !llvm::hasSingleElement(MI.all_defs()) ||
+          TII.isGlobalMemoryObject(&MI))
+        return {};
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isRegMask())
+          return {};
+        if (!MO.isReg() || !MO.isUse() || !MO.getReg().isPhysical())
+          continue;
+        if (!MO.isImplicit())
+          return {};
+        if (!MO.isUndef())
+          ImplicitPhysRegs.insert(MO.getReg());
+      }
+      MovesLoad |= MI.mayLoad() && !MI.isDereferenceableInvariantLoad();
+      if (&MI == &Root)
+        break;
+      continue;
+    }
+    if (&MI == &Root)
+      return {};
+    if (MovesLoad && (MI.mayStore() || MI.isLifetimeMarker() ||
+                      TII.isGlobalMemoryObject(&MI)))
+      return {};
+    if (llvm::any_of(ImplicitPhysRegs, [&](Register Reg) {
+          return MI.modifiesRegister(Reg, &TII.getRegisterInfo());
+        }))
+      return {};
+  }
+  if (NextMoved != Chain.end())
+    return {};
+  return Chain;
+}
+
+static MachineInstr *buildFMAChainAdd(const TargetInstrInfo &TII,
+                                      MachineInstr &Root, Register Lower,
+                                      Register Upper) {
+  return BuildMI(*Root.getMF(), MIMetadata(Root),
+                 TII.get(TII.getFMAChainLinkInfo(Root)->AddOpc),
+                 Root.getOperand(0).getReg())
+      .addReg(Lower)
+      .addReg(Upper);
+}
+
+// The split costs an add, so a scheduling model without the accumulator
+// forwarding between fused links overestimates its gain on cores that forward.
+// In a loop the split must also shorten the recurrence through the PHI, which
+// the machine combiner does not check.
+static bool isFMASplitProfitable(const TargetInstrInfo &TII,
+                                 ArrayRef<MachineInstr *> Chain) {
+  MachineInstr &Root = *Chain.back();
+  const MachineInstr &Leaf = *Chain.front();
+  MachineFunction &MF = *Root.getMF();
+  TargetSchedModel SchedModel;
+  SchedModel.init(&MF.getSubtarget());
+  if (!SchedModel.hasInstrSchedModelOrItineraries())
+    return false;
+
+  // Latency of the accumulator edge into each link but the leaf. The model
+  // must forward the accumulator between fused links.
+  SmallVector<unsigned, 16> AccLat;
+  bool PrevFused = TII.getFMAChainLinkInfo(Leaf)->isFused();
+  for (auto [Prev, Link] : llvm::zip(Chain, llvm::drop_begin(Chain))) {
+    TargetInstrInfo::FMAChainLinkInfo Info = *TII.getFMAChainLinkInfo(*Link);
+    AccLat.push_back(SchedModel.computeOperandLatency(
+        Prev, 0, Link, getFMAChainAccOpIdx(Info, *Link, *Prev)));
+    if (Info.isFused() && PrevFused &&
+        AccLat.back() >= SchedModel.computeInstrLatency(Prev))
+      return false;
+    PrevFused = Info.isFused();
+  }
+
+  // Find the leaf operand reading Root through a PHI, which closes a loop
+  // recurrence.
+  int PhiOpIdx = -1;
+  for (const MachineInstr &MI :
+       MF.getRegInfo().use_instructions(Root.getOperand(0).getReg())) {
+    if (!MI.isPHI())
+      continue;
+    PhiOpIdx = Leaf.findRegisterUseOperandIdx(MI.getOperand(0).getReg(),
+                                              /*TRI=*/nullptr);
+    if (PhiOpIdx >= 0)
+      break;
+  }
+  if (PhiOpIdx < 0)
+    return true;
+
+  // After the split, the recurrence runs through the lower half and the add,
+  // whose scheduling class may depend on the instruction.
+  unsigned S = Chain.size() / 2;
+  Register LowerReg = Chain[S - 1]->getOperand(0).getReg();
+  MachineInstr *Add =
+      buildFMAChainAdd(TII, Root, LowerReg, Chain[S]->getOperand(0).getReg());
+  unsigned AddLat = SchedModel.computeOperandLatency(Chain[S - 1], 0, Add, 1) +
+                    SchedModel.computeOperandLatency(Add, 0, &Leaf, PhiOpIdx);
+  MF.deleteMachineInstr(Add);
+  unsigned SplitRecurrenceLat =
+      llvm::accumulate(ArrayRef(AccLat).take_front(S - 1), AddLat);
+  unsigned RecurrenceLat = llvm::accumulate(
+      AccLat, SchedModel.computeOperandLatency(&Root, 0, &Leaf, PhiOpIdx));
+  return SplitRecurrenceLat < RecurrenceLat;
+}
+
+// Add MachineCombinerPattern::FMA_CHAIN if Root ends an FP accumulation chain
+// worth splitting into two shorter chains.
+static bool getFMAChainPatterns(const TargetInstrInfo &TII, MachineInstr &Root,
+                                SmallVectorImpl<unsigned> &Patterns,
+                                bool DoRegPressureReduce) {
+  // The split adds an instruction and a second live accumulator.
+  const MachineFunction &MF = *Root.getMF();
+  if (DoRegPressureReduce ||
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::Aggressive ||
+      MF.getFunction().hasOptSize())
+    return false;
+  SmallVector<MachineInstr *, 16> Chain = collectFMAChain(TII, Root);
+  if (Chain.empty() || !isFMASplitProfitable(TII, Chain))
+    return false;
+  Patterns.push_back(MachineCombinerPattern::FMA_CHAIN);
+  return true;
+}
+
+// Split the chain ending at Root into two chains joined by an add, e.g.
+//   X -> FMA0 -> FMA1 -> FMA2 -> FMA3 -> FMA4 -> FMA5
+// becomes
+//   X -> FMA0 -> FMA1 -> FMA2 --+
+//        MUL3 -> FMA4 -> FMA5 --+-> ADD
+static void
+reassociateFMAChain(const TargetInstrInfo &TII, MachineInstr &Root,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs,
+                    SmallVectorImpl<MachineInstr *> &DelInstrs,
+                    DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  SmallVector<MachineInstr *, 16> Chain = collectFMAChain(TII, Root);
+  assert(!Chain.empty() && "expected an FMA chain");
+  unsigned N = Chain.size();
+  unsigned S = N / 2;
+
+  uint32_t Flags = ~0u;
+  for (MachineInstr *Link : llvm::drop_begin(Chain, S))
+    Flags &= Link->getFlags();
+
+  // Start the upper chain at an unfused link, if any, so that its increment
+  // becomes the initial accumulator and no fused link becomes a multiply.
+  auto Order = llvm::to_vector<8>(llvm::seq(S, N));
+  auto *Unfused = llvm::find_if(Order, [&](unsigned I) {
+    return !TII.getFMAChainLinkInfo(*Chain[I])->isFused();
+  });
+  if (Unfused != Order.end())
+    std::rotate(Order.begin(), Unfused, std::next(Unfused));
+
+  DelInstrs.append(Chain.begin() + S, Chain.end());
+  const TargetRegisterClass *RC =
+      Root.getRegClassConstraint(0, &TII, &TII.getRegisterInfo());
+  Register UpperAcc;
+  for (auto [Pos, I] : llvm::enumerate(Order)) {
+    MachineInstr *Link = Chain[I];
+    TargetInstrInfo::FMAChainLinkInfo Info = *TII.getFMAChainLinkInfo(*Link);
+    int AccIdx = getFMAChainAccOpIdx(Info, *Link, *Chain[I - 1]);
+    if (Pos == 0 && !Info.isFused()) {
+      UpperAcc = Link->getOperand(AccIdx == 1 ? 2 : 1).getReg();
+      continue;
+    }
+    Register NewDst = MRI.createVirtualRegister(RC);
+    MachineInstr *NewInstr = MF->CloneMachineInstr(Link);
+    // The add joining the halves may read registers a moved link killed.
+    NewInstr->clearKillInfo();
+    if (Pos == 0) {
+      NewInstr->untieRegOperand(0);
+      NewInstr->removeOperand(AccIdx);
+      NewInstr->setDesc(TII.get(Info.MulOpc));
+    } else {
+      NewInstr->getOperand(AccIdx).setReg(UpperAcc);
+    }
+    NewInstr->getOperand(0).setReg(NewDst);
+    NewInstr->setFlags(Flags);
+    InstrIdxForVirtReg.try_emplace(NewDst, InsInstrs.size());
+    InsInstrs.push_back(NewInstr);
+    UpperAcc = NewDst;
+  }
+
+  MachineInstr *Add = buildFMAChainAdd(
+      TII, Root, Chain[S - 1]->getOperand(0).getReg(), UpperAcc);
+  Add->setFlags(Flags);
+  if (unsigned OldRootNum = Root.peekDebugInstrNum())
+    Add->setDebugInstrNum(OldRootNum);
+  InsInstrs.push_back(Add);
+}
+
 // The concept of the reassociation pass is that these operations can benefit
 // from this kind of transformation:
 //
@@ -1164,6 +1455,10 @@ void TargetInstrInfo::reduceAccumulatorTree(
 bool TargetInstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
+  // The split of a whole chain goes first. The reassociation of a single pair
+  // stays as a fallback if the machine combiner rejects the split.
+  bool FoundFMAChain =
+      getFMAChainPatterns(*this, Root, Patterns, DoRegPressureReduce);
   bool Commute;
   if (isReassociationCandidate(Root, Commute)) {
     // We found a sequence of instructions that may be suitable for a
@@ -1182,7 +1477,7 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
   if (getAccumulatorReassociationPatterns(Root, Patterns))
     return true;
 
-  return false;
+  return FoundFMAChain;
 }
 
 /// Return true when a code sequence can improve loop throughput.
@@ -1194,6 +1489,7 @@ CombinerObjective
 TargetInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case MachineCombinerPattern::ACC_CHAIN:
+  case MachineCombinerPattern::FMA_CHAIN:
     return CombinerObjective::MustReduceDepth;
   default:
     return CombinerObjective::Default;
@@ -1589,6 +1885,9 @@ void TargetInstrInfo::genAlternativeCodeSequence(
 
     break;
   }
+  case MachineCombinerPattern::FMA_CHAIN:
+    reassociateFMAChain(*this, Root, InsInstrs, DelInstrs, InstIdxForVirtReg);
+    break;
   }
 }
 

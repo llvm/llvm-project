@@ -1396,6 +1396,30 @@ public:
                              DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                              Register ResultReg) const;
 
+  /// Link of an FP accumulation chain, see MachineCombinerPattern::FMA_CHAIN.
+  /// All links of a chain define registers of the same class.
+  struct FMAChainLinkInfo {
+    /// Add joining the two halves of the chain. Its sources and those of an
+    /// unfused link are operands 1 and 2.
+    unsigned AddOpc;
+    /// Multiply replacing the fused link starting the upper half, or 0 for an
+    /// unfused link. Its operands are those of the fused link without
+    /// AccOpIdx, with no tied operands left.
+    unsigned MulOpc;
+    /// Accumulator operand of a fused link. An unfused link accumulates the
+    /// source defined by the previous link.
+    int AccOpIdx;
+
+    bool isFused() const { return MulOpc != 0; }
+  };
+
+  /// Return the FP accumulation chain link description of \p MI, or
+  /// std::nullopt. The FP flags of \p MI are checked by the caller.
+  virtual std::optional<FMAChainLinkInfo>
+  getFMAChainLinkInfo(const MachineInstr &MI) const {
+    return std::nullopt;
+  }
+
   /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
   /// for sub and vice versa).
   virtual std::optional<unsigned> getInverseOpcode(unsigned Opcode) const {
