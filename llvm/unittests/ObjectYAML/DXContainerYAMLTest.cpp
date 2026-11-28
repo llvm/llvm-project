@@ -685,7 +685,10 @@ TEST(DXCFile, ParseVERSPart) {
 TEST(DXCFile, ComputeVERSPart) {
   SmallString<128> Storage;
 
-  // Check default values of compiler version part fields.
+  // Check default values of compiler version part fields. The defaults are
+  // build-dependent: CommitSha is LLVM_REVISION and CustomVersionString is
+  // PACKAGE_VERSION. A downstream LLVM_REVISION can be much longer than an
+  // upstream git hash, so the part needs headroom for them.
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
     Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -696,7 +699,7 @@ TEST(DXCFile, ComputeVERSPart) {
     PartCount:       1
   Parts:
     - Name:            VERS
-      Size:            100
+      Size:            256
       CompilerVersion:
     )"));
 
