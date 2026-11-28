@@ -690,14 +690,19 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    pushq %r14
 ; ANDROID-NEXT:    pushq %rbx
-; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    subq $40, %rsp
+; ANDROID-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; ANDROID-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; ANDROID-NEXT:    movq %rsi, %rbx
 ; ANDROID-NEXT:    movq %rdi, %r14
+; ANDROID-NEXT:    callq __letf2@PLT
+; ANDROID-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; ANDROID-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; ANDROID-NEXT:    callq __eqtf2@PLT
 ; ANDROID-NEXT:    testl %eax, %eax
 ; ANDROID-NEXT:    cmovneq %rbx, %r14
 ; ANDROID-NEXT:    movq %r14, %rax
-; ANDROID-NEXT:    addq $8, %rsp
+; ANDROID-NEXT:    addq $40, %rsp
 ; ANDROID-NEXT:    popq %rbx
 ; ANDROID-NEXT:    popq %r14
 ; ANDROID-NEXT:    retq
@@ -706,28 +711,51 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    pushq %r14
 ; GNU-NEXT:    pushq %rbx
-; GNU-NEXT:    pushq %rax
+; GNU-NEXT:    subq $40, %rsp
+; GNU-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; GNU-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; GNU-NEXT:    movq %rsi, %rbx
 ; GNU-NEXT:    movq %rdi, %r14
+; GNU-NEXT:    callq __letf2@PLT
+; GNU-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; GNU-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; GNU-NEXT:    callq __eqtf2@PLT
 ; GNU-NEXT:    testl %eax, %eax
 ; GNU-NEXT:    cmovneq %rbx, %r14
 ; GNU-NEXT:    movq %r14, %rax
-; GNU-NEXT:    addq $8, %rsp
+; GNU-NEXT:    addq $40, %rsp
 ; GNU-NEXT:    popq %rbx
 ; GNU-NEXT:    popq %r14
 ; GNU-NEXT:    retq
 ;
 ; X86-LABEL: cmps:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __letf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __eqtf2
 ; X86-NEXT:    addl $32, %esp
@@ -738,26 +766,39 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    movl 4(%ecx), %edx
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; WIN-LABEL: cmps:
 ; WIN:       # %bb.0:
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    pushq %rdi
-; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    subq $136, %rsp
+; WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movq %rdx, %rsi
 ; WIN-NEXT:    movq %rcx, %rdi
-; WIN-NEXT:    movaps (%r8), %xmm0
-; WIN-NEXT:    movaps (%r9), %xmm1
-; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps (%r8), %xmm6
+; WIN-NEXT:    movaps (%r9), %xmm7
+; WIN-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    callq __letf2
+; WIN-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __eqtf2
 ; WIN-NEXT:    testl %eax, %eax
 ; WIN-NEXT:    cmovneq %rsi, %rdi
 ; WIN-NEXT:    movq %rdi, %rax
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; WIN-NEXT:    addq $136, %rsp
 ; WIN-NEXT:    popq %rdi
 ; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
@@ -766,14 +807,30 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86:       # %bb.0:
 ; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
 ; WIN-X86-NEXT:    subl $16, %esp
-; WIN-X86-NEXT:    pushl 52(%ebp)
+; WIN-X86-NEXT:    movl 32(%ebp), %edi
+; WIN-X86-NEXT:    movl 36(%ebp), %esi
+; WIN-X86-NEXT:    movl 52(%ebp), %ebx
+; WIN-X86-NEXT:    pushl %ebx
 ; WIN-X86-NEXT:    pushl 48(%ebp)
 ; WIN-X86-NEXT:    pushl 44(%ebp)
 ; WIN-X86-NEXT:    pushl 40(%ebp)
-; WIN-X86-NEXT:    pushl 36(%ebp)
-; WIN-X86-NEXT:    pushl 32(%ebp)
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl 28(%ebp)
+; WIN-X86-NEXT:    pushl 24(%ebp)
+; WIN-X86-NEXT:    calll ___letf2
+; WIN-X86-NEXT:    addl $32, %esp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl 48(%ebp)
+; WIN-X86-NEXT:    pushl 44(%ebp)
+; WIN-X86-NEXT:    pushl 40(%ebp)
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl 28(%ebp)
 ; WIN-X86-NEXT:    pushl 24(%ebp)
 ; WIN-X86-NEXT:    calll ___eqtf2
@@ -788,7 +845,10 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:  LBB5_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
 ; WIN-X86-NEXT:    movl 4(%ecx), %edx
-; WIN-X86-NEXT:    movl %ebp, %esp
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
 ; WIN-X86-NEXT:    popl %ebp
 ; WIN-X86-NEXT:    retl
   %cond = call i1 @llvm.experimental.constrained.fcmps.f128(

@@ -13,6 +13,13 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    mr r3, r5
 ; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __eqsf2
 ; SPE-NEXT:    cmplwi r3, 0
 ; SPE-NEXT:    beq cr0, .LBB0_2
@@ -22,6 +29,8 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r3, r30
 ; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 12(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r0, 36(r1)
 ; SPE-NEXT:    addi r1, r1, 32
 ; SPE-NEXT:    mtlr r0
@@ -73,12 +82,18 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __gesf2
 ; SPE-NEXT:    cmpwi cr2, r3, -1
 ; SPE-NEXT:    mr r3, r28
@@ -152,12 +167,18 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __lesf2
 ; SPE-NEXT:    cmpwi cr2, r3, 1
 ; SPE-NEXT:    mr r3, r28
@@ -248,14 +269,21 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r28, r5
-; SPE-NEXT:    bl __eqsf2
-; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
 ; SPE-NEXT:    mr r3, r28
 ; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __eqsf2
-; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    or. r3, r3, r28
 ; SPE-NEXT:    beq cr0, .LBB6_2
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    mr r30, r29
@@ -332,12 +360,18 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __gtsf2
 ; SPE-NEXT:    cmpwi cr2, r3, 0
 ; SPE-NEXT:    mr r3, r28
@@ -411,12 +445,18 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __ltsf2
 ; SPE-NEXT:    cmpwi cr2, r3, 0
 ; SPE-NEXT:    mr r3, r28
@@ -490,6 +530,13 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    mr r3, r5
 ; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __nesf2
 ; SPE-NEXT:    cmplwi r3, 0
 ; SPE-NEXT:    bne cr0, .LBB12_2
@@ -499,6 +546,8 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r3, r30
 ; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 12(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r0, 36(r1)
 ; SPE-NEXT:    addi r1, r1, 32
 ; SPE-NEXT:    mtlr r0
@@ -521,14 +570,21 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r6
 ; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
 ; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r28, r5
-; SPE-NEXT:    bl __nesf2
-; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __lesf2
 ; SPE-NEXT:    mr r3, r28
 ; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    bl __nesf2
-; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    or. r3, r3, r28
 ; SPE-NEXT:    bne cr0, .LBB13_2
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    mr r30, r29
@@ -551,17 +607,29 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_oeq_s:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -32(r1)
-; SPE-NEXT:    stw r0, 36(r1)
-; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    evstdd r25, 8(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
-; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    evmergehi r5, r7, r7
-; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    bl __eqdf2
 ; SPE-NEXT:    cmplwi r3, 0
 ; SPE-NEXT:    beq cr0, .LBB14_2
@@ -569,10 +637,14 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB14_2:
 ; SPE-NEXT:    mr r3, r30
-; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
-; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
-; SPE-NEXT:    lwz r0, 36(r1)
-; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r25, 8(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"oeq", metadata !"fpexcept.strict") #0
@@ -628,29 +700,39 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r28, r7, r8
-; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    evmergehi r26, r27, r27
-; SPE-NEXT:    evmergehi r25, r28, r28
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __gedf2
-; SPE-NEXT:    cmpwi cr2, r3, -1
+; SPE-NEXT:    bl __ledf2
 ; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r25
-; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __eqdf2
-; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __gedf2
+; SPE-NEXT:    cmpwi cr2, r3, -1
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r5, r26
 ; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __eqdf2
-; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    or. r3, r3, r27
 ; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+gt, eq
 ; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB16_2
 ; SPE-NEXT:  # %bb.1:
@@ -722,29 +804,39 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r28, r7, r8
-; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    evmergehi r26, r27, r27
-; SPE-NEXT:    evmergehi r25, r28, r28
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    bl __ledf2
-; SPE-NEXT:    cmpwi cr2, r3, 1
 ; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r25
-; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __eqdf2
-; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    cmpwi cr2, r3, 1
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r5, r26
 ; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __eqdf2
-; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    or. r3, r3, r27
 ; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+lt, eq
 ; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB18_2
 ; SPE-NEXT:  # %bb.1:
@@ -830,22 +922,37 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mflr r0
 ; SPE-NEXT:    stwu r1, -80(r1)
 ; SPE-NEXT:    stw r0, 84(r1)
-; SPE-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r25, 8(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r28, r5, r6
-; SPE-NEXT:    evmergelo r4, r7, r8
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    mr r6, r4
-; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __eqdf2
 ; SPE-NEXT:    mr r27, r3
-; SPE-NEXT:    evmergehi r3, r28, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    bl __eqdf2
 ; SPE-NEXT:    or. r3, r3, r27
@@ -856,8 +963,10 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mr r3, r30
 ; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
-; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r25, 8(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    lwz r0, 84(r1)
 ; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
@@ -938,29 +1047,39 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r28, r7, r8
-; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    evmergehi r26, r27, r27
-; SPE-NEXT:    evmergehi r25, r28, r28
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __gtdf2
-; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    bl __ledf2
 ; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r25
-; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __nedf2
-; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r5, r26
 ; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __nedf2
-; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    or. r3, r3, r27
 ; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+gt, eq
 ; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB22_2
 ; SPE-NEXT:  # %bb.1:
@@ -1032,29 +1151,39 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r28, r7, r8
-; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    evmergehi r26, r27, r27
-; SPE-NEXT:    evmergehi r25, r28, r28
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __ltdf2
-; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    bl __ledf2
 ; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r25
-; SPE-NEXT:    mr r6, r28
-; SPE-NEXT:    bl __nedf2
-; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r5, r26
 ; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __nedf2
-; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    or. r3, r3, r27
 ; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+lt, eq
 ; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB24_2
 ; SPE-NEXT:  # %bb.1:
@@ -1115,17 +1244,29 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_une_s:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -32(r1)
-; SPE-NEXT:    stw r0, 36(r1)
-; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    evstdd r25, 8(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
-; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    evmergehi r5, r7, r7
-; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    bl __nedf2
 ; SPE-NEXT:    cmplwi r3, 0
 ; SPE-NEXT:    bne cr0, .LBB26_2
@@ -1133,10 +1274,14 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB26_2:
 ; SPE-NEXT:    mr r3, r30
-; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
-; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
-; SPE-NEXT:    lwz r0, 36(r1)
-; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r25, 8(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"une", metadata !"fpexcept.strict") #0
@@ -1150,22 +1295,37 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mflr r0
 ; SPE-NEXT:    stwu r1, -80(r1)
 ; SPE-NEXT:    stw r0, 84(r1)
-; SPE-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
-; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r25, 8(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
 ; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r28, r5, r6
-; SPE-NEXT:    evmergelo r4, r7, r8
+; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    mr r6, r4
-; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
 ; SPE-NEXT:    bl __nedf2
 ; SPE-NEXT:    mr r27, r3
-; SPE-NEXT:    evmergehi r3, r28, r28
+; SPE-NEXT:    mr r3, r25
 ; SPE-NEXT:    mr r4, r28
-; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    mr r5, r25
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    bl __nedf2
 ; SPE-NEXT:    or. r3, r3, r27
@@ -1176,8 +1336,10 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    mr r3, r30
 ; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
-; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r25, 8(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    lwz r0, 84(r1)
 ; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0

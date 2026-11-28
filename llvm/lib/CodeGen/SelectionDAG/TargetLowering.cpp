@@ -539,6 +539,49 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     }
   }
 
+  // For a constrained compare, the libcalls also have to raise the right
+  // exceptions. The helpers for the relational predicates raise invalid for
+  // any NaN operand, while the equality and unordered helpers only do so for a
+  // signaling NaN. A quiet relational compare therefore must not pass a NaN to
+  // the relational helper, and a signaling compare that only uses the quiet
+  // helpers needs another call to raise invalid for a quiet NaN.
+  bool QuietRelational = false, SignalingNeedsRaise = false;
+  if (Chain) {
+    switch (OrigCCCode) {
+    case ISD::SETOLT:
+    case ISD::SETOLE:
+    case ISD::SETOGT:
+    case ISD::SETOGE:
+    case ISD::SETULT:
+    case ISD::SETULE:
+    case ISD::SETUGT:
+    case ISD::SETUGE:
+      QuietRelational = !IsSignaling;
+      break;
+    case ISD::SETOEQ:
+    case ISD::SETUNE:
+    case ISD::SETO:
+    case ISD::SETUO:
+    case ISD::SETONE:
+    case ISD::SETUEQ:
+      SignalingNeedsRaise = IsSignaling;
+      break;
+    default:
+      // The remaining condition codes are only used when neither operand can
+      // be a NaN.
+      break;
+    }
+  }
+  RTLIB::Libcall UOLC = RTLIB::UNKNOWN_LIBCALL,
+                 RaiseLC = RTLIB::UNKNOWN_LIBCALL;
+  if (QuietRelational)
+    UOLC = FP_CMP_LIBCALL(UO);
+  if (SignalingNeedsRaise)
+    RaiseLC = selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
+                                 FP_CMP_LIBCALL(FCMP3_PRED_OLE),
+                                 FP_CMP_LIBCALL(FCMP3), ISD::SETLE)
+                  .first;
+
 #undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
@@ -566,6 +609,42 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     return;
   }
 
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
+
+  if (SignalingNeedsRaise) {
+    // The result is not needed, only the exceptions it raises.
+    RTLIB::LibcallImpl RaiseImpl = DAG.getLibcalls().getLibcallImpl(RaiseLC);
+    if (RaiseImpl == RTLIB::Unsupported) {
+      ReportNoLibcall();
+      return;
+    }
+    Chain =
+        makeLibCall(DAG, RaiseImpl, RetVT, Ops, CallOptions, dl, Chain).second;
+  }
+
+  SDValue IsUO;
+  if (QuietRelational) {
+    RTLIB::LibcallImpl UOImpl = DAG.getLibcalls().getLibcallImpl(UOLC);
+    if (UOImpl == RTLIB::Unsupported) {
+      ReportNoLibcall();
+      return;
+    }
+    auto UOCall = makeLibCall(DAG, UOImpl, RetVT, Ops, CallOptions, dl, Chain);
+    Chain = UOCall.second;
+    IsUO = DAG.getSetCC(dl, SetCCVT, UOCall.first,
+                        DAG.getConstant(0, dl, RetVT), ISD::SETNE);
+    // Compare +0.0 instead of the operands when they are unordered, so that
+    // the relational helper does not see a NaN. The unordered result is
+    // merged in below.
+    for (SDValue &Op : Ops) {
+      EVT OpVT = Op.getValueType();
+      SDValue Zero = OpVT.isFloatingPoint() ? DAG.getConstantFP(0.0, dl, OpVT)
+                                            : DAG.getConstant(0, dl, OpVT);
+      Op = DAG.getSelect(dl, OpVT, IsUO, Zero, Op);
+    }
+  }
+
   auto Call = makeLibCall(DAG, LC1Impl, RetVT, Ops, CallOptions, dl, Chain);
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
@@ -579,7 +658,18 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   if (LC2 == RTLIB::UNKNOWN_LIBCALL) {
     // Update Chain.
     Chain = Call.second;
+    if (QuietRelational) {
+      SDValue Res = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
+      if (ISD::getUnorderedFlavor(OrigCCCode) == 1)
+        Res = DAG.getNode(ISD::OR, dl, SetCCVT, Res, IsUO);
+      else
+        Res = DAG.getNode(ISD::AND, dl, SetCCVT, Res,
+                          DAG.getLogicalNOT(dl, IsUO, SetCCVT));
+      NewLHS = Res;
+      NewRHS = SDValue();
+    }
   } else {
+    assert(!QuietRelational && "relational compare with two libcalls");
     RTLIB::LibcallImpl LC2Impl = DAG.getLibcalls().getLibcallImpl(LC2);
     if (LC2Impl == RTLIB::Unsupported) {
       ReportNoLibcall();
@@ -589,8 +679,6 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     assert(CCCode == (ShouldInvertCC ? ISD::SETEQ : ISD::SETNE) &&
            "unordered call should be simple boolean");
 
-    EVT SetCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
     if (getBooleanContents(RetVT) == ZeroOrOneBooleanContent) {
       NewLHS = DAG.getNode(ISD::AssertZext, dl, RetVT, Call.first,
                            DAG.getValueType(MVT::i1));

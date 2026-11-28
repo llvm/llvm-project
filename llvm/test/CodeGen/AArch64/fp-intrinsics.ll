@@ -2434,13 +2434,33 @@ define fp128 @trunc_f128(fp128 %x) #0 {
 define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_olt_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI192_0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI192_0]
+; CHECK-NEXT:    cset w19, ne
+; CHECK-NEXT:    b.eq .LBB192_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB192_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB192_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB192_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, mi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    bic w0, w8, w19
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"olt", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2450,13 +2470,33 @@ define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_ole_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI193_0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI193_0]
+; CHECK-NEXT:    cset w19, ne
+; CHECK-NEXT:    b.eq .LBB193_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB193_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB193_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB193_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __letf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, le
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, le
+; CHECK-NEXT:    bic w0, w8, w19
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ole", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2466,13 +2506,33 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_ogt_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI194_0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI194_0]
+; CHECK-NEXT:    cset w19, ne
+; CHECK-NEXT:    b.eq .LBB194_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB194_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB194_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB194_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __gttf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, gt
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    bic w0, w8, w19
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ogt", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2482,13 +2542,33 @@ define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_oge_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI195_0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI195_0]
+; CHECK-NEXT:    cset w19, ne
+; CHECK-NEXT:    b.eq .LBB195_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB195_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB195_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB195_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __getf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, pl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, pl
+; CHECK-NEXT:    bic w0, w8, w19
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"oge", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2538,13 +2618,34 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_ult_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI198_0
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI198_0]
+; CHECK-NEXT:    b.eq .LBB198_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB198_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB198_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB198_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __getf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, mi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    cmp w19, #0
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinc w0, w8, wzr, eq
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ult", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2554,13 +2655,34 @@ define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_ule_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI199_0
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI199_0]
+; CHECK-NEXT:    b.eq .LBB199_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB199_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB199_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB199_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __gttf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, le
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, le
+; CHECK-NEXT:    cmp w19, #0
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinc w0, w8, wzr, eq
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ule", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2570,13 +2692,34 @@ define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_ugt_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI200_0
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI200_0]
+; CHECK-NEXT:    b.eq .LBB200_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB200_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB200_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB200_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __letf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, gt
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp w19, #0
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinc w0, w8, wzr, eq
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ugt", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2586,13 +2729,34 @@ define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmp_uge_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __unordtf2
+; CHECK-NEXT:    adrp x8, .LCPI201_0
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI201_0]
+; CHECK-NEXT:    b.eq .LBB201_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:  .LBB201_2:
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-NEXT:    b.eq .LBB201_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:  .LBB201_4:
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w0, pl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cset w8, pl
+; CHECK-NEXT:    cmp w19, #0
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinc w0, w8, wzr, eq
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"uge", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2706,13 +2870,18 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmps_oeq_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __letf2
+; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __eqtf2
 ; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"oeq", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
@@ -2728,6 +2897,8 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __letf2
+; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __eqtf2
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    mov w19, w0
@@ -2816,6 +2987,8 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __letf2
+; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __eqtf2
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    mov w19, w0
@@ -2834,13 +3007,18 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: fcmps_une_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __letf2
+; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __netf2
 ; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"une", metadata !"fpexcept.strict") #0
   %conv = zext i1 %cmp to i32
