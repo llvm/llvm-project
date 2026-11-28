@@ -68,10 +68,10 @@
 ; CHECK:    .registers:      {}
 ; CHECK-NEXT:    .shader_functions:
 ; CHECK-NEXT:      dynamic_stack:
-; CHECK-NEXT:        .backend_stack_size: 0x10
+; CHECK-NEXT:        .backend_stack_size: 0x14
 ; CHECK-NEXT:        .lds_size:       0
-; CHECK-NEXT:        .sgpr_count:     0x22
-; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
+; CHECK-NEXT:        .sgpr_count:     0x21
+; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x14
 ; CHECK-NEXT:        .vgpr_count:     0x2
 ; CHECK-NEXT:      dynamic_stack_loop:
 ; CHECK-NEXT:        .backend_stack_size: 0x10

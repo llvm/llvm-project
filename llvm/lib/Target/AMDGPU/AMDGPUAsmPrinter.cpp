@@ -968,6 +968,21 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (STM.isAmdPalOS()) {
+    // PAL metadata has no way to request a dynamically sized stack, so the
+    // reported scratch size only covers an assumed size for dynamic stack
+    // objects, which may be too small.
+    const AMDGPUOptions &CLOpts =
+        static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
+    if (MF.getFrameInfo().hasVarSizedObjects() &&
+        !CLOpts.assume_dynamic_stack_object_size) {
+      const Function &F = MF.getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "scratch size includes only an assumed size for dynamic stack "
+          "allocations",
+          DiagnosticLocation(), DS_Warning));
+    }
+
     if (MFI->isEntryFunction())
       EmitPALMetadata(MF, CurrentProgramInfo);
     else if (MFI->isModuleEntryFunction())

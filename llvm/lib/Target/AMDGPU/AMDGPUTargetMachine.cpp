@@ -533,6 +533,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
+  initializeAMDGPUHoistAllocasLegacyPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
@@ -1427,6 +1428,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAtomicExpandLegacyPass());
 
+  if (TM.getTargetTriple().isAMDGCN() && CLOpts.enable_hoist_allocas)
+    addPass(createAMDGPUHoistAllocasLegacyPass());
+
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
 
@@ -2227,6 +2231,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
         AMDGPUAtomicOptimizerPass(TM, CLOpts.atomic_optimizer_strategy), PMW);
 
   addFunctionPass(AtomicExpandPass(TM), PMW);
+
+  if (TM.getTargetTriple().isAMDGCN() && CLOpts.enable_hoist_allocas)
+    addFunctionPass(AMDGPUHoistAllocasPass(), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
