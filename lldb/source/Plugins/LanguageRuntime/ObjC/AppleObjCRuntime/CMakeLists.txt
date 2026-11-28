@@ -1,3 +1,7 @@
+lldb_tablegen(AppleObjCRuntimeOptions.inc -gen-lldb-option-defs
+  SOURCE AppleObjCRuntimeOptions.td
+  TARGET LLDBPluginAppleObjCRuntimeOptionsGen)
+
 add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
   AppleObjCRuntime.cpp
   AppleObjCRuntimeV2.cpp
@@ -25,3 +29,6 @@ add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
   CLANG_LIBS
     clangAST
   )
+
+add_dependencies(lldbPluginAppleObjCRuntime
+  LLDBPluginAppleObjCRuntimeOptionsGen)
