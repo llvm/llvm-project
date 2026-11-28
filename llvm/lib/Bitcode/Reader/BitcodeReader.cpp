@@ -2559,16 +2559,18 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           SmallString<64> KindStr;
           SmallString<64> ValStr;
 
-          while (Record[i] != 0 && i != e)
+          while (i != e && Record[i] != 0)
             KindStr += Record[i++];
-          assert(Record[i] == 0 && "Kind string not null terminated");
+          if (i == e || Record[i] != 0)
+            return error("Kind string not null terminated");
 
           if (HasValue) {
             // Has a value associated with it.
             ++i; // Skip the '0' that terminates the "kind" string.
-            while (Record[i] != 0 && i != e)
+            while (i != e && Record[i] != 0)
               ValStr += Record[i++];
-            assert(Record[i] == 0 && "Value string not null terminated");
+            if (i == e || Record[i] != 0)
+              return error("Value string not null terminated");
           }
 
           B.addAttribute(KindStr.str(), ValStr.str());
