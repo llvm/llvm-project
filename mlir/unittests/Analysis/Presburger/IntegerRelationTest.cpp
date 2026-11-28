@@ -189,6 +189,46 @@ TEST(IntegerRelationTest, symbolicLexmax) {
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
 }
 
+// The lexmin and lexmax are taken over the range vars only. An unbounded
+// existentially quantified variable does not make them unbounded.
+TEST(IntegerRelationTest, symbolicLexOptUnboundedExists) {
+  // q is only bounded from above.
+  IntegerRelation rel1 = parseRelationFromSet(
+      "(a, x, q)[b] : (x - a >= 0, x - b >= 0, x - q >= 0)", 1);
+  rel1.convertToLocal(VarKind::Range, 1, 2);
+  SymbolicLexOpt lexmin = rel1.findSymbolicIntegerLexMin();
+
+  PWMAFunction expectedLexmin = parsePWMAF({
+      {"(a)[b] : (a - b >= 0)", "(a)[b] -> (a)"},
+      {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (b)"},
+  });
+  EXPECT_TRUE(lexmin.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin.lexopt.isEqual(expectedLexmin));
+
+  // q is only bounded from below. Note that the lexmax is computed by negating
+  // the range vars, which does not negate q.
+  IntegerRelation rel2 = parseRelationFromSet(
+      "(a, x, q)[b] : (a - x >= 0, b - x >= 0, q - x >= 0)", 1);
+  rel2.convertToLocal(VarKind::Range, 1, 2);
+  SymbolicLexOpt lexmax = rel2.findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax = parsePWMAF({
+      {"(a)[b] : (a - b >= 0)", "(a)[b] -> (b)"},
+      {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (a)"},
+  });
+  EXPECT_TRUE(lexmax.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax.lexopt.isEqual(expectedLexmax));
+
+  // x is unbounded as q can be arbitrarily large.
+  IntegerRelation rel3 =
+      parseRelationFromSet("(a, x, q)[b] : (x + q - a - b >= 0)", 1);
+  rel3.convertToLocal(VarKind::Range, 1, 2);
+  SymbolicLexOpt lexmin3 = rel3.findSymbolicIntegerLexMin();
+  EXPECT_TRUE(lexmin3.lexopt.getDomain().isIntegerEmpty());
+  EXPECT_TRUE(
+      lexmin3.unboundedDomain.isEqual(parsePresburgerSet({"(a)[b] : ()"})));
+}
+
 TEST(IntegerRelationTest, swapVar) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 2, 0);
 

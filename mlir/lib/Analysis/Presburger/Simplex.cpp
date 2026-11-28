@@ -232,12 +232,23 @@ Direction flippedDirection(Direction direction) {
 /// (A_k)*y is not zero then we have that A*y is lexicopositive and if not we
 /// add these to the set of ignored columns and continue to the next row. If we
 /// run out of rows, then A*y is zero and we are done.
-MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
+///
+/// The same argument shows that the first k elements of b form the
+/// lexicographic minimum of the first k variables, for any k. Since the first k
+/// elements of a lexicopositive vector are either all zero or form a
+/// lexicopositive vector, the first k elements of x = A*y + b are always equal
+/// to or lexicographically greater than the first k elements of b. So when the
+/// trailing variables are existentially quantified, we can just ignore their
+/// sample values, including whether these are bounded.
+MaybeOptimum<SmallVector<Fraction, 8>>
+LexSimplex::findRationalLexMin(unsigned numExistentialVars) {
+  assert(numExistentialVars <= var.size() &&
+         "Cannot have more existential vars than vars!");
   if (restoreRationalConsistency().failed()) {
     markEmpty();
     return OptimumKind::Empty;
   }
-  return getRationalSample();
+  return getRationalSample(var.size() - numExistentialVars);
 }
 
 /// Given a row that has a non-integer sample value, add an inequality such
@@ -303,7 +314,10 @@ std::optional<unsigned> LexSimplex::maybeGetNonIntegralVarRow() const {
   return {};
 }
 
-MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
+MaybeOptimum<SmallVector<DynamicAPInt, 8>>
+LexSimplex::findIntegerLexMin(unsigned numExistentialVars) {
+  assert(numExistentialVars <= var.size() &&
+         "Cannot have more existential vars than vars!");
   // We first try to make the tableau consistent.
   if (restoreRationalConsistency().failed())
     return OptimumKind::Empty;
@@ -326,7 +340,11 @@ MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
       return OptimumKind::Empty;
   }
 
-  MaybeOptimum<SmallVector<Fraction, 8>> sample = getRationalSample();
+  // Note that the cuts above are added for all variables, including the
+  // existentially quantified ones, since these have to take integer values
+  // too. However, only the leading variables need to be bounded.
+  MaybeOptimum<SmallVector<Fraction, 8>> sample =
+      getRationalSample(var.size() - numExistentialVars);
   assert(!sample.isEmpty() && "If we reached here the sample should exist!");
   if (sample.isUnbounded())
     return OptimumKind::Unbounded;
@@ -455,10 +473,17 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexOpt &result) const {
   IntMatrix output(0, domainPoly.getNumVars() + 1);
-  output.reserveRows(result.lexopt.getNumOutputs());
+  unsigned numOutputs = result.lexopt.getNumOutputs();
+  output.reserveRows(numOutputs);
   for (const Unknown &u : var) {
     if (u.isSymbol)
       continue;
+
+    // The remaining non-symbol variables are existentially quantified. These
+    // are minimized after the outputs, so they do not affect the lexmin of
+    // the outputs, whether or not they are bounded.
+    if (output.getNumRows() == numOutputs)
+      break;
 
     if (u.orientation == Orientation::Column) {
       // M + u has a sample value of zero so u has a sample value of -M, i.e,
@@ -533,10 +558,13 @@ LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
   return success();
 }
 
-SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
+SymbolicLexOpt
+SymbolicLexSimplex::computeSymbolicIntegerLexMin(unsigned numExistentialVars) {
+  assert(numExistentialVars <= var.size() - nSymbol &&
+         "Cannot have more existential vars than non-symbol vars!");
   SymbolicLexOpt result(PresburgerSpace::getRelationSpace(
       /*numDomain=*/domainPoly.getNumDimVars(),
-      /*numRange=*/var.size() - nSymbol,
+      /*numRange=*/var.size() - nSymbol - numExistentialVars,
       /*numSymbols=*/domainPoly.getNumSymbolVars()));
 
   /// The algorithm is more naturally expressed recursively, but we implement
@@ -1592,14 +1620,16 @@ void LexSimplexBase::addInequality(ArrayRef<DynamicAPInt> coeffs) {
   addRow(coeffs, /*makeRestricted=*/true);
 }
 
-MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalSample() const {
+MaybeOptimum<SmallVector<Fraction, 8>>
+LexSimplex::getRationalSample(unsigned numVars) const {
+  assert(numVars <= var.size() && "Cannot get sample of more vars than exist!");
   if (empty)
     return OptimumKind::Empty;
 
   SmallVector<Fraction, 8> sample;
-  sample.reserve(var.size());
+  sample.reserve(numVars);
   // Push the sample value for each variable into the vector.
-  for (const Unknown &u : var) {
+  for (const Unknown &u : ArrayRef<Unknown>(var).take_front(numVars)) {
     // When the big M parameter is being used, each variable x is represented
     // as M + x, so its sample value is finite if and only if it is of the
     // form 1*M + c. If the coefficient of M is not one then the sample value

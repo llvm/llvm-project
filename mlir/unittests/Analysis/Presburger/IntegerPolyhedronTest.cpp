@@ -1087,6 +1087,17 @@ TEST(IntegerPolyhedronTest, negativeDividends) {
   checkDivisionRepresentation(poly1, divisions, denoms);
 }
 
+/// Parse the given set and convert its last `numExists` dims into locals
+/// that have no division representation attached, i.e., into existentially
+/// quantified variables.
+static IntegerPolyhedron parseIntegerPolyhedronWithExists(StringRef str,
+                                                          unsigned numExists) {
+  IntegerPolyhedron poly = parseIntegerPolyhedron(str);
+  poly.convertToLocal(VarKind::SetDim, poly.getNumDimVars() - numExists,
+                      poly.getNumDimVars());
+  return poly;
+}
+
 static void expectRationalLexMin(const IntegerPolyhedron &poly,
                                  ArrayRef<Fraction> min) {
   auto lexMin = poly.findRationalLexMin();
@@ -1166,6 +1177,30 @@ TEST(IntegerPolyhedronTest, findRationalLexMin) {
   expectNoRationalLexMin(
       OptimumKind::Empty,
       parseIntegerPolyhedron("(x) : (2*x >= 0, -x - 1 >= 0)"));
+
+  // The lexmin is taken over the dims only. An unbounded existentially
+  // quantified variable does not make it unbounded.
+  //
+  // q is unconstrained.
+  expectRationalLexMin(
+      parseIntegerPolyhedronWithExists("(x, q) : (2*x - 1 >= 0)", 1), {{1, 2}});
+  // q is only bounded from above.
+  expectRationalLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, y, q) : (x - 3 >= 0, 2*y - x >= 0, y - q >= 0)", 1),
+      {{3, 1}, {3, 2}});
+  // x is unbounded as q can be arbitrarily large.
+  expectNoRationalLexMin(
+      OptimumKind::Unbounded,
+      parseIntegerPolyhedronWithExists("(x, q) : (x + q >= 0)", 1));
+  // y is unbounded, irrespective of q.
+  expectNoRationalLexMin(
+      OptimumKind::Unbounded,
+      parseIntegerPolyhedronWithExists("(x, y, q) : (x >= 0, q - x >= 0)", 1));
+  // The constraints on q are contradictory.
+  expectNoRationalLexMin(OptimumKind::Empty,
+                         parseIntegerPolyhedronWithExists(
+                             "(x, q) : (x >= 0, q - 1 >= 0, -q >= 0)", 1));
 }
 
 static void expectIntegerLexMin(const IntegerPolyhedron &poly,
@@ -1178,8 +1213,8 @@ static void expectIntegerLexMin(const IntegerPolyhedron &poly,
 static void expectNoIntegerLexMin(OptimumKind kind,
                                   const IntegerPolyhedron &poly) {
   ASSERT_NE(kind, OptimumKind::Bounded)
-      << "Use expectRationalLexMin for bounded min";
-  EXPECT_EQ(poly.findRationalLexMin().getKind(), kind);
+      << "Use expectIntegerLexMin for bounded min";
+  EXPECT_EQ(poly.findIntegerLexMin().getKind(), kind);
 }
 
 TEST(IntegerPolyhedronTest, findIntegerLexMin) {
@@ -1194,12 +1229,56 @@ TEST(IntegerPolyhedronTest, findIntegerLexMin) {
                              ">= 0, -11*z + 5*y - 3*x + 7 >= 0)"));
 }
 
+// The lexmin is taken over the dims only. An unbounded existentially
+// quantified variable does not make it unbounded.
+TEST(IntegerPolyhedronTest, findIntegerLexMinUnboundedExists) {
+  // q is unconstrained.
+  expectIntegerLexMin(parseIntegerPolyhedronWithExists("(x, q) : (x >= 0)", 1),
+                      {0});
+  // q is only bounded from above.
+  expectIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, y, q) : (2*x - 5 >= 0, y - x - 1 >= 0, y - q >= 0)", 1),
+      {3, 4});
+  // q0 is determined by x, and q1 is only bounded from above.
+  expectIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, q0, q1) : (x - 2*q0 == 0, x >= 0, x - q1 >= 0)", 2),
+      {0});
+  // x = 2*a + 4*b + 1 only requires x to be odd, and for any odd x both a and
+  // b are unbounded. The integrality requirement on the unbounded existentials
+  // still has to be taken into account.
+  expectIntegerLexMin(parseIntegerPolyhedronWithExists(
+                          "(x, a, b) : (x - 2*a - 4*b - 1 == 0, x >= 0)", 2),
+                      {1});
+  expectIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, y, a, b) : (x - 2*a - 4*b - 1 == 0, x + 4 >= 0, y - x >= 0)", 2),
+      {-3, -3});
+
+  // x is unbounded as q can be arbitrarily large.
+  expectNoIntegerLexMin(
+      OptimumKind::Unbounded,
+      parseIntegerPolyhedronWithExists("(x, q) : (x + q >= 0)", 1));
+  // y is unbounded, irrespective of q.
+  expectNoIntegerLexMin(
+      OptimumKind::Unbounded,
+      parseIntegerPolyhedronWithExists("(x, y, q) : (x >= 0, q - x >= 0)", 1));
+  // 2*q == 1 has no integer solutions.
+  expectNoIntegerLexMin(
+      OptimumKind::Empty,
+      parseIntegerPolyhedronWithExists("(x, q) : (x >= 0, 2*q - 1 == 0)", 1));
+  // x has to be both even and odd.
+  expectNoIntegerLexMin(
+      OptimumKind::Empty,
+      parseIntegerPolyhedronWithExists(
+          "(x, a, b) : (x - 2*a == 0, x - 2*b - 1 == 0, x >= 0)", 2));
+}
+
 static void expectSymbolicIntegerLexMin(
-    StringRef polyStr,
+    const IntegerPolyhedron &poly,
     ArrayRef<std::pair<StringRef, StringRef>> expectedLexminRepr,
     ArrayRef<StringRef> expectedUnboundedDomainRepr) {
-  IntegerPolyhedron poly = parseIntegerPolyhedron(polyStr);
-
   ASSERT_NE(poly.getNumDimVars(), 0u);
   ASSERT_NE(poly.getNumSymbolVars(), 0u);
 
@@ -1219,6 +1298,14 @@ static void expectSymbolicIntegerLexMin(
         parsePresburgerSet(expectedUnboundedDomainRepr);
     EXPECT_TRUE(result.unboundedDomain.isEqual(expectedUnboundedDomain));
   }
+}
+
+static void expectSymbolicIntegerLexMin(
+    StringRef polyStr,
+    ArrayRef<std::pair<StringRef, StringRef>> expectedLexminRepr,
+    ArrayRef<StringRef> expectedUnboundedDomainRepr) {
+  expectSymbolicIntegerLexMin(parseIntegerPolyhedron(polyStr),
+                              expectedLexminRepr, expectedUnboundedDomainRepr);
 }
 
 static void
@@ -1406,6 +1493,60 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
            "N >= 0, N + K - 2 - x >= 0, x - 4 >= 0)",
            "()[K, N, x, y] -> (1 + x, N)"},
       });
+}
+
+// The lexmin is taken over the dims only. An unbounded existentially
+// quantified variable does not make it unbounded.
+TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMinUnboundedExists) {
+  // q is unconstrained.
+  expectSymbolicIntegerLexMin(
+      parseIntegerPolyhedronWithExists("(x, q)[a] : (x - a >= 0)", 1),
+      {
+          {"()[a] : ()", "()[a] -> (a)"},
+      },
+      {});
+
+  // q is only bounded from above.
+  expectSymbolicIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, y, q)[a, b] : (x - a >= 0, x - b >= 0, x + y >= 0, y - q >= 0)",
+          1),
+      {
+          {"()[a, b] : (a - b >= 0)", "()[a, b] -> (a, -a)"},
+          {"()[a, b] : (b - a - 1 >= 0)", "()[a, b] -> (b, -b)"},
+      },
+      {});
+
+  // x = 2*p + 4*q + 1 only requires x to be odd, and for any odd x both p and
+  // q are unbounded. The integrality requirement on the unbounded existentials
+  // still has to be taken into account, so the lexmin is the smallest odd
+  // number that is at least a.
+  expectSymbolicIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, p, q)[a] : (x - 2*p - 4*q - 1 == 0, x - a >= 0)", 2),
+      {
+          {"()[a] : ()", "()[a] -> (2 * (a floordiv 2) + 1)"},
+      },
+      {});
+
+  // x is unbounded as q can be arbitrarily large.
+  expectSymbolicIntegerLexMin(
+      parseIntegerPolyhedronWithExists("(x, q)[a] : (x + q - a >= 0)", 1), {},
+      {"()[a] : ()"});
+
+  // y is unbounded, irrespective of q.
+  expectSymbolicIntegerLexMin(parseIntegerPolyhedronWithExists(
+                                  "(x, y, q)[a] : (x - a >= 0, q - x >= 0)", 1),
+                              {}, {"()[a] : ()"});
+
+  // The set is empty when a is negative; when it is not, q is unbounded.
+  expectSymbolicIntegerLexMin(
+      parseIntegerPolyhedronWithExists(
+          "(x, q)[a] : (x >= 0, a - x >= 0, x - q >= 0)", 1),
+      {
+          {"()[a] : (a >= 0)", "()[a] -> (0)"},
+      },
+      {});
 }
 
 static void
