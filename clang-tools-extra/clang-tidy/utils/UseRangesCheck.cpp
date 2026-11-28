@@ -308,7 +308,8 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         const Expr *RangeArg =
             Call->getArg(Replace == Indexes::Second ? Second : First);
         const bool NeedsDereference =
-            ArgExpr->getType()->isPointerType() &&
+            (ArgExpr->getType()->isPointerType() ||
+             ArgExpr->getType()->isArrayType()) &&
             isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts());
         const std::string ReplaceText =
             NeedsDereference

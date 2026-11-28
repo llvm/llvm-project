@@ -45,9 +45,17 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(*(P + 1), 4);
 
+  std::find(PointerContainers->begin(), PointerContainers->end(), 5);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*PointerContainers, 5);
+
   std::find(std::begin(I), std::end(I), 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 2);
+
+  std::find(std::begin(*P), std::end(*P), 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*P, 2);
 
   std::find(std::cbegin(I), std::cend(I), 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
