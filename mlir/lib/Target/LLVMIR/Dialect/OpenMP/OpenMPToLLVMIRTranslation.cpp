@@ -5615,11 +5615,38 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
   SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
+  std::optional<LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame>>
+      allocFrame;
+
+  bool parentIsDistribute =
+      llvm::isa_and_present<omp::DistributeOp>(loopOp->getParentOp());
+
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
                      llvm::Value *iv) -> llvm::Error {
     // Make sure further conversions know about the induction variable.
     moduleTranslation.mapValue(
         loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
+
+    // For the outermost loop when parent is distribute, set up allocation frame
+    // so nested parallel regions don't end up using allocate frame of the
+    // distribute operation. Do it only for device offload code.
+    bool isOutermostLoop = loopInfos.empty();
+    bool needsAllocationFrame = isOutermostLoop && parentIsDistribute &&
+                                ompBuilder->Config.isTargetDevice();
+
+    if (needsAllocationFrame) {
+      // Use the loop body entry for allocations
+      // For deallocations, use empty array for now - the deallocation will be
+      // handled by the outlined function's exit blocks. We cannot predict
+      // in advance where to put deallocation block, because the generated
+      // loops can be heavily transformed (for example tiling).
+      SmallVector<llvm::BasicBlock *> deallocBlocks;
+      llvm::BasicBlock *allocBlock = ip.getNodeParent();
+      llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
+          allocBlock->getFirstInsertionPt());
+      allocFrame.emplace(moduleTranslation, allocaIP.getNodeParent(),
+                         deallocBlocks);
+    }
 
     // Capture the body insertion point for use in nested loops. BodyIP of the
     // CanonicalLoopInfo always points to the beginning of the entry block of
