@@ -194,7 +194,7 @@ define void @symbolic_max_btc_may_wrap_negative_step(ptr %P, ptr %S) {
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (4 + %P))
+; CHECK-NEXT:          (Low: null High: inttoptr (i32 -1 to ptr))
 ; CHECK-NEXT:            Member: {%P,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
@@ -237,7 +237,7 @@ define void @symbolic_max_btc_may_wrap_non_constant_negative_step(ptr %P, ptr %S
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (4 + %P))
+; CHECK-NEXT:          (Low: null High: inttoptr (i32 -1 to ptr))
 ; CHECK-NEXT:            Member: {%P,+,(-1 + (-1 * (zext i16 (trunc i32 %step to i16) to i32))<nsw>)<nsw>}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))

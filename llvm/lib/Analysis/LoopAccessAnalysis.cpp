@@ -177,11 +177,15 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object. This does not imply
-/// that the whole accessed range is dereferenceable.
+/// that the whole accessed range is dereferenceable. For a negative step, also
+/// set \p FirstEndInBounds to true if the end of the first access,
+/// Start + EltSize, is guaranteed inbounds, regardless of the result, as it
+/// does not depend on \p MaxBTC; leave it unchanged otherwise.
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
-    AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards) {
+    AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards,
+    bool &FirstEndInBounds) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -245,6 +249,14 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   StartOffset = SE.applyLoopGuards(StartOffset, LoopGuards);
 
+  if (!IsKnownNonNegative) {
+    const SCEV *EndOffset = addSCEVNoOverflow(
+        StartOffset, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+    if (EndOffset &&
+        SE.isKnownPredicate(CmpInst::ICMP_ULE, EndOffset, DerefBytesSCEV))
+      FirstEndInBounds = true;
+  }
+
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
   // accessed pointer.
@@ -277,9 +289,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       return false;
   } else {
     // For a negative step StartOffset is the highest offset and AR at MaxBTC
-    // is DistToLastIter below it, so it must not fall below StartPtr. The end
-    // of the first access, Start + EltSize, does not depend on MaxBTC and is
-    // not checked here.
+    // is DistToLastIter below it, so it must not fall below StartPtr.
     assert(SE.isKnownNegative(Step) && "must be known negative");
     if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, StartOffset, DistToLastIter))
       return false;
@@ -411,14 +421,18 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     // The address of the last accessed element, if it can be computed
     // precisely.
     const SCEV *LastAddr = nullptr;
+    // Whether the end of the first access is known not to wrap when only
+    // MaxBTC is known.
+    bool FirstEndInBounds = false;
     if (!isa<SCEVCouldNotCompute>(BTC)) {
       // Evaluating AR at an exact BTC is safe: LAA separately checks that
       // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
       // the loop either triggers UB when executing a memory access with a
       // poison pointer or the wrapping/poisoned pointer is not used.
       LastAddr = AR->evaluateAtIteration(BTC, *SE);
-    } else if (evaluatePtrAddRecAtMaxBTCWillNotWrap(
-                   AR, MaxBTC, EltSizeSCEV, *SE, DL, DT, AC, LoopGuards)) {
+    } else if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV,
+                                                    *SE, DL, DT, AC, LoopGuards,
+                                                    FirstEndInBounds)) {
       LastAddr = AR->evaluateAtIteration(MaxBTC, *SE);
     }
     const SCEV *Start = AR->getStart();
@@ -429,10 +443,13 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
               ? LastAddr
               : SE->getSCEV(ConstantExpr::getIntToPtr(
                     Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
-      // FIXME: Start + EltSize is neither checked to stay within the
-      // dereferenceable region nor guarded against wrapping; it should
-      // saturate like the non-negative case below when that can't be proven.
-      ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
+      // Without an exact BTC, Start + EltSize may wrap unless it is in bounds;
+      // saturate it like the non-negative case below.
+      if (isa<SCEVCouldNotCompute>(BTC) && !FirstEndInBounds)
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
+      else
+        ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
     } else if (SE->isKnownNonNegative(Step)) {
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would
