@@ -44,6 +44,36 @@ StackProtectorDescriptor::addSuccessorMBB(
   return SuccMBB;
 }
 
+MachineBasicBlock::iterator
+StackProtectorDescriptor::getSplitPoint(const TargetInstrInfo &TII) const {
+  return SplitPoint ? *SplitPoint
+                    : findSplitPointForStackProtector(ParentMBB, TII);
+}
+
+void StackProtectorDescriptor::splitParentMBB(MachineBasicBlock::iterator I) {
+  assert((I == ParentMBB->end() || I->getParent() == ParentMBB) &&
+         "Split point is not in the parent block");
+  SuccessMBB->splice(SuccessMBB->end(), ParentMBB, I, ParentMBB->end());
+
+  // The successors the spliced code branches to (the destinations of an
+  // invoke) now follow SuccessMBB.
+  bool Moved = false;
+  for (auto SI = ParentMBB->succ_begin(); SI != ParentMBB->succ_end();) {
+    if (*SI == SuccessMBB || *SI == FailureMBB) {
+      ++SI;
+      continue;
+    }
+    SuccessMBB->copySuccessor(ParentMBB, SI);
+    (*SI)->replacePhiUsesWith(ParentMBB, SuccessMBB);
+    SI = ParentMBB->removeSuccessor(SI);
+    Moved = true;
+  }
+  if (Moved) {
+    ParentMBB->normalizeSuccProbs();
+    SuccessMBB->normalizeSuccProbs();
+  }
+}
+
 /// Given that the input MI is before a partial terminator sequence TSeq, return
 /// true if M + TSeq also a partial terminator sequence.
 ///

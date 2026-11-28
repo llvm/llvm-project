@@ -557,10 +557,12 @@ private:
 
   /// Perform instruction selection on a single basic block, for
   /// instructions between \p Begin and \p End.  \p HadTailCall will be set
-  /// to true if a call in the block was translated as a tail call.
+  /// to true if a call in the block was translated as a tail call. The debug
+  /// info attached to \p SPCheckCall, the call the stack protector is checked
+  /// before, goes with the instructions before it.
   void SelectBasicBlock(BasicBlock::const_iterator Begin,
-                        BasicBlock::const_iterator End,
-                        bool &HadTailCall);
+                        BasicBlock::const_iterator End, bool &HadTailCall,
+                        const Instruction *SPCheckCall = nullptr);
   void FinishBasicBlock();
 
   void CodeGenAndEmitDAG();

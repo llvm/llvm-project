@@ -75,7 +75,25 @@ static BasicBlock *CreateFailBB(Function *F,
                                 const LibcallLoweringInfo &Libcalls);
 
 bool SSPLayoutInfo::shouldEmitSDCheck(const BasicBlock &BB) const {
-  return HasPrologue && !HasIRCheck && isa<ReturnInst>(BB.getTerminator());
+  return HasPrologue && !HasIRCheck &&
+         (isa<ReturnInst>(BB.getTerminator()) || getSDCheckCall(BB));
+}
+
+const CallBase *SSPLayoutInfo::getSDCheckCall(const BasicBlock &BB) const {
+  if (!HasPrologue || HasIRCheck ||
+      !getCodeGenOptions(*BB.getParent()).stack_protector_check_noreturn_call)
+    return nullptr;
+  // As InsertStackProtectors does when it checks in IR, check before calls to
+  // noreturn functions that may unwind (e.g: __cxa_throw), as the check before
+  // the return never runs on that path. SelectionDAG and GlobalISel take the
+  // call that ends the block: an invoke, or a call followed by unreachable.
+  const Instruction *Term = BB.getTerminator();
+  const Instruction *Last =
+      isa<UnreachableInst>(Term) ? Term->getPrevNode() : Term;
+  if (!isa_and_present<CallInst, InvokeInst>(Last))
+    return nullptr;
+  const auto *CB = cast<CallBase>(Last);
+  return CB->doesNotReturn() && !CB->doesNotThrow() ? CB : nullptr;
 }
 
 void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {

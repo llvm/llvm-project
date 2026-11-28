@@ -5048,12 +5048,14 @@ bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
     // point. This prevents us needing to deal with Live-ins and many other
     // register allocation issues caused by us splitting the parent mbb. The
     // register allocator will clean up said virtual copies later on.
-    MachineBasicBlock::iterator SplitPoint = findSplitPointForStackProtector(
-        ParentMBB, *MF->getSubtarget().getInstrInfo());
+    MachineBasicBlock::iterator SplitPoint =
+        SPDescriptor.getSplitPoint(*MF->getSubtarget().getInstrInfo());
 
-    // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
-                       ParentMBB->end());
+    // Splice the end of ParentMBB into SuccessMBB, which then precedes the
+    // successors it branches to.
+    SPDescriptor.splitParentMBB(SplitPoint);
+    for (MachineBasicBlock *Succ : SuccessMBB->successors())
+      addMachineCFGPred({&BB, Succ->getBasicBlock()}, SuccessMBB);
 
     // Add compare/jump on neq/jump to the parent BB.
     if (!emitSPDescriptorParent(SPDescriptor, ParentMBB))
@@ -5395,6 +5397,8 @@ bool IRTranslatorImpl::runOnMachineFunction(
       // the end of this basic block.
       CurBuilder->setMBB(MBB);
       HasTailCall = false;
+      // The call the stack protector is checked right before, if any.
+      const CallBase *SPCheckCall = SPInfo->getSDCheckCall(*BB);
       for (const Instruction &Inst : *BB) {
         // If we translated a tail call in the last step, then we know
         // everything after the call is either a return, or something that is
@@ -5410,8 +5414,17 @@ bool IRTranslatorImpl::runOnMachineFunction(
         // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
 
-        if (translate(Inst))
+        MachineBasicBlock &CurMBB = CurBuilder->getMBB();
+        MachineInstr *PrevMI =
+            &Inst == SPCheckCall && !CurMBB.empty() ? &CurMBB.back() : nullptr;
+        if (translate(Inst)) {
+          // Check right before the code of the call.
+          if (&Inst == SPCheckCall)
+            SPDescriptor.setSplitPoint(
+                PrevMI ? std::next(MachineBasicBlock::iterator(PrevMI))
+                       : CurMBB.begin());
           continue;
+        }
 
         OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                    Inst.getDebugLoc(), BB);
