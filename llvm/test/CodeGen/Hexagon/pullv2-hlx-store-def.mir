@@ -1,0 +1,98 @@
+# Check that hlx store pullup does not choose an incorrect destination
+#
+# This test verifies that when global-schedV2 pass performs HLX store
+# pullup optimization, it correctly preserves register dependencies and doesn't
+# incorrectly place the store operation.
+# It checks that there is no store pullup to destination with no prior def.
+#
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass global-schedV2 %s -o - | FileCheck %s
+
+# CHECK: BUNDLE implicit-def $ll3, implicit-def $r2
+# CHECK: $l2 = LX_assign killed $l2
+# CHECK-NEXT: LX_S16b_new renamable $r2, internal killed renamable $l2 :: (store (s16384) into stack)
+# CHECK: }
+--- |
+  target triple = "hexagon"
+
+  @vtcm_base = dso_local local_unnamed_addr global ptr null, align 4
+
+  define dso_local noundef i32 @main() local_unnamed_addr {
+  entry:
+    %0 = load ptr, ptr @vtcm_base, align 4, !tbaa !10
+    ret i32 0
+  }
+
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"frame-pointer", i32 2}
+  !2 = !{!"clang"}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"short", !4, i64 0}
+  !8 = distinct !{!8, !9}
+  !9 = !{!"llvm.loop.mustprogress"}
+  !10 = !{!11, !11, i64 0}
+  !11 = !{!"p1 omnipotent char", !12, i64 0}
+  !12 = !{!"any pointer", !4, i64 0}
+...
+---
+name:            main
+alignment:       16
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r1
+
+    BUNDLE implicit-def $r7, implicit-def $l0, implicit-def $r29, implicit-def $r30, implicit-def $r0, implicit $vsp, implicit killed $r29, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31, implicit killed $gp {
+      $r7 = frame-setup A2_tfrcrr $vsp, implicit-def $upcyclelo, implicit-def $pktcountlo
+      renamable $l0 = LX_assign_s 1
+      $r29 = frame-setup S2_allocframe killed $r29, 8, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31 :: (store (s32) into stack)
+      renamable $r0 = L2_loadrigp @vtcm_base, implicit killed $gp :: (dereferenceable load (s32) from @vtcm_base, !tbaa !10)
+    }
+    BUNDLE implicit-def $vsp, implicit-def $l1, implicit killed $vframelimit, implicit $vsp, implicit $r29, implicit killed $r7 {
+      frame-setup V2_vallocframe_imm 3, implicit-def $vsp, implicit killed $vframelimit, implicit $vsp
+      renamable $l1 = LX_assign_s 2
+      S2_storeri_io $r29, 4, killed $r7 :: (store (s32) into %stack.0)
+    }
+    BUNDLE implicit-def $l2, implicit-def $r2, implicit killed $vsp {
+      renamable $l2 = LX_assign_s 3
+      $r2 = A2_tfrcrr killed $vsp, implicit-def $upcyclelo, implicit-def $pktcountlo
+    }
+    BUNDLE implicit-def $l5, implicit-def $ll5, implicit-def $r3, implicit $l0, implicit $l1, implicit $r2 {
+      $l5 = LX_assign $l0
+      $ll5 = LX_combine_w $l1, $l0
+      renamable $r3 = A2_addi renamable $r2, 2048
+    }
+    BUNDLE implicit-def $l3, implicit-def $l4 {
+      renamable $l3 = LX_assign_s 4
+      renamable $l4 = LX_assign_s 5
+    }
+    BUNDLE implicit-def $ll3, implicit-def $r2, implicit $l2, implicit $l1, implicit killed $r2 {
+      $ll3 = LX_combine_w $l2, $l1
+      $l2 = LX_assign killed $l2
+      LX_S16b_new renamable $r2, internal renamable $l2 :: (store (s16384) into stack)
+      renamable $r2 = A2_addi killed renamable $r2, 4096
+    }
+    BUNDLE implicit-def dead $r0, implicit-def $vsp, implicit-def $d15, implicit-def $pc, implicit-def $r29, implicit $vsp, implicit killed $r30, implicit killed $framekey {
+      $r0 = A2_tfrsi 0
+      V2_vdeallocframe_imm 3, implicit-def $vsp, implicit $vsp
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def $pc, implicit internal killed $r0
+    }
+...
+---

@@ -1,0 +1,42 @@
+# RUN: llc -march=hexagon -run-pass=global-schedV2 -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: $p0 = C4_cmplte renamable $r0, killed renamable $r2
+# CHECK-NEXT: $p0 = C4_cmpneqi killed renamable $r0, 0
+# CHECK-NEXT: $p0 = C2_cmpgt killed renamable $r1, killed renamable $r3
+# CHECK-NOT: C4_and_and
+# CHECK: $r0 = C2_muxii killed $p0, 1, 0
+
+--- |
+  define dso_local range(i32 0, 2) i32 @pAandpAleCpp(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) local_unnamed_addr {
+  entry:
+    %tobool = icmp ne i32 %a, 0
+    %cmp = icmp sle i32 %a, %c
+    %or.cond = and i1 %tobool, %cmp
+    %cmp2 = icmp sgt i32 %b, %d
+    %or.cond4 = and i1 %or.cond, %cmp2
+    %retval.0 = zext i1 %or.cond4 to i32
+    ret i32 %retval.0
+  }
+...
+---
+name:            pAandpAleCpp
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit killed $r0, implicit killed $r2, implicit killed $r1, implicit killed $r3 {
+      renamable $p0 = C4_cmplte renamable $r0, killed renamable $r2
+      renamable $p1 = C4_cmpneqi killed renamable $r0, 0
+      renamable $p2 = C2_cmpgt killed renamable $r1, killed renamable $r3
+    }
+    renamable $p0 = C4_and_and killed renamable $p2, killed renamable $p1, killed renamable $p0
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p0, implicit killed $r31 {
+      $r0 = C2_muxii killed $p0, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...

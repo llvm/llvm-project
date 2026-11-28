@@ -1,0 +1,52 @@
+# Check that auto AND predication is not applied when the result of AND
+# instruction is used by .new in the same packet.
+
+# RUN: llc -march=hexagon -run-pass=global-schedV2 -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: renamable $p0 = C2_cmpgtu renamable $r0, killed renamable $r1
+# CHECK: renamable $p1 = C2_cmpgtu killed renamable $r2, killed renamable $r3
+# CHECK: renamable $p2 = C2_and killed renamable $p0, killed renamable $p1
+
+--- |
+  target triple = "hexagon"
+
+  define dso_local void @foo() local_unnamed_addr {
+  entry:
+    ret void
+  }
+
+---
+name:            foo
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def $p0, implicit-def $p1, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3 {
+      renamable $p0 = C2_cmpgtu renamable $r0, killed renamable $r1
+      renamable $p1 = C2_cmpgtu killed renamable $r2, killed renamable $r3
+    }
+    BUNDLE implicit-def dead $p2, implicit-def $r0, implicit-def $pc, implicit killed $p0, implicit killed $p1 {
+      renamable $p2 = C2_and killed renamable $p0, killed renamable $p1
+      $r0 = C2_cmovenewit internal $p2, 64
+      J2_jumptnew internal killed $p2, %bb.2, implicit-def $pc
+    }
+
+  bb.1:
+    successors: %bb.2
+
+    $r0 = A2_tfrsi 32
+    J2_jump %bb.2, implicit-def $pc
+
+  bb.2:
+    liveins: $r0
+
+    J2_jumpr $r31, implicit $r0, implicit-def $pc
+
+...

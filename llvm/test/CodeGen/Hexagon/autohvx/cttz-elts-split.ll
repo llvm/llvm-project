@@ -149,40 +149,41 @@ define i32 @ctz_v32i1(<32 x i1> %m) {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r17:16 = extractu(r9:8,#8,#16)
 ; CHECK-NEXT:     r28 = extractu(r8,#3,#8)
+; CHECK-NEXT:     r11 = mux(p0,#2,#0)
 ; CHECK-NEXT:     p2 = cmp.gtu(r14,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r14 = setbit(r11,#0)
 ; CHECK-NEXT:     r17 = and(r8,r0)
-; CHECK-NEXT:     r11 = mux(p0,#2,#0)
 ; CHECK-NEXT:     p0 = cmp.gtu(r13,#0)
 ; CHECK-NEXT:     r16 = and(r16,#6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r28 = maxu(r17,r28)
-; CHECK-NEXT:     r14 = setbit(r11,#0)
+; CHECK-NEXT:     if (!p2) r14 = add(r11,#0)
+; CHECK-NEXT:     r15 = and(r15,#255)
 ; CHECK-NEXT:     r10 = and(r10,#255)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r28 = maxu(r28,r16)
 ; CHECK-NEXT:     r13 = mux(p1,##128,#0)
-; CHECK-NEXT:     r15 = and(r15,#255)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r10 = setbit(r13,#6)
 ; CHECK-NEXT:     r16 = mux(p0,#32,#0)
-; CHECK-NEXT:     if (!p2) r14 = add(r11,#0)
-; CHECK-NEXT:     p0 = cmp.gtu(r10,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r15 = setbit(r16,#4)
+; CHECK-NEXT:     r10 = setbit(r13,#6)
 ; CHECK-NEXT:     p1 = cmp.gtu(r15,#0)
+; CHECK-NEXT:     p0 = cmp.gtu(r10,#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = add(r29,#384)
+; CHECK-NEXT:     if (!p1) r15 = add(r16,#0)
 ; CHECK-NEXT:     r12 = or(r14,r12)
 ; CHECK-NEXT:     if (!p0) r10 = add(r13,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r19:18 = extractu(r9:8,#8,#24)
 ; CHECK-NEXT:     r21:20 = extractu(r9:8,#8,#32)
-; CHECK-NEXT:     if (!p1) r15 = add(r16,#0)
 ; CHECK-NEXT:     v1 = vmem(r6+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -203,7 +204,6 @@ define i32 @ctz_v32i1(<32 x i1> %m) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r19 = extractu(r9,#2,#8)
-; CHECK-NEXT:     r1 = add(r29,#384)
 ; CHECK-NEXT:     r10 = and(r12,r0)
 ; CHECK-NEXT:     v31 = vmem(r6+#0)
 ; CHECK-NEXT:    }
@@ -214,11 +214,11 @@ define i32 @ctz_v32i1(<32 x i1> %m) {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r20 = maxu(r28,r19)
 ; CHECK-NEXT:     r19:18 = extractu(r13:12,#8,#16)
+; CHECK-NEXT:     r21 = and(r16,#2)
 ; CHECK-NEXT:     v0 = vrdelta(v0,v31)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r15 = maxu(r10,r11)
-; CHECK-NEXT:     r21 = and(r16,#2)
 ; CHECK-NEXT:     r10 = memw(r7+#0)
 ; CHECK-NEXT:     r11 = memw(r7+#4)
 ; CHECK-NEXT:    }

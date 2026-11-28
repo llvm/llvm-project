@@ -1,0 +1,238 @@
+# RUN: llc -mtriple=hexagon -mattr=+hvx-length128b,+hvxv79,+v79 \
+# RUN:   -run-pass=global-schedV2 -enable-hvx-superblock-heuristic=false \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+#
+# Disable the profitability heuristic so these small functions exercise the
+# actual .cur producer. Check both forwarding operands and incoming header uses.
+# A pair operand overlapping only one loaded vector still needs its incoming
+# companion. Repeated operands must each get forwarding flags.
+
+# CHECK-LABEL: name: direct_low
+# CHECK: BUNDLE implicit-def dead $v0, implicit-def $r0, implicit-def $v8, implicit killed $r0, implicit killed $v1 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $v8 = V6_vaddw internal killed $v0, killed $v1
+# CHECK-NEXT: }
+---
+name: direct_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v1
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $v8 = V6_vaddw $v0, $v1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $v8
+    PS_jmpret $r31, implicit-def $pc, implicit $v8
+...
+
+# CHECK-LABEL: name: direct_high
+# CHECK: BUNDLE implicit-def dead $v1, implicit-def $r0, implicit-def $v8, implicit killed $r0, implicit killed $v0 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $v8 = V6_vaddw killed $v0, internal killed $v1
+# CHECK-NEXT: }
+---
+name: direct_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v0
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $v8 = V6_vaddw $v0, $v1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $v8
+    PS_jmpret $r31, implicit-def $pc, implicit $v8
+...
+
+# CHECK-LABEL: name: repeat_low
+# CHECK: BUNDLE implicit-def dead $v0, implicit-def $r0, implicit-def $v8, implicit killed $r0 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $v8 = V6_vaddw internal $v0, internal killed $v0
+# CHECK-NEXT: }
+---
+name: repeat_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $v8 = V6_vaddw $v0, $v0
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $v8
+    PS_jmpret $r31, implicit-def $pc, implicit $v8
+...
+
+# CHECK-LABEL: name: repeat_high
+# CHECK: BUNDLE implicit-def dead $v1, implicit-def $r0, implicit-def $v8, implicit killed $r0 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $v8 = V6_vaddw internal $v1, internal killed $v1
+# CHECK-NEXT: }
+---
+name: repeat_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $v8 = V6_vaddw $v1, $v1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $v8
+    PS_jmpret $r31, implicit-def $pc, implicit $v8
+...
+
+# CHECK-LABEL: name: pair_low
+# CHECK: BUNDLE implicit-def $v0, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $w0, implicit killed $w1 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal killed $w0, killed $w1
+# CHECK-NEXT: }
+---
+name: pair_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v1, $w1
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: pair_high
+# CHECK: BUNDLE implicit-def $v1, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $w0, implicit killed $w1 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal killed $w0, killed $w1
+# CHECK-NEXT: }
+---
+name: pair_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v0, $w1
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: pair_repeat_low
+# CHECK: BUNDLE implicit-def $v0, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $w0 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal $w0, internal killed $w0
+# CHECK-NEXT: }
+---
+name: pair_repeat_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v1
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w0
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: pair_repeat_high
+# CHECK: BUNDLE implicit-def $v1, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $w0 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal $w0, internal killed $w0
+# CHECK-NEXT: }
+---
+name: pair_repeat_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v0
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w0
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: combine_low
+# CHECK: BUNDLE implicit-def dead $v0, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $v1 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vcombine killed $v1, internal killed $v0
+# CHECK-NEXT: }
+---
+name: combine_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v1
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vcombine $v1, $v0
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: combine_high
+# CHECK: BUNDLE implicit-def dead $v1, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit killed $v0 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vcombine internal killed $v1, killed $v0
+# CHECK-NEXT: }
+---
+name: combine_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v0
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vcombine $v1, $v0
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4
+    PS_jmpret $r31, implicit-def $pc, implicit $w4
+...
+
+# CHECK-LABEL: name: companion_live_low
+# CHECK: BUNDLE implicit-def $v0, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit $w0, implicit killed $w1 :: (load (s1024)) {
+# CHECK-NEXT: $v0, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal $w0, killed $w1
+# CHECK-NEXT: }
+# CHECK: PS_jmpret killed $r31, implicit-def $pc, implicit killed $w4, implicit killed $v1
+---
+name: companion_live_low
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v1, $w1
+    $v0, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4, $v1
+    PS_jmpret $r31, implicit-def $pc, implicit $w4, implicit $v1
+...
+
+# CHECK-LABEL: name: companion_live_high
+# CHECK: BUNDLE implicit-def $v1, implicit-def $r0, implicit-def $w4, implicit killed $r0, implicit $w0, implicit killed $w1 :: (load (s1024)) {
+# CHECK-NEXT: $v1, $r0 = V6_vL32b_cur_pi killed $r0, 128
+# CHECK-NEXT: $w4 = V6_vaddw_dv internal $w0, killed $w1
+# CHECK-NEXT: }
+# CHECK: PS_jmpret killed $r31, implicit-def $pc, implicit killed $w4, implicit killed $v0
+---
+name: companion_live_high
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $r0, $r31, $v0, $w1
+    $v1, $r0 = V6_vL32b_pi $r0, 128 :: (load (s1024))
+    $w4 = V6_vaddw_dv $w0, $w1
+    J2_jump %bb.1, implicit-def $pc
+  bb.1:
+    liveins: $r31, $w4, $v0
+    PS_jmpret $r31, implicit-def $pc, implicit $w4, implicit $v0
+...

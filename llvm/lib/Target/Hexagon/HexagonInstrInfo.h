@@ -105,6 +105,56 @@ public:
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
 
+  /// Per-instruction (Use, Def) register bit-vectors, keyed by MachineInstr.
+  using UseDefBitVectors = std::pair<BitVector, BitVector>;
+  using MIUseDefMap = DenseMap<const MachineInstr *, UseDefBitVectors>;
+
+  /// Kinds of dependence reported by srcDependence() and the global
+  /// scheduler's dstDependence().
+  struct Dependency {
+    enum Kind {
+      Independent = 0x0, //  !Dependent
+      RAW = 1 << 0,
+      WAR = 1 << 1,
+      WAW = 1 << 2,
+      Dependent = RAW | WAR | WAW,
+      SamePacketRAW = (1 << 3) | RAW, // e.g., .new jumps
+      // MI and another MI in its packet have a WAR, so they must move
+      // together: in { r1 = add(r2,r3); r4 = r1 }, moving only the add up
+      // would make r4 read the new r1.
+      SamePacketWAR = (1 << 4) | WAR,
+      SamePacket = SamePacketRAW | SamePacketWAR,
+      Unknown = 1 << 5,
+      Duplex = 1 << 6, // Duplex-Dependency
+      // MI writes a reg that the destination packet reads. The packet still
+      // reads the old value, so MI may join it (if isSafeInBundleWAR allows)
+      // but not move above it: { r5 = r1 } <- r1 = add(r2,r3).
+      // No WAR bit; callers mask it.
+      WAR_SameBundle = 1 << 7
+    };
+    static bool has(int Dep, Kind K) {
+      if (K == Independent)
+        return Dep == Independent;
+      return Dep & K;
+    }
+    static bool hasOnly(int Dep, Kind K) { return Dep == K; }
+  };
+
+  /// Compute the intra-packet dependence of \p RMII against the rest of the
+  /// bundle [\p SrcBeg, \p SrcEnd). With a null \p DepSet the first conflict
+  /// is returned; with a \p DepSet (cluster mode) all instructions that must
+  /// move with \p RMII are collected into it. Returns a bitmask of
+  /// Dependency::Kind. \p IsPullDown models moving \p RMII later (vs. the
+  /// default pull-up): a regular producer \p RMII reads must then move down
+  /// with it.
+  int srcDependence(MachineBasicBlock::instr_iterator SrcBeg,
+                    MachineBasicBlock::instr_iterator SrcEnd,
+                    MachineBasicBlock::instr_iterator RMII,
+                    const MIUseDefMap &MIUseDefs,
+                    SmallPtrSetImpl<MachineInstr *> *DepSet = nullptr,
+                    bool PreventDuplexSep = true,
+                    bool IsPullDown = false) const;
+
   using TargetInstrInfo::analyzeBranch;
 
   /// Analyze the branching code at the end of MBB, returning
@@ -395,6 +445,15 @@ public:
   bool isDependent(const MachineInstr &ProdMI,
                    const MachineInstr &ConsMI) const;
   bool isDotCurInst(const MachineInstr &MI) const;
+  bool definesPredicateReg(const MachineInstr &MI) const;
+  std::optional<unsigned> getInvertedCompare(const int OpC) const;
+  bool isSoftwarePipelineLoopInstr(const MachineInstr &MI) const;
+  bool isFloatCompare(const MachineInstr &MI) const;
+  bool hasCallUseInBundle(MachineBasicBlock::const_instr_iterator MIBegin,
+                          MachineBasicBlock::const_instr_iterator MIEnd,
+                          unsigned Reg, const TargetRegisterInfo &TRI) const;
+  void findInstrPredicate(MachineInstr *MI,
+                          SmallVectorImpl<MachineOperand> &Cond) const;
   bool isDotCurOperand(const MachineInstr &MI, unsigned OpIndex) const;
   bool isDotNewOperand(const MachineInstr &MI, unsigned OpIndex) const;
   bool isDotTmpInst(const MachineInstr &MI) const;

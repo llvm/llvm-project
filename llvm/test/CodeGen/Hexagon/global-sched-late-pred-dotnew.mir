@@ -1,0 +1,125 @@
+# RUN: llc -mtriple=hexagon -run-pass global-schedV2 -o - %s | FileCheck %s
+
+# global-sched must not hoist a load from a successor block and predicate it
+# on p0.new when the predicate register is defined by a late-predicate
+# instruction (e.g. A4_addp_c) in the target packet.
+# A4_addp_c produces its predicate output late in the packet, so p0.new is
+# invalid as a consumer in the same packet.
+#
+# Before the fix, global-sched would generate:
+#   { r17:16 = add(r3:2,r1:0,p0):carry ; if (p0.new) r1:0 = memd(...) }
+# which caused an assembler assertion:
+#   "register 'P0' used with '.new' but not validly modified in the same packet"
+
+# CHECK-LABEL: name: __double_computePow5
+# The A4_addp_c packet must NOT contain a .new predicated load.
+# In MIR, the illegal hoisted load would appear as L2_ploadrdtnew_io in the same
+# bundle as A4_addp_c, which corresponds to the invalid "if (p0.new) memd(...)"
+# in assembly.
+#
+# Scope the negative check to the A4_addp_c bundle only, since a predicated load
+# using $p0 (non-.new) may legally appear in a later packet.
+# CHECK:      BUNDLE
+# CHECK:        A4_addp_c
+# CHECK-NOT:    L2_ploadrdtnew_io
+# CHECK:      }
+
+--- |
+  define i64 @__double_computePow5(ptr %DOUBLE_POW5_TABLE, i64 %0, i64 %call) {
+  entry:
+    br i1 false, label %if.then11, label %if.end12
+  if.then11:
+    ret i64 0
+  if.end12:
+    ret i64 0
+  }
+  declare i64 @__umul128()
+  declare i32 @__pow5bits()
+  declare i64 @__shiftright128(i64)
+...
+---
+name:            __double_computePow5
+alignment:       16
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$d1', virtual-reg: '' }
+  - { reg: '$d2', virtual-reg: '' }
+frameInfo:
+  stackSize:       24
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$d10', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$d9', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$d8', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r2, $r3, $r4, $r5, $d8, $d9, $d10
+
+    frame-setup BUNDLE implicit-def $r29, implicit-def $r30, implicit-def $d8, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, implicit killed $d8, implicit killed $d2 :: (store (s32) into stack), (store (s64) into %fixed-stack.2) {
+      $r29 = frame-setup S2_allocframe $r29, 24, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31 :: (store (s32) into stack)
+      S2_storerd_io internal $r29, -16, killed $d8 :: (store (s64) into %fixed-stack.2)
+      $d8 = A2_tfrp killed $d2
+    }
+    BUNDLE implicit-def $d10, implicit-def $r18, implicit $r29, implicit killed $d9, implicit killed $d10, implicit killed $d1, implicit killed $r0 :: (store (s64) into %fixed-stack.1), (store (s64) into %fixed-stack.0) {
+      S2_storerd_io $r29, 8, killed $d9 :: (store (s64) into %fixed-stack.1)
+      S2_storerd_io $r29, 0, killed $d10 :: (store (s64) into %fixed-stack.0)
+      $d10 = A2_tfrp killed $d1
+      $r18 = A2_tfr killed $r0
+    }
+    J2_call @__umul128, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit killed $r29, implicit-def $r29, implicit-def $d0
+    $p0 = C2_andn undef $p0, undef $p0
+    ; A4_addp_c is a late-predicate producer: $p0 is not valid for .new use
+    ; in the same packet.
+    BUNDLE implicit-def $d8, implicit-def $p0, implicit-def $d10, implicit killed $d10, implicit $d8, implicit $p0, implicit killed $d0 {
+      renamable $d8, renamable $p0 = A4_addp_c killed renamable $d10, renamable $d8, renamable $p0
+      $d10 = A2_tfrp killed $d0
+    }
+    J2_jumpf killed $p0, %bb.2, implicit-def $pc
+
+  bb.1.if.then11:
+    ; global-sched must NOT hoist this load into the A4_addp_c packet above
+    ; and predicate it with p0.new.
+    successors: %bb.2(0x80000000)
+    liveins: $r18
+
+    renamable $d0 = L2_loadrd_io renamable $r18, 0 :: (load (s64) from %ir.DOUBLE_POW5_TABLE)
+    renamable $r0 = S2_setbit_i renamable $r0, 0
+    S2_storerd_io killed renamable $r18, 0, killed renamable $d0 :: (store (s64) into %ir.DOUBLE_POW5_TABLE)
+
+  bb.2.if.end12:
+    liveins: $r29, $d8, $d10
+
+    J2_call @__pow5bits, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit-def $r29, implicit-def dead $r0
+    BUNDLE implicit-def dead $d0, implicit-def dead $pc, implicit-def dead $r31, implicit-def $r29, implicit killed $d10, implicit $r29 {
+      $d0 = A2_tfrp killed $d10
+      J2_call @__shiftright128, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit internal killed $d0, implicit-def $r29, implicit-def dead $d0
+    }
+    BUNDLE implicit-def $d0, implicit-def dead $pc, implicit-def dead $r31, implicit-def $r29, implicit killed $d8, implicit $r29 {
+      $d0 = A2_tfrp killed $d8
+      J2_call @__shiftright128, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit internal $d0, implicit-def $r29, implicit-def $d0
+    }
+    BUNDLE implicit-def $d8, implicit-def $d9, implicit $r29 :: (load (s64) from %fixed-stack.2), (load (s64) from %fixed-stack.1) {
+      $d8 = L2_loadrd_io $r29, 16 :: (load (s64) from %fixed-stack.2)
+      $d9 = L2_loadrd_io $r29, 8 :: (load (s64) from %fixed-stack.1)
+    }
+    BUNDLE implicit-def $d10, implicit-def $d15, implicit-def dead $pc, implicit-def $r29, implicit killed $r29, implicit killed $r30, implicit killed $framekey, implicit killed $d0, implicit $d8, implicit $d9 {
+      $d10 = L2_loadrd_io killed $r29, 0 :: (load (s64) from %fixed-stack.0)
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit killed $d0, implicit $d8, implicit $d9, implicit internal $d10
+    }
+...

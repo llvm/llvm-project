@@ -1,0 +1,60 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN:   -disable-hvx-sched-superblock=false -enable-hvx-two-load-cur-bypass \
+# RUN:   -enable-lcgp-for-load-bypass-only=true %s -o - | FileCheck %s
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN:   -disable-hvx-sched-superblock=false -enable-hvx-two-load-cur-bypass \
+# RUN:   -enable-lcgp-for-load-bypass-only=false %s -o - | FileCheck %s
+#
+# Two-load .cur load-bypass case: the consumer has two RAW producers sharing the
+# destination packet -- a .cur-able HVX load (rewritten to .cur and forwarded
+# in-packet) and a V6_vcombine (the "Other" producer). The combine is relocated
+# to the loop predecessor via lastChanceGlobalPullup so the consumer fits.
+#
+# lastChanceGlobalPullup always receives LoadBypassCand == Other (non-null) for
+# this path, so its early-return on -enable-lcgp-for-load-bypass-only never
+# fires and the flag value is irrelevant. Both RUN lines must produce the same
+# result.
+#
+# CHECK: V6_vL32b_cur_pi
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-unknown-elf"
+
+  define void @two_load_cur(ptr %p, i32 %n) {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  }
+
+...
+---
+name:            two_load_cur
+alignment:       16
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $v10, $v11, $v12, $v13
+
+    renamable $r8 = A2_tfrsi 8
+    J2_loop0r %bb.1, killed renamable $r8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.1.loop (machine-block-address-taken, align 16):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $r0, $v10, $v11, $v12, $v13
+
+    BUNDLE implicit-def $v0, implicit-def $r0, implicit-def $w3, implicit $r0, implicit $v10, implicit $v11 {
+      renamable $v0, renamable $r0 = V6_vL32b_pi killed renamable $r0, 128 :: (load (s1024) from %ir.p)
+      renamable $w3 = V6_vcombine renamable $v10, renamable $v11
+    }
+    renamable $v8 = V6_vaddw killed renamable $v0, renamable $v6
+    renamable $w3 = V6_vcombine renamable $v12, renamable $v13
+    renamable $v9 = V6_vaddw killed renamable $v8, renamable $v7
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+
+  bb.2:
+    liveins: $v9
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

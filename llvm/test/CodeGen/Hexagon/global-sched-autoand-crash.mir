@@ -1,0 +1,135 @@
+# Should not crash with assertion `!NodePtr->isKnownSentinel()
+
+# RUN: llc -mtriple=hexagon -run-pass global-schedV2 %s -o /dev/null
+
+--- |
+  define i1 @_ZNK12_GLOBAL__N_115ScatterTestBaseIliE6verifyEv(i1 %ret.040, i32 %0) {
+  entry:
+    %1 = add i32 %0, 1
+    br label %for.body
+
+  for.cond.cleanup:                                 ; preds = %for.body
+    ret i1 %ret.0401
+
+  for.body:                                         ; preds = %for.body, %entry
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ %1, %entry ]
+    %add.ptr.i.phi = phi ptr [ %cgep, %for.body ], [ null, %entry ]
+    %ret.0401 = phi i1 [ %spec.select, %for.body ], [ false, %entry ]
+    %2 = load i32, ptr %add.ptr.i.phi, align 4
+    %cmp22.not = icmp eq i32 %2, 0
+    %spec.select = select i1 %cmp22.not, i1 %ret.040, i1 false
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %cmp.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep = getelementptr i8, ptr %add.ptr.i.phi, i32 4
+    br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+  }
+...
+---
+name:            _ZNK12_GLOBAL__N_115ScatterTestBaseIliE6verifyEv
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.4(0x40000000)
+    liveins: $r0, $r1, $p1
+
+    BUNDLE implicit-def $r2, implicit-def $r3, implicit-def $p1, implicit-def $p0, implicit killed $r1, implicit killed undef $p1, implicit killed $r0 {
+      renamable $r2 = A2_tfrsi 0
+      renamable $r3 = A2_addi killed renamable $r1, 1
+      $p1 = C2_andn undef $p1, killed undef $p1
+      renamable $p0 = S2_tstbit_i killed renamable $r0, 0
+    }
+    BUNDLE implicit-def dead $p2, implicit-def $r4, implicit-def $r2, implicit-def $pc, implicit $r3, implicit killed $r2 :: (load (s32) from %ir.add.ptr.i.phi) {
+      renamable $p2 = C2_cmpgtui renamable $r3, 1
+      renamable $r4, renamable $r2 = L2_loadri_pi killed renamable $r2, 4 :: (load (s32) from %ir.add.ptr.i.phi)
+      J2_jumpfnewpt internal killed renamable $p2, %bb.4, implicit-def $pc
+    }
+
+  bb.1.for.body:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $p0, $r2, $r3, $r4
+
+    BUNDLE implicit-def $r5, implicit-def $p2, implicit-def $p1, implicit-def $r3, implicit-def $r2, implicit killed $r3, implicit killed $r4, implicit killed $r2 :: (load (s32) from %ir.add.ptr.i.phi + 4) {
+      renamable $r5 = A2_addi renamable $r3, -2
+      renamable $p2 = C2_cmpgtui killed renamable $r3, 2
+      renamable $p1 = C2_cmpeqi killed renamable $r4, 0
+      renamable $r3, renamable $r2 = L2_loadri_pi killed renamable $r2, 4 :: (load (s32) from %ir.add.ptr.i.phi + 4)
+    }
+    BUNDLE implicit-def $lc0, implicit-def $sa0, implicit-def $usr, implicit-def $pc, implicit killed $r5, implicit killed $p2 {
+      J2_loop0r %bb.2, killed renamable $r5, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+      J2_jumpf killed $p2, %bb.3, implicit-def $pc
+    }
+
+  bb.2.for.body (align 16):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+    liveins: $p0, $r2, $r3
+
+    BUNDLE implicit-def $p1, implicit-def $r3, implicit-def $r2, implicit-def $pc, implicit-def $lc0, implicit killed $r3, implicit killed $r2, implicit killed $sa0, implicit $lc0 :: (load (s32) from %ir.add.ptr.i.phi + 8) {
+      renamable $p1 = C2_cmpeqi killed renamable $r3, 0
+      renamable $r3, renamable $r2 = L2_loadri_pi killed renamable $r2, 4 :: (load (s32) from %ir.add.ptr.i.phi + 8)
+      ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+    }
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+    liveins: $p0, $p1
+
+    renamable $p1 = C2_and killed renamable $p1, killed renamable $p0
+
+  bb.4:
+    liveins: $p1
+
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p1, implicit killed $r31 {
+      $r0 = C2_muxii killed $p1, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...

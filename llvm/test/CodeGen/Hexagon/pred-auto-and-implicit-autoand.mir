@@ -1,0 +1,147 @@
+# Check that auto-and predicate optimization is not applied when the bundle
+# contains opcodes with implicit auto-and (A6_vminub_RdP, A5_ACS,
+# F2_sfinvsqrta, F2_sfrecipa) that write a predicate to operand 1.
+# These opcodes must block the C2_and elimination.
+
+# RUN: llc -march=hexagon -run-pass=global-schedV2 -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: test_sfinvsqrta
+# CHECK: F2_sfinvsqrta
+# CHECK: renamable $p1 = C2_cmpeqi
+# CHECK: renamable $p0 = C2_and
+
+# CHECK-LABEL: name: test_sfrecipa
+# CHECK: F2_sfrecipa
+# CHECK: renamable $p1 = C2_cmpeqi
+# CHECK: renamable $p0 = C2_and
+
+# CHECK-LABEL: name: test_vminub_RdP
+# CHECK: A6_vminub_RdP
+# CHECK: renamable $p1 = C2_cmpeqi
+# CHECK: renamable $p0 = C2_and
+
+# CHECK-LABEL: name: test_ACS
+# CHECK: A5_ACS
+# CHECK: renamable $p1 = C2_cmpeqi
+# CHECK: renamable $p0 = C2_and
+
+--- |
+  target triple = "hexagon"
+
+  define dso_local void @test_sfinvsqrta() local_unnamed_addr {
+  entry:
+    ret void
+  }
+
+  define dso_local void @test_sfrecipa() local_unnamed_addr {
+  entry:
+    ret void
+  }
+
+  define dso_local void @test_vminub_RdP() local_unnamed_addr {
+  entry:
+    ret void
+  }
+
+  define dso_local void @test_ACS() local_unnamed_addr {
+  entry:
+    ret void
+  }
+...
+
+---
+# F2_sfinvsqrta: (outs IntRegs:$Rd32, PredRegs:$Pe4), pred is operand 1.
+# The bundle contains F2_sfinvsqrta writing $p0 (operand 1) and C2_cmpeqi
+# writing $p1. The C2_and uses both $p0 and $p1. Since F2_sfinvsqrta writes
+# its predicate to operand 1 and that matches DestReg ($p0), failsSpecialConditions
+# must return true and the C2_and must NOT be eliminated.
+name:            test_sfinvsqrta
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    BUNDLE implicit-def $r2, implicit-def $p0, implicit-def $p1, implicit killed $r0, implicit killed $r1 {
+      renamable $r2, renamable $p0 = F2_sfinvsqrta killed renamable $r0
+      renamable $p1 = C2_cmpeqi killed renamable $r1, 0
+    }
+    renamable $p0 = C2_and killed renamable $p0, killed renamable $p1
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p0, implicit killed $r31 {
+      $r0 = C2_muxii killed $p0, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...
+
+---
+# F2_sfrecipa: (outs IntRegs:$Rd32, PredRegs:$Pe4), pred is operand 1.
+name:            test_sfrecipa
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    BUNDLE implicit-def $r3, implicit-def $p0, implicit-def $p1, implicit killed $r0, implicit killed $r1, implicit killed $r2 {
+      renamable $r3, renamable $p0 = F2_sfrecipa killed renamable $r0, killed renamable $r1
+      renamable $p1 = C2_cmpeqi killed renamable $r2, 0
+    }
+    renamable $p0 = C2_and killed renamable $p0, killed renamable $p1
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p0, implicit killed $r31 {
+      $r0 = C2_muxii killed $p0, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...
+
+---
+# A6_vminub_RdP: (outs DoubleRegs:$Rdd32, PredRegs:$Pe4), pred is operand 1.
+name:            test_vminub_RdP
+alignment:       16
+liveins:
+  - { reg: '$d2', virtual-reg: '' }
+  - { reg: '$d3', virtual-reg: '' }
+  - { reg: '$r0', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $d2, $d3, $r0
+
+    BUNDLE implicit-def $d1, implicit-def $p0, implicit-def $p1, implicit killed $d2, implicit killed $d3, implicit killed $r0 {
+      renamable $d1, renamable $p0 = A6_vminub_RdP killed renamable $d2, killed renamable $d3
+      renamable $p1 = C2_cmpeqi killed renamable $r0, 0
+    }
+    renamable $p0 = C2_and killed renamable $p0, killed renamable $p1
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p0, implicit killed $r31 {
+      $r0 = C2_muxii killed $p0, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...
+
+---
+# A5_ACS: (outs DoubleRegs:$Rxx32, PredRegs:$Pe4), pred is operand 1.
+# Note: A5_ACS has a tied operand constraint ($Rxx32 = $Rxx32in).
+name:            test_ACS
+alignment:       16
+liveins:
+  - { reg: '$d0', virtual-reg: '' }
+  - { reg: '$d2', virtual-reg: '' }
+  - { reg: '$d3', virtual-reg: '' }
+  - { reg: '$r0', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $d0, $d2, $d3, $r0
+
+    BUNDLE implicit-def $d0, implicit-def $p0, implicit-def $p1, implicit-def $usr_ovf, implicit killed $d0, implicit killed $d2, implicit killed $d3, implicit killed $r0 {
+      renamable $d0, renamable $p0 = A5_ACS killed renamable $d0, killed renamable $d2, killed renamable $d3, implicit-def $usr_ovf
+      renamable $p1 = C2_cmpeqi killed renamable $r0, 0
+    }
+    renamable $p0 = C2_and killed renamable $p0, killed renamable $p1
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p0, implicit killed $r31 {
+      $r0 = C2_muxii killed $p0, 1, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...

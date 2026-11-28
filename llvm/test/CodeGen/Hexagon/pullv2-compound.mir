@@ -1,0 +1,37 @@
+# RUN: llc -march=hexagon -run-pass global-schedV2 -predicate-all-inst -verify-machineinstrs %s -o - | FileCheck %s
+
+# PullupV2 generated a wrong compound instruction from a compare with -1:
+#   J4_cmpeqi_tp0_jump_nt killed $r22, -1, %bb.3
+# This is a problem because this instruction expects an unsigned 5-bit value,
+# so the -1 is interpreted as 31.
+#
+# Make sure that pullup generates a correct compound instruction.
+# CHECK: J4_cmpeqn1_tp0_jump_nt killed $r22, -1, %bb.3
+
+---
+name: fred
+stack:
+  - { id: 0, type: default, size: 4, alignment: 4 }
+  - { id: 1, type: default, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $r22
+
+    BUNDLE implicit $r22, implicit-def $r16, implicit-def $r18, implicit-def $r25, implicit-def $p0, implicit-def $pc {
+      $r18 = A2_tfrsi 0
+      $p0 = C2_cmpeqi $r22, -1
+      J2_jumptnew internal $p0, %bb.3, implicit-def $pc
+    }
+
+  bb.1:
+    successors: %bb.2
+    $r25 = L2_loadri_io $r29, 44 :: (load 4 from %stack.0)
+    $r16 = L2_loadri_io $r29, 132 :: (load 4 from %stack.1)
+
+  bb.2:
+    successors: %bb.3
+    J2_callr $r31
+
+  bb.3:
+...

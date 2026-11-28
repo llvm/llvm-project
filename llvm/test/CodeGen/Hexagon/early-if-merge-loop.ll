@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; The global scheduler can empty %should_merge, so run without it.
+; RUN: llc -mtriple=hexagon -enable-global-sched=false < %s | FileCheck %s
 ; Make sure that the loop in the end has only one basic block.
 
 ; CHECK-LABEL: fred

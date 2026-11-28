@@ -1,0 +1,125 @@
+# RUN: llc -mtriple=hexagon -run-pass global-schedV2 %s -o - | FileCheck %s
+
+# Test that the implicit return register is not renamed by the global
+# scheduler v2.
+
+# CHECK: PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+
+--- |
+
+  %struct.DataType = type { ptr, i32, i32, i32, i32, i32, i8, i32, i16, ptr, i32 }
+
+  @llvm.used = appending global [1 x ptr] [ptr @test], section "llvm.metadata"
+
+  define internal ptr @test(ptr readonly %ppList, i32 %n) #0 {
+  entry:
+    %cmp = icmp eq ptr %ppList, null
+    br i1 %cmp, label %cleanup, label %while.cond.preheader
+
+  while.cond.preheader:
+    %pCurNode.018 = load ptr, ptr %ppList, align 4
+    %cmp119 = icmp eq ptr %pCurNode.018, null
+    br i1 %cmp119, label %if.end8, label %land.end.preheader
+
+  land.end.preheader:
+    br label %land.end
+
+  land.end:
+    %pCurNode.020 = phi ptr [ %pCurNode.0, %while.body ], [ %pCurNode.018, %land.end.preheader ]
+    %cgep5 = bitcast ptr %pCurNode.020 to ptr
+    %cgep3 = getelementptr inbounds %struct.DataType, ptr %cgep5, i32 0, i32 10
+    %0 = load i32, ptr %cgep3, align 4
+    %cmp3 = icmp ult i32 %0, %n
+    br i1 %cmp3, label %while.body, label %land.lhs.true
+
+  while.body:
+    %1 = bitcast ptr %pCurNode.020 to ptr
+    %cgep4 = getelementptr inbounds %struct.DataType, ptr %1, i32 0, i32 9
+    %pCurNode.0 = load ptr, ptr %cgep4, align 4
+    %cmp1 = icmp eq ptr %pCurNode.0, null
+    br i1 %cmp1, label %if.end8, label %land.end
+
+  land.lhs.true:
+    %cmp6 = icmp eq i32 %0, %n
+    br i1 %cmp6, label %cleanup, label %if.end8
+
+  if.end8:
+    br label %cleanup
+
+  cleanup:
+    %retval.0 = phi ptr [ null, %if.end8 ], [ null, %entry ], [ %pCurNode.020, %land.lhs.true ]
+    ret ptr %retval.0
+  }
+
+...
+---
+name: test
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+body:             |
+  bb.0:
+    successors: %bb.6, %bb.1
+    liveins: $r0:0x00000001, $r1:0x00000001
+
+    BUNDLE implicit-def $r2, implicit-def $p0, implicit-def $r0, implicit killed $r0 {
+      $r2 = A2_tfr $r0
+      renamable $p0 = C2_cmpeqi killed $r0, 0
+      renamable $r0 = A2_tfrsi 0
+    }
+    J2_jumpt killed $p0, %bb.6, implicit-def $pc
+
+  bb.1:
+    successors: %bb.4
+    liveins: $r1, $r2
+
+    BUNDLE implicit-def $r0, implicit-def $pc, implicit killed $r2 {
+      renamable $r0 = L2_loadri_io killed renamable $r2, 0 :: (load 4 from %ir.ppList)
+      J2_jump %bb.4, implicit-def $pc
+    }
+
+  bb.2:
+    successors: %bb.3(0x7c000000), %bb.7(0x04000000)
+    liveins: $r0, $r1
+
+    renamable $r2 = L2_loadri_io renamable $r0, 40 :: (load 4 from %ir.cgep3)
+    BUNDLE implicit-def dead $p0, implicit-def dead $pc, implicit $r1, implicit $r2 {
+      renamable $p0 = C2_cmpgtu renamable $r1, renamable $r2
+      J2_jumpfnew internal killed renamable $p0, %bb.7, implicit-def dead $pc
+    }
+
+  bb.3:
+    successors: %bb.4
+    liveins: $r0, $r1
+
+    renamable $r0 = L2_loadri_io killed renamable $r0, 36 :: (load 4 from %ir.cgep4)
+
+  bb.4:
+    successors: %bb.5, %bb.2
+    liveins: $r0, $r1
+
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r0 {
+      renamable $p0 = C2_cmpeqi renamable $r0, 0
+      J2_jumpfnewpt internal killed $p0, %bb.2, implicit-def $pc
+    }
+
+  bb.5:
+    successors: %bb.6
+
+    renamable $r0 = A2_tfrsi 0
+
+  bb.6:
+    liveins: $r0
+
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+
+  bb.7:
+    liveins: $r0, $r1, $r2
+
+    BUNDLE implicit-def dead $p0, implicit-def dead $r0, implicit-def $pc, implicit killed $r2, implicit killed $r1, implicit $r0, implicit killed $r31 {
+      renamable $p0 = C2_cmpeq killed renamable $r2, killed renamable $r1
+      renamable $r0 = C2_cmovenewif internal killed $p0, 0, implicit $r0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+
+...

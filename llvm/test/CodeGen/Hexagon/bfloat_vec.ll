@@ -12,20 +12,20 @@ define dso_local void @bf16_vec_add(ptr noundef %c, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:     allocframe(#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = #16
 ; CHECK-NEXT:     r5 = #32767
 ; CHECK-NEXT:     v0 = vmemu(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v26 = vsplat(r6)
 ; CHECK-NEXT:     r2 = ##32768
+; CHECK-NEXT:     v2 = vxor(v0,v0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v25 = vsplat(r2)
-; CHECK-NEXT:     v2 = vxor(v0,v0)
 ; CHECK-NEXT:     v1 = vmemu(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = #16
 ; CHECK-NEXT:     v5:4.h = vshuffoe(v0.h,v2.h)
 ; CHECK-NEXT:     v3 = vxor(v1,v1)
 ; CHECK-NEXT:    }

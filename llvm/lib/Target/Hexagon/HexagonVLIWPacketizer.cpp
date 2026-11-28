@@ -1101,15 +1101,14 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 // Doing the test only one way saves the amount of code in this function,
 // since every test would need to be repeated with the MI and MJ reversed.
 static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
-      const HexagonInstrInfo &HII) {
+                               const HexagonInstrInfo &HII,
+                               const HexagonSubtarget &HST) {
   if (OneFloatPerPacket && HII.isFloat(MI) && HII.isFloat(MJ))
     return true;
   if (OneComplexPerPacket && HII.isComplex(MI) && HII.isComplex(MJ))
     return true;
 
-  const MachineFunction *MF = MI.getParent()->getParent();
-  if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
-      HII.isHVXMemWithAIndirect(MI, MJ))
+  if (HST.hasV60OpsOnly() && HII.isHVXMemWithAIndirect(MI, MJ))
     return true;
 
   // Don't allow a store and an instruction that must be in slot0 and
@@ -1213,7 +1212,9 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
 // Full, symmetric check.
 bool HexagonPacketizerList::cannotCoexist(const MachineInstr &MI,
       const MachineInstr &MJ) {
-  return cannotCoexistAsymm(MI, MJ, *HII) || cannotCoexistAsymm(MJ, MI, *HII);
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  return cannotCoexistAsymm(MI, MJ, *HII, HST) ||
+         cannotCoexistAsymm(MJ, MI, *HII, HST);
 }
 
 void HexagonPacketizerList::unpacketizeSoloInstrs(MachineFunction &MF) {

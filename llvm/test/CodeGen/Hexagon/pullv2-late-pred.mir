@@ -1,0 +1,32 @@
+# RUN: llc -march=hexagon -run-pass global-schedV2 -o - %s | FileCheck %s
+# CHECK-NOT: L2_ploadrdtnew_io
+
+# Make sure that pullup v2 does not newify the load in the packet with A4_addp_c.
+# The add is not a valid source for a .new predicate (it's a late predicate
+# producer).
+
+name: fred
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $d0, $d1, $r4, $p0, $r0, $r1, $r2, $r3, $r6, $r7
+    $p0 = C2_andn undef $p0, killed undef $p0
+    BUNDLE implicit-def $d3, implicit-def $r6, implicit-def $r7, implicit-def $p0, implicit-def $d1, implicit-def $r2, implicit-def $r3, implicit $d0, implicit killed $d1, implicit killed $p0 {
+      $d3, $p0 = A4_addp_c $d0, $d1, killed $p0
+      A2_nop
+    }
+    J2_jumpf killed $p0, %bb.2, implicit-def dead $pc
+
+  bb.1:
+    liveins: $r2, $r3, $r4, $r6, $r7
+    ; Make pullup pull the load up and predicate.
+    $d0 = L2_loadrd_io killed $r4, 0
+    $d0 = A2_addp killed $d3, killed $d0
+    PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $d0
+
+  bb.2:
+    liveins: $r0, $r1
+    ; Make this block unpredicable.
+    A2_nop
+    PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $d0
+...

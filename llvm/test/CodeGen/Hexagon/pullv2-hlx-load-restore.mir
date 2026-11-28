@@ -1,0 +1,60 @@
+# Ensure that the HLX Copy (LX_assign) is restored when a call that is passing
+# arguments through loaded register is present within the same bundle.
+
+# RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass global-schedV2 -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK: $l6 = LX_L16b_tmp
+# CHECK-NEXT: $l6 = LX_assign
+# CHECK-NEXT: J2_call @parameter_7
+--- |
+  source_filename = "test.c"
+  target triple = "hexagon"
+
+  declare dso_local inreg <1024 x i16> @parameter_7(<1024 x i16>, <1024 x i16>, <1024 x i16>, <1024 x i16>, <1024 x i16>, <1024 x i16>, <1024 x i16>)
+  define dso_local noundef i32 @main() {
+  entry:
+    ret i32 0
+  }
+...
+---
+name:            main
+alignment:       16
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+hasEHScopes:     false
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  adjustsStack:    false
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r29, $r30
+
+    BUNDLE implicit-def $r29, implicit-def $r30, implicit $vsp, implicit killed $r29, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31 {
+      $r29 = frame-setup S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31
+    }
+    BUNDLE implicit-def $l0, implicit-def $l1, implicit-def $l2, implicit-def $l3, implicit-def $l4, implicit-def $l5, implicit-def $r2 {
+      $l0 = LX_assign_u 4
+      $l1 = LX_assign_u 5
+      $l2 = LX_assign_u 1
+      $l3 = LX_assign_u 2
+      $l4 = LX_assign_u 3
+      $l5 = LX_assign_u 6
+      $r2 = A2_tfrsi 0
+    }
+    BUNDLE implicit-def $l6, implicit-def $pc, implicit-def $r31, implicit-def $r29, implicit-def $vsp, implicit $r29, implicit $l0, implicit $l1, implicit $l2, implicit $l3, implicit $l4, implicit $l5 {
+      $l6 = LX_L16b_tmp killed $r2
+      $l6 = LX_assign internal killed $l6
+      J2_call @parameter_7, hexagoncsr_hlx, implicit-def $pc, implicit-def $r31, implicit $r29, implicit $l0, implicit $l1, implicit $l2, implicit $l3, implicit $l4, implicit $l5, implicit internal $l6, implicit-def $r29, implicit-def $vsp, implicit-def $l0
+    }
+    BUNDLE implicit-def $r0, implicit-def $d15, implicit-def $pc, implicit-def $r29 {
+      $r0 = A2_tfrsi 0
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def $pc, implicit internal killed $r0
+    }
+...

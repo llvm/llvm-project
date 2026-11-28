@@ -1,0 +1,53 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN:   -disable-hvx-sched-superblock=false -enable-hvx-two-load-cur-bypass \
+# RUN:   %s -o - | FileCheck %s
+#
+# Single-load .cur bypass reached through tryTwoLoadCurBypass: with
+# -enable-hvx-two-load-cur-bypass the two-load helper runs first for size-1
+# clusters. Here the consumer has a single RAW producer that is a .cur-able HVX
+# load, so GenCur is set and PotentialGenCur stays false. The load packet has
+# room, so canReserveResources succeeds and the helper takes the else branch
+# (isLegalToPacketizeWith) rather than lastChanceGlobalPullup. The load is still
+# rewritten to its .cur form and the consumer forwarded in-packet.
+#
+# CHECK: V6_vL32b_cur_pi
+# CHECK: $v8 = V6_vaddw internal
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-unknown-elf"
+
+  define void @single_load_else(ptr %p, i32 %n) {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  }
+
+...
+---
+name:            single_load_else
+alignment:       16
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+
+    renamable $r8 = A2_tfrsi 8
+    J2_loop0r %bb.1, killed renamable $r8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.1.loop (machine-block-address-taken, align 16):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $r0
+
+    BUNDLE implicit-def $v0, implicit-def $r0, implicit $r0 {
+      renamable $v0, renamable $r0 = V6_vL32b_pi killed renamable $r0, 128 :: (load (s1024) from %ir.p)
+    }
+    renamable $v8 = V6_vaddw killed renamable $v0, renamable $v0
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+
+  bb.2:
+    liveins: $v8
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

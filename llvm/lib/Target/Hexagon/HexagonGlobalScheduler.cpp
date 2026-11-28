@@ -2417,9 +2417,12 @@ void HexagonGlobalSchedulerImpl::removeInstructionFromExistingBundle(
         if (Head->isBundledWithSucc())
           Head->unbundleFromSucc();
       }
-      // Head is no longer bundled, so none of its reads are internal.
+      // Head is no longer bundled, so its reads are not internal, except the
+      // predicate that a compound compare-and-jump defines and reads itself.
       for (MachineOperand &MO : Head->all_uses())
-        MO.setIsInternalRead(false);
+        if (!(QII->isCompoundBranchInstr(*Head) && MO.isImplicit() &&
+              Head->definesRegister(MO.getReg(), QRI)))
+          MO.setIsInternalRead(false);
     } else
       llvm_unreachable("Corrupt bundle");
   }

@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=hexagon -run-pass=global-schedV2 -verify-machineinstrs \
+# RUN:   %s -o - | FileCheck %s
+
+# The mux reads the old value of p2 between the compares and the AND, so the
+# compares must not be rewritten to define p2 (auto-and).
+
+# CHECK-LABEL: name: f
+# CHECK:     $p0 = C2_cmpeqi
+# CHECK:     $p1 = C2_cmpgti
+# CHECK-NOT: $p2 = C2_cmp
+# CHECK:     $r5 = C2_mux killed $p2
+# CHECK:     $p2 = C2_and killed renamable $p0, killed renamable $p1
+
+---
+name:            f
+body:             |
+  bb.0:
+    liveins: $r0, $r2, $r3, $r4, $p2
+
+    BUNDLE implicit-def $p0, implicit-def $p1, implicit-def $r6, implicit killed $r0, implicit killed $r2, implicit $r3 {
+      renamable $p0 = C2_cmpeqi killed renamable $r0, 0
+      renamable $p1 = C2_cmpgti killed renamable $r2, -1
+      $r6 = A2_addi $r3, 7
+    }
+    $r5 = C2_mux killed $p2, killed $r6, killed $r4
+    renamable $p2 = C2_and killed renamable $p0, killed renamable $p1
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $p2, implicit killed $r31, implicit $r5 {
+      $r0 = C2_muxir killed $p2, $r5, 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...

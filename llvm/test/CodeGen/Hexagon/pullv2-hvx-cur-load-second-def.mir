@@ -1,0 +1,65 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN:   -disable-hvx-sched-superblock=false %s -o - \
+# RUN:   | FileCheck %s --implicit-check-not=V6_vL32b_cur_pi
+#
+# A post-increment HVX load defines TWO registers -- the loaded
+# vector (forwardable via .cur) and, via the tied constraint
+# "$Rx32 = $Rx32in" (see V6_vL32b_pi in HexagonDepInstrInfo.td), the
+# incremented pointer, which has no .cur form and is not forwarded within the
+# packet.
+#
+# canGenCurBypass justified masking the entire RAW dependence bit on the
+# strength of the primary def's .cur forwarding alone. Here the consumer being
+# pulled up reads the POINTER def ($r0), not the loaded vector ($v0), so .cur
+# does nothing to satisfy that dependence. Masking it rewrote the load to
+# .cur and pulled the A2_addi into the load's packet as an internal read,
+# making it consume the stale PRE-increment pointer -- a silent miscompile.
+#
+# The bypass must be refused: the load keeps its plain V6_vL32b_pi form and the
+# A2_addi stays in a later packet, reading $r0 as an ordinary cross-packet use.
+
+# CHECK-LABEL: name: cur_bypass_second_def
+# CHECK: renamable $v0, renamable $r0 = V6_vL32b_pi
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: renamable $r1 = A2_addi renamable $r0, 896
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-unknown-elf"
+
+  define void @cur_bypass_second_def(ptr %p) {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  }
+
+...
+---
+name:            cur_bypass_second_def
+alignment:       16
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+
+    renamable $r8 = A2_tfrsi 8
+    J2_loop0r %bb.1, killed renamable $r8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.1.loop (machine-block-address-taken, align 16):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $r0
+
+    BUNDLE implicit-def $v0, implicit-def $r0, implicit $r0 {
+      renamable $v0, renamable $r0 = V6_vL32b_pi killed renamable $r0, 128 :: (load (s1024) from %ir.p)
+    }
+    ; The consumer reads the load's second (tied pointer) def $r0, not $v0.
+    ; No .cur bypass is legal here: $r0 is not forwarded within the packet.
+    renamable $r1 = A2_addi renamable $r0, 896
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+
+  bb.2:
+    liveins: $r1
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

@@ -1,0 +1,148 @@
+# Check that Global Scheduler V2 pulls up the unbundled endloop.
+# This test requires sparse pullup to be enabled.
+
+# RUN: llc -mtriple=hexagon -mattr=+hlx -run-pass global-schedV2 %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: foo
+# CHECK: BUNDLE
+# CHECK-DAG: $r0 = {{.*}}A2_addi
+# CHECK-DAG: LX_sub_h
+# CHECK-DAG: LX_S16b_new
+# CHECK: ENDLOOP0
+# CHECK-NEXT: }
+
+--- |
+  define dso_local void @foo(ptr noalias noundef %out, ptr noalias noundef %in, i32 noundef %frac_bits, i32 noundef %num_croutons) local_unnamed_addr {
+  entry:
+    %shl = shl i32 8, %frac_bits
+    %conv = add nuw i32 %shl, 65535
+    %conv1 = and i32 %conv, 65535
+    %0 = tail call <1024 x i16> @llvm.hexagon.LX.assign.r(i32 %conv1)
+    %1 = tail call <1024 x i16> @llvm.hexagon.LX.assign.u(i32 0)
+    %sub2 = add nsw i32 %frac_bits, -13
+    %cmp16 = icmp sgt i32 %num_croutons, 0
+    br i1 %cmp16, label %for.body, label %for.end
+
+  for.body:
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ %num_croutons, %entry ]
+    %out.addr.019 = phi ptr [ %cgep20, %for.body ], [ %out, %entry ]
+    %in.addr.018 = phi ptr [ %cgep, %for.body ], [ %in, %entry ]
+    %2 = load <1024 x i16>, ptr %in.addr.018, align 2048, !tbaa !2
+    %3 = tail call <1024 x i16> @llvm.hexagon.LX.abs.uh.sat(<1024 x i16> %2)
+    %4 = tail call <1024 x i16> @llvm.hexagon.LX.max.h(<1024 x i16> %2, <1024 x i16> %1)
+    %5 = tail call <1024 x i16> @llvm.hexagon.LX.cmp.gt.uh(<1024 x i16> %3, <1024 x i16> %0)
+    %6 = tail call <1024 x i16> @llvm.hexagon.LX.mux.h(<1024 x i16> %3, <1024 x i16> %1, <1024 x i16> %5)
+    %7 = tail call <1024 x i16> @llvm.hexagon.LX.shrr.uh.uh(<1024 x i16> %4, i32 %sub2)
+    %8 = tail call <1024 x i16> @llvm.hexagon.LX.sub.h(<1024 x i16> %7, <1024 x i16> %6)
+    store <1024 x i16> %8, ptr %out.addr.019, align 2048, !tbaa !2
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep = getelementptr inbounds i8, ptr %in.addr.018, i32 2048
+    %cgep20 = getelementptr inbounds i8, ptr %out.addr.019, i32 2048
+    br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !5
+
+  for.end:
+    ret void
+  }
+
+  declare void @llvm.assume(i1 noundef)
+
+  declare <1024 x i16> @llvm.hexagon.LX.assign.r(i32)
+
+  declare <1024 x i16> @llvm.hexagon.LX.assign.u(i32 immarg)
+
+  declare <1024 x i16> @llvm.hexagon.LX.abs.uh.sat(<1024 x i16>)
+
+  declare <1024 x i16> @llvm.hexagon.LX.max.h(<1024 x i16>, <1024 x i16>)
+
+  declare <1024 x i16> @llvm.hexagon.LX.cmp.gt.uh(<1024 x i16>, <1024 x i16>)
+
+  declare <1024 x i16> @llvm.hexagon.LX.mux.h(<1024 x i16>, <1024 x i16>, <1024 x i16>)
+
+  declare <1024 x i16> @llvm.hexagon.LX.shrr.uh.uh(<1024 x i16>, i32)
+
+  declare <1024 x i16> @llvm.hexagon.LX.sub.h(<1024 x i16>, <1024 x i16>)
+
+  !llvm.module.flags = !{!0, !1}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"frame-pointer", i32 2}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"omnipotent char", !4, i64 0}
+  !4 = !{!"Simple C/C++ TBAA"}
+  !5 = distinct !{!5, !6}
+  !6 = !{!"llvm.loop.mustprogress"}
+...
+---
+name:            foo
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+  - { reg: '$vsp', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.3(0x30000000)
+    liveins: $r0, $r1, $r2, $r3, $vsp
+
+    BUNDLE implicit-def $p0, implicit-def $r29, implicit-def $r30, implicit-def $r4, implicit $r3, implicit killed $r29, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31, implicit killed $vsp {
+      renamable $p0 = C2_cmpgti renamable $r3, 0
+      $r29 = frame-setup S2_allocframe killed $r29, 8, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31 :: (store (s32) into stack)
+      $r4 = A2_tfrcrr killed $vsp, implicit-def $upcyclelo, implicit-def $pktcountlo
+    }
+    BUNDLE implicit-def $pc, implicit killed $r29, implicit killed $r4, implicit killed $p0 {
+      S2_storeri_io killed $r29, 4, killed $r4 :: (store (s32) into %stack.0)
+      J2_jumpf killed renamable $p0, %bb.3, implicit-def $pc
+    }
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def $d2, implicit-def $r4, implicit-def $r5, implicit-def $l0, implicit-def $lc0, implicit-def $sa0, implicit-def $usr, implicit-def $usr_ovf, implicit killed $r3 {
+      $d2 = A2_combineii 8, -1
+      renamable $l0 = LX_assign_u 0
+      J2_loop0r %bb.2, killed renamable $r3, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    }
+    BUNDLE implicit-def $r4, implicit-def $r2, implicit killed $r4, implicit killed $r5, implicit killed $r2 {
+      renamable $r4 = S2_asl_r_r_acc killed renamable $r4, killed renamable $r5, renamable $r2
+      renamable $r2 = nsw A2_addi killed renamable $r2, -13
+    }
+    renamable $r4 = A2_zxth killed renamable $r4
+    renamable $l1 = LX_assign_r killed renamable $r4
+
+  bb.2.for.body (machine-block-address-taken, align 16):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+    liveins: $l0, $l1, $r0, $r1, $r2
+
+    BUNDLE implicit-def $l2, implicit $r1 {
+      $l2 = LX_L16b_tmp renamable $r1 :: (load (s16384) from %ir.in.addr.018, !tbaa !2)
+      $l2 = LX_assign internal killed $l2
+    }
+    BUNDLE implicit-def $l3, implicit-def $r1, implicit-def $l2, implicit killed $l2, implicit killed $r1, implicit $l0 {
+      renamable $l3 = LX_abs_uh_sat renamable $l2
+      renamable $r1 = nuw A2_addi killed renamable $r1, 2048
+      renamable $l2 = LX_max_h killed renamable $l2, renamable $l0
+    }
+    BUNDLE implicit-def $l4, implicit-def $l2, implicit $l3, implicit $l1, implicit killed $l2, implicit $r2 {
+      renamable $l4 = LX_cmp_gt_uh renamable $l3, renamable $l1
+      renamable $l2 = LX_shrr_uh_uh killed renamable $l2, renamable $r2
+    }
+    renamable $l3 = LX_mux_h killed renamable $l3, renamable $l0, killed renamable $l4
+    renamable $l2 = LX_sub_h killed renamable $l2, killed renamable $l3
+    BUNDLE implicit-def $r0, implicit-def $pc, implicit-def $lc0, implicit killed $r0, implicit killed $l2, implicit killed $sa0, implicit $lc0 {
+      $l2 = LX_assign killed $l2
+      LX_S16b_new renamable $r0, internal killed renamable $l2 :: (store (s16384) into %ir.out.addr.019, !tbaa !2)
+    }
+    renamable $r0 = nuw A2_addi killed renamable $r0, 2048
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+
+  bb.3.for.end:
+    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def $pc
+...

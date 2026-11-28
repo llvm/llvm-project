@@ -1,0 +1,85 @@
+# RUN: llc -march=hexagon -start-after if-converter -enable-pullup-pred=0 %s -o - | FileCheck %s
+
+# Make sure that the stack pointer setup is not speculated across any branch.
+# CHECK: r29 = add(r29,#-8)
+# CHECK-NOT: jump
+# CHECK: r29 = add(r29,#8)
+
+---
+name: foo
+alignment: 4
+stack:
+  - { id: 0, type: default, size: 4, alignment: 4 }
+liveins:
+  - { reg: '$r0' }
+body: |
+  bb.0:
+    liveins: $r0
+    successors: %bb.1, %bb.3
+        $r3 = S2_extractu $r0, 8, 23
+        $p0 = C2_cmpgtui $r3, 149
+        J2_jumpt $p0, %bb.3, implicit-def $pc
+
+  bb.1:
+    liveins: $r0, $r3
+    successors: %bb.2, %bb.4
+        $p0 = C2_cmpgti $r0, -1
+        $r2 = S2_togglebit_i $r0, 31
+        $p1 = C2_cmpgtui killed $r3, 125
+        $r2 = A2_tfrt $p0, $r0, implicit killed $r2(tied-def 0)
+        J2_jumpt killed $p1, %bb.4, implicit-def dead $pc
+
+  bb.2:
+    liveins: $r0, $r2
+    successors: %bb.3
+        $r29 = A2_addi $r29, -8
+        $r3 = A2_tfrsi 1258291200
+        $r4 = A2_tfrsi 0
+        $r2 = F2_sfadd killed $r2, killed $r3, implicit $usr
+        S2_storeri_io $r29, 4, killed $r2 :: (volatile store 4 into %stack.0)
+        $r0 = F2_sfmpy killed $r0, killed $r4, implicit killed $usr
+        $r29 = A2_addi $r29, 8
+
+  bb.3:
+    liveins: $r0
+        PS_jmpret killed $r31, implicit-def dead $pc, implicit killed $r0
+
+  bb.4:
+    liveins: $p0, $r2
+    successors: %bb.5, %bb.6
+        $r3 = A2_tfrsi 1258291200
+        $r3 = F2_sfadd $r2, killed $r3, implicit $usr
+        $r4 = A2_tfrsi -889192448
+        $r3 = F2_sfadd killed $r3, killed $r4, implicit $usr
+        $r3 = F2_sfsub killed $r3, $r2, implicit $usr
+        $r4 = A2_tfrsi 1056964608
+        $p1 = F2_sfcmpgt $r3, killed $r4, implicit $usr
+        $r0 = F2_sfadd killed $r2, $r3, implicit killed $usr
+        J2_jumpf killed $p1, %bb.6, implicit-def $pc
+
+  bb.5:
+    liveins: $p0, $r0
+    successors: %bb.8
+        $r2 = A2_tfrsi -1082130432
+        $r0 = F2_sfadd killed $r0, killed $r2, implicit killed $usr
+        J2_jump %bb.8, implicit-def $pc
+
+  bb.6:
+    liveins: $p0, $r0, $r3
+    successors: %bb.7, %bb.8
+        $r2 = A2_tfrsi -1090519040
+        $p1 = F2_sfcmpge killed $r2, killed $r3, implicit killed $usr
+        J2_jumpf $p1, %bb.8, implicit-def $pc
+
+  bb.7:
+    liveins: $p0, $r0
+    successors: %bb.8
+        $r2 = A2_tfrsi 1065353216
+        $r0 = F2_sfadd killed $r0, killed $r2, implicit killed $usr
+
+  bb.8:
+    liveins: $p0, $r0
+        $r2 = S2_togglebit_i $r0, 31
+        $r0 = A2_tfrf killed $p0, killed $r2, implicit killed $r0(tied-def 0)
+        PS_jmpret killed $r31, implicit-def dead $pc, implicit killed $r0
+...

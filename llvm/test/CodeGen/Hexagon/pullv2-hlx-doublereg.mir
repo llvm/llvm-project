@@ -1,0 +1,70 @@
+# Check that double register use of HLX load is pulled up into load's packet
+# Check that HLX store is pulled up into double register def's packet
+
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass global-schedV2 %s -o - | FileCheck %s
+
+# CHECK: BUNDLE implicit-def $l1
+# CHECK-NEXT: LX_L16b_tmp
+# CHECK-NEXT: LX_add_wwh
+# CHECK-NEXT: LX_S16b_new
+# CHECK-NEXT: }
+
+--- |
+
+  define dso_local void @hlx_load_store(ptr noundef readonly captures(none) %src0, ptr noundef readonly captures(none) %src1, ptr noundef writeonly captures(none) initializes((0, 4096)) %dst) local_unnamed_addr {
+  entry:
+    %0 = load <1024 x i32>, ptr %src0, align 2048, !tbaa !4
+    %1 = load <1024 x i16>, ptr %src1, align 2048, !tbaa !4
+    %2 = tail call <1024 x i32> @llvm.hexagon.LX.add.wwh(<1024 x i32> %0, <1024 x i16> %1)
+    store <1024 x i32> %2, ptr %dst, align 2048, !tbaa !4
+    ret void
+  }
+
+  declare <1024 x i32> @llvm.hexagon.LX.add.wwh(<1024 x i32>, <1024 x i16>)
+
+  !llvm.module.flags = !{!0, !1}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"frame-pointer", i32 2}
+  !2 = !{!"omnipotent char", !3, i64 0}
+  !3 = !{!"Simple C/C++ TBAA"}
+  !4 = !{!2, !2, i64 0}
+
+...
+---
+name:            hlx_load_store
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1, $r2
+
+    BUNDLE implicit-def $r3, implicit-def $l0, implicit-def $r0, implicit killed $r0, implicit $r2 {
+      renamable $r3 = A2_addi renamable $r0, 2048
+      $l0 = LX_L16b_tmp killed renamable $r0 :: (load (s16384) from %ir.src0, !tbaa !4)
+      $l0 = LX_assign internal killed $l0
+      $r0 = A2_addi renamable $r2, 2048
+    }
+    BUNDLE implicit-def $l2, implicit killed $r1 {
+      $l2 = LX_L16b_tmp killed renamable $r1 :: (load (s16384) from %ir.src1, !tbaa !4)
+      $l2 = LX_assign internal killed $l2
+    }
+    BUNDLE implicit-def $l1, implicit killed $r3 {
+      $l1 = LX_L16b_tmp killed renamable $r3 :: (load (s16384) from %ir.src0 + 2048, !tbaa !4)
+      $l1 = LX_assign internal killed $l1
+    }
+    renamable $ll0 = LX_add_wwh killed renamable $ll0, killed renamable $l2
+    BUNDLE implicit-def dead $l0, implicit killed $l0, implicit killed $r2 {
+      $l0 = LX_assign killed $l0
+      LX_S16b_new killed renamable $r2, internal killed renamable $l0 :: (store (s16384) into %ir.dst, !tbaa !4)
+    }
+    BUNDLE implicit-def $pc, implicit killed $r0, implicit killed $l1, implicit killed $r31 {
+      $l1 = LX_assign killed $l1
+      LX_S16b_new killed $r0, internal killed renamable $l1 :: (store (s16384) into %ir.dst + 2048, !tbaa !4)
+      PS_jmpret killed $r31, implicit-def $pc
+    }
+
+...

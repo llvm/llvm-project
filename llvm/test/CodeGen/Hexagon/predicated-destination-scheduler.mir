@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=hexagon -run-pass=global-sched \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=global-schedV2 \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: predicated_destination
+# The schedulers retain the old-value dependency within the packet.
+# CHECK:      BUNDLE implicit-def $r8, implicit $p0 {
+# CHECK-NEXT: $r8 = C2_cmoveit $p0, 0
+# CHECK-NEXT: $r8 = C2_cmoveif {{(killed )?}}$p0, 1, implicit internal $r8
+
+# V1 only schedules functions with multiple IR blocks.
+--- |
+  define void @predicated_destination() {
+  entry:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name: predicated_destination
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $p0, $r31
+    BUNDLE implicit-def $r24, implicit-def $r25, implicit-def $r26 {
+      $r24 = A2_tfrsi 13
+      $r25 = A2_tfrsi 14
+      $r26 = A2_tfrsi 15
+    }
+    BUNDLE implicit-def $r8, implicit $p0 {
+      $r8 = C2_cmoveit $p0, 0
+      $r8 = C2_cmoveif $p0, 1, implicit internal $r8
+    }
+    J2_jump %bb.1, implicit-def $pc
+
+  bb.1:
+    liveins: $r8, $r31
+    PS_jmpret $r31, implicit-def $pc, implicit $r8
+...

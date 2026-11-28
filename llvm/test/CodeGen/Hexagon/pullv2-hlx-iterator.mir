@@ -1,0 +1,188 @@
+# REQUIRES: asserts
+# Check that GlobalSchedulerV2 is able to attempt pullup for uses for each HLX
+# load. from a bundle with 2 instructions
+# This test used to crash after pulling up this use:
+#   renamable $ll3 = LX_mpa_wuh killed renamable $ll3, killed renamable $l1, renamable $l10
+# This instruction is part of a two instruction bundle. Pullup will unbundle the remaining
+# instruction in this bundle, leading to the iterator to the bundle being invalidated.
+
+# RUN: llc -march=hexagon -mattr=+hlx -mcpu=hexagonv85 \
+# RUN: -run-pass=global-schedV2 -debug-only="global_schedV2" \
+# RUN: -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+
+# CHECK: Speculated Local MI:{{.*}}LX_mpyr_uw_uh internal renamable $l1
+# CHECK: Speculated Local MI:{{.*}}LX_mpa_wuh killed {{.*}} internal renamable $l10
+
+--- |
+  target triple = "hexagon"
+
+  define dso_local void @foo(ptr noalias noundef readonly captures(none) %outblocktab, ptr noalias noundef readonly captures(none) %ablocktab, ptr noalias noundef readonly captures(none) %bblocktab, i32 noundef %n_blocks, i32 noundef %mulscale, i32 noundef %ina_zer, i32 noundef %inb_zer, i32 noundef %preadd, i32 noundef %postadd) local_unnamed_addr {
+  entry:
+    %0 = tail call <1024 x i16> @llvm.hexagon.LX.assign.r(i32 32768)
+    %1 = tail call <1024 x i32> @llvm.hexagon.LX.assign.rw(i32 %preadd)
+    %2 = tail call <1024 x i32> @llvm.hexagon.LX.assign.rw(i32 %postadd)
+    %mul = shl nsw i32 %mulscale, 1
+    %shr = ashr i32 %mulscale, 15
+    %cmp23 = icmp sgt i32 %n_blocks, 0
+    br i1 %cmp23, label %for.body, label %for.cond.cleanup
+
+  for.cond.cleanup:
+    ret void
+
+  for.body:
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ %n_blocks, %entry ]
+    %outblocktab.addr.027 = phi ptr [ %cgep29, %for.body ], [ %outblocktab, %entry ]
+    %ablocktab.addr.026 = phi ptr [ %cgep, %for.body ], [ %ablocktab, %entry ]
+    %bblocktab.addr.025 = phi ptr [ %cgep28, %for.body ], [ %bblocktab, %entry ]
+    %3 = load ptr, ptr %ablocktab.addr.026, align 4, !tbaa !0
+    %4 = load ptr, ptr %bblocktab.addr.025, align 4, !tbaa !0
+    %5 = load <1024 x i16>, ptr %3, align 2048, !tbaa !5
+    %6 = load <1024 x i16>, ptr %4, align 2048, !tbaa !5
+    %7 = tail call <1024 x i32> @llvm.hexagon.LX.mpa.wuh(<1024 x i32> %1, <1024 x i16> %5, <1024 x i16> %6)
+    %8 = tail call <1024 x i32> @llvm.hexagon.LX.mpyr.uw.uh(<1024 x i16> %5, i32 %inb_zer)
+    %9 = tail call <1024 x i32> @llvm.hexagon.LX.mpar.wuh(<1024 x i32> %8, <1024 x i16> %6, i32 %ina_zer)
+    %10 = tail call <1024 x i32> @llvm.hexagon.LX.sub.w(<1024 x i32> %7, <1024 x i32> %9)
+    %11 = tail call <1024 x i16> @llvm.hexagon.LX.lo(<1024 x i32> %10)
+    %12 = tail call <1024 x i32> @llvm.hexagon.LX.mpyr.uw.uh(<1024 x i16> %11, i32 %mul)
+    %13 = tail call <1024 x i16> @llvm.hexagon.LX.hi(<1024 x i32> %10)
+    %14 = tail call <1024 x i32> @llvm.hexagon.LX.mpar.wh.hi(<1024 x i16> %13, i32 %mul, <1024 x i32> %12)
+    %15 = tail call <1024 x i16> @llvm.hexagon.LX.hi(<1024 x i32> %14)
+    %16 = tail call <1024 x i32> @llvm.hexagon.LX.conv.w.h(<1024 x i16> %15)
+    %17 = tail call <1024 x i32> @llvm.hexagon.LX.mpar.wuh.lo(<1024 x i16> %11, i32 %shr, <1024 x i32> %14)
+    %18 = tail call <1024 x i32> @llvm.hexagon.LX.add.wwuh(<1024 x i32> %17, <1024 x i16> %0)
+    %19 = tail call <1024 x i32> @llvm.hexagon.LX.mpar.whuh(<1024 x i32> %16, <1024 x i16> %13, i32 %shr)
+    %20 = tail call <1024 x i16> @llvm.hexagon.LX.hi(<1024 x i32> %18)
+    %21 = tail call <1024 x i32> @llvm.hexagon.LX.add.wwh(<1024 x i32> %19, <1024 x i16> %20)
+    %22 = tail call <1024 x i32> @llvm.hexagon.LX.add.w.sat(<1024 x i32> %21, <1024 x i32> %2)
+    %23 = tail call <1024 x i16> @llvm.hexagon.LX.shrr.uh.w.rnd.sat(<1024 x i32> %22, i32 3)
+    %24 = load ptr, ptr %outblocktab.addr.027, align 4, !tbaa !0
+    store <1024 x i16> %23, ptr %24, align 2048, !tbaa !5
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep = getelementptr inbounds i8, ptr %ablocktab.addr.026, i32 4
+    %cgep28 = getelementptr inbounds i8, ptr %bblocktab.addr.025, i32 4
+    %cgep29 = getelementptr inbounds i8, ptr %outblocktab.addr.027, i32 4
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  declare <1024 x i16> @llvm.hexagon.LX.assign.r(i32)
+  declare <1024 x i32> @llvm.hexagon.LX.assign.rw(i32)
+  declare <1024 x i32> @llvm.hexagon.LX.mpa.wuh(<1024 x i32>, <1024 x i16>, <1024 x i16>)
+  declare <1024 x i32> @llvm.hexagon.LX.mpyr.uw.uh(<1024 x i16>, i32)
+  declare <1024 x i32> @llvm.hexagon.LX.mpar.wuh(<1024 x i32>, <1024 x i16>, i32)
+  declare <1024 x i32> @llvm.hexagon.LX.sub.w(<1024 x i32>, <1024 x i32>)
+  declare <1024 x i16> @llvm.hexagon.LX.lo(<1024 x i32>)
+  declare <1024 x i32> @llvm.hexagon.LX.mpar.wh.hi(<1024 x i16>, i32, <1024 x i32>)
+  declare <1024 x i16> @llvm.hexagon.LX.hi(<1024 x i32>)
+  declare <1024 x i32> @llvm.hexagon.LX.conv.w.h(<1024 x i16>)
+  declare <1024 x i32> @llvm.hexagon.LX.mpar.wuh.lo(<1024 x i16>, i32, <1024 x i32>)
+  declare <1024 x i32> @llvm.hexagon.LX.add.wwuh(<1024 x i32>, <1024 x i16>)
+  declare <1024 x i32> @llvm.hexagon.LX.mpar.whuh(<1024 x i32>, <1024 x i16>, i32)
+  declare <1024 x i32> @llvm.hexagon.LX.add.wwh(<1024 x i32>, <1024 x i16>)
+  declare <1024 x i32> @llvm.hexagon.LX.add.w.sat(<1024 x i32>, <1024 x i32>)
+  declare <1024 x i16> @llvm.hexagon.LX.shrr.uh.w.rnd.sat(<1024 x i32>, i32)
+
+  !0 = !{!1, !1, i64 0}
+  !1 = !{!"p1 short", !2, i64 0}
+  !2 = !{!"any pointer", !3, i64 0}
+  !3 = !{!"omnipotent char", !4, i64 0}
+  !4 = !{!"Simple C/C++ TBAA"}
+  !5 = !{!3, !3, i64 0}
+
+...
+---
+name:            foo
+alignment:       16
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
+  - { reg: '$r5', virtual-reg: '' }
+fixedStack:
+  - { id: 0, type: default, offset: 16, size: 4, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 12, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5, $l2, $l3, $l4, $l5, $l6, $l7
+
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r3 {
+      renamable $p0 = C2_cmpgti renamable $r3, 0
+      J2_jumpfnew internal killed renamable $p0, %bb.2, implicit-def $pc
+    }
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $l2, $l3, $l4, $l5, $l6, $l7, $r0, $r1, $r2, $r3, $r4, $r5
+
+    BUNDLE implicit-def $r9, implicit-def $r6, implicit-def $r12, implicit $r29, implicit $r4 {
+      renamable $r9 = L2_loadri_io $r29, 8 :: (load (s32) from %fixed-stack.0, align 8)
+      renamable $r6 = nsw S2_asl_i_r renamable $r4, 1
+      renamable $r12 = L2_loadri_io $r29, 4 :: (load (s32) from %fixed-stack.1)
+    }
+    BUNDLE implicit-def $r7, implicit-def $ll1, implicit-def $l2, implicit-def $l3, implicit-def $r9, implicit-def $r1, implicit killed $r9, implicit killed $r1 {
+      renamable $r7 = A2_tfrsi 32768
+      renamable $ll1 = LX_assign_rw killed renamable $r9
+      renamable $r9, renamable $r1 = L2_loadri_pi killed renamable $r1, 4 :: (load (s32) from %ir.ablocktab.addr.026, !tbaa !0)
+    }
+    BUNDLE implicit-def $ll2, implicit-def $l4, implicit-def $l5, implicit-def $p0, implicit-def $r15, implicit-def $r2, implicit killed $r12, implicit $r3, implicit killed $r2 {
+      renamable $ll2 = LX_assign_rw killed renamable $r12
+      renamable $p0 = C2_cmpgtui renamable $r3, 1
+      $r15, renamable $r2 = L2_loadri_pi killed renamable $r2, 4 :: (load (s32) from %ir.bblocktab.addr.025, !tbaa !0)
+    }
+    BUNDLE implicit-def $ll3, implicit-def $l6, implicit-def $l7, implicit-def $l0, implicit-def $r8, implicit $ll2, implicit killed $r7, implicit killed $r29 {
+      $ll3 = LX_assign_w $ll2
+      renamable $l0 = LX_assign_r killed renamable $r7
+      renamable $r8 = L2_loadri_io killed $r29, 0 :: (load (s32) from %fixed-stack.2, align 8)
+    }
+    BUNDLE implicit-def $l1, implicit killed $r9 {
+      $l1 = LX_L16b_tmp killed renamable $r9 :: (load (s16384) from %ir.3, !tbaa !5)
+      $l1 = LX_assign internal killed $l1
+    }
+    BUNDLE implicit-def $ll4, implicit-def $l8, implicit-def $l9, implicit-def $r9, implicit-def $l10, implicit $l1, implicit $r8, implicit killed $r3, implicit killed $r15 {
+      renamable $ll4 = LX_mpyr_uw_uh renamable $l1, renamable $r8
+      renamable $r9 = A2_addi killed renamable $r3, -1
+      $l10 = LX_L16b_tmp killed $r15 :: (load (s16384) from %ir.4, !tbaa !5)
+      $l10 = LX_assign internal killed $l10
+    }
+    BUNDLE implicit-def $ll3, implicit-def $l6, implicit-def $l7, implicit-def $r3, implicit-def $r0, implicit killed $ll3, implicit killed $l1, implicit $l10, implicit killed $r0 {
+      renamable $ll3 = LX_mpa_wuh killed renamable $ll3, killed renamable $l1, renamable $l10
+      renamable $r3, renamable $r0 = L2_loadri_pi killed renamable $r0, 4 :: (load (s32) from %ir.outblocktab.addr.027, !tbaa !0)
+    }
+    BUNDLE implicit-def $ll4, implicit-def $l8, implicit-def $l9, implicit-def $r7, implicit-def $r4, implicit killed $ll4, implicit killed $l10, implicit $r5, implicit killed $r4 {
+      renamable $ll4 = LX_mpar_wuh killed renamable $ll4, killed renamable $l10, renamable $r5
+      renamable $r7 = S2_asr_i_r killed renamable $r4, 15
+      renamable $r4 = A2_tfrsi 3
+    }
+    renamable $ll3 = LX_sub_w killed renamable $ll3, killed renamable $ll4
+    renamable $ll4 = LX_mpyr_uw_uh renamable $l6, renamable $r6
+    renamable $ll4 = LX_mpar_wh_hi renamable $l7, renamable $r6, killed renamable $ll4
+    BUNDLE implicit-def $ll5, implicit-def $l10, implicit-def $l11, implicit-def $ll4, implicit-def $l8, implicit-def $l9, implicit $l9, implicit killed $ll4, implicit killed $l6, implicit $r7 {
+      renamable $ll5 = LX_conv_w_h renamable $l9
+      renamable $ll4 = LX_mpar_wuh_lo killed renamable $l6, renamable $r7, killed renamable $ll4
+    }
+    BUNDLE implicit-def $ll5, implicit-def $l10, implicit-def $l11, implicit-def $ll4, implicit-def $l8, implicit-def $l9, implicit killed $ll5, implicit killed $l7, implicit $r7, implicit killed $ll4, implicit $l0 {
+      renamable $ll5 = LX_mpar_whuh killed renamable $ll5, killed renamable $l7, renamable $r7
+      $ll4 = LX_add_wwuh killed renamable $ll4, renamable $l0
+    }
+    renamable $ll3 = LX_add_wwh killed renamable $ll5, killed $l9
+    renamable $ll0 = LX_add_w_sat killed renamable $ll3, killed renamable $ll1
+    renamable $l0 = LX_shrr_uh_w_rnd_sat killed renamable $ll0, killed renamable $r4
+    BUNDLE implicit-def dead $l0, implicit killed $l0, implicit killed $r3 {
+      $l0 = LX_assign killed $l0
+      LX_S16b_new killed renamable $r3, internal killed renamable $l0 :: (store unknown-size into %ir.24, align 2048, !tbaa !5)
+    }
+
+  bb.2:
+    PS_jmpret killed $r31, implicit-def $pc
+
+...

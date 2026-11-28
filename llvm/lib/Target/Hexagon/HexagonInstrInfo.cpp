@@ -1816,6 +1816,14 @@ bool HexagonInstrInfo::PredicateInstruction(
   bool GotPredReg = getPredReg(Cond, PredReg, PredRegPos, PredRegFlags);
   (void)GotPredReg;
   assert(GotPredReg);
+  if (isPredicatedNew(Cond[0].getImm()) && MI.isBundledWithPred()) {
+    auto BundleStart = getBundleStart(MI.getIterator());
+    for (auto I = std::next(BundleStart), E = MI.getIterator(); I != E; ++I)
+      if (I->definesRegister(PredReg, &getRegisterInfo())) {
+        PredRegFlags |= RegState::InternalRead;
+        break;
+      }
+  }
   T.addReg(PredReg, PredRegFlags);
   while (NOp < NumOps)
     T.add(MI.getOperand(NOp++));
@@ -5405,4 +5413,278 @@ MCInst HexagonInstrInfo::getNop() const {
   return MCInstBuilder(Hexagon::BUNDLE)
     .addImm(0)
     .addInst(&Nop);
+}
+
+// Returns true if \p MI has any internal (same-packet, .new) register read.
+static bool usesInternalDefs(const MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.isInternalRead())
+      return true;
+  return false;
+}
+
+int HexagonInstrInfo::srcDependence(MachineBasicBlock::instr_iterator SrcBeg,
+                                    MachineBasicBlock::instr_iterator SrcEnd,
+                                    MachineBasicBlock::instr_iterator RMII,
+                                    const MIUseDefMap &MIUseDefs,
+                                    SmallPtrSetImpl<MachineInstr *> *DepSet,
+                                    bool PreventDuplexSep,
+                                    bool IsPullDown) const {
+  const HexagonRegisterInfo *TRI = Subtarget.getRegisterInfo();
+
+  // No src dependence for single instruction bundles.
+  MachineInstr *BundleMI = &*SrcBeg;
+  if (BundleMI->getBundleSize() == 1)
+    return Dependency::Independent;
+
+  // An HVX instruction that would stall in this packet.
+  if (producesStall(*RMII, SrcBeg))
+    return Dependency::Unknown;
+  unsigned Dep = Dependency::Independent;
+  // Special checks for preventing duplex separation.
+  bool IsDuplexCandidate = false;
+  if (PreventDuplexSep &&
+      (getDuplexCandidateGroup(*RMII) != HexagonII::HSIG_None))
+    IsDuplexCandidate = true;
+
+  MIUseDefMap::const_iterator MIUseDef = MIUseDefs.find(&*RMII);
+  assert(MIUseDef != MIUseDefs.end());
+  BitVector Uses = MIUseDef->second.first;
+  BitVector Defs = MIUseDef->second.second;
+
+  // For global pullup, which does not need full cluster dependence checks,
+  // reject MIs with multiple defs.
+  if (!DepSet && Defs.count() > 1)
+    return Dependency::SamePacketRAW;
+
+  // Use all_defs()/all_uses() to include implicit register defs/uses.
+  // Implicit defs (e.g. L2_deallocframe's implicit-def $r29) are real
+  // register writes that establish dependencies with sibling instructions
+  // in the same packet; missing them caused the pull-down RAW between
+  // L2_deallocframe and a sibling load of $r29 to be ignored, producing a
+  // functionally incorrect split.
+  for (auto &RMIDef : RMII->all_defs()) {
+    if (!RMIDef.isReg())
+      continue;
+    for (MCRegAliasIterator AI(RMIDef.getReg(), TRI, true); AI.isValid(); ++AI)
+      Defs.set(*AI);
+  }
+  for (auto &RMIUse : RMII->all_uses()) {
+    if (!RMIUse.isReg())
+      continue;
+    for (MCRegAliasIterator AI(RMIUse.getReg(), TRI, true); AI.isValid(); ++AI)
+      Uses.set(*AI);
+  }
+
+  // Avoid the local pullup of a load against a store when the bundle is
+  // marked with disabled memory shuffling.
+  if ((&*RMII)->mayLoad() && BundleMI->mayStore() && BundleMI->isBundle() &&
+      getBundleNoShuf(*BundleMI))
+    return Dependency::Unknown;
+
+  // If DepSet was provided, find all dependencies and add to the set.
+  if (DepSet)
+    DepSet->insert(&*RMII);
+  else {
+    if (isDotNewInst(*RMII) || usesInternalDefs(*RMII))
+      return Dependency::SamePacketRAW;
+  }
+  for (auto MII = SrcBeg; MII != SrcEnd; ++MII) {
+    MachineInstr *MI = &*MII;
+    if (MI == &*RMII)
+      continue;
+    // Make sure MI has defs or uses.
+    MIUseDefMap::const_iterator MIUseDefP = MIUseDefs.find(MI);
+    if (MIUseDefP == MIUseDefs.end()) {
+      assert(MI->isBundle() || MI->isDebugInstr());
+      continue;
+    }
+    if (PreventDuplexSep && IsDuplexCandidate && isDuplexPair(*RMII, *MI))
+      return Dependency::Duplex;
+
+    // Check if use (.new) of RMII aliases with def (.tmp, .cur) of MI.
+    for (auto &SrcDef : MI->all_defs()) {
+      if (!SrcDef.isReg() || !Uses[SrcDef.getReg()])
+        continue;
+      int DefIdx = SrcDef.getOperandNo();
+      int UseIdx = RMII->findRegisterUseOperandIdx(SrcDef.getReg(), TRI);
+      if (UseIdx >= 0 && isDotNewOperand(*RMII, UseIdx)) {
+        if (DepSet && DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketRAW;
+      } else if (DefIdx >= 0 && (isDotTmpOperand(*MI, DefIdx) ||
+                                 isDotCurOperand(*MI, DefIdx))) {
+        if (DepSet && DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketRAW;
+      } else if (DepSet && IsPullDown) {
+        // Pull-down: RMII's regular read of MI's def must move with MI.
+        if (DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketWAR;
+      }
+      // Regular def of MI could alias with regular use of RMII.
+      // Safe to pullup RMII in this case.
+    }
+    // Check if def (.tmp, .cur) of RMII aliases with use (.new) of MI.
+    // Regular def of RMII should not alias with regular use.
+    for (auto &SrcUse : MI->all_uses()) {
+      if (!SrcUse.isReg() || !Defs[SrcUse.getReg()])
+        continue;
+      int DefIdx = RMII->findRegisterDefOperandIdx(SrcUse.getReg(), TRI);
+      if (isDotNewOperand(*MI, SrcUse.getOperandNo())) {
+        if (DepSet && DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketRAW;
+      } else if (DefIdx >= 0 && (isDotTmpOperand(*RMII, DefIdx) ||
+                                 isDotCurOperand(*RMII, DefIdx))) {
+        if (DepSet && DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketRAW;
+      } else if (DepSet) {
+        // Regular def of RMII aliases with regular use of MI.
+        // Pullup for RMII is legal only if MI is pulled up along with RMII.
+        if (DepSet->insert(MI).second)
+          Dep |= srcDependence(SrcBeg, SrcEnd, MII, MIUseDefs, DepSet,
+                               PreventDuplexSep, IsPullDown);
+        Dep |= Dependency::SamePacketWAR;
+      } else {
+        // If only RMII is being pulled up, regular def of RMII should not
+        // alias with regular use.
+        return Dependency::WAR;
+      }
+    }
+    // Def of RMII can only alias with def on MI, if one of them is .tmp.
+    // .tmp does not write to register file, so there cannot be a dependency.
+  }
+  return Dep;
+}
+
+bool HexagonInstrInfo::definesPredicateReg(const MachineInstr &MI) const {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical())
+      if (Hexagon::PredRegsRegClass.contains(MO.getReg()))
+        return true;
+  }
+  return false;
+}
+
+std::optional<unsigned>
+HexagonInstrInfo::getInvertedCompare(const int OpC) const {
+
+  switch (OpC) {
+  // compares
+  case Hexagon::C2_cmpeqi:
+    return Hexagon::C4_cmpneqi;
+  case Hexagon::C4_cmpneqi:
+    return Hexagon::C2_cmpeqi;
+  case Hexagon::C2_cmpgti:
+    return Hexagon::C4_cmpltei;
+  case Hexagon::C4_cmpltei:
+    return Hexagon::C2_cmpgti;
+  case Hexagon::C2_cmpgtui:
+    return Hexagon::C4_cmplteui;
+  case Hexagon::C4_cmplteui:
+    return Hexagon::C2_cmpgtui;
+  case Hexagon::C2_cmpeq:
+    return Hexagon::C4_cmpneq;
+  case Hexagon::C4_cmpneq:
+    return Hexagon::C2_cmpeq;
+  case Hexagon::C2_cmpgt:
+    return Hexagon::C4_cmplte;
+  case Hexagon::C4_cmplte:
+    return Hexagon::C2_cmpgt;
+  case Hexagon::C2_cmpgtu:
+    return Hexagon::C4_cmplteu;
+  case Hexagon::C4_cmplteu:
+    return Hexagon::C2_cmpgtu;
+  // bitmask and bitset
+  case Hexagon::C2_bitsclri:
+    return Hexagon::C4_nbitsclri;
+  case Hexagon::C4_nbitsclri:
+    return Hexagon::C2_bitsclri;
+  case Hexagon::C2_bitsclr:
+    return Hexagon::C4_nbitsclr;
+  case Hexagon::C4_nbitsclr:
+    return Hexagon::C2_bitsclr;
+  case Hexagon::C2_bitsset:
+    return Hexagon::C4_nbitsset;
+  case Hexagon::C4_nbitsset:
+    return Hexagon::C2_bitsset;
+  // tstbit
+  case Hexagon::S2_tstbit_i:
+    return Hexagon::S4_ntstbit_i;
+  case Hexagon::S4_ntstbit_i:
+    return Hexagon::S2_tstbit_i;
+  case Hexagon::S2_tstbit_r:
+    return Hexagon::S4_ntstbit_r;
+  case Hexagon::S4_ntstbit_r:
+    return Hexagon::S2_tstbit_r;
+  // FIXME: vector cmp bytes for any match?
+  default:
+    return std::nullopt;
+  }
+}
+
+bool HexagonInstrInfo::isSoftwarePipelineLoopInstr(
+    const MachineInstr &MI) const {
+  auto OpC = MI.getOpcode();
+  return OpC == Hexagon::J2_ploop1sr || OpC == Hexagon::J2_ploop2sr ||
+         OpC == Hexagon::J2_ploop3sr || OpC == Hexagon::J2_ploop1si ||
+         OpC == Hexagon::J2_ploop2si || OpC == Hexagon::J2_ploop3si;
+}
+
+bool HexagonInstrInfo::isFloatCompare(const MachineInstr &MI) const {
+  const MCInstrDesc &D = MI.getDesc();
+  return isFloat(MI) && D.isCompare();
+}
+
+bool HexagonInstrInfo::hasCallUseInBundle(
+    MachineBasicBlock::const_instr_iterator MIBegin,
+    MachineBasicBlock::const_instr_iterator MIEnd, unsigned Reg,
+    const TargetRegisterInfo &TRI) const {
+  for (auto I = MIBegin; I != MIEnd; ++I) {
+    const MachineInstr &MI = *I;
+    if (MI.isBundle() || MI.isDebugInstr())
+      continue;
+    if (!MI.isCall())
+      continue;
+    if (MI.readsRegister(Reg, &TRI))
+      return true;
+  }
+  return false;
+}
+
+/// findInstrPredicate - Set the predicate of the instruction
+/// in the specified predicate vector
+/// First entry is the opcode, subsequent entries can be used to
+/// reproduce the predication.
+void HexagonInstrInfo::findInstrPredicate(
+    MachineInstr *MI, SmallVectorImpl<MachineOperand> &Cond) const {
+  if (isNewValueJump(*MI)) {
+    LLVM_DEBUG(dbgs() << "\nPredication in NV-jump different from other ins.");
+    return;
+  }
+  MachineFunction &MF = *MI->getParent()->getParent();
+  const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+
+  for (unsigned oper = 0; oper < MI->getNumOperands(); ++oper) {
+    MachineOperand MO = MI->getOperand(oper);
+    if (MO.isReg() && MO.isUse()) {
+      if (HRI.isFakeReg(MO.getReg()))
+        continue;
+      const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(MO.getReg());
+      if ((RC == &Hexagon::PredRegsRegClass) &&
+          !MI->definesRegister(MO.getReg(), &HRI)) {
+        Cond.push_back(MachineOperand::CreateImm(MI->getOpcode()));
+        Cond.push_back(MO);
+        return;
+      }
+    }
+  }
 }

@@ -18,16 +18,16 @@ define void @splat_i32_word_into_i8_vector(ptr %out, i32 %x, i8 %y) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5:4 = bitsplit(r1,#16)
 ; CHECK-NEXT:     r6 = insert(r2,#8,#0)
+; CHECK-NEXT:     r8 = and(r1,#255)
 ; CHECK-NEXT:     r7 = #64
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r6 = combine(r5.l,r6.l)
 ; CHECK-NEXT:     r3 = and(r5,##65280)
-; CHECK-NEXT:     r8 = and(r1,#255)
 ; CHECK-NEXT:     v0 = valign(v1,v0,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r2 = r3
-; CHECK-NEXT:     r6 = combine(r5.l,r6.l)
 ; CHECK-NEXT:     v1 = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {

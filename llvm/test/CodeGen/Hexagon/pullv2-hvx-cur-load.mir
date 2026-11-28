@@ -1,0 +1,525 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN: -disable-hvx-sched-superblock=false %s -o - | FileCheck %s \
+# RUN: --check-prefix=CHECK0
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 \
+# RUN: -disable-hvx-sched-superblock=true %s -o - | FileCheck %s \
+# RUN: --check-prefix=CHECK1
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-length128b,+hvxv79 -run-pass global-schedV2 %s -o - | FileCheck %s \
+# RUN: --check-prefix=CHECK-DEFAULT
+#
+# With HVX scheduling for superblocks enabled (default), "$v0 = V6_vassign $v1"
+# is pulled up into the preceding .cur load packet, verifying the plain HVX
+# load is rewritten to its .cur form. With it explicitly disabled, HVX local
+# pullup does not run and the vassign stays in its own packet. CHECK-DEFAULT
+# runs with no flag to guard the on-by-default behaviour: it must match the
+# enabled case.
+#
+# CHECK0: V6_vL32b_cur_pi
+# CHECK0: $v0 = V6_vassign $v1
+# CHECK0-NEXT: }
+#
+# CHECK1: BUNDLE
+# CHECK1: $v6 = V6_vassign $v4
+# CHECK1-NEXT: $v0 = V6_vassign $v1
+# CHECK1-NEXT: }
+#
+# CHECK-DEFAULT: V6_vL32b_cur_pi
+# CHECK-DEFAULT: $v0 = V6_vassign $v1
+# CHECK-DEFAULT-NEXT: }
+
+--- |
+  ; ModuleID = 'test.cpp'
+  source_filename = "test.cpp"
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-unknown-elf"
+
+  $f1 = comdat any
+
+  $f3 = comdat any
+
+  ; Function Attrs: mustprogress
+  define dso_local noundef ptr @f0(ptr noundef %params) local_unnamed_addr {
+  entry:
+    %call = tail call noundef ptr @f1(ptr noundef %params)
+    ret ptr %call
+  }
+
+  ; Function Attrs: mustprogress
+  define linkonce_odr dso_local noundef ptr @f1(ptr noundef %params) local_unnamed_addr comdat {
+  entry:
+    %0 = load ptr, ptr %params, align 4, !tbaa !7
+    %1 = load i32, ptr %0, align 4, !tbaa !12
+    %cgep = getelementptr inbounds i8, ptr %0, i32 8
+    %2 = load i32, ptr %cgep, align 4, !tbaa !16
+    %mul.i = mul nsw i32 %2, %1
+    %cmp = icmp eq i32 %mul.i, 1
+    br i1 %cmp, label %if.then, label %cleanup
+
+  if.then:                                          ; preds = %entry
+    %cgep3 = getelementptr inbounds i8, ptr %params, i32 4
+    %3 = load ptr, ptr %cgep3, align 4, !tbaa !17
+    %cgep4 = getelementptr inbounds i8, ptr %3, i32 12
+    %4 = load i32, ptr %cgep4, align 4, !tbaa !18
+    %cmp.i.i = icmp eq i32 %4, 8
+    %spec.select.i = select i1 %cmp.i.i, ptr @f3, ptr null
+    br label %cleanup
+
+  cleanup:                                          ; preds = %entry, %if.then
+    %retval.0 = phi ptr [ %spec.select.i, %if.then ], [ null, %entry ]
+    ret ptr %retval.0
+  }
+
+  ; Function Attrs: mustprogress
+  define dso_local noundef i32 @f2(ptr noundef %params, i32 noundef %start, i32 noundef %end) local_unnamed_addr {
+  entry:
+    %call = tail call noundef ptr @f1(ptr noundef %params)
+    ret i32 0
+  }
+
+  ; Function Attrs: mustprogress
+  define linkonce_odr dso_local void @f3(ptr noundef %plane_desc_in, ptr noundef %layout_in_ptr, ptr noundef %filt_x, i32 noundef %comp_stride) comdat {
+  entry:
+    %0 = load i32, ptr %plane_desc_in, align 4, !tbaa !12
+    %sub = add i32 %0, 127
+    %div17 = lshr i32 %sub, 7
+    %sub5 = add nsw i32 %div17, -1
+    %cmp647 = icmp ugt i32 %sub, 255
+    br i1 %cmp647, label %for.body8.lr.ph, label %for.cond.cleanup7
+
+  for.body8.lr.ph:                                  ; preds = %entry
+    %layout_in.sroa.0.0.copyload = load ptr, ptr %layout_in_ptr, align 4
+    %1 = ptrtoint ptr %layout_in.sroa.0.0.copyload to i32
+    %and.i = and i32 %1, -128
+    %2 = inttoptr i32 %and.i to ptr
+    %3 = load <32 x i32>, ptr %2, align 128, !tbaa !20
+    %4 = add i32 %comp_stride, 128
+    %cgep = getelementptr i8, ptr %filt_x, i32 %4
+    %cgep63 = getelementptr i8, ptr %filt_x, i32 128
+    %cgep64 = getelementptr i8, ptr %2, i32 256
+    br label %for.body8
+
+  for.cond.cleanup7:                                ; preds = %for.body8, %entry
+    ret void
+
+  for.body8:                                        ; preds = %for.body8.lr.ph, %for.body8
+    %lsr.iv60 = phi ptr [ %cgep64, %for.body8.lr.ph ], [ %cgep70, %for.body8 ]
+    %lsr.iv58 = phi i32 [ %sub5, %for.body8.lr.ph ], [ %lsr.iv.next, %for.body8 ]
+    %lsr.iv55 = phi ptr [ %cgep63, %for.body8.lr.ph ], [ %cgep69, %for.body8 ]
+    %lsr.iv = phi ptr [ %cgep, %for.body8.lr.ph ], [ %cgep68, %for.body8 ]
+    %.lcssa4449 = phi <32 x i32> [ %3, %for.body8.lr.ph ], [ %6, %for.body8 ]
+    %cgep67 = getelementptr i8, ptr %lsr.iv60, i32 -128
+    %5 = load <32 x i32>, ptr %cgep67, align 128, !tbaa !20
+    %6 = load <32 x i32>, ptr %lsr.iv60, align 128, !tbaa !20
+    %7 = tail call <64 x i32> @llvm.hexagon.V6.vdealvdd.128B(<32 x i32> %5, <32 x i32> %.lcssa4449, i32 -1)
+    %8 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %7)
+    %9 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %7)
+    %10 = tail call <64 x i32> @llvm.hexagon.V6.vdealvdd.128B(<32 x i32> %5, <32 x i32> %6, i32 -1)
+    %11 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %10)
+    %12 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %10)
+    %13 = tail call <64 x i32> @llvm.hexagon.V6.vmpyub.128B(<32 x i32> %8, i32 0)
+    %14 = tail call <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32> %11, <32 x i32> %8)
+    %15 = tail call <64 x i32> @llvm.hexagon.V6.vdmpybus.dv.128B(<64 x i32> %14, i32 0)
+    %16 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %13)
+    %17 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %13)
+    %18 = tail call <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32> %16, <32 x i32> %17, i32 -2)
+    %19 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %15)
+    %20 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %15)
+    %21 = tail call <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32> %19, <32 x i32> %20, i32 -2)
+    %22 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %18)
+    %cgep66 = getelementptr i8, ptr %lsr.iv55, i32 -128
+    store <32 x i32> %22, ptr %cgep66, align 128, !tbaa !20
+    %23 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %21)
+    store <32 x i32> %23, ptr %lsr.iv55, align 128, !tbaa !20
+    %24 = tail call <64 x i32> @llvm.hexagon.V6.vmpyub.128B(<32 x i32> %9, i32 0)
+    %25 = tail call <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32> %12, <32 x i32> %9)
+    %26 = tail call <64 x i32> @llvm.hexagon.V6.vdmpybus.dv.128B(<64 x i32> %25, i32 0)
+    %27 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %24)
+    %28 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %24)
+    %29 = tail call <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32> %27, <32 x i32> %28, i32 -2)
+    %30 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %26)
+    %31 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %26)
+    %32 = tail call <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32> %30, <32 x i32> %31, i32 -2)
+    %33 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %29)
+    %cgep65 = getelementptr i8, ptr %lsr.iv, i32 -128
+    store <32 x i32> %33, ptr %cgep65, align 128, !tbaa !20
+    %34 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %32)
+    store <32 x i32> %34, ptr %lsr.iv, align 128, !tbaa !20
+    %lsr.iv.next = add nsw i32 %lsr.iv58, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep68 = getelementptr i8, ptr %lsr.iv, i32 256
+    %cgep69 = getelementptr i8, ptr %lsr.iv55, i32 256
+    %cgep70 = getelementptr i8, ptr %lsr.iv60, i32 256
+    br i1 %exitcond.not, label %for.cond.cleanup7, label %for.body8, !llvm.loop !21
+  }
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <64 x i32> @llvm.hexagon.V6.vdealvdd.128B(<32 x i32>, <32 x i32>, i32)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32>)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <64 x i32> @llvm.hexagon.V6.vmpyub.128B(<32 x i32>, i32)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32>, <32 x i32>)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <64 x i32> @llvm.hexagon.V6.vdmpybus.dv.128B(<64 x i32>, i32)
+
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+  declare <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32>, <32 x i32>, i32)
+
+  !llvm.module.flags = !{!0, !1, !2}
+  !llvm.ident = !{!6}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"frame-pointer", i32 2}
+  !2 = !{i32 5, !"CG MDInfo", !3}
+  !3 = !{!4, !5}
+  !4 = !{!"F", !"no_filename_available", !"", !"", i1 false, !""}
+  !5 = !{!"C", !"f3", !"(void)", !"(ptr, ptr, i32)", i1 true, !""}
+  !6 = !{!"clang"}
+  !7 = !{!8, !9, i64 0}
+  !8 = !{!"s0", !9, i64 0, !9, i64 4, !9, i64 8, !9, i64 12}
+  !9 = !{!"any pointer", !10, i64 0}
+  !10 = !{!"omnipotent char", !11, i64 0}
+  !11 = !{!"Simple C++ TBAA"}
+  !12 = !{!13, !14, i64 0}
+  !13 = !{!"s1", !14, i64 0, !14, i64 4, !15, i64 8, !14, i64 16, !14, i64 20}
+  !14 = !{!"long", !10, i64 0}
+  !15 = !{!"s2", !14, i64 0, !14, i64 4}
+  !16 = !{!13, !14, i64 8}
+  !17 = !{!8, !9, i64 4}
+  !18 = !{!19, !14, i64 12}
+  !19 = !{!"s3", !10, i64 0, !14, i64 8, !14, i64 12, !14, i64 16}
+  !20 = !{!10, !10, i64 0}
+  !21 = distinct !{!21, !22}
+  !22 = !{!"llvm.loop.mustprogress"}
+
+...
+---
+name:            f0
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r0
+
+    J2_jump @f1, hexagoncsr, implicit $r0, implicit-def $pc
+
+...
+---
+name:            f1
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0
+
+    BUNDLE implicit-def $r3, implicit-def $r2, implicit-def $r0, implicit killed $r0 {
+      renamable $r3 = L2_loadri_io $r0, 0 :: (load (s32) from %ir.params, !tbaa !7)
+      $r2 = A2_tfr killed $r0
+      renamable $r0 = A2_tfrsi 0
+    }
+    BUNDLE implicit-def $r4, implicit-def $r3, implicit killed $r3 {
+      renamable $r4 = L2_loadri_io renamable $r3, 0 :: (load (s32) from %ir.0, !tbaa !12)
+      renamable $r3 = L2_loadri_io killed renamable $r3, 8 :: (load (s32) from %ir.cgep, !tbaa !16)
+    }
+    BUNDLE implicit-def dead $r3, implicit-def $pc, implicit killed $r3, implicit killed $r4 {
+      renamable $r3 = nsw M2_mpyi killed renamable $r3, killed renamable $r4
+      J4_cmpeqi_f_jumpnv_t internal killed $r3, 1, %bb.2, implicit-def $pc
+    }
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+    liveins: $r2
+
+    renamable $r2 = L2_loadri_io killed renamable $r2, 4 :: (load (s32) from %ir.cgep3, !tbaa !17)
+    renamable $r2 = L2_loadri_io killed renamable $r2, 12 :: (load (s32) from %ir.cgep4, !tbaa !18)
+    renamable $p0 = C2_cmpeqi killed renamable $r2, 8
+    $r0 = C2_muxii killed $p0, @f3, 0
+
+  bb.2.cleanup:
+    liveins: $r0
+
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+
+...
+---
+name:            f2
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r0
+
+    BUNDLE implicit-def $r29, implicit-def $r30, implicit-def $pc, implicit-def $r31, implicit-def $r0, implicit killed $r29, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31, implicit $r0 {
+      $r29 = frame-setup S2_allocframe killed $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31 :: (store (s32) into stack)
+      J2_call @f1, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit internal $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+    }
+    BUNDLE implicit-def dead $r0, implicit-def $d15, implicit-def $r30, implicit-def $r31, implicit-def $pc, implicit-def $r29, implicit killed $r30, implicit killed $framekey {
+      $r0 = A2_tfrsi 0
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def $pc, implicit internal killed $r0
+    }
+
+...
+---
+name:            f3
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $r1, $r2, $r3, $r6, $r7
+
+    renamable $r4 = L2_loadri_io killed renamable $r0, 0 :: (load (s32) from %ir.plane_desc_in, !tbaa !12)
+    renamable $r8 = A2_addi killed renamable $r4, 127
+    BUNDLE implicit-def dead $p0, implicit-def dead $pc, implicit $r8 {
+      renamable $p0 = C2_cmpgtui renamable $r8, 255
+      J2_jumpfnewpt internal killed renamable $p0, %bb.3, implicit-def dead $pc
+    }
+
+  bb.1.for.body8.lr.ph:
+    successors: %bb.2(0x80000000)
+    liveins: $r1, $r2, $r3, $r6, $r7, $r8
+
+    BUNDLE implicit-def $r4, implicit-def $r2, implicit-def $d3, implicit-def $r6, implicit-def $r7, implicit-def $r5, implicit killed $r1, implicit killed $r2 {
+      renamable $r4 = L2_loadri_io killed renamable $r1, 0 :: (load (s32) from %ir.layout_in_ptr)
+      renamable $r2 = A2_addi killed renamable $r2, 128
+      $d3 = A2_combineii -1, -2
+      renamable $r5 = A2_tfrsi 0
+    }
+    BUNDLE implicit-def $r4, implicit-def $r3, implicit-def $r8, implicit killed $r4, implicit $r2, implicit killed $r3, implicit killed $r8 {
+      renamable $r4 = A2_andir killed renamable $r4, -128
+      renamable $r3 = A2_add renamable $r2, killed renamable $r3
+      renamable $r8 = nsw S4_addi_lsr_ri -1, killed renamable $r8, 7
+    }
+    renamable $v0, renamable $r4 = V6_vL32b_pi killed renamable $r4, 256 :: (load (s1024) from %ir.2, !tbaa !20)
+    J2_loop0r %bb.2, killed renamable $r8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.2.for.body8 (machine-block-address-taken, align 16):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+    liveins: $r2, $r3, $r4, $r5, $r6, $r7, $v0
+
+    renamable $v1, renamable $r4 = V6_vL32b_pi killed renamable $r4, -128 :: (load (s1024) from %ir.lsr.iv60, !tbaa !20)
+    BUNDLE implicit-def $v2, implicit-def $r4, implicit-def $w2, implicit-def $v4, implicit-def $v5, implicit-def $vf2, implicit killed $r4, implicit killed $v0, implicit $r7 {
+      renamable $v2, renamable $r4 = V6_vL32b_cur_pi killed renamable $r4, 384 :: (load (s1024) from %ir.cgep67, !tbaa !20)
+      renamable $w2 = V6_vdealvdd internal renamable $v2, killed renamable $v0, renamable $r7
+    }
+    BUNDLE implicit-def $v6, implicit-def $v0, implicit $v4, implicit $v1 {
+      $v6 = V6_vassign $v4
+      $v0 = V6_vassign $v1
+    }
+    BUNDLE implicit-def $w1, implicit-def $v2, implicit-def $v3, implicit-def $vf1, implicit-def $w4, implicit-def $v8, implicit-def $v9, implicit-def $vf4, implicit killed $v2, implicit killed $v1, implicit $r7, implicit killed $v4, implicit $r5 {
+      renamable $w1 = V6_vdealvdd killed renamable $v2, killed renamable $v1, renamable $r7
+      renamable $w4 = V6_vmpyub killed renamable $v4, renamable $r5
+    }
+    BUNDLE implicit-def $v7, implicit-def $v2, implicit-def $w6, implicit-def $v12, implicit-def $v13, implicit-def $vf6, implicit $v2, implicit killed $v5, implicit $r5 {
+      $v7 = V6_vassign $v2
+      $v2 = V6_vassign $v5
+      renamable $w6 = V6_vmpyub killed renamable $v5, renamable $r5
+    }
+    renamable $w9 = V6_vshuffvdd killed renamable $v9, killed renamable $v8, renamable $r6
+    BUNDLE implicit-def $w5, implicit-def $v10, implicit-def $v11, implicit-def $vf5, implicit-def $w11, implicit-def $v22, implicit-def $v23, implicit-def $vf11, implicit killed $w3, implicit $r5, implicit killed $v13, implicit killed $v12, implicit $r6 {
+      renamable $w5 = V6_vdmpybus_dv killed renamable $w3, renamable $r5
+      renamable $w11 = V6_vshuffvdd killed renamable $v13, killed renamable $v12, renamable $r6
+    }
+    renamable $w7 = V6_vdmpybus_dv killed renamable $w1, renamable $r5
+    BUNDLE implicit-def $w8, implicit-def dead $v16, implicit-def $v17, implicit-def $vf8, implicit-def $r2, implicit killed $v11, implicit killed $v10, implicit $r6, implicit killed $r2 {
+      renamable $w8 = V6_vshuffvdd killed renamable $v11, killed renamable $v10, renamable $r6
+      renamable $r2 = V6_vS32b_new_pi killed renamable $r2, -128, internal killed renamable $v16 :: (store (s1024) into %ir.lsr.iv55, !tbaa !20)
+    }
+    BUNDLE implicit-def $w10, implicit-def $v20, implicit-def $v21, implicit-def $vf10, implicit-def $r2, implicit killed $v15, implicit killed $v14, implicit $r6, implicit killed $r2, implicit killed $v18 {
+      renamable $w10 = V6_vshuffvdd killed renamable $v15, killed renamable $v14, renamable $r6
+      renamable $r2 = V6_vS32b_pi killed renamable $r2, 384, killed renamable $v18 :: (store (s1024) into %ir.cgep66, !tbaa !20)
+    }
+    renamable $r3 = V6_vS32b_pi killed renamable $r3, -128, killed renamable $v20 :: (store (s1024) into %ir.lsr.iv, !tbaa !20)
+    BUNDLE implicit-def $r3, implicit-def $pc, implicit-def $lc0, implicit killed $r3, implicit killed $v22, implicit killed $sa0, implicit $lc0 {
+      renamable $r3 = V6_vS32b_pi killed renamable $r3, 384, killed renamable $v22 :: (store (s1024) into %ir.cgep65, !tbaa !20)
+      ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+    }
+
+  bb.3.for.cond.cleanup7:
+    PS_jmpret killed $r31, implicit-def $pc
+
+...

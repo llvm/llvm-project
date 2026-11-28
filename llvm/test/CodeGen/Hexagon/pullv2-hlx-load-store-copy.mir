@@ -1,0 +1,53 @@
+# Check that localPullupHLX does not crash when a bundle has multiple LX_assign
+# instructions.
+
+# Two LX_assign instructions with different registers ($l6 and $l8),
+# which were expanded from the corresponding LX_S16b_pseudo and LX_L16b_pseudo
+# pseudo instructions.
+# Before the fix, both load and store were associated with the same copy
+# $l8 = LX_assign internal killed $l8
+
+# REQUIRES: asserts
+
+# RUN: llc -march=hexagon -mattr=+hlx -mcpu=hexagonv85 \
+# RUN: -run-pass=global-schedV2 -verify-machineinstrs %s -o - | FileCheck %s
+
+# Check that LX_S16b_new is pulled up
+# CHECK: bb.0:
+# CHECK: BUNDLE
+# CHECK-NEXT: LX_shrr_h_w_rnd_sat
+# CHECK-NEXT: LX_S16b_new
+# CHECK-NEXT: }
+
+--- |
+  target triple = "hexagon"
+
+  define dso_local void @test(ptr noundef captures(none) %out, ptr noundef readonly captures(none) %in) local_unnamed_addr {
+  entry:
+    ret void
+  }
+
+...
+---
+name:            test
+liveins:
+  - { reg: '$r4' }
+  - { reg: '$r5' }
+  - { reg: '$r6' }
+  - { reg: '$r7' }
+  - { reg: '$r14' }
+  - { reg: '$ll3' }
+body:             |
+  bb.0:
+    liveins: $r4, $r5, $r6, $r7, $r14, $ll3
+
+    renamable $l6 = LX_shrr_h_w_rnd_sat renamable $ll3, renamable $r6
+    BUNDLE implicit-def $l8, implicit killed $r7, implicit killed $l6, implicit killed $r14 {
+      $l6 = LX_assign killed $l6
+      LX_S16b_new killed renamable $r7, internal killed renamable $l6 :: (store (s16384) into %ir.out)
+      $l8 = LX_L16b_tmp killed renamable $r14 :: (load (s16384) from %ir.in, align 8, basealign 2048)
+      $l8 = LX_assign internal killed $l8
+    }
+    renamable $ll4 = LX_mpyr_uw_uh killed renamable $l8, renamable $r5
+    PS_jmpret killed $r31, implicit-def $pc
+...

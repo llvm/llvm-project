@@ -23,6 +23,7 @@ define void @f16s8_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v4.h = vsplat(r4)
+; CHECK-NEXT:     r3 = #16
 ; CHECK-NEXT:     v8.h = vasl(v1.h,r2)
 ; CHECK-NEXT:     v3.h = vsub(v3.h,v2.h)
 ; CHECK-NEXT:    }
@@ -32,25 +33,24 @@ define void @f16s8_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v8.h = vsub(v8.h,v2.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = #16
+; CHECK-NEXT:     v6.h = vsplat(r3)
 ; CHECK-NEXT:     v5.h = vasl(v0.h,r6)
+; CHECK-NEXT:     q0 = vcmp.gt(v7.h,v0.h)
 ; CHECK-NEXT:     q1 = vcmp.gt(v7.h,v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.h = vsplat(r3)
+; CHECK-NEXT:     v9.h = vsplat(r4)
 ; CHECK-NEXT:     v28.h = vasr(v3.h,r5)
 ; CHECK-NEXT:     v5 = vor(v5,v2)
-; CHECK-NEXT:     q0 = vcmp.gt(v7.h,v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v9.h = vsplat(r4)
 ; CHECK-NEXT:     v8.h = vasr(v8.h,r5)
+; CHECK-NEXT:     v29 = vmux(q0,v2,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v27.h = vasl(v1.h,r6)
 ; CHECK-NEXT:     v1.h = vsub(v4.h,v28.h)
 ; CHECK-NEXT:     v4.h = vsub(v4.h,v8.h)
-; CHECK-NEXT:     v29 = vmux(q0,v2,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1.h = vmin(v1.h,v6.h)
@@ -306,13 +306,13 @@ define void @f16s32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.h = vsplat(r2)
+; CHECK-NEXT:     v25 = vxor(v25,v25)
 ; CHECK-NEXT:     r4 = #32
 ; CHECK-NEXT:     r5 = #8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v7 = vsplat(r4)
 ; CHECK-NEXT:     r2 = ##2147483647
-; CHECK-NEXT:     v25 = vxor(v25,v25)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v28 = vsplat(r2)
@@ -402,6 +402,7 @@ define void @f16s32_1(ptr %a0, ptr %a1) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r6 = #24
 ; CHECK-NEXT:     r4 = #15360
 ; CHECK-NEXT:     r7 = #-4
 ; CHECK-NEXT:     v0 = vmem(r0+#0)
@@ -414,7 +415,6 @@ define void @f16s32_1(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v3 = vsplat(r2)
 ; CHECK-NEXT:     r5:4 = combine(#8,#30)
-; CHECK-NEXT:     r6 = #24
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v4 = vsplat(r4)
@@ -681,12 +681,12 @@ define void @f32s8_1(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v6 = vor(v6,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = #64
 ; CHECK-NEXT:     v5.w = vmin(v5.w,v8.w)
 ; CHECK-NEXT:     q1 = vcmp.gt(v4.w,v27.w)
 ; CHECK-NEXT:     v0 = vmux(q2,v3,v28)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = #64
 ; CHECK-NEXT:     v6.w = vlsr(v6.w,v4.w)
 ; CHECK-NEXT:     q3 = vcmp.gt(v5.w,v27.w)
 ; CHECK-NEXT:    }
@@ -748,11 +748,11 @@ define void @f32s8_2(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v3.w = vsub(v3.w,v2.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     q3 = vsetq(r6)
 ; CHECK-NEXT:     v1 = vxor(v1,v1)
 ; CHECK-NEXT:     v29 = vor(v6,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     q3 = vsetq(r6)
 ; CHECK-NEXT:     v3.w = vasr(v3.w,r4)
 ; CHECK-NEXT:     q0 = vcmp.gt(v1.w,v0.w)
 ; CHECK-NEXT:    }
@@ -818,6 +818,7 @@ define void @f32s16_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v4 = vsplat(r4)
+; CHECK-NEXT:     r3 = #32
 ; CHECK-NEXT:     v8.w = vasl(v1.w,r2)
 ; CHECK-NEXT:     v3.w = vsub(v3.w,v2.w)
 ; CHECK-NEXT:    }
@@ -827,25 +828,24 @@ define void @f32s16_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v8.w = vsub(v8.w,v2.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = #32
+; CHECK-NEXT:     v6 = vsplat(r3)
 ; CHECK-NEXT:     v5.w = vasl(v0.w,r6)
+; CHECK-NEXT:     q0 = vcmp.gt(v7.w,v0.w)
 ; CHECK-NEXT:     q1 = vcmp.gt(v7.w,v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v6 = vsplat(r3)
+; CHECK-NEXT:     v9 = vsplat(r4)
 ; CHECK-NEXT:     v28.w = vasr(v3.w,r5)
 ; CHECK-NEXT:     v5 = vor(v5,v2)
-; CHECK-NEXT:     q0 = vcmp.gt(v7.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v9 = vsplat(r4)
 ; CHECK-NEXT:     v8.w = vasr(v8.w,r5)
+; CHECK-NEXT:     v29 = vmux(q0,v2,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v27.w = vasl(v1.w,r6)
 ; CHECK-NEXT:     v1.w = vsub(v4.w,v28.w)
 ; CHECK-NEXT:     v4.w = vsub(v4.w,v8.w)
-; CHECK-NEXT:     v29 = vmux(q0,v2,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1.w = vmin(v1.w,v6.w)
@@ -1120,17 +1120,17 @@ define void @f16u8_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r2 = #32767
 ; CHECK-NEXT:     v3.h = vasr(v3.h,r7)
+; CHECK-NEXT:     q2 = vcmp.gt(v28.h,v0.h)
 ; CHECK-NEXT:     v5 = vor(v5,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v29.h = vsplat(r2)
 ; CHECK-NEXT:     v4.h = vasr(v4.h,r7)
-; CHECK-NEXT:     q2 = vcmp.gt(v28.h,v0.h)
+; CHECK-NEXT:     q3 = vcmp.gt(v28.h,v1.h)
 ; CHECK-NEXT:     v3.h = vsub(v6.h,v3.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v8.h = vasl(v1.h,r5)
-; CHECK-NEXT:     q3 = vcmp.gt(v28.h,v1.h)
 ; CHECK-NEXT:     v4.h = vsub(v6.h,v4.h)
 ; CHECK-NEXT:     v3.h = vmin(v3.h,v7.h)
 ; CHECK-NEXT:    }
@@ -1363,6 +1363,7 @@ define void @f16u32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r2 = #15360
 ; CHECK-NEXT:     r7 = #-4
+; CHECK-NEXT:     v26 = vxor(v26,v26)
 ; CHECK-NEXT:     v0 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -1377,14 +1378,11 @@ define void @f16u32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     r0 = #8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     v7 = vsplat(r4)
 ; CHECK-NEXT:     v6 = vsplat(r3)
-; CHECK-NEXT:     v26 = vxor(v26,v26)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.qf32 = vmpy(v0.hf,v1.hf)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v7 = vsplat(r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.sf = v0.qf32
@@ -1460,6 +1458,7 @@ define void @f16u32_1(ptr %a0, ptr %a1) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r6 = #24
 ; CHECK-NEXT:     r4 = #15360
 ; CHECK-NEXT:     r7 = #-4
 ; CHECK-NEXT:     v0 = vmem(r0+#0)
@@ -1472,7 +1471,6 @@ define void @f16u32_1(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v3 = vsplat(r2)
 ; CHECK-NEXT:     r5:4 = combine(#8,#30)
-; CHECK-NEXT:     r6 = #24
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v4 = vsplat(r4)
@@ -1725,11 +1723,11 @@ define void @f32u8_1(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v2 = vor(v8,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     q1 = vcmp.gt(v27.w,v4.w)
 ; CHECK-NEXT:     q0 = vcmp.gt(v27.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v5.w = vlsr(v5.w,v3.w)
-; CHECK-NEXT:     q1 = vcmp.gt(v27.w,v4.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v2.w = vlsr(v2.w,v4.w)

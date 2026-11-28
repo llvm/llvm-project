@@ -107,11 +107,11 @@ define void @f32s8_2(ptr %a0, ptr %a1) {
 ; CHECK-V68-NEXT:     v3.w = vsub(v3.w,v2.w)
 ; CHECK-V68-NEXT:    }
 ; CHECK-V68-NEXT:    {
+; CHECK-V68-NEXT:     q3 = vsetq(r6)
 ; CHECK-V68-NEXT:     v1 = vxor(v1,v1)
 ; CHECK-V68-NEXT:     v29 = vor(v6,v2)
 ; CHECK-V68-NEXT:    }
 ; CHECK-V68-NEXT:    {
-; CHECK-V68-NEXT:     q3 = vsetq(r6)
 ; CHECK-V68-NEXT:     v3.w = vasr(v3.w,r4)
 ; CHECK-V68-NEXT:     q0 = vcmp.gt(v1.w,v0.w)
 ; CHECK-V68-NEXT:    }
@@ -157,10 +157,10 @@ define void @f32s8_2(ptr %a0, ptr %a1) {
 ; CHECK-V81:         .cfi_startproc
 ; CHECK-V81-NEXT:  // %bb.0:
 ; CHECK-V81-NEXT:    {
+; CHECK-V81-NEXT:     r2 = #32
 ; CHECK-V81-NEXT:     v0 = vmem(r0+#0)
 ; CHECK-V81-NEXT:    }
 ; CHECK-V81-NEXT:    {
-; CHECK-V81-NEXT:     r2 = #32
 ; CHECK-V81-NEXT:     v0.w = v0.sf
 ; CHECK-V81-NEXT:    }
 ; CHECK-V81-NEXT:    {
@@ -287,11 +287,11 @@ define void @f32s8_v81(ptr %a0, ptr %a1) {
 ; CHECK-V68-NEXT:     v3.w = vsub(v3.w,v2.w)
 ; CHECK-V68-NEXT:    }
 ; CHECK-V68-NEXT:    {
+; CHECK-V68-NEXT:     q3 = vsetq(r6)
 ; CHECK-V68-NEXT:     v1 = vxor(v1,v1)
 ; CHECK-V68-NEXT:     v29 = vor(v6,v2)
 ; CHECK-V68-NEXT:    }
 ; CHECK-V68-NEXT:    {
-; CHECK-V68-NEXT:     q3 = vsetq(r6)
 ; CHECK-V68-NEXT:     v3.w = vasr(v3.w,r4)
 ; CHECK-V68-NEXT:     q0 = vcmp.gt(v1.w,v0.w)
 ; CHECK-V68-NEXT:    }
@@ -337,10 +337,10 @@ define void @f32s8_v81(ptr %a0, ptr %a1) {
 ; CHECK-V81:         .cfi_startproc
 ; CHECK-V81-NEXT:  // %bb.0:
 ; CHECK-V81-NEXT:    {
+; CHECK-V81-NEXT:     r2 = #32
 ; CHECK-V81-NEXT:     v0 = vmem(r0+#0)
 ; CHECK-V81-NEXT:    }
 ; CHECK-V81-NEXT:    {
-; CHECK-V81-NEXT:     r2 = #32
 ; CHECK-V81-NEXT:     v0.w = v0.sf
 ; CHECK-V81-NEXT:    }
 ; CHECK-V81-NEXT:    {

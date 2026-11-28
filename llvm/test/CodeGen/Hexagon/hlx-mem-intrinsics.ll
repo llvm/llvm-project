@@ -1,4 +1,5 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx -enable-global-sched=false < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx < %s | FileCheck %s --check-prefix=GS
 
 ; Verify that the HLX load/store memory intrinsics select through the
 ; LX_L16b_pseudo / LX_S16b_pseudo pseudos and are expanded (after
@@ -19,6 +20,17 @@ declare <1024 x i16> @llvm.hexagon.LX.abs.uh(<1024 x i16>)
 ; CHECK-DAG: L0.h = L0.h
 ; CHECK-DAG: mem(r1) = L0.new
 ; CHECK: }
+
+; With the global scheduler, the identity copies are gone and the load, the
+; computation and the store share one packet.
+; GS-LABEL: t:
+; GS:      {
+; GS-DAG:  L0.uh = abs(L0.h)
+; GS-DAG:  L0.tmp = mem(r0)
+; GS-DAG:  mem(r1) = L0.new
+; GS:      }
+; GS-NEXT: {
+; GS-NEXT: jumpr r31
 define void @t(ptr %p, ptr %q) {
   %a = call <1024 x i16> @llvm.hexagon.LX.L16b.tmp(ptr %p)
   %r = call <1024 x i16> @llvm.hexagon.LX.abs.uh(<1024 x i16> %a)
