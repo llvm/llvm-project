@@ -100,9 +100,9 @@ struct M68kISelAddressMode {
     return BaseType == Base::RegBase && BaseReg.getNode() != nullptr;
   }
 
-  bool hasIndexReg() const {
-    return BaseType == Base::RegBase && IndexReg.getNode() != nullptr;
-  }
+  // The index register can be set with either kind of base, including a frame
+  // index.
+  bool hasIndexReg() const { return IndexReg.getNode() != nullptr; }
 
   /// True if address mode type supports displacement
   bool isDispAddrType() const {
@@ -502,6 +502,16 @@ bool M68kDAGToDAGISel::matchAddressBase(SDValue N, M68kISelAddressMode &AM) {
   if (AM.hasBase()) {
     // If so, check to see if the scale index register is set.
     if (!AM.hasIndexReg()) {
+      // A frame index can't be the base of an indexed mode: the frame offset
+      // would have to fit the 8-bit displacement. When a register is added
+      // to it, use the frame object's address as an ordinary base register
+      // instead. A constant that didn't fit the displacement stays out of
+      // the indexed modes, and AddrType::ARID takes it as a displacement.
+      if (AM.hasFrameIndex() && !isa<ConstantSDNode>(N)) {
+        AM.BaseType = M68kISelAddressMode::Base::RegBase;
+        AM.BaseReg = CurDAG->getFrameIndex(
+            AM.BaseFrameIndex, TLI->getPointerTy(CurDAG->getDataLayout()));
+      }
       AM.IndexReg = N;
       AM.Scale = 1;
       return true;
@@ -823,15 +833,15 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
     return false;
   }
 
+  if (AM.hasIndexReg()) {
+    LLVM_DEBUG(dbgs() << "REJECT: Cannot match Index\n");
+    return false;
+  }
+
   // If this is a frame index, grab it
   if (getFrameIndexAddress(AM, SDLoc(N), Disp, Base)) {
     LLVM_DEBUG(dbgs() << "SUCCESS matched FI\n");
     return true;
-  }
-
-  if (AM.hasIndexReg()) {
-    LLVM_DEBUG(dbgs() << "REJECT: Cannot match Index\n");
-    return false;
   }
 
   if (!AM.hasBaseReg()) {
