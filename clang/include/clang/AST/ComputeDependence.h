@@ -117,7 +117,7 @@ class OpenACCAsteriskSizeExpr;
 ExprDependence computeDependence(FullExpr *E);
 ExprDependence computeDependence(OpaqueValueExpr *E);
 ExprDependence computeDependence(ParenExpr *E);
-ExprDependence computeDependence(UnaryOperator *E, const ASTContext &Ctx);
+ExprDependence computeDependence(UnaryOperator *E);
 ExprDependence computeDependence(UnaryExprOrTypeTraitExpr *E);
 ExprDependence computeDependence(ArraySubscriptExpr *E);
 ExprDependence computeDependence(MatrixSingleSubscriptExpr *E);

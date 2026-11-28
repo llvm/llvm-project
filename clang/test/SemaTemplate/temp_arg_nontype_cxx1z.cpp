@@ -661,3 +661,12 @@ namespace temp_deduct_type_p13 {
   using R = long;
   using R = C<A<2>>::Q;
 } // namespace temp_deduct_type_p13
+
+namespace non_value_dependent_current_instantiation {
+// *&xx should not be considered value-dependent: it is always zero.
+template<int x> struct A {
+  static const int xx = 0;
+  void f(decltype(*(int(*)[xx])0)); // expected-note {{previous declaration is here}}
+  void f(decltype(*(int(*)[*&xx])0)); // expected-error {{class member cannot be redeclared}}
+};
+}

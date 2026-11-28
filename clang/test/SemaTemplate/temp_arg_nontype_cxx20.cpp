@@ -403,3 +403,57 @@ template <bool &Ref> int g() { int n = 0; n += Ref; return n; }
 
 int test() { return f<S::arr[1]>() + g<S::arr[0]>() + f<s.b>(); }
 }
+
+namespace non_value_dependent_current_instantiation_template_argument {
+struct Obj {
+  int a;
+};
+
+template <const int* P>
+struct Target {
+  static constexpr int val = 0;
+};
+
+template <const int& P>
+struct Target2 {
+  static constexpr int val = 0;
+};
+
+union ContainsPtr { const int *p; };
+template <ContainsPtr>
+struct Target3 {
+  static constexpr int val = 0;
+};
+
+struct ContainsPtr2 { const int *p[2]; };
+template <ContainsPtr2>
+struct Target4 {
+  static constexpr int val = 0;
+};
+
+struct ContainsMemberPtr { int Obj::*p[2]; };
+
+template <typename T>
+struct S {
+  static constexpr Obj o{42};
+
+  int aa;
+
+  void f() {
+    // No error: We should not instantiate Target<&o.a> because it could be
+    // specialized later.
+    switch (1) { case Target<&(o.a)>::val: case 0: ; }
+
+    // Same as above, without "&".
+    switch (1) { case Target2<o.a>::val: case 0: ; }
+
+    // Same as above with a pointer in a union.
+    switch (1) { case Target3<ContainsPtr(&o.a)>::val: case 0: ; }
+
+    // Same as above with a pointer in an array in a struct.
+    switch (1) { case Target4<ContainsPtr2{&o.a}>::val: case 0: ; }
+
+    switch (1) { case o.a: case 42: ; } // expected-error {{duplicate case value}} expected-note {{previous}}
+  }
+};
+}
