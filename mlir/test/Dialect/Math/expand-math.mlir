@@ -248,9 +248,28 @@ func.func @roundf_func(%a: f32) -> f32 {
   // CHECK-DAG:       %[[ARG_BIASED_EXP:.*]] = arith.subi %[[ARG_EXP]], %[[C127]]
   // CHECK-DAG:       %[[IS_SPECIAL_VAL:.*]] = arith.cmpi sge, %[[ARG_BIASED_EXP]], %[[C23]]
   // CHECK-DAG:       %[[RESULT:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[ARG0]], %[[FP_FIXED_CONVERT_1]]
-  // CHECK:           return %[[RESULT]]
+  // CHECK-DAG:       %[[MINUS_ONE:.*]] = arith.constant -1 : i32
+  // CHECK-DAG:       %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG:       %[[BELOW_HALF:.*]] = arith.cmpi slt, %[[ARG_BIASED_EXP]], %[[MINUS_ONE]]
+  // CHECK-DAG:       %[[SIGNED_ZERO:.*]] = math.copysign %[[ZERO]], %[[ARG0]]
+  // CHECK-DAG:       %[[ROUNDED:.*]] = arith.select %[[BELOW_HALF]], %[[SIGNED_ZERO]], %[[RESULT]]
+  // CHECK:           return %[[ROUNDED]]
   %ret = math.round %a : f32
   return %ret : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @round_scalable
+// CHECK-FILTER-LABEL: func.func @round_scalable
+func.func @round_scalable(%arg: vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK: %[[BELOW_HALF:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : vector<[4]xi32>
+  // CHECK: %[[SIGNED_ZERO:.*]] = math.copysign
+  // CHECK: %[[RESULT:.*]] = arith.select %[[BELOW_HALF]], %[[SIGNED_ZERO]],
+  // CHECK: return %[[RESULT]] : vector<[4]xf32>
+  // CHECK-FILTER: math.round %{{.*}} : vector<[4]xf32>
+  %r = math.round %arg : vector<[4]xf32>
+  return %r : vector<[4]xf32>
 }
 
 // -----
@@ -519,7 +538,10 @@ func.func @roundeven32(%arg: f32) -> f32 {
 // CHECK:     %[[ARG_EXP:.*]] = arith.andi %[[ARG_BITCAST_SHIFTED]], %[[EXP_MASK]]
 // CHECK:     %[[ARG_BIASED_EXP:.*]] = arith.subi %[[ARG_EXP]], %[[C_127]]
 // CHECK:     %[[IS_SPECIAL_VAL:.*]] = arith.cmpi sge, %[[ARG_BIASED_EXP]], %[[C_23]]
-// CHECK:     %[[ROUND:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[VAL_0]], %[[FP_FIXED_CONVERT_1]]
+// CHECK:     %[[UNGUARDED_ROUND:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[VAL_0]], %[[FP_FIXED_CONVERT_1]]
+// CHECK:     %[[BELOW_HALF:.*]] = arith.cmpi slt, %[[ARG_BIASED_EXP]], %{{.*}}
+// CHECK:     %[[SIGNED_ZERO:.*]] = math.copysign %{{.*}}, %[[VAL_0]]
+// CHECK:     %[[ROUND:.*]] = arith.select %[[BELOW_HALF]], %[[SIGNED_ZERO]], %[[UNGUARDED_ROUND]]
 // CHECK:     %[[ROUND_BITCAST:.*]] = arith.bitcast %[[ROUND]] : f32 to i32
 
 // Get biased exponents of `round` and `operand`

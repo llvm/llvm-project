@@ -612,6 +612,13 @@ static LogicalResult convertRoundOp(math::RoundOp op,
 
   Value result = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand,
                                          fpFixedConvert);
+  // Adding 0.5 to the predecessor of 0.5 can round to 1.0 before truncation.
+  Value minusOne = createIntConst(loc, i32Ty, -1, b, operand);
+  Value isBelowHalf = arith::CmpIOp::create(b, arith::CmpIPredicate::slt,
+                                            operandBiasedExp, minusOne);
+  Value zero = createFloatConst(loc, opType, 0.0, b, operand);
+  Value signedZero = math::CopySignOp::create(b, zero, operand);
+  result = arith::SelectOp::create(b, isBelowHalf, signedZero, result);
   rewriter.replaceOp(op, result);
   return success();
 }
