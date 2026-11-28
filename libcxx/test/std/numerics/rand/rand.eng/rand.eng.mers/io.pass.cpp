@@ -49,6 +49,8 @@ test1()
     E e2;
     is >> e2;
     assert(e1 == e2);
+    for (std::size_t i = 0; i != 2 * E::state_size; ++i)
+      assert(e1() == e2());
 }
 
 void
@@ -63,6 +65,8 @@ test2()
     E e2;
     is >> e2;
     assert(e1 == e2);
+    for (std::size_t i = 0; i != 2 * E::state_size; ++i)
+      assert(e1() == e2());
 }
 
 int main(int, char**)

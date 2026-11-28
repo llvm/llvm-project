@@ -191,7 +191,6 @@ public:
     for (size_t __i = 1; __i < __n; ++__i)
       __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;
     __i_ = 0;
-    __update_all_states();
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, mersenne_twister_engine>, int> = 0>
   void seed(_Sseq& __q) {
@@ -216,34 +215,20 @@ public:
       if (__i == __n)
         __x_[0] = result_type(1) << (__w - 1);
     }
-    __update_all_states();
-  }
-
-  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_state(size_t __i, size_t __k) {
-    const size_t __j         = (__i + 1) % __n;
-    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
-    const result_type __yp   = (__x_[__i] & ~__mask) | (__x_[__j] & __mask);
-    __x_[__i]                = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
-  }
-
-  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_state(size_t __i) { __update_state(__i, (__i + __m) % __n); }
-
-  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_all_states() {
-    size_t __i = 0;
-    // This is split into two loops to help the compiler vectorize the code
-    for (; __i != (__n - __m); ++__i)
-      __update_state(__i);
-    for (size_t __j = 0; __i != __n; ++__i, ++__j)
-      __update_state(__i, __j);
   }
 
   // generating functions
   [[__nodiscard__]] result_type operator()() {
-    result_type __val = __x_[__i_];
-    if (++__i_ == __n) [[__unlikely__]] {
-      __update_all_states();
-      __i_ = 0;
-    }
+    // Keep the last n state words for stream insertion, including between block boundaries.
+    const size_t __i         = __i_;
+    const size_t __j         = __i + 1 == __n ? 0 : __i + 1;
+    const size_t __k         = __i < __n - __m ? __i + __m : __i - (__n - __m);
+    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
+    const result_type __yp   = (__x_[__i] & ~__mask) | (__x_[__j] & __mask);
+    const result_type __val   = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
+    __x_[__i]                = __val;
+    __i_                     = __j;
+
     result_type __z = __val ^ (__rshift<__u>(__val) & __d);
     __z ^= __lshift<__s>(__z) & __b;
     __z ^= __lshift<__t>(__z) & __c;
