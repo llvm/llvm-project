@@ -1299,3 +1299,106 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
   %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
   ret <2 x float> %abs2
 }
+
+; fptrunc_round (fpext X) --> X, like fptrunc (fpext X).
+
+define half @fpext_fptrunc_round_towardzero(half %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_towardzero(
+; CHECK-NEXT:    ret half [[X:%.*]]
+;
+  %ext = fpext half %x to float
+  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
+  ret half %r
+}
+
+define half @fpext_fptrunc_round_upward(half %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_upward(
+; CHECK-NEXT:    ret half [[X:%.*]]
+;
+  %ext = fpext half %x to float
+  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.upward")
+  ret half %r
+}
+
+define <2 x half> @fpext_fptrunc_round_vec(<2 x half> %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_vec(
+; CHECK-NEXT:    ret <2 x half> [[X:%.*]]
+;
+  %ext = fpext <2 x half> %x to <2 x float>
+  %r = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %ext, metadata !"round.towardzero")
+  ret <2 x half> %r
+}
+
+define <vscale x 2 x half> @fpext_fptrunc_round_scalable_vec(<vscale x 2 x half> %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x half> [[X:%.*]]
+;
+  %ext = fpext <vscale x 2 x half> %x to <vscale x 2 x float>
+  %r = call <vscale x 2 x half> @llvm.fptrunc.round.nxv2f16.nxv2f32(<vscale x 2 x float> %ext, metadata !"round.towardzero")
+  ret <vscale x 2 x half> %r
+}
+
+define bfloat @fpext_fptrunc_round_bf16(bfloat %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_bf16(
+; CHECK-NEXT:    ret bfloat [[X:%.*]]
+;
+  %ext = fpext bfloat %x to float
+  %r = call bfloat @llvm.fptrunc.round.bf16.f32(float %ext, metadata !"round.towardzero")
+  ret bfloat %r
+}
+
+; Denormal modes are ignored, as for fptrunc (fpext X).
+define half @fpext_fptrunc_round_denormal_mode(half %x) denormal_fpenv(preservesign) {
+; CHECK-LABEL: @fpext_fptrunc_round_denormal_mode(
+; CHECK-NEXT:    ret half [[X:%.*]]
+;
+  %ext = fpext half %x to float
+  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
+  ret half %r
+}
+
+; Negative test: the result type differs from the original type.
+define float @fpext_fptrunc_round_different_type(half %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_different_type(
+; CHECK-NEXT:    [[EXT:%.*]] = fpext half [[X:%.*]] to double
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[EXT]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret float [[R]]
+;
+  %ext = fpext half %x to double
+  %r = call float @llvm.fptrunc.round.f32.f64(double %ext, metadata !"round.towardzero")
+  ret float %r
+}
+
+; Negative test: the operand is not an fpext.
+define half @fptrunc_round_not_fpext(float %x) {
+; CHECK-LABEL: @fptrunc_round_not_fpext(
+; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[X:%.*]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.towardzero")
+  ret half %r
+}
+
+; Negative test: the extended value is modified before truncation.
+define half @fpext_fadd_fptrunc_round(half %x) {
+; CHECK-LABEL: @fpext_fadd_fptrunc_round(
+; CHECK-NEXT:    [[EXT:%.*]] = fpext half [[X:%.*]] to float
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[EXT]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[ADD]], metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[R]]
+;
+  %ext = fpext half %x to float
+  %add = fadd float %ext, 1.0
+  %r = call half @llvm.fptrunc.round.f16.f32(float %add, metadata !"round.towardzero")
+  ret half %r
+}
+
+; Negative test: don't fold a constant with the default rounding mode.
+define half @fptrunc_round_constant() {
+; CHECK-LABEL: @fptrunc_round_constant(
+; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float 1.000700e+00, metadata !"round.towardzero")
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = call half @llvm.fptrunc.round.f16.f32(float 0x3FF002DE00000000, metadata !"round.towardzero")
+  ret half %r
+}

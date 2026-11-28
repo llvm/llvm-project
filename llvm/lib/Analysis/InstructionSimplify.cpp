@@ -7370,6 +7370,13 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::ldexp:
     return simplifyLdexp(Op0, Op1, Q, false);
+  case Intrinsic::fptrunc_round:
+    // fptrunc_round ( fpext X, rm ) --> X, like fptrunc (fpext X).
+    // Only match with the default rounding mode.
+    if (match(Op0, m_FPExt(m_Value())))
+      return simplifyCastInst(Instruction::FPTrunc, Op0, ReturnType, Q,
+                              RecursionLimit);
+    break;
   case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)
