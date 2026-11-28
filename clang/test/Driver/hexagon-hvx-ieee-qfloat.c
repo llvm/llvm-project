@@ -23,3 +23,12 @@
 // CHECK-FEATURE-NOT: "-target-feature" "+hvx-qfloat"
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv75 -mhvx \
 // RUN:   -mhvx-ieee-fp 2>&1 | FileCheck -check-prefix=CHECK-FEATURE %s
+
+// Lossy QFloat sets the target mode and frontend fast-math flags, without
+// forwarding the removed LLVM -fast-math option.
+// CHECK-LOSSY: "-mllvm" "-hexagon-qfloat-mode=lossy"
+// CHECK-LOSSY-NOT: "-fast-math=true"
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv79 -mhvx \
+// RUN:   -mhvx-qfloat=lossy 2>&1 | FileCheck -check-prefix=CHECK-LOSSY %s
+// RUN: %clang -c %s -target hexagon-unknown-elf -mv79 -mhvx \
+// RUN:   -mhvx-qfloat=lossy -o %t.o
