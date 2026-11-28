@@ -72,9 +72,14 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
                                  DefaultDAZ)
             : DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) || DefaultDAZ;
 
-  FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only) ||
-               DriverArgs.hasFlag(options::OPT_ffinite_math_only,
-                                  options::OPT_fno_finite_math_only, false);
+  FloatingPointValueOptions ValueOptions;
+  const bool OFastEnabled = isOptimizationLevelFast(DriverArgs);
+  for (const Arg *A : DriverArgs)
+    ValueOptions.apply(*A, OFastEnabled);
+
+  FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only,
+                                 options::OPT_cl_fast_relaxed_math) ||
+               ValueOptions.isFiniteOnly();
 
   UnsafeMathOpt =
       DriverArgs.hasArg(options::OPT_cl_unsafe_math_optimizations) ||
@@ -1161,7 +1166,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
-  AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
+  AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
   AddBCLib(LibDeviceFile);
   auto ABIVerPath = getABIVersionPath(Pref.ABIVer);

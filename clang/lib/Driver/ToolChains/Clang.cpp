@@ -3010,8 +3010,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // "umbrella" flags, so we do this by stepping through the flags incrementally
   // adjusting what we think is enabled/disabled, then at the end setting the
   // LLVM flags based on the final state.
-  bool HonorINFs = true;
-  bool HonorNaNs = true;
+  FloatingPointValueOptions ValueOptions;
   bool ApproxFunc = false;
   // -fmath-errno is the default on some platforms, e.g. BSD-derived OSes.
   bool MathErrno = TC.IsMathErrnoDefault();
@@ -3061,13 +3060,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
   auto applyFastMath = [&](bool Aggressive, StringRef CallerOption) {
     if (Aggressive) {
-      HonorINFs = false;
-      HonorNaNs = false;
       setComplexRange(D, CallerOption, LangOptions::ComplexRangeKind::CX_Basic,
                       LastComplexRangeOption, Range);
     } else {
-      HonorINFs = true;
-      HonorNaNs = true;
       setComplexRange(D, CallerOption,
                       LangOptions::ComplexRangeKind::CX_Promoted,
                       LastComplexRangeOption, Range);
@@ -3096,6 +3091,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
+    bool IsValueOption = ValueOptions.apply(*A, OFastEnabled);
     llvm::scope_exit CheckMathErrnoForVecLib(
         [&, MathErrnoBeforeArg = MathErrno] {
           if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
@@ -3103,8 +3099,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         });
 
     switch (A->getOption().getID()) {
-    // If this isn't an FP option skip the claim below
-    default: continue;
+    default:
+      if (!IsValueOption)
+        continue;
+      break;
 
     case options::OPT_fcx_limited_range:
       setComplexRange(D, A->getSpelling(),
@@ -3147,9 +3145,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
     case options::OPT_ffp_model_EQ: {
-      // If -ffp-model= is seen, reset to fno-fast-math
-      HonorINFs = true;
-      HonorNaNs = true;
+      // If -ffp-model= is seen, reset to fno-fast-math.
       ApproxFunc = false;
       // Turning *off* -ffast-math restores the toolchain default.
       MathErrno = TC.IsMathErrnoDefault();
@@ -3204,10 +3200,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     }
 
     // Options controlling individual features
-    case options::OPT_fhonor_infinities:    HonorINFs = true;         break;
-    case options::OPT_fno_honor_infinities: HonorINFs = false;        break;
-    case options::OPT_fhonor_nans:          HonorNaNs = true;         break;
-    case options::OPT_fno_honor_nans:       HonorNaNs = false;        break;
     case options::OPT_fapprox_func:         ApproxFunc = true;        break;
     case options::OPT_fno_approx_func:      ApproxFunc = false;       break;
     case options::OPT_fmath_errno:          MathErrno = true;         break;
@@ -3350,15 +3342,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       BFloat16ExcessPrecision = Float16ExcessPrecision;
       break;
     }
-    case options::OPT_ffinite_math_only:
-      HonorINFs = false;
-      HonorNaNs = false;
-      break;
-    case options::OPT_fno_finite_math_only:
-      HonorINFs = true;
-      HonorNaNs = true;
-      break;
-
     case options::OPT_funsafe_math_optimizations:
       AssociativeMath = true;
       ReciprocalMath = true;
@@ -3394,8 +3377,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffast-math";
       break;
     case options::OPT_fno_fast_math:
-      HonorINFs = true;
-      HonorNaNs = true;
       // Turning on -ffast-math (with either flag) removes the need for
       // MathErrno. However, turning *off* -ffast-math merely restores the
       // toolchain default (which may be false).
@@ -3424,9 +3405,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
-      if (HonorINFs && HonorNaNs && !AssociativeMath && !ReciprocalMath &&
-          SignedZeros && TrappingMath && RoundingFPMath && !ApproxFunc &&
-          FPContract == "off")
+      if (ValueOptions.HonorInfs && ValueOptions.HonorNaNs &&
+          !AssociativeMath && !ReciprocalMath && SignedZeros && TrappingMath &&
+          RoundingFPMath && !ApproxFunc && FPContract == "off")
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -3450,10 +3431,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     A->claim();
   }
 
-  if (!HonorINFs)
+  if (!ValueOptions.HonorInfs)
     CmdArgs.push_back("-menable-no-infs");
 
-  if (!HonorNaNs)
+  if (!ValueOptions.HonorNaNs)
     CmdArgs.push_back("-menable-no-nans");
 
   if (ApproxFunc)
@@ -3530,16 +3511,15 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // -ffast-math enables the __FAST_MATH__ preprocessor macro, but check for the
   // individual features enabled by -ffast-math instead of the option itself as
   // that's consistent with gcc's behaviour.
-  if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
-      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
+  if (ValueOptions.isFiniteOnly() && !MathErrno && AssociativeMath &&
+      ApproxFunc && ReciprocalMath && !SignedZeros && !TrappingMath &&
+      !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
 
-  // Handle __FINITE_MATH_ONLY__ similarly.
-  // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
-  // Otherwise process the Xclang arguments to determine if -menable-no-infs and
-  // -menable-no-nans are set by the user.
+  // Define __FINITE_MATH_ONLY__ if both NaNs and infinities are disabled,
+  // including when both flags are passed directly to cc1 via -Xclang.
   bool shouldAddFiniteMathOnly = false;
-  if (!HonorINFs && !HonorNaNs) {
+  if (ValueOptions.isFiniteOnly()) {
     shouldAddFiniteMathOnly = true;
   } else {
     bool InfValues = true;
