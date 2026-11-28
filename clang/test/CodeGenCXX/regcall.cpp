@@ -31,7 +31,7 @@ void __regcall f1(Dyn a) { a.x = 42; }
 // CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall3__f13Dyn(ptr noundef byval(%struct.Dyn) align 8 %a)
 // CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall3__f13Dyn(ptr inreg nofreeobj noundef align 4 dead_on_return dereferenceable(16) %a)
 // CHECK-WIN64: define dso_local x86_regcallcc void @"?f1@@YwXUDyn@@@Z"(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(24) %a)
-// CHECK-WIN32: define dso_local x86_regcallcc void @"?f1@@YwXUDyn@@@Z"(ptr inalloca(<{ %struct.Dyn }>) %0)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f1@@YwXUDyn@@@Z"(ptr inalloca(<{ %struct.Dyn }>) align 4 %0)
 
 struct Base { int x; };
 struct Derived : public Base { double a; };

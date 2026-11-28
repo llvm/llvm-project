@@ -19,7 +19,7 @@ A B::foo(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_thiscallcc ptr @"?foo@B@@QAE?AUA@@U2@@Z"
-// CHECK:       (ptr noundef %this, ptr inalloca(<{ ptr, %struct.A }>) %0)
+// CHECK:       (ptr noundef %this, ptr inalloca(<{ ptr, %struct.A }>) align 4 %0)
 // CHECK:   getelementptr inbounds nuw <{ ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 0
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
@@ -29,7 +29,7 @@ A B::bar(A x) {
 }
 
 // CHECK-LABEL: define dso_local ptr @"?bar@B@@QAA?AUA@@U2@@Z"
-// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %0)
+// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) align 4 %0)
 // CHECK:   getelementptr inbounds nuw <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
@@ -39,7 +39,7 @@ A B::baz(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_stdcallcc ptr @"?baz@B@@QAG?AUA@@U2@@Z"
-// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %0)
+// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) align 4 %0)
 // CHECK:   getelementptr inbounds nuw <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
@@ -49,7 +49,7 @@ A B::qux(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (ptr inreg noundef %this, ptr dead_on_unwind inreg noalias writable sret(%struct.A) align 4 %agg.result, ptr inalloca(<{ %struct.A }>) %0)
+// CHECK:       (ptr inreg noundef %this, ptr dead_on_unwind inreg noalias writable sret(%struct.A) align 4 %agg.result, ptr inalloca(<{ %struct.A }>) align 4 %0)
 // CHECK:   ret void
 
 int main() {
@@ -61,10 +61,10 @@ int main() {
 }
 
 // CHECK: call x86_thiscallcc ptr @"?foo@B@@QAE?AUA@@U2@@Z"
-// CHECK:       (ptr noundef %{{[^,]*}}, ptr inalloca(<{ ptr, %struct.A }>) %{{[^,]*}})
+// CHECK:       (ptr noundef %{{[^,]*}}, ptr inalloca(<{ ptr, %struct.A }>) align 4 %{{[^,]*}})
 // CHECK: call ptr @"?bar@B@@QAA?AUA@@U2@@Z"
-// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %{{[^,]*}})
+// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) align 4 %{{[^,]*}})
 // CHECK: call x86_stdcallcc ptr @"?baz@B@@QAG?AUA@@U2@@Z"
-// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %{{[^,]*}})
+// CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) align 4 %{{[^,]*}})
 // CHECK: call x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (ptr inreg noundef %{{[^,]*}}, ptr dead_on_unwind inreg writable sret(%struct.A) align 4 %{{.*}}, ptr inalloca(<{ %struct.A }>) %{{[^,]*}})
+// CHECK:       (ptr inreg noundef %{{[^,]*}}, ptr dead_on_unwind inreg writable sret(%struct.A) align 4 %{{.*}}, ptr inalloca(<{ %struct.A }>) align 4 %{{[^,]*}})

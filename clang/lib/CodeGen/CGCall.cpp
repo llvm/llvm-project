@@ -3108,8 +3108,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   // Attach attributes to inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
-    ArgAttrs[IRFunctionArgs.getInallocaArgNo()].addInAllocaAttr(
-        FI.getArgStruct());
+    llvm::AttrBuilder &Attrs = ArgAttrs[IRFunctionArgs.getInallocaArgNo()];
+    Attrs.addInAllocaAttr(FI.getArgStruct());
+    Attrs.addAlignmentAttr(FI.getArgStructAlignment().getAsAlign());
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,

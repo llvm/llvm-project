@@ -152,7 +152,7 @@ namespace inalloca_nonvirt {
   // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) align 4 %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
@@ -188,7 +188,7 @@ namespace inalloca_nonvirt {
   // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) align 4 %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
@@ -234,7 +234,7 @@ namespace inalloca_virt {
   // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) align 4 %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //
@@ -284,7 +284,7 @@ namespace inalloca_virt {
   // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) align 4 %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //

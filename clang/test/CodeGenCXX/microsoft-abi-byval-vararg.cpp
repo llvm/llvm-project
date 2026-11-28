@@ -19,14 +19,14 @@ int foo(A a, ...) {
   return sum;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @"?foo@@YAHUA@@ZZ"(ptr inalloca(<{ %struct.A }>) %0, ...)
+// CHECK-LABEL: define dso_local noundef i32 @"?foo@@YAHUA@@ZZ"(ptr inalloca(<{ %struct.A }>) align 4 %0, ...)
 
 int main() {
   return foo(A(3), 1, 2, 3);
 }
 // CHECK-LABEL: define dso_local noundef i32 @main()
 // CHECK: %[[argmem:[^ ]*]] = alloca inalloca <{ %struct.A, i32, i32, i32 }>
-// CHECK: call noundef i32 (ptr, ...) @"?foo@@YAHUA@@ZZ"{{.*}}(ptr inalloca(<{ %struct.A, i32, i32, i32 }>) %[[argmem]])
+// CHECK: call noundef i32 (ptr, ...) @"?foo@@YAHUA@@ZZ"{{.*}}(ptr inalloca(<{ %struct.A, i32, i32, i32 }>) align 4 %[[argmem]])
 
 void varargs_zero(...);
 void varargs_one(int, ...);
