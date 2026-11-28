@@ -26,7 +26,7 @@ define i16 @test_int() {
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    [[CALL_LCSSA_LCSSA:%.*]] = phi i16 [ [[CALL]], [[COND_END]] ]
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i16 [ [[ADD]], [[COND_END]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i16 [[I_LCSSA]], 11
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i16 [[I_LCSSA]], 11
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_SPLIT_PREHEADER:%.*]], label [[END:%.*]]
 ; CHECK:       for.body.split.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_SPLIT:%.*]]
