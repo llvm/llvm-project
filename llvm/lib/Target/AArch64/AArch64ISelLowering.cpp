@@ -31834,6 +31834,84 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
   return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
+// Match:
+//   X0, X1, X2, X3 = four consecutive EXTRACT_SUBVECTORs(Wide)
+//   (A, B, C, D) = VECTOR_DEINTERLEAVE(X0, X1, X2, X3)
+// Replace the four-way deinterleave with:
+//   (AC, BD) = VECTOR_DEINTERLEAVE(WideLo, WideHi)
+//   (A, C) = VECTOR_DEINTERLEAVE(ACLo, ACHi)
+//   (B, D) = VECTOR_DEINTERLEAVE(BDLo, BDHi)
+static SDValue tryPartialSVEDeinterleave(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         SelectionDAG &DAG) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  if (N->getNumOperands() != 4 || N->getNumValues() != 4)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  bool IsSupportedType = VT == MVT::nxv1i64 || VT == MVT::nxv2i32 ||
+                         VT == MVT::nxv4i16 || VT == MVT::nxv8i8 ||
+                         VT == MVT::nxv1f64 || VT == MVT::nxv2f32 ||
+                         VT == MVT::nxv4f16 || VT == MVT::nxv4bf16;
+
+  if (!IsSupportedType)
+    return SDValue();
+
+  // Ensure each extract is consecutive and from the same widevec
+  unsigned MinNumElements = VT.getVectorMinNumElements();
+  SDValue Op0 = N->getOperand(0);
+
+  if (Op0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      Op0.getConstantOperandVal(1) != 0)
+    return SDValue();
+
+  SDValue WideVec = Op0->getOperand(0);
+
+  for (unsigned I = 1; I != N->getNumOperands(); ++I) {
+    SDValue OpI = N->getOperand(I);
+    if (OpI.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        OpI->getOperand(0) != WideVec)
+      return SDValue();
+
+    if (OpI->getConstantOperandVal(1) != I * MinNumElements)
+      return SDValue();
+  }
+
+  EVT ExpectedWideVecType =
+      EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                       VT.getVectorElementCount() * 4);
+
+  if (WideVec.getValueType() != ExpectedWideVecType)
+    return SDValue();
+
+  SDLoc DL(N);
+  auto [WideLo, WideHi] = DAG.SplitVector(WideVec, DL);
+  EVT FullVecType = WideLo.getValueType();
+  SDValue DeinterleaveWide =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                  DAG.getVTList(FullVecType, FullVecType), {WideLo, WideHi});
+
+  SDValue AC = DeinterleaveWide.getValue(0);
+  SDValue BD = DeinterleaveWide.getValue(1);
+  auto [ACLo, ACHi] = DAG.SplitVector(AC, DL);
+  auto [BDLo, BDHi] = DAG.SplitVector(BD, DL);
+
+  SDVTList DeinterleaveTypes = DAG.getVTList(VT, VT);
+  SDValue DeinterleaveAC = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                       DeinterleaveTypes, {ACLo, ACHi});
+  SDValue DeinterleaveBD = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                       DeinterleaveTypes, {BDLo, BDHi});
+
+  SmallVector<SDValue, 4> Results = {
+      DeinterleaveAC.getValue(0), DeinterleaveBD.getValue(0),
+      DeinterleaveAC.getValue(1), DeinterleaveBD.getValue(1)};
+
+  return DCI.CombineTo(N, Results);
+}
+
 static SDValue performLegalizedVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   // Type legalization splits a wide load into consecutive legal loads. Combine
@@ -31933,6 +32011,9 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
 
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (SDValue Res = tryPartialSVEDeinterleave(N, DCI, DAG))
+    return Res;
+
   if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
     return Res;
 
