@@ -16,6 +16,8 @@
 # CHECK-NEXT:   [[CPATH]]lib
 # ARM64EC-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}arm64ec-pc-windows-msvc
 # CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}aarch64-pc-windows-msvc
+# ARM64EC-NEXT:   [[CPATH]]lib{{[/\\]}}arm64ec-pc-windows-msvc
+# CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}aarch64-pc-windows-msvc
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}DIA SDK{{[/\\]}}lib{{[/\\]}}arm64
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}lib{{[/\\]}}arm64
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}atlmfc{{[/\\]}}lib{{[/\\]}}arm64

@@ -205,7 +205,8 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
-  std::string clangRuntimeLibDir;
+  StringRef clangLibDir;
+  StringRef clangResourceLibDir;
 
   // For linkreprofullpathrsp
   std::unique_ptr<llvm::raw_fd_ostream> reproFile;

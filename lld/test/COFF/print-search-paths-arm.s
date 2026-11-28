@@ -13,6 +13,9 @@
 # CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}armv7-pc-windows-msvc
 # CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}arm-pc-windows-msvc
 # CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}thumbv7-pc-windows-msvc
+# CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}armv7-pc-windows-msvc
+# CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}arm-pc-windows-msvc
+# CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}thumbv7-pc-windows-msvc
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}DIA SDK{{[/\\]}}lib{{[/\\]}}arm
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}lib{{[/\\]}}arm
 # CHECK-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}atlmfc{{[/\\]}}lib{{[/\\]}}arm
