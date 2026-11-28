@@ -58,6 +58,9 @@ protected:
                                 lldb::ModuleSP preferred_module,
                                 bool &any_found) const;
 
+  /// Whether \p type is a C++ class or struct.
+  static bool IsCXXClassOrStruct(const CompilerType &type);
+
   TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
 
   void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
