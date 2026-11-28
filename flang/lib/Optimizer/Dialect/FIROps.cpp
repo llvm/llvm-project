@@ -1935,6 +1935,11 @@ static bool typesMatchExceptForVolatility(mlir::Type fromType,
                 auto castedToType = mlir::dyn_cast<TYPE>(toType);
                 if (!castedToType)
                   return false;
+
+                // For fir::BoxType and fir::ClassType, the corank must match.
+                if (fir::getBoxCorank(type) != fir::getBoxCorank(toType))
+                  return false;
+
                 // If we are the same base class, we match if the element types
                 // match.
                 return typesMatchExceptForVolatility(type.getEleTy(),

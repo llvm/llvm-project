@@ -1408,3 +1408,35 @@ func.func @alloca_bad_alignment() -> !fir.ref<!fir.array<10xf32>> {
   %0 = fir.alloca !fir.array<10xf32> {alignment = 24 : i64}
   return %0 : !fir.ref<!fir.array<10xf32>>
 }
+
+// -----
+
+func.func @volatile_cast_box_corank_changed(%arg0 : !fir.box<!fir.heap<i32>, corank:1>) {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.box<!fir.heap<i32>, corank:1>) -> !fir.box<!fir.heap<i32>, volatile, corank:2>
+  return
+}
+
+// -----
+
+func.func @volatile_cast_box_corank_dropped(%arg0 : !fir.box<!fir.heap<i32>, corank:1>) {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.box<!fir.heap<i32>, corank:1>) -> !fir.box<!fir.heap<i32>, volatile>
+  return
+}
+
+// -----
+
+func.func @volatile_cast_class_corank_changed(%arg0 : !fir.class<!fir.type<t{i:i32}>, corank:1>) {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.class<!fir.type<t{i:i32}>, corank:1>) -> !fir.class<!fir.type<t{i:i32}>, volatile, corank:2>
+  return
+}
+
+// -----
+
+func.func @volatile_cast_class_corank_dropped(%arg0 : !fir.class<!fir.type<t{i:i32}>, corank:1>) {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.class<!fir.type<t{i:i32}>, corank:1>) -> !fir.class<!fir.type<t{i:i32}>, volatile>
+  return
+}

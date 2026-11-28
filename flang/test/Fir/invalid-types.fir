@@ -187,3 +187,23 @@ func.func private @upe() -> !fir.class<!fir.box<i32>, volatile>
 // expected-error@+1 {{expected non-function type}}
 func.func private @upe() -> !fir.class<, volatile>
 
+// -----
+
+// expected-error@+1 {{expected ':'}}
+func.func private @nc() -> !fir.box<i32, corank>
+
+// -----
+
+// expected-error@+1 {{expected 'volatile' or 'corank'}}
+func.func private @tc() -> !fir.box<i32, >
+
+// -----
+
+// expected-error@+1 {{duplicate 'volatile' keyword}}
+func.func private @dv() -> !fir.box<i32, volatile, volatile>
+
+// -----
+
+// expected-error@+1 {{duplicate 'corank' keyword}}
+func.func private @dc() -> !fir.class<!fir.type<t{i:i32}>, corank:1, corank:2>
+
