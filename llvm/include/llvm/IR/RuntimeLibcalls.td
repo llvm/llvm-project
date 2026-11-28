@@ -1186,32 +1186,37 @@ def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 def MEMCPY_ALIGN_4 : VoidMemCpyLibcall<4>;
 
 // Objective-C calls
-def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_AUTORELEASEPOOLPOP : RuntimeLibcall<Void, [Ptr]>;
-def OBJC_AUTORELEASEPOOLPUSH : RuntimeLibcall<Ptr, []>;
-def OBJC_AUTORELEASERETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_COPYWEAK : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def OBJC_DESTROYWEAK : RuntimeLibcall<Void, [Ptr]>;
-def OBJC_INITWEAK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def OBJC_LOADWEAK : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_LOADWEAKRETAINED : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_MOVEWEAK : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def OBJC_RELEASE : RuntimeLibcall<Void, [Ptr]>;
-def OBJC_RETAIN : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAINAUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAINAUTORELEASERETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAINAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_CLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAINBLOCK : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_STORESTRONG : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def OBJC_STOREWEAK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAINEDOBJECT : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_UNRETAINEDOBJECT : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_UNRETAINEDPOINTER : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
-def OBJC_SYNC_ENTER : RuntimeLibcall<Int, [Ptr]>;
-def OBJC_SYNC_EXIT : RuntimeLibcall<Int, [Ptr]>;
+class ObjCReturnedLibcall : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoUnwind];
+  let ParamAttrs = [[Returned]];
+}
+
+def OBJC_AUTORELEASE : ObjCReturnedLibcall;
+def OBJC_AUTORELEASEPOOLPOP : NoUnwindLibcall<Void, [Ptr]>;
+def OBJC_AUTORELEASEPOOLPUSH : NoUnwindLibcall<Ptr>;
+def OBJC_AUTORELEASERETURNVALUE : ObjCReturnedLibcall;
+def OBJC_COPYWEAK : NoUnwindLibcall<Void, [Ptr, Ptr]>;
+def OBJC_DESTROYWEAK : NoUnwindLibcall<Void, [Ptr]>;
+def OBJC_INITWEAK : NoUnwindLibcall<Ptr, [Ptr, Ptr]>;
+def OBJC_LOADWEAK : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_LOADWEAKRETAINED : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_MOVEWEAK : NoUnwindLibcall<Void, [Ptr, Ptr]>;
+def OBJC_RELEASE : NoUnwindLibcall<Void, [Ptr]>;
+def OBJC_RETAIN : ObjCReturnedLibcall;
+def OBJC_RETAINAUTORELEASE : ObjCReturnedLibcall;
+def OBJC_RETAINAUTORELEASERETURNVALUE : ObjCReturnedLibcall;
+def OBJC_RETAINAUTORELEASEDRETURNVALUE : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_CLAIMAUTORELEASEDRETURNVALUE : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINBLOCK : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_STORESTRONG : NoUnwindLibcall<Void, [Ptr, Ptr]>;
+def OBJC_STOREWEAK : NoUnwindLibcall<Ptr, [Ptr, Ptr]>;
+def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINEDOBJECT : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_UNRETAINEDOBJECT : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_UNRETAINEDPOINTER : NoUnwindLibcall<Ptr, [Ptr]>;
+def OBJC_RETAIN_AUTORELEASE : ObjCReturnedLibcall;
+def OBJC_SYNC_ENTER : NoUnwindLibcall<Int, [Ptr]>;
+def OBJC_SYNC_EXIT : NoUnwindLibcall<Int, [Ptr]>;
 
 class PrintfLibcall : RuntimeLibcall<Int, [Ptr, Ellip]> {
   let FnAttrs = [NoFree, NoUnwind];
