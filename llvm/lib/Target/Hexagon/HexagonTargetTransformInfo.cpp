@@ -46,6 +46,10 @@ static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
 static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
     cl::Hidden, cl::desc("Enable masked loads/stores for HVX"));
 
+static cl::opt<bool> HexagonEnableMemmove(
+    "hexagon-enable-memmove", cl::init(false), cl::Hidden,
+    cl::desc("Always promote safe loop access to memmove"));
+
 // Constant "cost factor" to make floating point operations more expensive
 // in terms of vectorization cost. This isn't the best way, but it should
 // do. Ultimately, the cost should use cycles.
@@ -229,6 +233,39 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
                                 OpInfo, I);
+}
+
+// Do not promote loop access to memmove if the source or destination cannot be
+// aligned to an 8-byte boundary. Memmove is beneficial only if both pointers
+// are 8-byte aligned or if memmove supports unaligned accesses. For example:
+//
+//   char a[100];
+//   for (i = n; i > 0; i--)
+//     a[i] = a[i - 1];
+//
+// The source and destination can never be aligned simultaneously at an
+// 8-byte boundary. If this loop is converted to memmove, memmove performs
+// alignment checks and eventually copies byte by byte. As a result, memmove
+// is relatively slow due to call overhead and checks compared with the loop's
+// unaligned accesses.
+
+bool HexagonTTIImpl::isMemmoveProfitable(
+    Align DstAlign, Align SrcAlign, const std::optional<APInt> &PtrDiff) const {
+  if (HexagonEnableMemmove)
+    return true;
+
+  const Align RequiredAlign(8);
+  bool DstAligned = DstAlign >= RequiredAlign;
+  bool SrcAligned = SrcAlign >= RequiredAlign;
+  if (DstAligned && SrcAligned)
+    return true;
+
+  if (!PtrDiff || PtrDiff->countTrailingZeros() < Log2(RequiredAlign))
+    return false;
+
+  // A multiple-of-8 difference preserves 8-byte alignment. It proves the
+  // other pointer aligned only when one pointer is already known aligned.
+  return DstAligned || SrcAligned;
 }
 
 InstructionCost HexagonTTIImpl::getShuffleCost(
