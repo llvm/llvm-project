@@ -18,6 +18,11 @@
 ; RUN: llc -mtriple=arm64-apple-darwin -enable-machine-outliner -codegen-data-use-path=%t_cgdata -filetype=obj %t/local-one.ll -o %t_read
 ; RUN: llvm-objdump -d %t_read | FileCheck %s
 
+; Re-run with the outlined hash tree read in place instead of
+; fully materialized, and confirm the same outlining is produced.
+; RUN: llc -mtriple=arm64-apple-darwin -enable-machine-outliner -codegen-data-use-path=%t_cgdata -indexed-codegen-data-lazy-loading -filetype=obj %t/local-one.ll -o %t_read_lazy
+; RUN: llvm-objdump -d %t_read_lazy | FileCheck %s
+
 ; CHECK: _OUTLINED_FUNCTION
 ; CHECK-NEXT:  mov
 ; CHECK-NEXT:  mov

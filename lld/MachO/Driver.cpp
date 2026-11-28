@@ -1585,7 +1585,10 @@ static void codegenDataGenerate() {
       OutlinedHashTreeRecord localOutlineRecord;
       // Use a pointer to allow modification by the function.
       auto *data = isec->data.data();
-      localOutlineRecord.deserialize(data);
+      if (Error e = localOutlineRecord.deserialize(data, isec->data.end())) {
+        error(toString(isec) + ": " + toString(std::move(e)));
+        continue;
+      }
 
       // Merge it to the global hash tree.
       globalOutlineRecord.merge(localOutlineRecord);

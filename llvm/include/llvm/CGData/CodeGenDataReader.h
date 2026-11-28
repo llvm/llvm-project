@@ -42,7 +42,7 @@ public:
   virtual bool hasStableFunctionMap() const = 0;
   /// Return the outlined hash tree that is released from the reader.
   std::unique_ptr<OutlinedHashTree> releaseOutlinedHashTree() {
-    return std::move(HashTreeRecord.HashTree);
+    return HashTreeRecord.releaseTree();
   }
   std::unique_ptr<StableFunctionMap> releaseStableFunctionMap() {
     return std::move(FunctionMapRecord.FunctionMap);
@@ -50,7 +50,8 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// codegen data file path and file system. \p LazyLoading defers
-  /// deserializing the stable function map of indexed codegen data.
+  /// deserializing the stable function map of indexed codegen data, and reads
+  /// its outlined hash tree in place.
   LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
   create(const cl::LibraryOptionsContext &LibraryOptions, const Twine &Path,
          vfs::FileSystem &FS, bool LazyLoading = false);

@@ -27,9 +27,9 @@ RUN: printf '\377cgdata\201' > %t_corrupt.cgdata
 RUN: not llvm-cgdata --show %t_corrupt.cgdata 2>&1 | FileCheck %s  --check-prefix=CORRUPT
 CORRUPT: {{.}}cgdata: invalid codegen data (file header is corrupt)
 
-# The current version 4 while the header says 5.
+# The current version 5 while the header says 6.
 RUN: printf '\377cgdata\201' > %t_version.cgdata
-RUN: printf '\005\000\000\000' >> %t_version.cgdata
+RUN: printf '\006\000\000\000' >> %t_version.cgdata
 RUN: printf '\000\000\000\000' >> %t_version.cgdata
 RUN: printf '\040\000\000\000\000\000\000\000' >> %t_version.cgdata
 RUN: printf '\040\000\000\000\000\000\000\000' >> %t_version.cgdata

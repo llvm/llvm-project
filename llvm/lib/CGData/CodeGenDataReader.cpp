@@ -42,9 +42,9 @@ Error CodeGenDataReader::mergeFromObjectFile(
       getCodeGenDataSectionName(CG_merge, OF, /*AddSegmentInfo=*/false);
 
   auto processSectionContents = [&](const StringRef &Name,
-                                    const StringRef &Contents) {
+                                    const StringRef &Contents) -> Error {
     if (Name != CGOutlineName && Name != CGMergeName)
-      return;
+      return Error::success();
     if (CombinedHash)
       *CombinedHash = stable_hash_combine(*CombinedHash, xxh3_64bits(Contents));
     auto *Data = reinterpret_cast<const unsigned char *>(Contents.data());
@@ -56,7 +56,8 @@ Error CodeGenDataReader::mergeFromObjectFile(
     if (Name == CGOutlineName) {
       while (Data != EndData) {
         OutlinedHashTreeRecord LocalOutlineRecord;
-        LocalOutlineRecord.deserialize(Data);
+        if (Error E = LocalOutlineRecord.deserialize(Data, EndData))
+          return E;
         GlobalOutlineRecord.merge(LocalOutlineRecord);
       }
     } else if (Name == CGMergeName) {
@@ -66,6 +67,7 @@ Error CodeGenDataReader::mergeFromObjectFile(
         GlobalFunctionMapRecord.merge(LocalFunctionMapRecord);
       }
     }
+    return Error::success();
   };
 
   for (auto &Section : Obj->sections()) {
@@ -75,7 +77,8 @@ Error CodeGenDataReader::mergeFromObjectFile(
     Expected<StringRef> ContentsOrErr = Section.getContents();
     if (!ContentsOrErr)
       return ContentsOrErr.takeError();
-    processSectionContents(*NameOrErr, *ContentsOrErr);
+    if (Error E = processSectionContents(*NameOrErr, *ContentsOrErr))
+      return E;
   }
 
   return Error::success();
@@ -97,15 +100,21 @@ Error IndexedCodeGenDataReader::read() {
   if (auto E = IndexedCGData::Header::readFromBuffer(Start).moveInto(Header))
     return E;
 
+  // Keep the buffer alive via a shared_ptr so records can be read from it on
+  // demand and outlive this reader.
+  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
+
   if (hasOutlinedHashTree()) {
     const unsigned char *Ptr = Start + Header.OutlinedHashTreeOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    HashTreeRecord.deserialize(Ptr);
+    if (Error E = LazyLoading
+                      ? HashTreeRecord.lazyDeserialize(
+                            SharedDataBuffer, Header.OutlinedHashTreeOffset)
+                      : HashTreeRecord.deserialize(Ptr, End))
+      return error(std::move(E));
   }
 
-  // TODO: lazy loading support for outlined hash tree.
-  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
   if (hasStableFunctionMap()) {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)

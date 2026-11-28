@@ -413,7 +413,7 @@ struct MachineOutliner : public ModulePass {
   /// which will be dead-stripped not going to the final binary.
   /// A post-process using llvm-cgdata, lld, or ThinLTO can merge them into
   /// a global oulined hash tree for the subsequent codegen.
-  std::unique_ptr<OutlinedHashTree> LocalHashTree;
+  std::unique_ptr<MutableOutlinedHashTree> LocalHashTree;
 
   /// The mode of the outliner.
   /// When is's CGDataMode::None, candidates are populated with the suffix tree
@@ -429,7 +429,7 @@ struct MachineOutliner : public ModulePass {
   /// invalidated by outlining. Their surviving sites are recounted at the end.
   SmallVector<SmallVector<stable_hash>> UnprofitableCandidates;
   // Terminals store one-based indices into UnprofitableCandidates.
-  OutlinedHashTree UnprofitableCandidateHashTree;
+  MutableOutlinedHashTree UnprofitableCandidateHashTree;
 
   StringRef getPassName() const override { return "Machine Outliner"; }
 
@@ -663,7 +663,7 @@ getMatchedEntries(InstructionMapper &Mapper, const OutlinedHashTree &HashTree) {
   SmallVector<MatchedEntry> MatchedEntries;
   auto Size = UnsignedVec.size();
 
-  const auto *RootNode = HashTree.getRoot();
+  auto RootCursor = HashTree.getRootCursor();
 
   auto getValidInstr = [&](unsigned Index) -> const MachineInstr * {
     if (UnsignedVec[Index] >= Mapper.LegalInstrNumber)
@@ -672,19 +672,20 @@ getMatchedEntries(InstructionMapper &Mapper, const OutlinedHashTree &HashTree) {
   };
 
   auto getStableHashAndFollow =
-      [](const MachineInstr &MI, const HashNode *CurrNode) -> const HashNode * {
+      [&HashTree](const MachineInstr &MI,
+                  const OutlinedHashTree::HashNodeCursor &CurrNode)
+      -> std::optional<OutlinedHashTree::HashNodeCursor> {
     stable_hash StableHash = hashInstruction(MI);
     if (!StableHash)
-      return nullptr;
-    auto It = CurrNode->Successors.find(StableHash);
-    return (It == CurrNode->Successors.end()) ? nullptr : It->second.get();
+      return std::nullopt;
+    return CurrNode.getSuccessor(HashTree, StableHash);
   };
 
   for (unsigned I = 0; I < Size; ++I) {
     const MachineInstr *MI = getValidInstr(I);
     if (!MI || MI->isDebugInstr())
       continue;
-    const HashNode *CurrNode = getStableHashAndFollow(*MI, RootNode);
+    auto CurrNode = getStableHashAndFollow(*MI, RootCursor);
     if (!CurrNode)
       continue;
 
@@ -695,12 +696,12 @@ getMatchedEntries(InstructionMapper &Mapper, const OutlinedHashTree &HashTree) {
       // Skip debug instructions as we did for the outlined function.
       if (MJ->isDebugInstr())
         continue;
-      CurrNode = getStableHashAndFollow(*MJ, CurrNode);
+      CurrNode = getStableHashAndFollow(*MJ, *CurrNode);
       if (!CurrNode)
         break;
       // Even with a match ending with a terminal, we continue finding
       // matches to populate all candidates.
-      if (auto Count = CurrNode->Terminals)
+      if (auto Count = CurrNode->getTerminals(HashTree))
         MatchedEntries.emplace_back(I, J, *Count);
     }
   }
@@ -1661,7 +1662,7 @@ void MachineOutliner::initializeOutlinerMode(const Module &M) {
   if (cgdata::emitCGData(LibraryOptions)) {
     OutlinerMode = CGDataMode::Write;
     // Create a local outlined hash tree to be published.
-    LocalHashTree = std::make_unique<OutlinedHashTree>();
+    LocalHashTree = std::make_unique<MutableOutlinedHashTree>();
     // We don't need to read the outlined hash tree from the previous codegen
   } else if (cgdata::hasOutlinedHashTree(LibraryOptions))
     OutlinerMode = CGDataMode::Read;
