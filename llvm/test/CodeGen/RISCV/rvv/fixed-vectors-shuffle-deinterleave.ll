@@ -431,11 +431,12 @@ entry:
 define void @deinterleave8_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; CHECK-LABEL: deinterleave8_8_i8_two_source:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v0, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, ma
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a2)
 ; CHECK-NEXT:    ret
 entry:
