@@ -18,6 +18,14 @@ macros:
     macro_header: dirent-macros.h
   - macro_name: DT_SOCK
     macro_header: dirent-macros.h
+  - macro_name: IFTODT
+    standards:
+      - bsd
+    macro_header: dirent-macros.h
+  - macro_name: DTTOIF
+    standards:
+      - bsd
+    macro_header: dirent-macros.h
 types:
   - type_name: struct_dirent
   - type_name: struct_posix_dent
