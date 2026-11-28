@@ -1949,6 +1949,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
     if (Frame.IsNonHintPAuthFrame)
       Augmentation += "N";
     Streamer.emitBytes(Augmentation);
+  } else if (Frame.IsSignalFrame) {
+    Streamer.emitInt8('S');
   }
   Streamer.emitInt8(0);
 
@@ -2129,8 +2131,8 @@ struct CIEKey {
   bool operator<(const CIEKey &Other) const {
     assert(IsEH == Other.IsEH);
     if (!IsEH)
-      return std::make_tuple(RAReg, IsSimple) <
-             std::make_tuple(Other.RAReg, Other.IsSimple);
+      return std::make_tuple(RAReg, IsSimple, IsSignalFrame) <
+             std::make_tuple(Other.RAReg, Other.IsSimple, Other.IsSignalFrame);
 
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
@@ -2144,7 +2146,8 @@ struct CIEKey {
   bool operator==(const CIEKey &Other) const {
     assert(IsEH == Other.IsEH);
     if (!IsEH)
-      return RAReg == Other.RAReg && IsSimple == Other.IsSimple;
+      return RAReg == Other.RAReg && IsSimple == Other.IsSimple &&
+             IsSignalFrame == Other.IsSignalFrame;
 
     return Personality == Other.Personality &&
            PersonalityEncoding == Other.PersonalityEncoding &&
