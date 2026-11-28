@@ -5,10 +5,10 @@ define i16 @pr110631(i32 range(i32 0, 256) %arg, i64 %arg1) {
 ; CHECK-LABEL: define i16 @pr110631(
 ; CHECK-SAME: i32 range(i32 0, 256) [[ARG:%.*]], i64 [[ARG1:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[ARG]], 48991
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ARG1]] to i32
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I]], [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[I4]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ARG1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw nsw i32 [[ARG]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[TMP3]], -16545
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[I8:%.*]] = xor i16 [[TMP1]], 1
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
