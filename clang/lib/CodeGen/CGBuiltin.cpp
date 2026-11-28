@@ -17,6 +17,7 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
+#include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
 #include "CGValue.h"
 #include "CodeGenFunction.h"
@@ -2827,6 +2828,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
           BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
           OptNone, IsOptimizationEnabled);
+
+  if (GenerateFPMathIntrinsics && getLangOpts().OpenMP &&
+      CGOpenMPRuntime::hasLibraryDeclareSimdVariants(FD))
+    GenerateFPMathIntrinsics = false;
 
   if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
