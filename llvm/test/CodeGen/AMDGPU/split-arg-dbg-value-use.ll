@@ -381,6 +381,50 @@ define i32 @deref(ptr addrspace(1) %p) !dbg !90 {
   ret i32 %r, !dbg !92
 }
 
+; The DBG_VALUE of each member of an aggregate describes the whole variable, so
+; a member narrower than it is not split into fragments.
+define i64 @aggregate({ i32, i64 } %a) !dbg !100 {
+; SDAG-LABEL: aggregate:
+; SDAG:       .Lfunc_begin9:
+; SDAG-NEXT:    .loc 1 0 0 ; :0:0
+; SDAG-NEXT:    .cfi_startproc
+; SDAG-NEXT:  ; %bb.0:
+; SDAG-NEXT:    ;DEBUG_VALUE: aggregate:a <- undef
+; SDAG-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; SDAG-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; SDAG-NEXT:    .cfi_undefined 2560
+; SDAG-NEXT:    .cfi_undefined 2561
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:  .Ltmp23:
+; SDAG-NEXT:    .loc 1 1 0 prologue_end ; :1
+; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v1
+; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v2, vcc
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-NEXT:  .Ltmp24:
+;
+; GISEL-LABEL: aggregate:
+; GISEL:       .Lfunc_begin9:
+; GISEL-NEXT:    .loc 1 0 0 ; :0:0
+; GISEL-NEXT:    .cfi_startproc
+; GISEL-NEXT:  ; %bb.0:
+; GISEL-NEXT:    ;DEBUG_VALUE: aggregate:a <- undef
+; GISEL-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GISEL-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GISEL-NEXT:    .cfi_undefined 2560
+; GISEL-NEXT:    .cfi_undefined 2561
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:  .Ltmp24:
+; GISEL-NEXT:    .loc 1 1 0 prologue_end ; :1
+; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v1
+; GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v2, vcc
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-NEXT:  .Ltmp25:
+  #dbg_value({ i32, i64 } %a, !101, !DIExpression(), !102)
+  %v = extractvalue { i32, i64 } %a, 1, !dbg !102
+  %r = add i64 %v, 1, !dbg !102
+  ret i64 %r, !dbg !102
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, emissionKind: FullDebug)
@@ -396,6 +440,7 @@ define i32 @deref(ptr addrspace(1) %p) !dbg !90 {
 !13 = !DISubrange(count: 2)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
 !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!16 = !DICompositeType(tag: DW_TAG_structure_type, name: "S", size: 128, elements: !{})
 !10 = distinct !DISubprogram(name: "use_f64", type: !3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !11 = !DILocalVariable(name: "v", arg: 1, scope: !10, type: !5)
 !12 = !DILocation(line: 1, scope: !10)
@@ -423,3 +468,6 @@ define i32 @deref(ptr addrspace(1) %p) !dbg !90 {
 !90 = distinct !DISubprogram(name: "deref", type: !3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !91 = !DILocalVariable(name: "x", scope: !90, type: !15)
 !92 = !DILocation(line: 1, scope: !90)
+!100 = distinct !DISubprogram(name: "aggregate", type: !3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!101 = !DILocalVariable(name: "a", arg: 1, scope: !100, type: !16)
+!102 = !DILocation(line: 1, scope: !100)

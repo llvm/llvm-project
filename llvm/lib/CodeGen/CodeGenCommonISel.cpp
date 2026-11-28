@@ -277,11 +277,15 @@ static void salvageMergeLike(const MachineRegisterInfo &MRI,
   unsigned VecSize = Size.getFixedValue();
   // A fragment narrower than the value is described by the low bits of the
   // value, so the sources past its end are dropped and the last one is cut.
+  // A value narrower than what it describes, such as one member of an
+  // aggregate, does not say which bits it holds.
   unsigned End = VecSize;
   if (auto Fragment = Expr->getFragmentInfo()) {
-    End = std::min<uint64_t>(End, Fragment->SizeInBits);
+    if (VecSize < Fragment->SizeInBits)
+      return;
+    End = Fragment->SizeInBits;
   } else if (auto VarSize = DbgMI.getDebugVariable()->getSizeInBits()) {
-    if (VecSize > *VarSize)
+    if (VecSize != *VarSize)
       return;
   }
 
