@@ -680,10 +680,6 @@ StmtResult Parser::ParseSEHExceptBlock(SourceLocation ExceptLoc) {
 }
 
 StmtResult Parser::ParseSEHFinallyBlock(SourceLocation FinallyLoc) {
-  PoisonIdentifierRAIIObject raii(Ident__abnormal_termination, false),
-    raii2(Ident___abnormal_termination, false),
-    raii3(Ident_AbnormalTermination, false);
-
   if (Tok.isNot(tok::l_brace))
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 

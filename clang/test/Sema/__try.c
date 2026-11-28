@@ -152,12 +152,12 @@ void TEST(void) {
   (void)AbnormalTermination();  // expected-error{{only allowed in __finally block}}
 
   __try {
-    (void)AbnormalTermination;  // expected-error{{only allowed in __finally block}}
-    (void)__abnormal_termination; // expected-error{{only allowed in __finally block}}
+    (void)AbnormalTermination;  // expected-error{{builtin functions must be directly called}}
+    (void)__abnormal_termination; // expected-error{{builtin functions must be directly called}}
   }
   __except( 1 ) {
-    (void)AbnormalTermination;  // expected-error{{only allowed in __finally block}}
-    (void)__abnormal_termination; // expected-error{{only allowed in __finally block}}
+    (void)AbnormalTermination;  // expected-error{{builtin functions must be directly called}}
+    (void)__abnormal_termination; // expected-error{{builtin functions must be directly called}}
   }
 
   __try {
