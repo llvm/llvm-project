@@ -1065,11 +1065,13 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 //===----------------------------------------------------------------------===//
 
 // An entry in the VLdStIdxOpcodeInfo searchable table.
-class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
+class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx,
+                         bit isSubDword = 0> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bits<12> BitWidth = size;
   bit IsStore = isStore;
   bit IsGPRIdx = isGPRIdx;
+  bit IsSubDword = isSubDword;
 }
 
 // $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
@@ -1099,6 +1101,25 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
         : VPseudoInstSI<(outs), (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
           VLdStIdxOpcodeInfo<rc.Size, 1, 1>;
   }
+}
+
+// A store of the bits of $data that $mask selects into a dword, which reads the
+// dword and writes it back. It is one node through SelectionDAG, which takes
+// stores to different bytes to be independent, and one access for
+// SIFixSGPRCopies, so that a divergent index puts the whole of it in one
+// waterfall loop. The custom inserter then expands it into the whole-dword
+// load and store of the same form and a V_BFI.
+let UseNamedOperandTable = 1, hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+    Uses = [M0, EXEC], usesCustomInserter = 1, VGPRAsMem = 1 in {
+  def V_STORE_IDX_BITS
+      : VPseudoInstSI<(outs),
+                      (ins VGPR_32:$data, i32imm:$offset, VSrc_b32:$mask)>,
+        VLdStIdxOpcodeInfo<32, 1, 0, 1>;
+  let Defs = [M0] in
+  def V_STORE_IDX_GPR_IDX_BITS
+      : VPseudoInstSI<(outs), (ins VGPR_32:$data, SReg_32:$idx,
+                                   i32imm:$offset, VSrc_b32:$mask)>,
+        VLdStIdxOpcodeInfo<32, 1, 1, 1>;
 }
 
 // The moves the movrel pseudos expand into. A real v_movrel[sd]_b32 must carry
@@ -1179,6 +1200,32 @@ foreach vt = !listconcat(
     Reg288Types.types, Reg320Types.types, Reg352Types.types, Reg384Types.types,
     Reg512Types.types, Reg1024Types.types) in
 defm : VRegIdxLoadStorePat<vt>;
+
+defvar store_bits_foldable_add = VRegIdxFoldableAdd<1>;
+
+let OtherPredicates = [NotUseVGPRIndexMode] in {
+  def : GCNPat<
+    (SIreg_store_bits i32:$data,
+                      (store_bits_foldable_add M0, (i32 imm:$offset)),
+                      i32:$mask),
+    (V_STORE_IDX_BITS $data, imm:$offset, $mask)>;
+
+  def : GCNPat<
+    (SIreg_store_bits i32:$data, M0, i32:$mask),
+    (V_STORE_IDX_BITS $data, 0, $mask)>;
+}
+
+let OtherPredicates = [UseVGPRIndexMode] in {
+  def : GCNPat<
+    (SIreg_store_bits i32:$data,
+                      (store_bits_foldable_add i32:$idx, (i32 imm:$offset)),
+                      i32:$mask),
+    (V_STORE_IDX_GPR_IDX_BITS $data, $idx, imm:$offset, $mask)>;
+
+  def : GCNPat<
+    (SIreg_store_bits i32:$data, i32:$idx, i32:$mask),
+    (V_STORE_IDX_GPR_IDX_BITS $data, $idx, 0, $mask)>;
+}
 
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this

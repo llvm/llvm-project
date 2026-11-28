@@ -450,14 +450,14 @@ def LDSDMAIntrinsicTable : GenericTable {
 def VLdStIdxOpcodeInfoTable : GenericTable {
   let FilterClass = "VLdStIdxOpcodeInfo";
   let CppTypeName = "VLdStIdxOpcodeInfo";
-  let Fields = ["Opcode", "BitWidth", "IsStore", "IsGPRIdx"];
+  let Fields = ["Opcode", "BitWidth", "IsStore", "IsGPRIdx", "IsSubDword"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVLdStIdxOpcodeInfoByOpcode";
 }
 
 def getVLdStIdxOpcodeInfoByKeyImpl : SearchIndex {
   let Table = VLdStIdxOpcodeInfoTable;
-  let Key = ["BitWidth", "IsStore", "IsGPRIdx"];
+  let Key = ["BitWidth", "IsStore", "IsGPRIdx", "IsSubDword"];
 }
 
 class ExponentOnlyScaleIntrinsic<AMDGPUExponentOnlyScale intr> {

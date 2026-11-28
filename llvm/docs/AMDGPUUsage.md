@@ -2040,6 +2040,14 @@ supported for the `amdgcn` target.
   of `v3`. Storing 8 bytes to address `32` overwrites the contents of
   `v[8:9]`.
 
+  An 8- or 16-bit access reads its whole dword, and a store writes the dword
+  back, even when volatile. An access that is neither a naturally aligned 8- or
+  16-bit one nor a whole number of dwords at dword alignment is split into
+  smaller accesses, which is slower; the parts of a volatile one are accessed
+  in order. A type that is not a whole number of bytes, such as `i1`, is
+  accessed as the bytes of its store size, and a store writes the extra bits as
+  zero.
+
   Use of this address space by frontends is strongly discouraged. It has unusual
   and subtle lifetime rules due to the potential for interaction with normal
   register allocation. It exists primarily for internal purposes of the backend,

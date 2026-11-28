@@ -491,7 +491,8 @@ struct VOP3PHasNoOpSelHiInfo {
 const VLdStIdxOpcodeInfo *
 getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx) {
   assert(isUInt<16>(BitWidth) && "the table's key is 16 bits");
-  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx);
+  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx,
+                                        /*IsSubDword=*/false);
 }
 
 int getMTBUFBaseOpcode(unsigned Opc) {
