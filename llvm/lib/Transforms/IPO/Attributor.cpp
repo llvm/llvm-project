@@ -26,12 +26,14 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -3041,10 +3043,18 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     OldFn->getParent()->getFunctionList().insert(OldFn->getIterator(), NewFn);
     NewFn->takeName(OldFn);
     NewFn->copyAttributesFrom(OldFn);
-
-    // Patch the pointer to LLVM function in debug info descriptor.
-    NewFn->setSubprogram(OldFn->getSubprogram());
+    NewFn->copyMetadata(OldFn, 0);
+    // These name the old signature.
+    for (unsigned Kind : {LLVMContext::MD_type, LLVMContext::MD_kcfi_type,
+                          LLVMContext::MD_callgraph})
+      NewFn->setMetadata(Kind, nullptr);
     OldFn->setSubprogram(nullptr);
+    // The copied debug type still lists the old parameters.
+    if (NewFnTy != OldFnTy && NewFn->getSubprogram()) {
+      DISubprogram *SP = NewFn->getSubprogram();
+      auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+      SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
+    }
 
     // Recompute the parameter attributes list based on the new arguments for
     // the function.
