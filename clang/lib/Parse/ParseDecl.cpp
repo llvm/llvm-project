@@ -2207,11 +2207,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       ;
 
   if (Tok.is(tok::kw_requires)) {
-    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-    // With abbreviated function templates - we need to explicitly add depth to
-    // account for the implicit template parameter list induced by the template.
-    if (!TemplateInfo.TemplateParams && D.getInventedTemplateParameterList())
-      ++CurTemplateDepthTracker;
+    ReenterTemplateScopeRAII InTemplateScope(*this, D);
     ParseTrailingRequiresClauseWithScope(D);
   }
 
@@ -7079,6 +7075,10 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   while (true) {
     if (Tok.is(tok::l_paren)) {
       bool IsFunctionDeclaration = D.isFunctionDeclaratorAFunctionDeclaration();
+      ParseScope ImplicitTemplateScope(this, Scope::NoScope,
+                                       getLangOpts().CPlusPlus &&
+                                           IsFunctionDeclaration);
+
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
       ParseScope PrototypeScope(
@@ -7416,6 +7416,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
                                      BalancedDelimiterTracker &Tracker,
                                      bool IsAmbiguous,
                                      bool RequiresArg) {
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
   assert(getCurScope()->isFunctionPrototypeScope() &&
          "Should call from a Function scope");
   // lparen is already consumed!
@@ -7479,7 +7480,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
           D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef)
         FnLateAttrs = D.getDeclarationLateAttrs();
       ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc,
-                                      FnLateAttrs);
+                                      CurTemplateDepthTracker, FnLateAttrs);
     } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7705,8 +7706,8 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration,
-    LateParsedAttrList *OuterLateParamAttrs) {
+    SourceLocation &EllipsisLoc, TemplateParameterDepthRAII &TemplateDepth,
+    bool IsACXXFunctionDeclaration, LateParsedAttrList *OuterLateParamAttrs) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7883,8 +7884,18 @@ void Parser::ParseParameterDeclarationClause(
 
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
+      Scope *TemplateScope = getCurScope()->getTemplateParamParent();
       Decl *Param =
           Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
+
+      // 'auto' introduces an implicit template scope:
+      //   void f(auto x, int = []<auto N = sizeof(x)>() { return N; }());
+      // Since x's implicit type parameter has depth 0, N needs depth 1.
+      // Otherwise, N would have depth 0, which drops to -1 when f is
+      // instantiated.
+      if (getCurScope()->getTemplateParamParent() != TemplateScope)
+        ++TemplateDepth;
+
       // Claim deferred attributes now, before the next parameter can.
       DistributeCLateParsedAttrs(Param, &LateParamAttrs);
       // Parse the default argument, if any. We parse the default
