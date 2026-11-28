@@ -1059,6 +1059,32 @@ func.func @reduce_bf16(%arg0: tensor<5x4xbf16>) -> () {
 
 // -----
 
+// CHECK-LABEL: @reduce_product_bf16_f32_acc
+// CHECK-SAME: %[[INPUT:.*]]: tensor<2x3xbf16>
+func.func @reduce_product_bf16_f32_acc(
+    %input: tensor<2x3xbf16>) -> tensor<1x3xbf16> {
+  // CHECK: %[[INIT:.*]] = tensor.empty() : tensor<3xf32>
+  // CHECK: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[ONE]] : f32) outs(%[[INIT]] : tensor<3xf32>)
+  // CHECK: %[[REDUCE:.*]] = linalg.reduce ins(%[[INPUT]] : tensor<2x3xbf16>) outs(%[[FILL]] : tensor<3xf32>) dimensions = [0]
+  // CHECK: (%[[IN:.*]]: bf16, %[[ACC:.*]]: f32) {
+  // CHECK-NEXT: %[[EXT:.*]] = arith.extf %[[IN]] : bf16 to f32
+  // CHECK-NEXT: %[[MUL:.*]] = arith.mulf %[[EXT]], %[[ACC]] : f32
+  // CHECK-NEXT: linalg.yield %[[MUL]] : f32
+  // CHECK-NEXT: }
+
+  // CHECK: %[[NARROW:.*]] = linalg.generic {{.*}} ins(%[[REDUCE]] : tensor<3xf32>) outs({{.*}} : tensor<3xbf16>)
+  // CHECK: %[[TRUNC:.*]] = arith.truncf {{.*}} : f32 to bf16
+  // CHECK-NEXT: linalg.yield %[[TRUNC]] : bf16
+  // CHECK: %[[RESULT:.*]] = tensor.expand_shape %[[NARROW]] {{.*}} : tensor<3xbf16> into tensor<1x3xbf16>
+  // CHECK: return %[[RESULT]] : tensor<1x3xbf16>
+  %result = tosa.reduce_product %input axis(0)
+      : (tensor<2x3xbf16>) -> tensor<1x3xbf16>
+  return %result : tensor<1x3xbf16>
+}
+
+// -----
+
 // CHECK-LABEL: @reduce_float
 // CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xf32>
 func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {

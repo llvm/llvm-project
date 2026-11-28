@@ -340,6 +340,28 @@ func.func @matmul_i8_zero_point(%arg0: tensor<2x5x3xi8>, %arg1: tensor<2x3x6xi8>
 
 // -----
 
+// CHECK-LABEL: @matmul_f16_fp8e4m3_to_bf16
+func.func @matmul_f16_fp8e4m3_to_bf16(
+    %arg0: tensor<2x5x3xf16>,
+    %arg1: tensor<2x3x6xf8E4M3FN>) -> tensor<2x5x6xbf16> {
+  // CHECK: %[[FILLED:.+]] = linalg.fill {{.*}} -> tensor<2x5x6xf32>
+  // CHECK: %[[MATMUL:.+]] = linalg.batch_matmul ins(%arg0, %arg1 : {{.*}}) outs(%[[FILLED]] : tensor<2x5x6xf32>) -> tensor<2x5x6xf32>
+  // CHECK: %[[CAST:.+]] = linalg.generic {{.*}} ins(%[[MATMUL]] : tensor<2x5x6xf32>)
+  // CHECK-SAME: outs(%{{.*}} : tensor<2x5x6xbf16>)
+  // CHECK: arith.truncf %{{.*}} : f32 to bf16
+  // CHECK: return %[[CAST]] : tensor<2x5x6xbf16>
+  %a_zp = tosa.const values(dense<0.0> : tensor<1xf16>)
+      : () -> tensor<1xf16>
+  %b_zp = tosa.const values(dense<0.0> : tensor<1xf8E4M3FN>)
+      : () -> tensor<1xf8E4M3FN>
+  %0 = tosa.matmul %arg0, %arg1, %a_zp, %b_zp
+      : (tensor<2x5x3xf16>, tensor<2x3x6xf8E4M3FN>,
+         tensor<1xf16>, tensor<1xf8E4M3FN>) -> tensor<2x5x6xbf16>
+  return %0 : tensor<2x5x6xbf16>
+}
+
+// -----
+
 // CHECK-LABEL: @matmul_zero_point_rank2
 func.func @matmul_zero_point_rank2(%arg0: tensor<5x3xi8>, %arg1: tensor<3x6xi8>) -> tensor<5x6xi32> {
 // CHECK: %[[ZERO:.+]] = arith.constant 0 : i32
@@ -510,9 +532,13 @@ func.func @matmul_t(%arg0: tensor<2x5x3xf32>, %arg1: tensor<2x6x3xf32>) -> tenso
 
 // CHECK-LABEL: @matmul_t_f16_fp8e4m3_to_bf16
 func.func @matmul_t_f16_fp8e4m3_to_bf16(%arg0: tensor<2x5x3xf16>, %arg1: tensor<2x6x3xf8E4M3FN>) -> tensor<2x5x6xbf16> {
-  // CHECK: %[[FILLED:.+]] = linalg.fill {{.*}} -> tensor<2x5x6xbf16>
-  // CHECK: linalg.batch_matmul indexing_maps =
-  // CHECK-SAME: ins(%arg0, %arg1 : tensor<2x5x3xf16>, tensor<2x6x3xf8E4M3FN>) outs(%[[FILLED]] : tensor<2x5x6xbf16>) -> tensor<2x5x6xbf16>
+  // CHECK: %[[FILLED:.+]] = linalg.fill {{.*}} -> tensor<2x5x6xf32>
+  // CHECK: %[[MATMUL:.+]] = linalg.batch_matmul indexing_maps =
+  // CHECK-SAME: ins(%arg0, %arg1 : {{.*}}) outs(%[[FILLED]] : tensor<2x5x6xf32>) -> tensor<2x5x6xf32>
+  // CHECK: %[[CAST:.+]] = linalg.generic {{.*}} ins(%[[MATMUL]] : tensor<2x5x6xf32>)
+  // CHECK-SAME: outs(%{{.*}} : tensor<2x5x6xbf16>)
+  // CHECK: arith.truncf %{{.*}} : f32 to bf16
+  // CHECK: return %[[CAST]] : tensor<2x5x6xbf16>
   %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E4M3FN>}> : () -> tensor<1xf8E4M3FN>
   %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<2x5x3xf16>, tensor<2x6x3xf8E4M3FN>, tensor<1xf16>, tensor<1xf8E4M3FN>) -> tensor<2x5x6xbf16>
@@ -523,9 +549,13 @@ func.func @matmul_t_f16_fp8e4m3_to_bf16(%arg0: tensor<2x5x3xf16>, %arg1: tensor<
 
 // CHECK-LABEL: @matmul_t_fp8e5m2_f16_to_bf16
 func.func @matmul_t_fp8e5m2_f16_to_bf16(%arg0: tensor<2x5x3xf8E5M2>, %arg1: tensor<2x6x3xf16>) -> tensor<2x5x6xbf16> {
-  // CHECK: %[[FILLED:.+]] = linalg.fill {{.*}} -> tensor<2x5x6xbf16>
-  // CHECK: linalg.batch_matmul indexing_maps =
-  // CHECK-SAME: ins(%arg0, %arg1 : tensor<2x5x3xf8E5M2>, tensor<2x6x3xf16>) outs(%[[FILLED]] : tensor<2x5x6xbf16>) -> tensor<2x5x6xbf16>
+  // CHECK: %[[FILLED:.+]] = linalg.fill {{.*}} -> tensor<2x5x6xf32>
+  // CHECK: %[[MATMUL:.+]] = linalg.batch_matmul indexing_maps =
+  // CHECK-SAME: ins(%arg0, %arg1 : {{.*}}) outs(%[[FILLED]] : tensor<2x5x6xf32>) -> tensor<2x5x6xf32>
+  // CHECK: %[[CAST:.+]] = linalg.generic {{.*}} ins(%[[MATMUL]] : tensor<2x5x6xf32>)
+  // CHECK-SAME: outs(%{{.*}} : tensor<2x5x6xbf16>)
+  // CHECK: arith.truncf %{{.*}} : f32 to bf16
+  // CHECK: return %[[CAST]] : tensor<2x5x6xbf16>
   %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E5M2>}> : () -> tensor<1xf8E5M2>
   %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<2x5x3xf8E5M2>, tensor<2x6x3xf16>, tensor<1xf8E5M2>, tensor<1xf16>) -> tensor<2x5x6xbf16>
@@ -1960,6 +1990,29 @@ func.func @depthwise_int_conv_zero_zp(%arg0 : tensor<1x7x5x3xi8>, %arg1 : tensor
 
 // -----
 
+// CHECK-LABEL: @depthwise_conv2d_bf16_f32_acc
+// CHECK: %[[CONV:.*]] = linalg.depthwise_conv_2d_nhwc_hwcm
+// CHECK-SAME: outs(%{{.*}} : tensor<1x2x2x2x3xf32>)
+// CHECK: %[[CAST:.*]] = tosa.cast %[[CONV]]
+// CHECK-SAME: : (tensor<1x2x2x2x3xf32>) -> tensor<1x2x2x2x3xbf16>
+// CHECK: tensor.collapse_shape %[[CAST]]
+// CHECK: return %{{.*}} : tensor<1x2x2x6xbf16>
+func.func @depthwise_conv2d_bf16_f32_acc(
+    %input: tensor<1x3x3x2xbf16>,
+    %weight: tensor<2x2x2x3xbf16>,
+    %bias: tensor<6xbf16>) -> tensor<1x2x2x6xbf16> {
+  %zp = tosa.const values(dense<0.0> : tensor<1xbf16>)
+      : () -> tensor<1xbf16>
+  %result = tosa.depthwise_conv2d %input, %weight, %bias, %zp, %zp
+      pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(bf16)
+      : (tensor<1x3x3x2xbf16>, tensor<2x2x2x3xbf16>,
+         tensor<6xbf16>, tensor<1xbf16>, tensor<1xbf16>)
+      -> tensor<1x2x2x6xbf16>
+  return %result : tensor<1x2x2x6xbf16>
+}
+
+// -----
+
 // CHECK-LABEL: @depthwise_conv2d_f16_f32_acc
 func.func @depthwise_conv2d_f16_f32_acc(%arg0 : tensor<1x7x5x3xf16>, %arg1 : tensor<3x1x3x11xf16>, %arg2 : tensor<33xf16>) -> () {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
@@ -2105,6 +2158,29 @@ func.func @conv3d_f16_f32_acc(%input: tensor<1x49x48x47x27xf16>, %weights: tenso
   // CHECK: tosa.cast %[[CONV]] input_unsigned(false) : (tensor<1x47x45x43x43xf32>) -> tensor<1x47x45x43x43xf16>
   %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x49x48x47x27xf16>, tensor<43x3x4x5x27xf16>, tensor<43xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x47x45x43x43xf16>
   return
+}
+
+// -----
+
+// CHECK-LABEL: @conv3d_bf16_f32_acc
+// CHECK: %[[CONV:.*]] = linalg.conv_3d_ndhwc_dhwcf
+// CHECK-SAME: outs(%{{.*}} : tensor<1x2x2x2x3xf32>)
+// CHECK: %[[CAST:.*]] = tosa.cast %[[CONV]]
+// CHECK-SAME: : (tensor<1x2x2x2x3xf32>) -> tensor<1x2x2x2x3xbf16>
+// CHECK: return %[[CAST]] : tensor<1x2x2x2x3xbf16>
+func.func @conv3d_bf16_f32_acc(
+    %input: tensor<1x2x2x2x4xbf16>,
+    %weight: tensor<3x1x1x1x4xbf16>,
+    %bias: tensor<3xbf16>) -> tensor<1x2x2x2x3xbf16> {
+  %zp = tosa.const values(dense<0.0> : tensor<1xbf16>)
+      : () -> tensor<1xbf16>
+  %result = tosa.conv3d %input, %weight, %bias, %zp, %zp
+      pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1])
+      dilation([1, 1, 1]) acc_type(bf16)
+      : (tensor<1x2x2x2x4xbf16>, tensor<3x1x1x1x4xbf16>,
+         tensor<3xbf16>, tensor<1xbf16>, tensor<1xbf16>)
+      -> tensor<1x2x2x2x3xbf16>
+  return %result : tensor<1x2x2x2x3xbf16>
 }
 
 // -----
