@@ -333,6 +333,8 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_GHC;
   if (CC == CallingConv::CFGuard_Check)
     return CC_AArch64_Win64_CFGuard_Check;
+  if (CC == CallingConv::PreserveNone)
+    return CC_AArch64_Preserve_None;
   if (Subtarget->isTargetDarwin())
     return CC_AArch64_DarwinPCS;
   if (Subtarget->isTargetWindowsOrUEFI())
@@ -2904,7 +2906,9 @@ bool AArch64FastISel::fastLowerArguments() {
     return false;
 
   CallingConv::ID CC = F->getCallingConv();
-  if (CC != CallingConv::C && CC != CallingConv::Swift)
+  if (CC != CallingConv::C && CC != CallingConv::Swift &&
+      CC != CallingConv::PreserveMost && CC != CallingConv::PreserveAll &&
+      !(CC == CallingConv::PreserveNone && F->arg_empty()))
     return false;
 
   if (Subtarget->hasCustomCallingConv())
@@ -3105,12 +3109,13 @@ bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, unsigned NumBytes) {
   // Issue CALLSEQ_END
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
-    .addImm(NumBytes).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0);
 
   // Now the return values.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-  CCInfo.AnalyzeCallResult(CLI.Ins, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_AArch64_AAPCS);
 
   Register ResultReg = FuncInfo.CreateRegs(CLI.RetTy);
   for (unsigned i = 0; i != RVLocs.size(); ++i) {

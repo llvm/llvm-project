@@ -771,7 +771,9 @@ bool AArch64CallLowering::lowerFormalArguments(
 
   // If an argument is marked "sret" and "inreg", it must be returned in x0.
   // Bail for now.
-  if (IsWin64 && any_of(F.args(), [](const Argument &A) {
+  if ((IsWin64 || (Subtarget.isTargetWindowsOrUEFI() &&
+                   F.getCallingConv() == CallingConv::PreserveNone)) &&
+      any_of(F.args(), [](const Argument &A) {
         return A.hasStructRetAttr() && A.hasInRegAttr();
       }))
     return false;

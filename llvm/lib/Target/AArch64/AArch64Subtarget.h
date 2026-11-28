@@ -428,6 +428,8 @@ public:
     switch (CC) {
     case CallingConv::C:
     case CallingConv::Fast:
+    case CallingConv::PreserveMost:
+    case CallingConv::PreserveAll:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
       return isTargetWindowsOrUEFI();
