@@ -216,6 +216,119 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   containerOp->destroy();
 }
 
+TEST(OperationOrderTest, MoveWithinBlockPreservesOrderValidity) {
+  MLIRContext context;
+  Block block;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  Operation *c = createOp(&context);
+  Operation *d = createOp(&context);
+  for (Operation *op : {a, b, c, d})
+    block.push_back(op);
+  block.recomputeOpOrder();
+
+  // Move into the middle, to the end, and to the beginning. Check validity
+  // before querying the order, since a query may recompute it.
+  d->moveBefore(b);
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(a->isBeforeInBlock(d));
+  EXPECT_TRUE(d->isBeforeInBlock(b));
+  EXPECT_TRUE(b->isBeforeInBlock(c));
+  EXPECT_FALSE(block.verifyOpOrder());
+
+  a->moveBefore(&block, block.end());
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(c->isBeforeInBlock(a));
+  EXPECT_FALSE(a->isBeforeInBlock(d));
+  EXPECT_FALSE(block.verifyOpOrder());
+
+  c->moveBefore(&block, block.begin());
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(c->isBeforeInBlock(d));
+  EXPECT_FALSE(d->isBeforeInBlock(c));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
+TEST(OperationOrderTest, MoveAcrossBlocksPreservesOrderValidity) {
+  MLIRContext context;
+  Block source, destination;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  Operation *c = createOp(&context);
+  Operation *d = createOp(&context);
+  source.push_back(a);
+  source.push_back(b);
+  destination.push_back(c);
+  destination.push_back(d);
+  source.recomputeOpOrder();
+  destination.recomputeOpOrder();
+
+  a->moveBefore(d);
+  EXPECT_EQ(a->getBlock(), &destination);
+  EXPECT_EQ(b->getBlock(), &source);
+  EXPECT_TRUE(source.isOpOrderValid());
+  EXPECT_TRUE(destination.isOpOrderValid());
+  EXPECT_TRUE(c->isBeforeInBlock(a));
+  EXPECT_TRUE(a->isBeforeInBlock(d));
+  EXPECT_FALSE(source.verifyOpOrder());
+  EXPECT_FALSE(destination.verifyOpOrder());
+
+  // Also cover moving the last operation out of a block.
+  b->moveAfter(a);
+  EXPECT_TRUE(source.empty());
+  EXPECT_TRUE(source.isOpOrderValid());
+  EXPECT_TRUE(destination.isOpOrderValid());
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_TRUE(b->isBeforeInBlock(d));
+  EXPECT_FALSE(destination.verifyOpOrder());
+}
+
+TEST(OperationOrderTest, QueryAfterMovingAdjacentOperations) {
+  MLIRContext context;
+  Block block;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  Operation *c = createOp(&context);
+  Operation *d = createOp(&context);
+  for (Operation *op : {a, b, c, d})
+    block.push_back(op);
+  block.recomputeOpOrder();
+
+  // Leave adjacent operations with invalid indices. Querying their order must
+  // still work when updating a single index requires recomputing the block.
+  a->moveAfter(d);
+  b->moveAfter(a);
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(c->isBeforeInBlock(d));
+  EXPECT_TRUE(d->isBeforeInBlock(a));
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_FALSE(b->isBeforeInBlock(c));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
+TEST(OperationOrderTest, MoveToSamePositionPreservesOrderValidity) {
+  MLIRContext context;
+  Block block;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  block.push_back(a);
+  block.push_back(b);
+  block.recomputeOpOrder();
+
+  a->moveBefore(a);
+  EXPECT_TRUE(block.isOpOrderValid());
+  a->moveBefore(b);
+  EXPECT_TRUE(block.isOpOrderValid());
+  b->moveBefore(&block, block.end());
+  EXPECT_TRUE(block.isOpOrderValid());
+  b->moveAfter(b);
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_EQ(&block.front(), a);
+  EXPECT_EQ(&block.back(), b);
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
 TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
   MLIRContext context;
   Builder builder(&context);

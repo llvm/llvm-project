@@ -553,8 +553,15 @@ void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
   assert(getBlock() &&
          "cannot move an operation that isn't contained in a block");
-  block->getOperations().splice(iterator, getBlock()->getOperations(),
-                                getIterator());
+  auto current = getIterator();
+  if (getBlock() == block &&
+      (iterator == current || iterator == std::next(current)))
+    return;
+
+  // Remove and reinsert to invalidate only this operation's order index,
+  // preserving the cached order of the other operations.
+  remove();
+  block->getOperations().insert(iterator, this);
 }
 
 /// Unlink this operation from its current block and insert it right after
