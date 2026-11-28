@@ -1407,7 +1407,7 @@ func.func @switch_i8_distinct_signs(%selector: i8) -> () {
 
 // 255 and -1 are the same i8 value.
 func.func @switch_duplicate_literal(%selector: i8) -> () {
-  // expected-error@+1 {{'spirv.Switch' op literal -1 (unsigned 255) is repeated (targets 0 and 2)}}
+  // expected-error@+1 {{'spirv.Switch' op literals cannot repeat}}
   spirv.Switch %selector : i8, [default: ^bb1, 255: ^bb1, 1: ^bb1, -1: ^bb1]
 ^bb1:
   spirv.Return
