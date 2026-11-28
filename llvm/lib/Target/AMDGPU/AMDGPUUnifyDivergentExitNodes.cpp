@@ -22,6 +22,7 @@
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPU.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,6 +38,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Type.h"
@@ -113,6 +115,45 @@ void AMDGPUUnifyDivergentExitNodesLegacy::getAnalysisUsage(
   FunctionPass::getAnalysisUsage(AU);
 
   AU.addRequired<TargetTransformInfoWrapperPass>();
+}
+
+/// Turn calls that are marked noreturn into an ordinary if-then edge. Keeps
+/// this from appearing as another edge to the structurizer with live values.
+static bool
+rejoinNoReturnBlock(BasicBlock &BB,
+                    const SmallPtrSetImpl<BasicBlock *> &ReachesReturn,
+                    std::vector<DominatorTree::UpdateType> &Updates) {
+  Instruction *Term = BB.getTerminator();
+  auto *Call = dyn_cast_or_null<CallInst>(Term->getPrevNode());
+  BasicBlock *Pred = BB.getSinglePredecessor();
+  auto *Br = Pred ? dyn_cast<CondBrInst>(Pred->getTerminator()) : nullptr;
+  // Noreturn intrinsics have their own lowering, which may expect the
+  // unreachable, as llvm.amdgcn.cs.chain does.
+  if (!isa<UnreachableInst>(Term) || !Call || isa<IntrinsicInst>(Call) ||
+      !Call->doesNotReturn() || !Br)
+    return false;
+
+  // A join could make PHIs divergent, and a continuation that never returns
+  // could leave a loop without an exit.
+  BasicBlock *Succ = Br->getSuccessor(Br->getSuccessor(0) == &BB ? 1 : 0);
+  if (Succ->getSinglePredecessor() != Pred || !ReachesReturn.contains(Succ))
+    return false;
+
+  // The edge can place BB in a cycle, which is invalid for a convergence token
+  // defined outside of it.
+  if (any_of(BB, [](const Instruction &I) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        return CB && CB->getConvergenceControlToken();
+      }))
+    return false;
+
+  // Succ's PHIs are trivial. An entry for BB would let simplifyCFG, which runs
+  // on returning blocks below, drop the edge again if the value is UB to use.
+  FoldSingleEntryPHINodes(Succ);
+  Term->eraseFromParent();
+  UncondBrInst::Create(Succ, &BB);
+  Updates.emplace_back(DominatorTree::Insert, &BB, Succ);
+  return true;
 }
 
 /// \returns true if \p BB is reachable through only uniform branches.
@@ -242,6 +283,24 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
   bool Changed = false;
   std::vector<DominatorTree::UpdateType> Updates;
 
+  // Blocks that can reach a return, including the return. Iteration fills the
+  // set.
+  df_iterator_default_set<BasicBlock *, 32> ReachesReturn;
+  for (BasicBlock *Root : PDT.roots()) {
+    if (!isa<ReturnInst>(Root->getTerminator()))
+      continue;
+    for (BasicBlock *BB : inverse_depth_first_ext(Root, ReachesReturn))
+      (void)BB;
+  }
+
+  SmallVector<BasicBlock *, 4> Roots;
+  for (BasicBlock *BB : PDT.roots()) {
+    if (rejoinNoReturnBlock(*BB, ReachesReturn, Updates))
+      Changed = true;
+    else
+      Roots.push_back(BB);
+  }
+
   // TODO: For now we unify all exit blocks, even though they are uniformly
   // reachable, if there are any exits not uniformly reached. This is to
   // workaround the limitation of structurizer, which can not handle multiple
@@ -249,9 +308,9 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
   // exits, we should only unify UnreachableBlocks that are not uniformly
   // reachable.
   bool HasDivergentExitBlock = llvm::any_of(
-      PDT.roots(), [&](auto BB) { return !isUniformlyReached(UA, *BB); });
+      Roots, [&](auto BB) { return !isUniformlyReached(UA, *BB); });
 
-  for (BasicBlock *BB : PDT.roots()) {
+  for (BasicBlock *BB : Roots) {
     Instruction *Term = BB->getTerminator();
     if (auto *RI = dyn_cast<ReturnInst>(Term)) {
       auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode());
