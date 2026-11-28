@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
+#include "llvm/Support/Parallel.h"
 
 namespace llvm {
 namespace dwarf_linker {
@@ -369,7 +370,7 @@ protected:
   void emitCommonSectionsAndWriteCompileUnitsToTheOutput();
 
   /// Emit apple accelerator sections.
-  void emitAppleAcceleratorSections(const Triple &TargetTriple);
+  void emitAppleAcceleratorSections(llvm::parallel::TaskGroup &TG);
 
   /// Emit .debug_names section.
   void emitDWARFv5DebugNamesSection(const Triple &TargetTriple);

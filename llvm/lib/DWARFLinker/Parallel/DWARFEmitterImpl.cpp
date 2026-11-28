@@ -179,35 +179,3 @@ void DwarfEmitterImpl::emitDebugNames(DWARF5AccelTable &Table,
         return std::nullopt;
       });
 }
-
-void DwarfEmitterImpl::emitAppleNamespaces(
-    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamespaceSection());
-  auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
-  Asm->OutStreamer->emitLabel(SectionBegin);
-  emitAppleAccelTable(Asm.get(), Table, "namespac", SectionBegin);
-}
-
-void DwarfEmitterImpl::emitAppleNames(
-    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamesSection());
-  auto *SectionBegin = Asm->createTempSymbol("names_begin");
-  Asm->OutStreamer->emitLabel(SectionBegin);
-  emitAppleAccelTable(Asm.get(), Table, "names", SectionBegin);
-}
-
-void DwarfEmitterImpl::emitAppleObjc(
-    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelObjCSection());
-  auto *SectionBegin = Asm->createTempSymbol("objc_begin");
-  Asm->OutStreamer->emitLabel(SectionBegin);
-  emitAppleAccelTable(Asm.get(), Table, "objc", SectionBegin);
-}
-
-void DwarfEmitterImpl::emitAppleTypes(
-    AccelTable<AppleAccelTableStaticTypeData> &Table) {
-  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelTypesSection());
-  auto *SectionBegin = Asm->createTempSymbol("types_begin");
-  Asm->OutStreamer->emitLabel(SectionBegin);
-  emitAppleAccelTable(Asm.get(), Table, "types", SectionBegin);
-}
