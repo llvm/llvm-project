@@ -1108,6 +1108,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   setLiveRoot(Index, "llvm.global_dtors");
   setLiveRoot(Index, "llvm.global.annotations");
 
+  DenseSet<GlobalValue::GUID> AliasedVarGUIDs;
+  for (const GlobalAlias &GA : M.aliases())
+    if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GA.getAliaseeObject()))
+      AliasedVarGUIDs.insert(GVar->getGUID());
+
   for (auto &GlobalList : Index) {
     // Ignore entries for references that are undefined in the current module.
     if (GlobalList.second.getSummaryList().empty())
@@ -1125,7 +1130,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
         llvm::all_of(Summary->refs(), [&](const ValueInfo &VI) {
           return !CantBePromoted.count(VI.getGUID());
         });
-    if (!AllRefsCanBeExternallyReferenced) {
+    bool RefsAliasedVariable =
+        llvm::any_of(Summary->refs(), [&](const ValueInfo &VI) {
+          return AliasedVarGUIDs.count(VI.getGUID());
+        });
+    if (!AllRefsCanBeExternallyReferenced || RefsAliasedVariable) {
       Summary->setNotEligibleToImport();
       continue;
     }
