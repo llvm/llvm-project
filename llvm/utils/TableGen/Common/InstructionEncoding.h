@@ -48,7 +48,8 @@ struct OperandInfo {
   bool HasCompleteDecoder;
   std::optional<uint64_t> InitValue;
 
-  OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
+  OperandInfo(std::string D, bool HCD)
+      : Decoder(std::move(D)), HasCompleteDecoder(HCD) {}
 };
 
 /// Represents a parsed InstructionEncoding record or a record derived from it.

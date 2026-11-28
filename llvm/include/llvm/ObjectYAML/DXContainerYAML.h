@@ -389,7 +389,7 @@ struct SourceInfo {
 
 struct Part {
   Part() = default;
-  Part(std::string N, uint32_t S) : Name(N), Size(S) {}
+  Part(std::string N, uint32_t S) : Name(std::move(N)), Size(S) {}
   std::string Name;
   uint32_t Size;
   std::optional<DXILProgram> Program;

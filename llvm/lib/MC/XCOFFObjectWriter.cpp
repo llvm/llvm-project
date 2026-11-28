@@ -260,7 +260,7 @@ struct CInfoSymInfo {
   uint64_t Offset;
 
   CInfoSymInfo(std::string Name, std::string Metadata)
-      : Name(Name), Metadata(Metadata) {}
+      : Name(std::move(Name)), Metadata(std::move(Metadata)) {}
   // Metadata needs to be padded out to an even word size.
   uint32_t paddingSize() const {
     return alignTo(Metadata.size(), sizeof(uint32_t)) - Metadata.size();

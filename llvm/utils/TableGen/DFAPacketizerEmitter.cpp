@@ -85,7 +85,7 @@ public:
   // Emit code for a subset of itineraries.
   void emitForItineraries(raw_ostream &OS,
                           std::vector<const CodeGenProcModel *> &ProcItinList,
-                          std::string DFAName);
+                          StringRef DFAName);
 
   void run(raw_ostream &OS);
 };
@@ -226,13 +226,13 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   }
 
   for (auto &KV : ItinsByNamespace)
-    emitForItineraries(OS, KV.second, KV.first().str());
+    emitForItineraries(OS, KV.second, KV.first());
   OS << "} // end namespace llvm\n";
 }
 
 void DFAPacketizerEmitter::emitForItineraries(
     raw_ostream &OS, std::vector<const CodeGenProcModel *> &ProcModels,
-    std::string DFAName) {
+    StringRef DFAName) {
   OS << "} // end namespace llvm\n\n";
   OS << "namespace {\n";
   collectAllFuncUnits(ProcModels);
@@ -353,7 +353,7 @@ void DFAPacketizerEmitter::emitForItineraries(
     }
   }
 
-  std::string TargetAndDFAName = TargetName + DFAName;
+  std::string TargetAndDFAName = (TargetName + DFAName).str();
   Emitter.emit(TargetAndDFAName, OS);
   OS << "} // end anonymous namespace\n\n";
 

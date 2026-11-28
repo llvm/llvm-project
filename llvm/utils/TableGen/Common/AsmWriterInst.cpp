@@ -78,7 +78,7 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
           AddLiteralString("\\\\");
           break;
         default:
-          AddLiteralString(std::string(1, AsmString[LastEmitted]));
+          AddLiteralString(StringRef(AsmString).substr(LastEmitted, 1));
           break;
         }
     } else if (AsmString[DollarPos] == '\\') {
@@ -87,9 +87,8 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
           AddLiteralString("\\n");
         } else if (AsmString[DollarPos + 1] == 't') {
           AddLiteralString("\\t");
-        } else if (std::string("${|}\\").find(AsmString[DollarPos + 1]) !=
-                   std::string::npos) {
-          AddLiteralString(std::string(1, AsmString[DollarPos + 1]));
+        } else if (StringRef("${|}\\").contains(AsmString[DollarPos + 1])) {
+          AddLiteralString(StringRef(AsmString).substr(DollarPos + 1, 1));
         } else {
           PrintFatalError(
               CGI.TheDef->getLoc(),

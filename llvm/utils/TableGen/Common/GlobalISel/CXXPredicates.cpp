@@ -42,7 +42,8 @@ const CXXPredicateCode &CXXPredicateCode::get(CXXPredicateCodePool &Pool,
 
 // TODO: Make BaseEnumName prefix configurable.
 CXXPredicateCode::CXXPredicateCode(std::string Code, unsigned ID)
-    : Code(Code), ID(ID), BaseEnumName("GICombiner" + std::to_string(ID)) {}
+    : Code(std::move(Code)), ID(ID),
+      BaseEnumName("GICombiner" + std::to_string(ID)) {}
 
 CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXMatchCode;
 CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXCustomActionCode;
