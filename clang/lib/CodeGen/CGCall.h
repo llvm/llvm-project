@@ -413,7 +413,10 @@ enum class FnInfoOpts {
   IsInstanceMethod = 1 << 0,
   IsChainCall = 1 << 1,
   IsDelegateCall = 1 << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsDelegateCall)
+  // ABIInfoFD describes the function being arranged rather than the caller, so
+  // its parameter attributes may affect ABI classification.
+  IsFunctionDeclaration = 1 << 3,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsFunctionDeclaration)
 };
 
 struct DisableDebugLocationUpdates {
