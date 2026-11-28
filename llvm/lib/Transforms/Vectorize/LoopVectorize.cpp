@@ -5570,6 +5570,59 @@ LoopVectorizationPlanner::~LoopVectorizationPlanner() = default;
 
 void LoopVectorizationPlanner::clearCostModel() { CM.reset(); }
 
+/// Return clones of the dbg_value records in \p L for variables whose locations
+/// in \p L are all loop-invariant and unambiguous, so they hold throughout the
+/// vector loop.
+static SmallVector<DbgVariableRecord *>
+cloneLoopInvariantDbgValues(const Loop *L, const DominatorTree &DT) {
+  auto IsInvariant = [&](const DbgVariableRecord &DVR) {
+    return DVR.isDbgValue() && !DVR.isKillLocation() &&
+           all_of(DVR.location_ops(), [&](Value *V) {
+             auto *I = dyn_cast<Instruction>(V);
+             return !I || (!L->contains(I) &&
+                           DT.dominates(I->getParent(), L->getHeader()));
+           });
+  };
+
+  MapVector<DebugVariableAggregate, SmallVector<DbgVariableRecord *>> Vars;
+  DenseSet<DebugVariableAggregate> Rejected;
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        DebugVariableAggregate Var(&DVR);
+        if (Rejected.contains(Var))
+          continue;
+        if (!IsInvariant(DVR)) {
+          Rejected.insert(Var);
+          continue;
+        }
+        // Overlapping fragments must agree, as their order is not preserved.
+        SmallVector<DbgVariableRecord *> &Records = Vars[Var];
+        bool Duplicate = false;
+        for (DbgVariableRecord *Prev : Records) {
+          if (!Prev->getExpression()->fragmentsOverlap(DVR.getExpression()))
+            continue;
+          if (Prev->getRawLocation() != DVR.getRawLocation() ||
+              Prev->getExpression() != DVR.getExpression()) {
+            Rejected.insert(Var);
+            break;
+          }
+          Duplicate = true;
+        }
+        if (!Duplicate && !Rejected.contains(Var))
+          Records.push_back(&DVR);
+      }
+    }
+  }
+
+  SmallVector<DbgVariableRecord *> Clones;
+  for (const auto &[Var, Records] : Vars)
+    if (!Rejected.contains(Var))
+      for (DbgVariableRecord *DVR : Records)
+        Clones.push_back(DVR->clone());
+  return Clones;
+}
+
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     bool HasRuntimeChecks, EpilogueVectorizationKind EpilogueVecKind,
@@ -5747,6 +5800,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   unsigned OrigLoopInvocationWeight = 0;
   std::optional<unsigned> OrigAverageTripCount =
       getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
+  SmallVector<DbgVariableRecord *> InvariantDbgValues =
+      cloneLoopInvariantDbgValues(OrigLoop, *DT);
 
   BestVPlan.execute(&State);
 
@@ -5770,6 +5825,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 3. Remove redundant induction instructions, if a vector loop remains.
   if (HeaderVPBB)
     legacyCSE(State.CFG.VPBB2IRBB.lookup(HeaderVPBB));
+
+  // TODO: Model debug records in VPlan instead.
+  for (DbgVariableRecord *DVR : reverse(InvariantDbgValues)) {
+    if (!HeaderVPBB) {
+      DVR->deleteRecord();
+      continue;
+    }
+    BasicBlock *Header = State.CFG.VPBB2IRBB.lookup(HeaderVPBB);
+    Header->insertDbgRecordBefore(DVR, Header->getFirstNonPHIIt());
+  }
 
   // Wrap the generated blocks in VPIRBasicBlocks, so they can be used in the
   // epilogue plan.
