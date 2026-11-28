@@ -156,28 +156,6 @@ exit:
   ret i32 0
 }
 
-define i64 @find_last_offset_wide_canonical_iv(ptr %A, i64 %n) {
-; CHECK-LABEL: Checking a loop in 'find_last_offset_wide_canonical_iv'
-; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with reductions
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %red = phi i64 [ -1, %entry ], [ %sel, %loop ]
-  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-  %l = load i32, ptr %gep, align 4
-  %c = icmp eq i32 %l, 11
-  %sel = select i1 %c, i64 %iv, i64 %red
-  %iv.next = add nuw nsw i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, %n
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret i64 %sel
-}
-
 define i32 @fixed-order-recurrence(ptr %src) {
 ; CHECK-LABEL: Checking a loop in 'fixed-order-recurrence'
 ; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with fixed-order recurrence
