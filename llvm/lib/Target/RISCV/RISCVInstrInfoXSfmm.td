@@ -301,9 +301,9 @@ class VPseudoSF_VTileStore
   let hasSideEffects = 1;
 }
 
-class VPseudoSF_VTileMove_V_T
-    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, GPRNoX0:$atn, sew:$sew,
-                                         twiden:$twiden)> {
+class VPseudoSF_VTileMove_V_T<RegisterClass vreg_class>
+    : RISCVVPseudo<(outs vreg_class:$vd), (ins GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                               twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -312,8 +312,8 @@ class VPseudoSF_VTileMove_V_T
   let hasSideEffects = 1;
 }
 
-class VPseudoSF_VTileMove_T_V
-    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, GPRNoX0:$atn, sew:$sew,
+class VPseudoSF_VTileMove_T_V<RegisterClass vreg_class>
+    : RISCVVPseudo<(outs), (ins GPR:$rs1, vreg_class:$vs2, GPRNoX0:$atn, sew:$sew,
                                 twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -394,8 +394,10 @@ foreach eew = [8, 16, 32, 64] in {
   def PseudoSF_VSTE # eew : VPseudoSF_VTileStore;
 }
 
-def PseudoSF_VTMV_T_V : VPseudoSF_VTileMove_T_V;
-def PseudoSF_VTMV_V_T : VPseudoSF_VTileMove_V_T;
+foreach lmul = [V_M2, V_M4, V_M8] in {
+  def PseudoSF_VTMV_T_V_ # lmul.MX : VPseudoSF_VTileMove_T_V<lmul.vrclass>;
+  def PseudoSF_VTMV_V_T_ # lmul.MX : VPseudoSF_VTileMove_V_T<lmul.vrclass>;
+}
 
 foreach a = I8Encodes in
   foreach b = I8Encodes in
@@ -436,14 +438,15 @@ class VPatXSfmmTileStore<string intrinsic_name,
 class VPatXSfmmTileMove_T_V<string intrinsic_name,
                             string inst_name,
                             ValueType reg_type,
+                            RegisterClass vreg_class,
                             int log2sew> :
   Pat<(!cast<Intrinsic>(intrinsic_name)
                     (XLenVT GPR:$rs1),
-                    (reg_type VRM8:$vs2),
+                    (reg_type vreg_class:$vs2),
                     (XLenVT GPRNoX0:$atn)),
       (!cast<Instruction>(inst_name)
        (XLenVT GPR:$rs1),
-       (reg_type VRM8:$vs2),
+       (reg_type vreg_class:$vs2),
        GPR:$atn, log2sew, 1)>;
 
 class VPatXSfmmTileMove_V_T<string intrinsic_name,
@@ -465,9 +468,14 @@ class VPatXSfmmVTDiscard<string intrinsic_name,
 foreach eew = [8, 16, 32, 64] in
   def : VPatXSfmmTileStore<"int_riscv_sf_vste" # eew, "PseudoSF_VSTE" # eew, !logtwo(eew)>;
 
-foreach vti = [VI8M8, VI16M8, VI32M8, VI64M8, VF16M8, VF32M8, VF64M8, VBF16M8] in {
-  def : VPatXSfmmTileMove_T_V<"int_riscv_sf_vtmv_t_v", "PseudoSF_VTMV_T_V", vti.Vector, vti.Log2SEW>;
-  def : VPatXSfmmTileMove_V_T<"int_riscv_sf_vtmv_v_t", "PseudoSF_VTMV_V_T", vti.Vector, vti.Log2SEW>;
+foreach vti = [VI8M2, VI16M4, VF16M4, VBF16M4, VI8M8, VI16M8, VI32M8, VI64M8,
+               VF16M8, VF32M8, VF64M8, VBF16M8] in {
+  def : VPatXSfmmTileMove_T_V<"int_riscv_sf_vtmv_t_v",
+                              "PseudoSF_VTMV_T_V_" # vti.LMul.MX, vti.Vector,
+                              vti.LMul.vrclass, vti.Log2SEW>;
+  def : VPatXSfmmTileMove_V_T<"int_riscv_sf_vtmv_v_t",
+                              "PseudoSF_VTMV_V_T_" # vti.LMul.MX, vti.Vector,
+                              vti.Log2SEW>;
 }
 
 def : VPatXSfmmVTDiscard<"int_riscv_sf_vtdiscard", "PseudoSF_VTDISCARD">;

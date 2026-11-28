@@ -8,6 +8,86 @@
 
 #include <sifive_vector.h>
 
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_sf_vtmv_v_t_i8m2(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.sf.vtmv.v.t.nxv16i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+vint8m2_t test_sf_vtmv_v_t_i8m2(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_i8m2(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_sf_vtmv_v_t_u8m2(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.sf.vtmv.v.t.nxv16i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+vuint8m2_t test_sf_vtmv_v_t_u8m2(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_u8m2(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_sf_vtmv_v_t_f8e4m3m2(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.sf.vtmv.v.t.nxv16i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+vfloat8e4m3m2_t test_sf_vtmv_v_t_f8e4m3m2(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_f8e4m3m2(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_sf_vtmv_v_t_f8e5m2m2(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.sf.vtmv.v.t.nxv16i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+vfloat8e5m2m2_t test_sf_vtmv_v_t_f8e5m2m2(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_f8e5m2m2(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_sf_vtmv_v_t_i16m4(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.sf.vtmv.v.t.nxv16i16.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
+//
+vint16m4_t test_sf_vtmv_v_t_i16m4(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_i16m4(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_sf_vtmv_v_t_u16m4(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.sf.vtmv.v.t.nxv16i16.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
+//
+vuint16m4_t test_sf_vtmv_v_t_u16m4(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_u16m4(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x half> @test_sf_vtmv_v_t_f16m4(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.sf.vtmv.v.t.nxv16f16.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
+//
+vfloat16m4_t test_sf_vtmv_v_t_f16m4(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_f16m4(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_sf_vtmv_v_t_bf16m4(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.riscv.sf.vtmv.v.t.nxv16bf16.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
+//
+vbfloat16m4_t test_sf_vtmv_v_t_bf16m4(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_bf16m4(tss, vl);
+}
+
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x bfloat> @test_sf_vtmv_v_t_bf16m8(
 // CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:

@@ -266,7 +266,10 @@ multiclass RVVSFTileMoveBuiltinSet<list<list<string>> suffixes_prototypes,
         Name = NAME,
         IRName = NAME,
         HasVL = true,
-        Log2LMUL = [3],
+        Log2LMUL = !cond(
+            !or(!eq(type, "c"), !eq(type, "a"), !eq(type, "b")): [1, 3],
+            !or(!eq(type, "s"), !eq(type, "x"), !eq(type, "y")): [2, 3],
+            true: [3]),
         IntrinsicTypes = intrinsic_types in
       def : RVVBuiltin<sp[0], sp[1], type>;
 }
