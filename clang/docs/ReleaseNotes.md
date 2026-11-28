@@ -1088,6 +1088,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
+- Fixed stack overflows during recursive argument-dependent lookup and while
+  printing deeply nested template arguments in diagnostics. (#GH242311)
+
 - Clang now recovers from invalid single pointer declarators in structured
   bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
   This allows type deduction to proceed and avoids redundant follow-up
