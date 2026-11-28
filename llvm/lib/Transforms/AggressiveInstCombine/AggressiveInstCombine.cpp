@@ -91,6 +91,22 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 ///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 false)
 ///   %result = trunc iN %cttz_wide to i(N/2)
 /// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/-s14-s
+///
+/// The hi arm may instead guard the zero case itself, giving a defined value
+/// at zero:
+///
+///   %hi_plus = add/or_disjoint i(N/2) %cttz_hi, N/2
+///   %hi_sel = select i1 (icmp eq %val, 0), i(N/2) ZeroVal, i(N/2) %hi_plus
+///   %result = select i1 %cmp, i(N/2) %hi_sel, i(N/2) %cttz_lo
+/// -->
+///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 true)
+///   %trunc = trunc iN %cttz_wide to i(N/2)
+///   %result = select i1 (icmp eq iN %val, 0), i(N/2) ZeroVal, i(N/2) %trunc
+///
+/// Here %cmp implies that %val == 0 iff the guard compares equal to zero, so
+/// the guard's compare operand may be %val, %shr, or %hi. ZeroVal is kept
+/// as-is: when %val == 0 the original also produces ZeroVal.
+/// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/4H9gqk
 // TrueVal/FalseVal are pre-normalized by the caller to the EQ/NE cases.
 static bool foldSelectSplitCTTZ(Instruction &I, Value *LoTrunc, Value *HiResult,
                                 Value *LoResult, Type *HalfTy) {
@@ -109,10 +125,49 @@ static bool foldSelectSplitCTTZ(Instruction &I, Value *LoTrunc, Value *HiResult,
     return false;
 
   // HiResult: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2)), _), N/2)
-  Value *CttzHiCall;
+  // or a select guarding zero: select (CmpOp2 == 0), ZeroVal, NonZeroArm
+  Value *CttzHiCall = nullptr;
+  Value *ZeroVal = nullptr;
+
   if (!match(HiResult, m_OneUse(m_AddLike(m_Value(CttzHiCall),
-                                          m_SpecificInt(HalfWidth)))))
-    return false;
+                                          m_SpecificInt(HalfWidth))))) {
+    Value *CmpOp2, *TrueArm2, *FalseArm2;
+    // Match select(icmp eq/ne CmpOp2, 0), folding the icmp into the select.
+    if (!match(HiResult,
+              m_OneUse(m_Select(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                              m_Value(CmpOp2), m_ZeroInt()),
+                                m_Value(TrueArm2), m_Value(FalseArm2)))) &&
+        !match(HiResult,
+              m_OneUse(m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                              m_Value(CmpOp2), m_ZeroInt()),
+                                m_Value(FalseArm2), m_Value(TrueArm2)))))
+      return false;
+
+    if (!match(TrueArm2, m_Constant()))
+      return false;
+    ZeroVal = TrueArm2;
+
+    if (!match(FalseArm2, m_OneUse(m_AddLike(m_Value(CttzHiCall),
+                                             m_SpecificInt(HalfWidth)))))
+      return false;
+
+    // Under lo == 0, val == 0 iff hi == 0. CmpOp2 must be either SrcVal or the
+    // hi value (lshr or its trunc to the full half-width). A narrower trunc
+    // drops upper bits of the high half and is unsound.
+    auto isHiValue = [&](Value *V) {
+      if (V == SrcVal)
+        return true;
+      Value *ShVal;
+      if (match(V, m_Trunc(m_Value(ShVal)))) {
+        if (V->getType() != HalfTy)
+          return false;  // Narrower trunc drops high-half bits — unsound
+        V = ShVal;
+      }
+      return match(V, m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)));
+    };
+    if (!isHiValue(CmpOp2))
+      return false;
+  }
 
   Value *HiCttzArg;
   if (!match(CttzHiCall, m_OneUse(m_Cttz(m_Value(HiCttzArg), m_Value()))))
@@ -124,11 +179,20 @@ static bool foldSelectSplitCTTZ(Instruction &I, Value *LoTrunc, Value *HiResult,
 
   // Match successful.
   IRBuilder<> Builder(&I);
+  // When ZeroVal is set the wide cttz uses zero_poison=true (the wrapping
+  // select guards zero), otherwise zero_poison=false.
   Value *CttzWide = Builder.CreateIntrinsic(
-      Intrinsic::cttz, {SrcVal->getType()}, {SrcVal, Builder.getFalse()});
+      Intrinsic::cttz, {SrcVal->getType()},
+      {SrcVal, Builder.getInt1(ZeroVal != nullptr)});
   Value *Trunc = Builder.CreateTrunc(CttzWide, HalfTy);
 
-  I.replaceAllUsesWith(Trunc);
+  Value *Result = Trunc;
+  if (ZeroVal) {
+    Value *CmpZero =
+        Builder.CreateICmpEQ(SrcVal, Constant::getNullValue(SrcVal->getType()));
+    Result = Builder.CreateSelect(CmpZero, ZeroVal, Trunc);
+  }
+  I.replaceAllUsesWith(Result);
   ++NumSelectCTTZFolded;
   return true;
 }
