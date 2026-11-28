@@ -157,7 +157,7 @@ for.end:
 ; DEFAULT:    Precomputed costs for VF 2: 3
 ; VPLAN: Precomputed costs for VF 2: 0
 ; CHECK:   Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
-; VPLAN: Cost of 2 for VF 2: REPLICATE ir<%tmp3> = add nsw ir<%tmp2>, ir<%x>
+; VPLAN: Cost of 3 for VF 2: REPLICATE ir<%tmp3> = add nsw ir<%tmp2>, ir<%x>
 ;
 
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -207,7 +207,7 @@ for.end:
 ; DEFAULT:    Precomputed costs for VF 2: 5
 ; VPLAN: Precomputed costs for VF 2: 0
 ; CHECK:   Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
-; VPLAN: Cost of 2 for VF 2: REPLICATE ir<%tmp2> = add nsw ir<%tmp1>, ir<%x>
+; VPLAN: Cost of 3 for VF 2: REPLICATE ir<%tmp2> = add nsw ir<%tmp1>, ir<%x>
 ; VPLAN: Cost of 6 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>.1
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -263,12 +263,12 @@ for.end:
 ; DEFAULT:      Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
 ; DEFAULT:      Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
-; CHECK:     Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
-; CHECK:     Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
-; DEFAULT:      Precomputed costs for VF 2: 5
+; CHECK:     Cost of 5 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
+; CHECK:     Cost of 3 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
+; DEFAULT: Precomputed costs for VF 2: 5
 ; VPLAN:   Precomputed costs for VF 2: 0
 ; CHECK:     Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
-; VPLAN:   Cost of 2 for VF 2: REPLICATE ir<%tmp5> = sub ir<%tmp4>, ir<%x>
+; VPLAN:   Cost of 1 for VF 2: REPLICATE ir<%tmp5> = sub ir<%tmp4>, ir<%x>
 ; VPLAN:   Cost of 6 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp0>.1
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {

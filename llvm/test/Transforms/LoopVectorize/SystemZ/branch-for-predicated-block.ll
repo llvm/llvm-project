@@ -38,7 +38,7 @@ for.end.loopexit:
 ; DEFAULT: Cost of 1 for VF 2: profitable to scalarize   store i32 %sub, ptr %arrayidx, align 4
 ; DEFAULT: Cost of 2.5 for VF 2: profitable to scalarize   %sub = sub nsw i32 0, %l
 ; COMMON: Cost of 1 for VF 2: WIDEN ir<%cmp55> = icmp sgt ir<%l>, ir<0>
-; VPLAN: Cost of 2 for VF 2: REPLICATE ir<%sub> = sub nsw ir<0>, ir<%l>
+; VPLAN: Cost of 2.5 for VF 2: REPLICATE ir<%sub> = sub nsw ir<0>, ir<%l>
 ; VPLAN: Cost of 1 for VF 2: REPLICATE store ir<%sub>, ir<%arrayidx>
 ; COMMON: Cost of 0 for VF 2: vector loop backedge
 }

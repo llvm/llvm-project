@@ -50,16 +50,16 @@ define void @varying_pred_store_kept_in_replicate_region(ptr noalias %dst, ptr n
 ; VPLAN-LABEL: 'varying_pred_store_kept_in_replicate_region'
 ; VPLAN:  Precomputed costs for VF 2: 0
 ; VPLAN:  Cost of 1 for VF 2: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
-; VPLAN:  Cost of 2 for VF 2: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; VPLAN:  Cost of 3.5 for VF 2: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VPLAN:  Cost of 10.5 for VF 2: REPLICATE store ir<%mul>, ir<%gep.dst>
 ; VPLAN:  Cost of 0 for VF 2: unconditional branches from pred.store.if
-; VPLAN:  Cost for VF 2: 18 (Estimated cost per lane: 9)
+; VPLAN:  Cost for VF 2: 19.5 (Estimated cost per lane: 9.5)
 ; VPLAN:  Precomputed costs for VF 4: 0
 ; VPLAN:  Cost of 1 for VF 4: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
-; VPLAN:  Cost of 4 for VF 4: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; VPLAN:  Cost of 8.5 for VF 4: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VPLAN:  Cost of 22.5 for VF 4: REPLICATE store ir<%mul>, ir<%gep.dst>
 ; VPLAN:  Cost of 0 for VF 4: unconditional branches from pred.store.if
-; VPLAN:  Cost for VF 4: 32 (Estimated cost per lane: 8)
+; VPLAN:  Cost for VF 4: 36.5 (Estimated cost per lane: 9)
 ; VPLAN:  LV: Selecting VF: 1.
 ;
 ; DEFAULT-LABEL: 'varying_pred_store_kept_in_replicate_region'
