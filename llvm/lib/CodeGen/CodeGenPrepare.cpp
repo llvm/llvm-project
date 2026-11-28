@@ -8808,6 +8808,114 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   return true;
 }
 
+static bool isLocalMaskZeroTest(const User *MaskUser, const BasicBlock *BB) {
+  auto *Bits = dyn_cast<BitCastInst>(MaskUser);
+  if (!Bits || !Bits->getType()->isIntegerTy() || Bits->getParent() != BB ||
+      !Bits->hasOneUse())
+    return false;
+
+  auto *ZeroTest = dyn_cast<ICmpInst>(*Bits->user_begin());
+  return ZeroTest && ZeroTest->getParent() == BB && ZeroTest->isEquality() &&
+         match(ZeroTest->getOperand(0) == Bits ? ZeroTest->getOperand(1)
+                                               : ZeroTest->getOperand(0),
+               m_Zero());
+}
+
+/// Keep the target's full-width compare result across the loop backedge when
+/// the boolean PHI would otherwise use a narrower register type.
+static bool widenLoopMaskPhi(PHINode &Phi, const LoopInfo &LI,
+                             const TargetLowering &TLI, const DataLayout &DL) {
+  auto *MaskTy = dyn_cast<FixedVectorType>(Phi.getType());
+  if (!MaskTy || !MaskTy->getElementType()->isIntegerTy(1) ||
+      !Phi.hasOneUse() || Phi.getNumIncomingValues() != 2)
+    return false;
+
+  auto *Select = dyn_cast<SelectInst>(*Phi.user_begin());
+  BasicBlock *Header = Phi.getParent();
+  if (!Select || Select->getCondition() != &Phi ||
+      Select->getParent() != Header)
+    return false;
+
+  const Loop *L = LI.getLoopFor(Header);
+  if (!L || !L->isInnermost() || L->getHeader() != Header || !L->getLoopLatch())
+    return false;
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!LoopPred)
+    return false;
+
+  auto *SelectTy = cast<FixedVectorType>(Select->getType());
+  Type *EltTy = SelectTy->getElementType();
+  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy())
+    return false;
+
+  LLVMContext &Ctx = Phi.getContext();
+  EVT MaskVT = TLI.getValueType(DL, MaskTy);
+  EVT SelectVT = TLI.getValueType(DL, SelectTy);
+  if (TLI.isTypeLegal(MaskVT) ||
+      !TLI.isOperationLegalOrCustom(ISD::SETCC, SelectVT) ||
+      !TLI.isOperationLegalOrCustom(ISD::VSELECT, SelectVT) ||
+      TLI.getBooleanContents(SelectVT) !=
+          TargetLowering::ZeroOrNegativeOneBooleanContent)
+    return false;
+
+  // Use the compare result type only when it fits in a register and has the
+  // same lane widths as the select operands.
+  EVT WideVT = TLI.getSetCCResultType(DL, Ctx, SelectVT);
+  if (WideVT != SelectVT.changeVectorElementTypeToInteger() ||
+      !TLI.isTypeLegal(WideVT))
+    return false;
+
+  // Legalization may already use the compare's width for a vector of i1.
+  // Only widen a PHI whose cross-block register holds narrower lanes.
+  EVT MaskRegVT = TLI.getRegisterType(Ctx, MaskVT);
+  if (!MaskRegVT.isFixedLengthVector() ||
+      MaskRegVT.getVectorElementCount() != MaskVT.getVectorElementCount() ||
+      TLI.getNumRegisters(Ctx, MaskVT) != 1 || !MaskRegVT.bitsLT(WideVT))
+    return false;
+
+  for (unsigned I = 0; I != Phi.getNumIncomingValues(); ++I) {
+    auto *Cmp = dyn_cast<CmpInst>(Phi.getIncomingValue(I));
+    if (!Cmp || Cmp->getOperand(0)->getType() != SelectTy)
+      return false;
+
+    // Keep the extension with the compare so they can be combined. On the
+    // entry edge, allow an empty preheader dominated by the compare's block.
+    BasicBlock *CmpBB = Cmp->getParent();
+    BasicBlock *Pred = Phi.getIncomingBlock(I);
+    if (CmpBB != Pred &&
+        (Pred != LoopPred || !isa<UncondBrInst>(Pred->getTerminator()) ||
+         &Pred->front() != Pred->getTerminator() ||
+         Pred->getSinglePredecessor() != CmpBB))
+      return false;
+
+    if (any_of(Cmp->users(), [&](const User *MaskUser) {
+          return MaskUser != &Phi && !isLocalMaskZeroTest(MaskUser, CmpBB);
+        }))
+      return false;
+  }
+
+  Type *WideTy = WideVT.getTypeForEVT(Ctx);
+  auto *WidePhi = PHINode::Create(WideTy, Phi.getNumIncomingValues(),
+                                  Phi.getName() + ".wide", Phi.getIterator());
+  WidePhi->setDebugLoc(Phi.getDebugLoc());
+  for (unsigned I = 0; I != Phi.getNumIncomingValues(); ++I) {
+    auto *Cmp = cast<CmpInst>(Phi.getIncomingValue(I));
+    IRBuilder<> Builder(Cmp->getParent()->getTerminator());
+    Builder.SetCurrentDebugLocation(Cmp->getDebugLoc());
+    WidePhi->addIncoming(Builder.CreateSExt(Cmp, WideTy),
+                         Phi.getIncomingBlock(I));
+  }
+
+  // A sign-extended lane is 0 or -1, so its sign bit recovers the condition.
+  IRBuilder<> Builder(Header->getFirstInsertionPt());
+  Builder.SetCurrentDebugLocation(Phi.getDebugLoc());
+  Value *Cond = Builder.CreateICmpSLT(WidePhi, Constant::getNullValue(WideTy));
+  Cond->takeName(&Phi);
+  Phi.replaceAllUsesWith(Cond);
+  Phi.eraseFromParent();
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
   AnyChange = fixupDbgVariableRecordsOnInst(*I);
@@ -8829,6 +8937,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+
+    if (widenLoopMaskPhi(*P, *LI, *TLI, *DL))
+      return true;
 
     // Look for simple GEPs on scalable vectors used as data which may
     // introduce unnecessary multiplies in the loop.
