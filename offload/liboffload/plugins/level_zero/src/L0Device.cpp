@@ -414,15 +414,26 @@ Error L0DeviceTy::dataMemcpy3DImpl(const Copy3DDescTy &Copy,
   uint32_t SrcSlicePitch =
       static_cast<uint32_t>(std::min<size_t>(Copy.SrcSlicePitch, Max));
 
+  // A single slice is copied as a 2D region: fold the z offsets into the
+  // pointers instead of passing a nonzero z origin with a depth of one.
+  void *DstPtr = Copy.DstPtr;
+  const void *SrcPtr = Copy.SrcPtr;
+  size_t DstZ = Copy.DstOffset[2], SrcZ = Copy.SrcOffset[2];
+  if (Copy.Extent[2] == 1) {
+    DstPtr = static_cast<char *>(DstPtr) + DstZ * Copy.DstSlicePitch;
+    SrcPtr = static_cast<const char *>(SrcPtr) + SrcZ * Copy.SrcSlicePitch;
+    DstZ = SrcZ = 0;
+  }
+
   ze_copy_region_t DstRegion{static_cast<uint32_t>(Copy.DstOffset[0]),
                              static_cast<uint32_t>(Copy.DstOffset[1]),
-                             static_cast<uint32_t>(Copy.DstOffset[2]),
+                             static_cast<uint32_t>(DstZ),
                              static_cast<uint32_t>(Copy.Extent[0]),
                              static_cast<uint32_t>(Copy.Extent[1]),
                              static_cast<uint32_t>(Copy.Extent[2])};
   ze_copy_region_t SrcRegion{static_cast<uint32_t>(Copy.SrcOffset[0]),
                              static_cast<uint32_t>(Copy.SrcOffset[1]),
-                             static_cast<uint32_t>(Copy.SrcOffset[2]),
+                             static_cast<uint32_t>(SrcZ),
                              static_cast<uint32_t>(Copy.Extent[0]),
                              static_cast<uint32_t>(Copy.Extent[1]),
                              static_cast<uint32_t>(Copy.Extent[2])};
@@ -432,9 +443,9 @@ Error L0DeviceTy::dataMemcpy3DImpl(const Copy3DDescTy &Copy,
   if (!QueueOrErr)
     return QueueOrErr.takeError();
   if (auto Err = (*QueueOrErr)
-                     ->memoryCopy3D(Copy.DstPtr, DstRegion,
+                     ->memoryCopy3D(DstPtr, DstRegion,
                                     static_cast<uint32_t>(Copy.DstPitch),
-                                    DstSlicePitch, Copy.SrcPtr, SrcRegion,
+                                    DstSlicePitch, SrcPtr, SrcRegion,
                                     static_cast<uint32_t>(Copy.SrcPitch),
                                     SrcSlicePitch))
     return Err;
