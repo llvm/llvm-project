@@ -10,16 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CallGraph.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Process.h"
 
 using namespace clang;
@@ -158,6 +159,7 @@ class CFGViewer : public Checker<check::ASTCodeBody> {
 public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     if (CFG *cfg = mgr.getCFG(D)) {
       cfg->viewCFG(mgr.getLangOpts());
     }
@@ -212,6 +214,7 @@ class CallGraphViewer : public Checker< check::ASTDecl<TranslationUnitDecl> > {
 public:
   void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager& mgr,
                     BugReporter &BR) const {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     CallGraph CG;
     CG.addToCallGraph(const_cast<TranslationUnitDecl*>(TU));
     CG.viewGraph();
@@ -301,6 +304,7 @@ class ExplodedGraphViewer : public Checker< check::EndAnalysis > {
 public:
   ExplodedGraphViewer() {}
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,ExprEngine &Eng) const {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     Eng.ViewGraph(false);
   }
 };
