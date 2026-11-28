@@ -271,7 +271,7 @@ ___kmp_unnamed_critical_addr:
         .data
         .comm .gomp_critical_user_,32,8
         .data
-	ALIGN 4
+	ALIGN 2
         .global __kmp_unnamed_critical_addr
 __kmp_unnamed_critical_addr:
         .4byte .gomp_critical_user_
@@ -292,7 +292,7 @@ ___kmp_unnamed_critical_addr:
         .data
         .comm .gomp_critical_user_,32,8
         .data
-	ALIGN 8
+	ALIGN 3
         .global __kmp_unnamed_critical_addr
 __kmp_unnamed_critical_addr:
         .8byte .gomp_critical_user_
