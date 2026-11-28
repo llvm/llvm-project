@@ -1349,6 +1349,12 @@ enum NodeType {
   /// frequency counter suitable for measuring elapsed time.
   READSTEADYCOUNTER,
 
+  /// IS_DEBUGGING_ENABLED - This corresponds to the is.debugging.enabled
+  /// intrinsic. The only operand is a chain. Results are an i1 value and a
+  /// chain. Each node is a distinct, ordered observation.
+  /// Unsupported targets expand this to zero and the incoming chain.
+  IS_DEBUGGING_ENABLED,
+
   /// HANDLENODE node - Used as a handle for various purposes.
   HANDLENODE,
 
