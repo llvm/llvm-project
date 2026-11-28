@@ -113,6 +113,23 @@ spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
   %3 = spirv.CL.u_min %arg0, %arg1 : i32
   // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i32) -> i32
   %4 = spirv.CL.s_abs %arg0 : i32
+  // CHECK: llvm.intr.sadd.sat(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = spirv.CL.s_add_sat %arg0, %arg1 : i32
+  // CHECK: llvm.intr.uadd.sat(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %6 = spirv.CL.u_add_sat %arg0, %arg1 : i32
+  // CHECK: llvm.intr.ssub.sat(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %7 = spirv.CL.s_sub_sat %arg0, %arg1 : i32
+  // CHECK: llvm.intr.usub.sat(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %8 = spirv.CL.u_sub_sat %arg0, %arg1 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @cl_sat_vector
+spirv.func @cl_sat_vector(%arg0: vector<3xi16>, %arg1: vector<3xi16>) "None" {
+  // CHECK: llvm.intr.sadd.sat(%{{.*}}, %{{.*}}) : (vector<3xi16>, vector<3xi16>) -> vector<3xi16>
+  %0 = spirv.CL.s_add_sat %arg0, %arg1 : vector<3xi16>
+  // CHECK: llvm.intr.usub.sat(%{{.*}}, %{{.*}}) : (vector<3xi16>, vector<3xi16>) -> vector<3xi16>
+  %1 = spirv.CL.u_sub_sat %arg0, %arg1 : vector<3xi16>
   spirv.Return
 }
 
