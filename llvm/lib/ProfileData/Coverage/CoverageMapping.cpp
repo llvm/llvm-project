@@ -1121,7 +1121,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     }
   }
 
-  if (!DataFound)
+  if (!DataFound && ProfileReader)
     return createFileError(
         join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "),
         make_error<CoverageMapError>(coveragemap_error::no_data_found));
