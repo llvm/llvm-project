@@ -7421,6 +7421,66 @@ ASTContext::getDefaultTemplateArgumentOrNone(const NamedDecl *P) const {
   }
 }
 
+static bool isArgForParam(TemplateArgument Arg, const NamedDecl *Param) {
+  if (Param->isTemplateParameterPack()) {
+    if (Arg.getKind() != TemplateArgument::Pack || Arg.pack_size() != 1 ||
+        !Arg.pack_begin()->isPackExpansion())
+      return false;
+    Arg = Arg.pack_begin()->getPackExpansionPattern();
+  }
+  auto Same = [](const auto *X, const auto *Y) {
+    return X && X->getDepth() == Y->getDepth() &&
+           X->getIndex() == Y->getIndex();
+  };
+  if (const auto *P = dyn_cast<TemplateTypeParmDecl>(Param))
+    return Arg.getKind() == TemplateArgument::Type &&
+           Same(Arg.getAsType()->getAs<TemplateTypeParmType>(), P);
+  if (const auto *P = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    if (Arg.getKind() != TemplateArgument::Expression)
+      return false;
+    const auto *DRE = dyn_cast<DeclRefExpr>(Arg.getAsExpr()->IgnoreImpCasts());
+    return DRE && Same(dyn_cast<NonTypeTemplateParmDecl>(DRE->getDecl()), P);
+  }
+  return Arg.getKind() == TemplateArgument::Template &&
+         Same(dyn_cast_or_null<TemplateTemplateParmDecl>(
+                  Arg.getAsTemplate().getAsTemplateDecl()),
+              cast<TemplateTemplateParmDecl>(Param));
+}
+
+/// If \p AT is equivalent to a class template under the proposed resolution of
+/// CWG1286, returns that class template; otherwise returns null.
+static TemplateDecl *
+getSimpleAliasUnderlyingTemplate(const ASTContext &Ctx,
+                                 const TypeAliasTemplateDecl *AT) {
+  const TypeAliasDecl *Pattern = AT->getTemplatedDecl();
+  if (!Pattern || Pattern->isInvalidDecl())
+    return nullptr;
+  QualType RHS = Pattern->getUnderlyingType().getCanonicalType();
+  const auto *TST = dyn_cast<TemplateSpecializationType>(RHS);
+  if (!TST || RHS.hasLocalQualifiers())
+    return nullptr;
+  auto *CTD = dyn_cast_or_null<ClassTemplateDecl>(
+      TST->getTemplateName().getAsTemplateDecl());
+  if (!CTD)
+    return nullptr;
+
+  const TemplateParameterList *AP = AT->getTemplateParameters();
+  const TemplateParameterList *CP =
+      CTD->getMostRecentDecl()->getTemplateParameters();
+  ArrayRef<TemplateArgument> Args = TST->template_arguments();
+  if (AP->getRequiresClause() || AP->size() != CP->size() ||
+      Args.size() != AP->size())
+    return nullptr;
+  for (unsigned I = 0, N = AP->size(); I != N; ++I) {
+    const NamedDecl *P = AP->getParam(I), *Q = CP->getParam(I);
+    if (Ctx.getDefaultTemplateArgumentOrNone(P) ||
+        Ctx.getDefaultTemplateArgumentOrNone(Q) ||
+        !Ctx.isSameTemplateParameter(P, Q) || !isArgForParam(Args[I], P))
+      return nullptr;
+  }
+  return CTD->getCanonicalDecl();
+}
+
 TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
                                                   bool IgnoreDeduced) const {
   while (std::optional<TemplateName> UnderlyingOrNone =
@@ -7432,6 +7492,15 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
     TemplateDecl *Template = Name.getAsTemplateDecl();
     if (auto *TTP  = dyn_cast<TemplateTemplateParmDecl>(Template))
       Template = getCanonicalTemplateTemplateParmDecl(TTP);
+    else if (auto *AT = dyn_cast<TypeAliasTemplateDecl>(Template);
+             AT && !getTargetInfo().getCXXABI().isMicrosoft() &&
+             getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver23) {
+      // CWG1286: a simple alias template is equivalent to the class template
+      // it names. Not applied for the Microsoft ABI, for MSVC compatibility.
+      if (TemplateDecl *Underlying =
+              getSimpleAliasUnderlyingTemplate(*this, AT))
+        Template = Underlying;
+    }
 
     // The canonical template name is the canonical template declaration.
     return TemplateName(cast<TemplateDecl>(Template->getCanonicalDecl()));

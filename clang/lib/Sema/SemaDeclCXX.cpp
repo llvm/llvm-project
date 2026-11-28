@@ -12467,8 +12467,13 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     if (auto RetTST =
             TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
-      bool TemplateMatches = Context.hasSameTemplateName(
-          SpecifiedName, GuidedTemplate, /*IgnoreDeduced=*/true);
+      // [temp.deduct.guide]p3 requires the same template-name, so an alias
+      // template that is equivalent under CWG1286 does not match.
+      bool TemplateMatches =
+          !isa_and_nonnull<TypeAliasTemplateDecl>(
+              SpecifiedName.getAsTemplateDecl()) &&
+          Context.hasSameTemplateName(SpecifiedName, GuidedTemplate,
+                                      /*IgnoreDeduced=*/true);
 
       const QualifiedTemplateName *Qualifiers =
           SpecifiedName.getAsQualifiedTemplateName();

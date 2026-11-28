@@ -206,6 +206,10 @@ features cannot lower the translation-unit ABI level;
   to generate more efficient code, if compatibility with either the platform
   ABI or old Clang-built objects is not necessary. (#GH236450)
 
+- On Itanium ABI targets, a simple alias template used as a template template
+  argument is now mangled as the equivalent class template, matching GCC
+  (CWG1286).
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -326,6 +330,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Implemented [CWG2900](https://wg21.link/cwg2900), removing an ambiguity
   when partial ordering constant template parameters declared
   with placeholder types.
+
+- Implemented the provisional resolution of
+  [CWG1286](https://wg21.link/cwg1286), making a simple alias template
+  equivalent to the class template it names, except on Microsoft ABI
+  targets. (#GH167320)
 
 ### C Language Changes
 
