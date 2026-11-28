@@ -212,7 +212,7 @@ namespace LabelGoto {
 }
 
 namespace ExplicitLambdaThis {
-  constexpr auto f = [x = 3]<typename Self>(this Self self) { // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+  constexpr auto f = [x = 3]<typename Self>(this Self self) {
       return x;
   };
   static_assert(f());
@@ -257,7 +257,7 @@ namespace ExplicitLambdaInstancePointer {
       constexpr C(auto) { }
   };
   void foo() {
-      constexpr auto b = [](this C) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+      constexpr auto b = [](this C) { return 1; };
       constexpr int (*fp)(C) = b;
       static_assert(fp(1) == 1, "");
   }
@@ -266,8 +266,7 @@ namespace ExplicitLambdaInstancePointer {
   struct S2 {
       constexpr K(auto) { } // all-error {{a type specifier is required for all declarations}}
   };
-  constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
-                                               // all-error {{unknown type name 'K'}}
+  constexpr auto b = [](this K) { return 1; }; // all-error {{unknown type name 'K'}}
   constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}} \
                               // expected-error {{must be initialized by a constant expression}} \
                               // expected-note {{declared here}}
@@ -625,7 +624,7 @@ namespace PointerIntInc {
 
 namespace VariadicOperator {
   struct S {
-    constexpr int operator()(this S, ...) { return 42; } // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+    constexpr int operator()(this S, ...) { return 42; }
   };
   constexpr S s;
   static_assert(s() == 42);
