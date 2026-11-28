@@ -416,15 +416,13 @@ define void @early_exit_with_store_after_exit(ptr align 4 dereferenceable(4096) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 500)
-; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 4 x i1> [[TMP10]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i1> @llvm.mask.beforefirst.nxv4i1(<vscale x 4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP7]], ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP12:%.*]] = freeze <vscale x 4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vp.reduce.or.nxv4i1(i1 false, <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vp.reduce.or.nxv4i1(i1 false, <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP9]], false
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i32 [[TMP0]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
