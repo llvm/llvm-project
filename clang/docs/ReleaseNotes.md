@@ -1679,6 +1679,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 - add unary operator handling to `clang_getCursorSpelling()`.
+- Fixed `clang_Cursor_Evaluate()` to evaluate parenthesized string literals in
+  initializers such as `const char *s = ("hello");`.
 
 ### Code Completion
 
