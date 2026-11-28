@@ -115,21 +115,35 @@ void void_return() {
   return g();
 }
 
-void nested_return_unmolested() {
+void nested_return() {
   g();
   {
     g();
     return;
   }
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant return statement
+// CHECK-FIXES: void nested_return() {
+// CHECK-FIXES-NEXT: g();
+// CHECK-FIXES-NEXT: {
+// CHECK-FIXES-NEXT: g();
+// CHECK-FIXES-NEXT: }
+// CHECK-FIXES-NEXT: }
 
-void nested_continue_unmolested() {
+void nested_continue() {
   for (int i = 0; i < 10; ++i) {
     if (i < 5) {
       continue;
     }
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:7: warning: redundant continue statement
+// CHECK-FIXES: void nested_continue() {
+// CHECK-FIXES-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK-FIXES-NEXT: if (i < 5) {
+// CHECK-FIXES-NEXT: }
+// CHECK-FIXES-NEXT: }
+// CHECK-FIXES-NEXT: }
 
 #define MACRO_RETURN_UNMOLESTED(fn_)  \
   (fn_)();                            \

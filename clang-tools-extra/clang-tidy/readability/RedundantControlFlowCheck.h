@@ -30,6 +30,10 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  void checkTrailingStmt(const ast_matchers::MatchFinder::MatchResult &Result,
+                         const Stmt *S, bool IsReturn, bool IsCompoundChild);
 };
 
 } // namespace clang::tidy::readability
