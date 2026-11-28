@@ -217,8 +217,7 @@ TEST(AssumeQueryAPI, AssumptionCache) {
       "define void @test(ptr %P, ptr %P1, ptr %P2, ptr %P3, i1 %B) {\n"
       "call void @llvm.assume(i1 true) [\"nonnull\"(ptr %P), \"align\"(ptr "
       "%P2, i32 4), \"align\"(ptr %P, i32 8)]\n"
-      "call void @llvm.assume(i1 %B) [\"test\"(ptr %P1), "
-      "\"dereferenceable\"(ptr %P, i32 4)]\n"
+      "call void @llvm.assume(i1 %B) [\"dereferenceable\"(ptr %P, i32 4)]\n"
       "ret void\n}\n",
       Err, C);
   if (!Mod)
@@ -230,10 +229,6 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   AssumptionCache AC(*F);
   auto AR = AC.assumptionsFor(F->getArg(3));
   ASSERT_EQ(AR.size(), 0u);
-  AR = AC.assumptionsFor(F->getArg(1));
-  ASSERT_EQ(AR.size(), 1u);
-  ASSERT_EQ(AR[0].Index, 0u);
-  ASSERT_EQ(AR[0].Assume, &*Second);
   AR = AC.assumptionsFor(F->getArg(2));
   ASSERT_EQ(AR.size(), 1u);
   ASSERT_EQ(AR[0].Index, 1u);
@@ -245,7 +240,7 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   ASSERT_EQ(AR[0].Assume, &*First);
   ASSERT_EQ(AR[0].Index, 0u);
   ASSERT_EQ(AR[1].Assume, &*Second);
-  ASSERT_EQ(AR[1].Index, 1u);
+  ASSERT_EQ(AR[1].Index, 0u);
   ASSERT_EQ(AR[2].Assume, &*First);
   ASSERT_EQ(AR[2].Index, 2u);
   AR = AC.assumptionsFor(F->getArg(4));
@@ -262,7 +257,7 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   ASSERT_EQ(AR[0].Assume, &*First);
   ASSERT_EQ(AR[0].Index, 0u);
   ASSERT_EQ(AR[1].Assume, nullptr);
-  ASSERT_EQ(AR[1].Index, 1u);
+  ASSERT_EQ(AR[1].Index, 0u);
   ASSERT_EQ(AR[2].Assume, &*First);
   ASSERT_EQ(AR[2].Index, 2u);
   AR = AC.assumptionsFor(F->getArg(2));
