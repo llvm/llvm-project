@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -21,6 +22,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Target/TargetMachine.h"
 #include <array>
 
 using namespace llvm;
@@ -522,14 +524,13 @@ static Error readVocabulary(VocabMap &OpcodeVocab, VocabMap &CommonOperandVocab,
 }
 
 static Expected<mir2vec::MIRVocabulary>
-buildVocabulary(const MachineFunction &MF) {
+buildVocabulary(const TargetSubtargetInfo &ST) {
   VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
 
   if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
                                  VirtRegVocabMap))
     return std::move(Err);
 
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
   return mir2vec::MIRVocabulary::create(
       std::move(OpcVocab), std::move(CommonOperandVocab),
       std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *ST.getInstrInfo(),
@@ -538,15 +539,11 @@ buildVocabulary(const MachineFunction &MF) {
 
 Expected<mir2vec::MIRVocabulary>
 MIR2VecVocabProvider::getVocabulary(const Module &M) {
-  for (const auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-
-    if (auto *MF = MMI.getMachineFunction(F))
-      return buildVocabulary(*MF);
-  }
-  return createStringError(errc::invalid_argument,
-                           "No machine functions found in module");
+  auto Defs = M.getFunctionDefs();
+  if (Defs.empty())
+    return createStringError(errc::invalid_argument,
+                             "No machine functions found in module");
+  return buildVocabulary(*MMI.getTarget().getSubtargetImpl(*Defs.begin()));
 }
 
 char MIR2VecVocabLegacyAnalysis::ID = 0;
@@ -562,17 +559,19 @@ StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
 
 AnalysisKey MIR2VecVocabAnalysis::Key;
 
+bool MIRVocabulary::invalidate(Module &M, const PreservedAnalyses &PA,
+                               ModuleAnalysisManager::Invalidator &Inv) const {
+  return !PA.getChecker<MIR2VecVocabAnalysis>().preservedWhenStateless();
+}
+
 MIR2VecVocabAnalysis::Result
-MIR2VecVocabAnalysis::run(MachineFunction &MF,
-                          MachineFunctionAnalysisManager &MFAM) {
-  if (!Vocab) {
-    auto VocabOrErr = buildVocabulary(MF);
-    if (!VocabOrErr)
-      reportFatalUsageError(VocabOrErr.takeError());
-    Vocab =
-        std::make_shared<const mir2vec::MIRVocabulary>(std::move(*VocabOrErr));
-  }
-  return Vocab;
+MIR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto VocabOrErr =
+      MIR2VecVocabProvider(MAM.getResult<MachineModuleAnalysis>(M).getMMI())
+          .getVocabulary(M);
+  if (!VocabOrErr)
+    reportFatalUsageError(VocabOrErr.takeError());
+  return std::move(*VocabOrErr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -667,6 +666,20 @@ INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
 INITIALIZE_PASS_END(MIR2VecVocabPrinterLegacyPass, "print-mir2vec-vocab",
                     "MIR2Vec Vocabulary Printer Pass", false, true)
 
+static void printVocabulary(const mir2vec::MIRVocabulary &MIR2VecVocab,
+                            raw_ostream &OS) {
+  unsigned Pos = 0;
+  for (const auto &Entry : MIR2VecVocab) {
+    // Skip zero embeddings to avoid printing entries not in the vocabulary.
+    // This makes the output stable across changes to the opcode list.
+    if (PrintAllVocabEntries || !Entry.isZero()) {
+      OS << "Key: " << MIR2VecVocab.getStringKey(Pos) << ": ";
+      Entry.print(OS);
+    }
+    ++Pos;
+  }
+}
+
 bool MIR2VecVocabPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
@@ -681,24 +694,19 @@ bool MIR2VecVocabPrinterLegacyPass::doFinalization(Module &M) {
     return false;
   }
 
-  auto &MIR2VecVocab = *MIR2VecVocabOrErr;
-  unsigned Pos = 0;
-  for (const auto &Entry : MIR2VecVocab) {
-    // Skip zero embeddings to avoid printing entries not in the vocabulary.
-    // This makes the output stable across changes to the opcode list.
-    if (PrintAllVocabEntries || !Entry.isZero()) {
-      OS << "Key: " << MIR2VecVocab.getStringKey(Pos) << ": ";
-      Entry.print(OS);
-    }
-    ++Pos;
-  }
-
+  printVocabulary(*MIR2VecVocabOrErr, OS);
   return false;
 }
 
 MachineFunctionPass *
 llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecVocabPrinterLegacyPass(OS);
+}
+
+PreservedAnalyses MIR2VecVocabPrinterPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  printVocabulary(MAM.getResult<MIR2VecVocabAnalysis>(M), OS);
+  return PreservedAnalyses::all();
 }
 
 static void printEmbeddings(const MachineFunction &MF,
@@ -760,6 +768,11 @@ MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
 PreservedAnalyses
 MIR2VecPrinterPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-  printEmbeddings(MF, *MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  const auto *Vocab =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MIR2VecVocabAnalysis>(*MF.getFunction().getParent());
+  if (!Vocab)
+    reportFatalUsageError("print<mir2vec> requires mir2vec-vocab");
+  printEmbeddings(MF, *Vocab, OS);
   return PreservedAnalyses::all();
 }

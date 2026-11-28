@@ -289,6 +289,10 @@ public:
 
   const_iterator end() const { return Storage.end(); }
 
+  /// The vocabulary stays valid unless explicitly invalidated.
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv) const;
+
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
@@ -472,18 +476,24 @@ public:
 /// Create a machine pass that prints MIR2Vec embeddings
 LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
-/// New pass manager analysis that provides the MIR2Vec vocabulary. The
-/// vocabulary is built on the first request and shared by all machine
-/// functions.
+/// New pass manager analysis that provides the MIR2Vec vocabulary for a module.
 class MIR2VecVocabAnalysis : public AnalysisInfoMixin<MIR2VecVocabAnalysis> {
   friend AnalysisInfoMixin<MIR2VecVocabAnalysis>;
   LLVM_ABI static AnalysisKey Key;
-  std::shared_ptr<const mir2vec::MIRVocabulary> Vocab;
 
 public:
-  using Result = std::shared_ptr<const mir2vec::MIRVocabulary>;
-  LLVM_ABI Result run(MachineFunction &MF,
-                      MachineFunctionAnalysisManager &MFAM);
+  using Result = mir2vec::MIRVocabulary;
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+/// New pass manager pass that prints the MIR2Vec vocabulary once per module.
+class MIR2VecVocabPrinterPass
+    : public RequiredPassInfoMixin<MIR2VecVocabPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MIR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// New pass manager pass that prints the MIR2Vec embeddings for machine
