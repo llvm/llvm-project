@@ -36,6 +36,8 @@
   define void @blocking_cycles_pseudo_scalar_trans() #0 { ret void }
   define void @blocking_cycles_dot() #0 { ret void }
   define void @blocking_cycles_dpp() #0 { ret void }
+  define void @blocking_cycles_cvt_scale_pk16() #0 { ret void }
+  define void @blocking_cycles_cvt_scale_pk32() #0 { ret void }
 
 
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
@@ -311,4 +313,34 @@ body: |
     %1:vgpr_32 = V_MOV_B32_dpp %0, %0, 1, 15, 15, 1, implicit $exec
 
     S_ENDPGM 0, implicit %1
+...
+
+# CHECK-LABEL: blocking_cycles_cvt_scale_pk16:
+# CHECK: VALU(Nc): 8 cycles, 1 instrs
+
+---
+name: blocking_cycles_cvt_scale_pk16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_96_align2 = V_CVT_SCALEF32_PK16_FP6_F32_e64 %0, %1, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %2
+...
+
+# CHECK-LABEL: blocking_cycles_cvt_scale_pk32:
+# CHECK: VALU(Nc): 16 cycles, 1 instrs
+
+---
+name: blocking_cycles_cvt_scale_pk32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_192_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_1024_align2 = V_CVT_SCALEF32_PK32_F32_FP6_e64 %0, %1, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %2
 ...
