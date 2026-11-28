@@ -481,8 +481,12 @@ def TestTensorType : Test_Type<"TestTensor",
   }];
 }
 
+// A buffer-like type that stands for the builtin memref of its shape, element
+// type and layout: it is deallocated and identified as that memref.
 def TestMemrefType : Test_Type<"TestMemref",
-    [Bufferization_BufferLikeTypeInterface, ShapedTypeInterface]> {
+    [DeclareTypeInterfaceMethods<Bufferization_BufferLikeTypeInterface,
+        ["supportsDeallocation", "genFree", "genIdentity"]>,
+     ShapedTypeInterface]> {
   let mnemonic = "test_memref";
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,

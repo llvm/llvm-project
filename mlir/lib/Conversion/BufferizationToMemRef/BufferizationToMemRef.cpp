@@ -163,6 +163,9 @@ struct BufferizationToMemRefPass
     target.addLegalDialect<memref::MemRefDialect, arith::ArithDialect,
                            scf::SCFDialect, func::FuncDialect>();
     target.addIllegalDialect<bufferization::BufferizationDialect>();
+    // A buffer type builds its deallocations and identities with operations
+    // of its own choosing.
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

@@ -273,15 +273,17 @@ def StaticMemoryPlannerAnalysisPass
 }
 
 def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
-  let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
-                "operations";
+  let summary = "Lowers `bufferization.dealloc` operations to the "
+                "deallocations their operands' types build";
   let description = [{
-    This pass lowers `bufferization.dealloc` operations to the `memref` dialect.
+    This pass lowers `bufferization.dealloc` operations to the deallocations
+    and identities their operands' buffer types build (`memref.dealloc` and
+    `memref.extract_aligned_pointer_as_index` for memrefs).
     It can be applied to a `builtin.module` or operations implementing the
     `FunctionOpInterface`. For the latter, only simple `dealloc` operations can
     be lowered because the library function necessary for the fully generic
     lowering cannot be inserted. In this case, an error will be emitted.
-    Next to `memref.dealloc` operations, it may also emit operations from the
+    Next to the deallocations, it may also emit operations from the `memref`,
     `arith`, `scf`, and `func` dialects to build conditional deallocations and
     library functions to avoid code-size blow-up.
   }];

@@ -133,12 +133,17 @@ func.func @conversion_buffer_like_clone_to_unranked_memref(
 
 // -----
 
-// A dealloc of a buffer-like value that is not a memref is not lowered to the
-// memref dialect.
+// A dealloc of a buffer-like value that is not a memref is lowered to the
+// deallocation its type builds.
 
+// CHECK-LABEL: func @conversion_buffer_like_dealloc
+//  CHECK-SAME: ([[ARG0:%.+]]: !test.test_memref<[4], f32>, [[ARG1:%.+]]: i1)
+//       CHECK: scf.if [[ARG1]] {
+//  CHECK-NEXT:   [[CAST:%.+]] = builtin.unrealized_conversion_cast [[ARG0]] : !test.test_memref<[4], f32> to memref<4xf32>
+//  CHECK-NEXT:   memref.dealloc [[CAST]] : memref<4xf32>
+//  CHECK-NEXT: }
 func.func @conversion_buffer_like_dealloc(%arg0: !test.test_memref<[4], f32>,
                                           %arg1: i1) {
-  // expected-error@+1 {{failed to legalize operation 'bufferization.dealloc' that was explicitly marked illegal}}
   bufferization.dealloc (%arg0 : !test.test_memref<[4], f32>) if (%arg1)
   return
 }

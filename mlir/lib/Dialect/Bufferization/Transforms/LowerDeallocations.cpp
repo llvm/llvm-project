@@ -29,10 +29,31 @@ namespace bufferization {
 
 using namespace mlir;
 
+/// Builds an `scf.if` on `cond` whose block deallocates `buffer`, as the
+/// buffer's type says.
+static void buildConditionalFree(OpBuilder &builder, Location loc, Value cond,
+                                 Value buffer) {
+  auto ifOp = scf::IfOp::create(builder, loc, cond, /*withElseRegion=*/false);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  cast<bufferization::BufferLikeType>(buffer.getType())
+      .genFree(builder, loc, buffer);
+}
+
+/// Builds the identity of the allocation `buffer` belongs to, as the buffer's
+/// type says.
+static Value buildIdentity(OpBuilder &builder, Location loc, Value buffer) {
+  Value identity = cast<bufferization::BufferLikeType>(buffer.getType())
+                       .genIdentity(builder, loc, buffer);
+  assert(identity.getType().isIndex() && "expected an index identity");
+  return identity;
+}
+
 namespace {
 /// The DeallocOpConversion transforms all bufferization dealloc operations into
-/// memref dealloc operations potentially guarded by scf if operations.
-/// Additionally, memref extract_aligned_pointer_as_index and arith operations
+/// the deallocations their operands' types build (memref dealloc for memrefs),
+/// potentially guarded by scf if operations. Additionally, operand identities
+/// (memref extract_aligned_pointer_as_index for memrefs) and arith operations
 /// are inserted to compute the guard conditions. We distinguish multiple cases
 /// to provide an overall more efficient lowering. In the general case, a helper
 /// func is created to avoid quadratic code size explosion (relative to the
@@ -62,11 +83,9 @@ class DeallocOpConversion
     assert(adaptor.getMemrefs().size() == 1 && "expected only one memref");
     assert(adaptor.getRetained().empty() && "expected no retained memrefs");
 
-    rewriter.replaceOpWithNewOp<scf::IfOp>(
-        op, adaptor.getConditions()[0], [&](OpBuilder &builder, Location loc) {
-          memref::DeallocOp::create(builder, loc, adaptor.getMemrefs()[0]);
-          scf::YieldOp::create(builder, loc);
-        });
+    buildConditionalFree(rewriter, op.getLoc(), adaptor.getConditions()[0],
+                         adaptor.getMemrefs()[0]);
+    rewriter.eraseOp(op);
     return success();
   }
 
@@ -108,11 +127,10 @@ class DeallocOpConversion
     // Compute the base pointer indices, compare all retained indices to the
     // memref index to check if they alias.
     SmallVector<Value> doesNotAliasList;
-    Value memrefAsIdx = memref::ExtractAlignedPointerAsIndexOp::create(
-        rewriter, op->getLoc(), adaptor.getMemrefs()[0]);
+    Value memrefAsIdx =
+        buildIdentity(rewriter, op->getLoc(), adaptor.getMemrefs()[0]);
     for (Value retained : adaptor.getRetained()) {
-      Value retainedAsIdx = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, op->getLoc(), retained);
+      Value retainedAsIdx = buildIdentity(rewriter, op->getLoc(), retained);
       Value doesNotAlias = arith::CmpIOp::create(rewriter, op->getLoc(),
                                                  arith::CmpIPredicate::ne,
                                                  memrefAsIdx, retainedAsIdx);
@@ -129,12 +147,8 @@ class DeallocOpConversion
     Value shouldDealloc = arith::AndIOp::create(rewriter, op->getLoc(), prev,
                                                 adaptor.getConditions()[0]);
 
-    scf::IfOp::create(rewriter, op.getLoc(), shouldDealloc,
-                      [&](OpBuilder &builder, Location loc) {
-                        memref::DeallocOp::create(builder, loc,
-                                                  adaptor.getMemrefs()[0]);
-                        scf::YieldOp::create(builder, loc);
-                      });
+    buildConditionalFree(rewriter, op.getLoc(), shouldDealloc,
+                         adaptor.getMemrefs()[0]);
 
     // Compute the replacement values for the dealloc operation results. This
     // inserts an already canonicalized form of
@@ -252,8 +266,7 @@ class DeallocOpConversion
     // Extract the base pointers of the memrefs as indices to check for aliasing
     // at runtime.
     for (auto [i, toDealloc] : llvm::enumerate(adaptor.getMemrefs())) {
-      Value memrefAsIdx = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, op.getLoc(), toDealloc);
+      Value memrefAsIdx = buildIdentity(rewriter, op.getLoc(), toDealloc);
       memref::StoreOp::create(rewriter, op.getLoc(), memrefAsIdx,
                               toDeallocMemref, getConstValue(i));
     }
@@ -263,8 +276,7 @@ class DeallocOpConversion
                               getConstValue(i));
 
     for (auto [i, toRetain] : llvm::enumerate(adaptor.getRetained())) {
-      Value memrefAsIdx = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, op.getLoc(), toRetain);
+      Value memrefAsIdx = buildIdentity(rewriter, op.getLoc(), toRetain);
       memref::StoreOp::create(rewriter, op.getLoc(), memrefAsIdx,
                               toRetainMemref, getConstValue(i));
     }
@@ -314,12 +326,8 @@ class DeallocOpConversion
       Value idxValue = getConstValue(i);
       Value shouldDealloc = memref::LoadOp::create(
           rewriter, op.getLoc(), deallocCondsMemref, idxValue);
-      scf::IfOp::create(rewriter, op.getLoc(), shouldDealloc,
-                        [&](OpBuilder &builder, Location loc) {
-                          memref::DeallocOp::create(builder, loc,
-                                                    adaptor.getMemrefs()[i]);
-                          scf::YieldOp::create(builder, loc);
-                        });
+      buildConditionalFree(rewriter, op.getLoc(), shouldDealloc,
+                           adaptor.getMemrefs()[i]);
     }
 
     SmallVector<Value> replacements;
@@ -361,10 +369,16 @@ public:
       return success();
     }
 
-    auto isMemref = [](Value v) { return isa<BaseMemRefType>(v.getType()); };
-    if (!llvm::all_of(adaptor.getMemrefs(), isMemref) ||
-        !llvm::all_of(adaptor.getRetained(), isMemref))
-      return rewriter.notifyMatchFailure(op, "expected memref operands");
+    // Every operand's type is asked before anything is built, so that a
+    // refusal leaves the IR as it was.
+    for (Value buffer :
+         llvm::concat<Value>(adaptor.getMemrefs(), adaptor.getRetained()))
+      if (!cast<bufferization::BufferLikeType>(buffer.getType())
+               .supportsDeallocation())
+        return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+          diag << "type " << buffer.getType()
+               << " does not say how its values are deallocated";
+        });
 
     if (adaptor.getMemrefs().size() == 1 && adaptor.getRetained().empty())
       return rewriteOneMemrefNoRetainCase(op, adaptor, rewriter);
@@ -425,6 +439,9 @@ struct LowerDeallocationsPass
     target.addLegalDialect<memref::MemRefDialect, arith::ArithDialect,
                            scf::SCFDialect, func::FuncDialect>();
     target.addIllegalOp<bufferization::DeallocOp>();
+    // A buffer type builds its deallocations and identities with operations of
+    // its own choosing.
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

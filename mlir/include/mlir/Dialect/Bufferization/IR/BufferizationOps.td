@@ -474,9 +474,10 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     The `memref` operands must be the originally allocated memrefs, however, the
     `retained` memref operands may be arbitrary memrefs.
 
-    The operands may be of any type that implements `BufferLikeType`. The
-    lowering of this operation to the `memref` dialect supports only memrefs
-    and does not lower a dealloc with an operand of any other type.
+    The operands may be values of any type implementing `BufferLikeType`. Its
+    lowering asks each operand's type how its values are deallocated and
+    identified (`genFree` and `genIdentity`); an operand whose type does not
+    say (`supportsDeallocation`) is not lowered.
 
     This operation returns a variadic number of `updatedConditions` operands,
     one updated condition per retained memref. An updated condition indicates

@@ -308,3 +308,18 @@ func.func @index_switch_non_writable(%t: tensor<4xf32> {bufferization.writable =
   %1 = vector.transfer_write %v, %0[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
   return %1 : tensor<4xf32>
 }
+
+// -----
+
+// The deallocation of a buffer that is not a memref is the one its type builds.
+
+// CHECK-LABEL: func @dealloc_tensor_of_buffer_like(
+//  CHECK-SAME:     %[[b:.*]]: !test.test_memref<[4], f32>
+//       CHECK:   %[[m:.*]] = builtin.unrealized_conversion_cast %[[b]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK:   memref.dealloc %[[m]] : memref<4xf32>
+func.func @dealloc_tensor_of_buffer_like(%b: !test.test_memref<[4], f32>) {
+  %t = bufferization.to_tensor %b restrict writable
+    : !test.test_memref<[4], f32> to tensor<4xf32>
+  bufferization.dealloc_tensor %t : tensor<4xf32>
+  return
+}

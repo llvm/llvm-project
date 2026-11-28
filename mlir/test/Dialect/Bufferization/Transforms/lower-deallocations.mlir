@@ -198,15 +198,64 @@ module @conversion_nest_module_dealloc_helper {
 
 // -----
 
-// A dealloc of a buffer-like value that is not a memref is not lowered to the
-// memref dialect.
+// A dealloc of a buffer-like value whose type does not say how it is
+// deallocated and identified is not lowered.
 
-func.func @conversion_buffer_like_dealloc(%arg0: !test.test_memref<[4], f32>,
+func.func @conversion_buffer_like_dealloc(%arg0: !test.test_unshaped<f32>,
                                           %arg1: i1,
-                                          %arg2: !test.test_memref<[4], f32>)
+                                          %arg2: !test.test_unshaped<f32>)
     -> i1 {
   // expected-error@+1 {{failed to legalize operation 'bufferization.dealloc' that was explicitly marked illegal}}
+  %0 = bufferization.dealloc (%arg0 : !test.test_unshaped<f32>) if (%arg1)
+    retain (%arg2 : !test.test_unshaped<f32>)
+  return %0 : i1
+}
+
+// -----
+
+// A buffer-like value that is not a memref is identified and deallocated as
+// its type says.
+
+// CHECK-LABEL: func @conversion_buffer_like_one_memref_and_retained
+//  CHECK-SAME: ([[ARG0:%.+]]: !test.test_memref<[4], f32>, [[ARG1:%.+]]: i1, [[ARG2:%.+]]: !test.test_memref<[4], f32>)
+//       CHECK: [[CAST0:%.+]] = builtin.unrealized_conversion_cast [[ARG0]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK: [[M0:%.+]] = memref.extract_aligned_pointer_as_index [[CAST0]]
+//       CHECK: [[CAST2:%.+]] = builtin.unrealized_conversion_cast [[ARG2]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK: [[R0:%.+]] = memref.extract_aligned_pointer_as_index [[CAST2]]
+//       CHECK: arith.cmpi ne, [[M0]], [[R0]] : index
+//       CHECK: scf.if
+//       CHECK:   [[FREE:%.+]] = builtin.unrealized_conversion_cast [[ARG0]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK:   memref.dealloc [[FREE]] : memref<4xf32>
+func.func @conversion_buffer_like_one_memref_and_retained(
+    %arg0: !test.test_memref<[4], f32>, %arg1: i1,
+    %arg2: !test.test_memref<[4], f32>) -> i1 {
   %0 = bufferization.dealloc (%arg0 : !test.test_memref<[4], f32>) if (%arg1)
     retain (%arg2 : !test.test_memref<[4], f32>)
+  return %0 : i1
+}
+
+// -----
+
+// The identities of a memref and of a buffer-like value that is not a memref
+// are compared by the helper function.
+
+// CHECK-LABEL: func @conversion_buffer_like_and_memref
+//  CHECK-SAME: ([[ARG0:%.+]]: memref<2xf32>, [[ARG1:%.+]]: !test.test_memref<[4], f32>, [[ARG2:%.+]]: i1, [[ARG3:%.+]]: i1, [[ARG4:%.+]]: memref<2xf32>)
+//       CHECK: [[M0:%.+]] = memref.extract_aligned_pointer_as_index [[ARG0]]
+//       CHECK: memref.store [[M0]]
+//       CHECK: [[CAST1:%.+]] = builtin.unrealized_conversion_cast [[ARG1]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK: [[M1:%.+]] = memref.extract_aligned_pointer_as_index [[CAST1]]
+//       CHECK: memref.store [[M1]]
+//       CHECK: call @dealloc_helper
+//       CHECK: scf.if
+//       CHECK:   memref.dealloc [[ARG0]] : memref<2xf32>
+//       CHECK: scf.if
+//       CHECK:   [[FREE:%.+]] = builtin.unrealized_conversion_cast [[ARG1]] : !test.test_memref<[4], f32> to memref<4xf32>
+//       CHECK:   memref.dealloc [[FREE]] : memref<4xf32>
+func.func @conversion_buffer_like_and_memref(
+    %arg0: memref<2xf32>, %arg1: !test.test_memref<[4], f32>, %arg2: i1,
+    %arg3: i1, %arg4: memref<2xf32>) -> i1 {
+  %0 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, !test.test_memref<[4], f32>)
+    if (%arg2, %arg3) retain (%arg4 : memref<2xf32>)
   return %0 : i1
 }
