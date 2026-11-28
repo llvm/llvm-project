@@ -23,28 +23,34 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/InitAllDialects.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 
 #include <optional>
 #include <string>
 
-static llvm::cl::OptionCategory
-    CIROffloadMergeCategory("cir-offload-merge options");
+namespace {
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static llvm::cl::opt<bool> Combine("combine",
-                                   llvm::cl::desc("Combine CIR inputs"),
-                                   llvm::cl::cat(CIROffloadMergeCategory));
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static llvm::cl::list<std::string>
-    InputFileNames(llvm::cl::Positional, llvm::cl::desc("<input files>"),
-                   llvm::cl::cat(CIROffloadMergeCategory));
-
-static llvm::cl::opt<std::string>
-    OutputFileName("o", llvm::cl::desc("Output CIR file"),
-                   llvm::cl::value_desc("filename"), llvm::cl::init("-"),
-                   llvm::cl::cat(CIROffloadMergeCategory));
+class CIROffloadMergeOptTable : public OptTable {
+public:
+  CIROffloadMergeOptTable() : OptTable(optionTables()) {
+    setDashDashParsing(true);
+  }
+};
+} // namespace
 
 // The host/device role and language of a module come from the LangOptions
 // that CIRGen records in cir.lowering_options.
@@ -79,7 +85,8 @@ static void setOffloadAttrs(mlir::ModuleOp moduleOp, llvm::StringRef name,
 }
 
 static mlir::OwningOpRef<mlir::ModuleOp>
-combineInputs(mlir::MLIRContext &context) {
+combineInputs(mlir::MLIRContext &context,
+              llvm::ArrayRef<std::string> InputFileNames) {
   mlir::Location unknownLoc = mlir::UnknownLoc::get(&context);
   mlir::OwningOpRef<mlir::ModuleOp> hostModule;
   llvm::SmallVector<mlir::OwningOpRef<mlir::ModuleOp>> deviceModules;
@@ -166,9 +173,23 @@ static int writeModuleToOutput(mlir::ModuleOp moduleOp,
 
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
-  llvm::cl::HideUnrelatedOptions(CIROffloadMergeCategory);
-  llvm::cl::ParseCommandLineOptions(argc, argv,
-                                    "CIR host-device offload merge\n");
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  CIROffloadMergeOptTable Tbl;
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [](llvm::StringRef Msg) {
+        llvm::WithColor::error(llvm::errs(), "cir-offload-merge")
+            << Msg << '\n';
+        exit(1);
+      });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "cir-offload-merge [options] <input files>",
+                  "CIR host-device offload merge");
+    return 0;
+  }
+  bool Combine = Args.hasArg(OPT_combine);
+  std::vector<std::string> InputFileNames = Args.getAllArgValues(OPT_INPUT);
+  std::string OutputFileName = Args.getLastArgValue(OPT_o, "-").str();
 
   mlir::DialectRegistry registry;
   cir::registerAllDialects(registry);
@@ -185,7 +206,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  mlir::OwningOpRef<mlir::ModuleOp> container = combineInputs(context);
+  mlir::OwningOpRef<mlir::ModuleOp> container =
+      combineInputs(context, InputFileNames);
   if (!container)
     return 1;
   if (mlir::failed(mlir::verify(*container))) {
