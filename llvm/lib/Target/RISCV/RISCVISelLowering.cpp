@@ -1969,8 +1969,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
                        ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::MUL,
-                       ISD::AND, ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT,
-                       ISD::SRA});
+                       ISD::MULHS, ISD::MULHU, ISD::AND, ISD::OR, ISD::XOR,
+                       ISD::SETCC, ISD::SELECT, ISD::SRA});
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
   if (Subtarget.hasStdExtFOrZfinx())
@@ -21642,6 +21642,38 @@ static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RV64Opc, DL, VT, Zip, Zip);
 }
 
+// mulhu (X, 2^N) -> shl (X, Bitwidth - N)
+// mulhs (X, 2^N) -> sha (X, Bitwidth - N)
+static SDValue expandMulhToShift(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (VT.isVector())
+    return SDValue();
+
+  auto *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!CNode)
+    return SDValue();
+
+  APInt MulAmt = CNode->getAPIntValue();
+  if (!MulAmt.isPowerOf2())
+    return SDValue();
+
+  bool IsSigned = N->getOpcode() == ISD::MULHS;
+  if (IsSigned && MulAmt.isNegative())
+    return SDValue();
+
+  SDLoc DL(N);
+  // MULHS (X, 1) -> SRA (X, Bitwidth - 1) (sign extension)
+  // MULHU (X, 1) -> 0
+  unsigned ShiftAmt = VT.getSizeInBits() - CNode->getAPIntValue().logBase2();
+  if (MulAmt.isOne()) {
+    if (!IsSigned)
+      return DAG.getConstant(0, DL, VT);
+    ShiftAmt = VT.getSizeInBits() - 1;
+  }
+  return DAG.getNode(IsSigned ? ISD::SRA : ISD::SRL, DL, VT, N->getOperand(0),
+                     DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
+}
+
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -26279,6 +26311,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     return performMULCombine(N, DAG, DCI, Subtarget);
+  case ISD::MULHS:
+  case ISD::MULHU:
+    return expandMulhToShift(N, DAG);
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::SREM:
