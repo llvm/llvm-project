@@ -24,28 +24,28 @@
 # CHECK: {nf}	sarq	%rax
 # CHECK: encoding: [0x62,0xf4,0xfc,0x0c,0xd1,0xf8]
          {nf}	sarq	$1, %rax
-# CHECK: sarb	%al, %bl
+# CHECK: sarb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd0,0xf8]
          sarb	$1, %al, %bl
-# CHECK: sarw	%ax, %bx
+# CHECK: sarw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x18,0xd1,0xf8]
          sarw	$1, %ax, %bx
-# CHECK: sarl	%eax, %ebx
+# CHECK: sarl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd1,0xf8]
          sarl	$1, %eax, %ebx
-# CHECK: sarq	%rax, %rbx
+# CHECK: sarq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xf8]
          sarq	$1, %rax, %rbx
-# CHECK: {nf}	sarb	%al, %bl
+# CHECK: {nf}	sarb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xf8]
          {nf}	sarb	$1, %al, %bl
-# CHECK: {nf}	sarw	%ax, %bx
+# CHECK: {nf}	sarw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xf8]
          {nf}	sarw	$1, %ax, %bx
-# CHECK: {nf}	sarl	%eax, %ebx
+# CHECK: {nf}	sarl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xf8]
          {nf}	sarl	$1, %eax, %ebx
-# CHECK: {nf}	sarq	%rax, %rbx
+# CHECK: {nf}	sarq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xf8]
          {nf}	sarq	$1, %rax, %rbx
 # CHECK: {evex}	sarb	123(%r8,%rax,4)
@@ -72,27 +72,27 @@
 # CHECK: {nf}	sarq	123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0x7c,0x80,0x7b]
          {nf}	sarq	$1, 123(%r8,%rax,4)
-# CHECK: sarb	123(%r8,%rax,4), %bl
+# CHECK: sarb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x7c,0x80,0x7b]
          sarb	$1, 123(%r8,%rax,4), %bl
-# CHECK: sarw	123(%r8,%rax,4), %bx
+# CHECK: sarw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x18,0xd1,0x7c,0x80,0x7b]
          sarw	$1, 123(%r8,%rax,4), %bx
-# CHECK: sarl	123(%r8,%rax,4), %ebx
+# CHECK: sarl	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd1,0x7c,0x80,0x7b]
          sarl	$1, 123(%r8,%rax,4), %ebx
-# CHECK: sarq	123(%r8,%rax,4), %rbx
+# CHECK: sarq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x18,0xd1,0x7c,0x80,0x7b]
          sarq	$1, 123(%r8,%rax,4), %rbx
-# CHECK: {nf}	sarb	123(%r8,%rax,4), %bl
+# CHECK: {nf}	sarb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0x7c,0x80,0x7b]
          {nf}	sarb	$1, 123(%r8,%rax,4), %bl
-# CHECK: {nf}	sarw	123(%r8,%rax,4), %bx
+# CHECK: {nf}	sarw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x1c,0xd1,0x7c,0x80,0x7b]
          {nf}	sarw	$1, 123(%r8,%rax,4), %bx
-# CHECK: {nf}	sarl	123(%r8,%rax,4), %ebx
+# CHECK: {nf}	sarl	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd1,0x7c,0x80,0x7b]
          {nf}	sarl	$1, 123(%r8,%rax,4), %ebx
-# CHECK: {nf}	sarq	123(%r8,%rax,4), %rbx
+# CHECK: {nf}	sarq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x1c,0xd1,0x7c,0x80,0x7b]
          {nf}	sarq	$1, 123(%r8,%rax,4), %rbx

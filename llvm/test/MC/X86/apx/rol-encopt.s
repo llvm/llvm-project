@@ -24,28 +24,28 @@
 # CHECK: {nf}	rolq	%rax
 # CHECK: encoding: [0x62,0xf4,0xfc,0x0c,0xd1,0xc0]
          {nf}	rolq	$1, %rax
-# CHECK: rolb	%al, %bl
+# CHECK: rolb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd0,0xc0]
          rolb	$1, %al, %bl
-# CHECK: rolw	%ax, %bx
+# CHECK: rolw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x18,0xd1,0xc0]
          rolw	$1, %ax, %bx
-# CHECK: roll	%eax, %ebx
+# CHECK: roll	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd1,0xc0]
          roll	$1, %eax, %ebx
-# CHECK: rolq	%rax, %rbx
+# CHECK: rolq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xc0]
          rolq	$1, %rax, %rbx
-# CHECK: {nf}	rolb	%al, %bl
+# CHECK: {nf}	rolb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xc0]
          {nf}	rolb	$1, %al, %bl
-# CHECK: {nf}	rolw	%ax, %bx
+# CHECK: {nf}	rolw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xc0]
          {nf}	rolw	$1, %ax, %bx
-# CHECK: {nf}	roll	%eax, %ebx
+# CHECK: {nf}	roll	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xc0]
          {nf}	roll	$1, %eax, %ebx
-# CHECK: {nf}	rolq	%rax, %rbx
+# CHECK: {nf}	rolq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xc0]
          {nf}	rolq	$1, %rax, %rbx
 # CHECK: {evex}	rolb	123(%r8,%rax,4)
@@ -72,27 +72,27 @@
 # CHECK: {nf}	rolq	123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0x44,0x80,0x7b]
          {nf}	rolq	$1, 123(%r8,%rax,4)
-# CHECK: rolb	123(%r8,%rax,4), %bl
+# CHECK: rolb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x44,0x80,0x7b]
          rolb	$1, 123(%r8,%rax,4), %bl
-# CHECK: rolw	123(%r8,%rax,4), %bx
+# CHECK: rolw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x18,0xd1,0x44,0x80,0x7b]
          rolw	$1, 123(%r8,%rax,4), %bx
-# CHECK: roll	123(%r8,%rax,4), %ebx
+# CHECK: roll	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd1,0x44,0x80,0x7b]
          roll	$1, 123(%r8,%rax,4), %ebx
-# CHECK: rolq	123(%r8,%rax,4), %rbx
+# CHECK: rolq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x18,0xd1,0x44,0x80,0x7b]
          rolq	$1, 123(%r8,%rax,4), %rbx
-# CHECK: {nf}	rolb	123(%r8,%rax,4), %bl
+# CHECK: {nf}	rolb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0x44,0x80,0x7b]
          {nf}	rolb	$1, 123(%r8,%rax,4), %bl
-# CHECK: {nf}	rolw	123(%r8,%rax,4), %bx
+# CHECK: {nf}	rolw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x1c,0xd1,0x44,0x80,0x7b]
          {nf}	rolw	$1, 123(%r8,%rax,4), %bx
-# CHECK: {nf}	roll	123(%r8,%rax,4), %ebx
+# CHECK: {nf}	roll	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd1,0x44,0x80,0x7b]
          {nf}	roll	$1, 123(%r8,%rax,4), %ebx
-# CHECK: {nf}	rolq	123(%r8,%rax,4), %rbx
+# CHECK: {nf}	rolq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x1c,0xd1,0x44,0x80,0x7b]
          {nf}	rolq	$1, 123(%r8,%rax,4), %rbx

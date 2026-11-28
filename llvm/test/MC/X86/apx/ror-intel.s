@@ -204,10 +204,10 @@
 # CHECK: {nf}	ror	dx
 # CHECK: encoding: [0x62,0xf4,0x7d,0x0c,0xd1,0xca]
          {nf}	ror	dx
-# CHECK: ror	dx, dx
+# CHECK: ror	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xca]
          ror	dx, dx
-# CHECK: {nf}	ror	dx, dx
+# CHECK: {nf}	ror	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xca]
          {nf}	ror	dx, dx
 # CHECK: {evex}	ror	ecx
@@ -216,10 +216,10 @@
 # CHECK: {nf}	ror	ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x0c,0xd1,0xc9]
          {nf}	ror	ecx
-# CHECK: ror	ecx, ecx
+# CHECK: ror	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xc9]
          ror	ecx, ecx
-# CHECK: {nf}	ror	ecx, ecx
+# CHECK: {nf}	ror	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xc9]
          {nf}	ror	ecx, ecx
 # CHECK: {evex}	ror	r9
@@ -228,10 +228,10 @@
 # CHECK: {nf}	ror	r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xc9]
          {nf}	ror	r9
-# CHECK: ror	r9, r9
+# CHECK: ror	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xc9]
          ror	r9, r9
-# CHECK: {nf}	ror	r9, r9
+# CHECK: {nf}	ror	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xc9]
          {nf}	ror	r9, r9
 # CHECK: {evex}	ror	byte ptr [r8 + 4*rax + 291]
@@ -240,10 +240,10 @@
 # CHECK: {nf}	ror	byte ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd0,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	byte ptr [r8 + 4*rax + 291]
-# CHECK: ror	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: ror	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x8c,0x80,0x23,0x01,0x00,0x00]
          ror	bl, byte ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	ror	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	ror	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	bl, byte ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	ror	word ptr [r8 + 4*rax + 291]
@@ -252,10 +252,10 @@
 # CHECK: {nf}	ror	word ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	word ptr [r8 + 4*rax + 291]
-# CHECK: ror	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: ror	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x18,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          ror	dx, word ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	ror	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	ror	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x1c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	dx, word ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	ror	dword ptr [r8 + 4*rax + 291]
@@ -264,10 +264,10 @@
 # CHECK: {nf}	ror	dword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	dword ptr [r8 + 4*rax + 291]
-# CHECK: ror	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: ror	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x18,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          ror	ecx, dword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	ror	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	ror	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x1c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	ecx, dword ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	ror	qword ptr [r8 + 4*rax + 291]
@@ -276,9 +276,9 @@
 # CHECK: {nf}	ror	qword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	qword ptr [r8 + 4*rax + 291]
-# CHECK: ror	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: ror	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          ror	r9, qword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	ror	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	ror	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0x8c,0x80,0x23,0x01,0x00,0x00]
          {nf}	ror	r9, qword ptr [r8 + 4*rax + 291]
