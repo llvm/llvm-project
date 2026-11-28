@@ -47,7 +47,7 @@ def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
 def AffineApplyOp : Affine_Op<"apply",
-    [Pure,
+    [ConditionallySpeculatable, NoMemoryEffect,
      DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
@@ -124,6 +124,9 @@ def AffineApplyOp : Affine_Op<"apply",
       return OperandRange{getOperands().begin() + getMap().getNumDims(),
                           getOperands().end()};
     }
+    
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
   }];
 
   let hasCanonicalizer = 1;
@@ -1115,7 +1118,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure, Elementwise,
+    [ConditionallySpeculatable, NoMemoryEffect, Elementwise,
      DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
      // Infer linear_index type from the first result type during parsing.
      TypesMatchWith<"linear_index type must match result types",
@@ -1194,6 +1197,9 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   ];
 
   let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+
     /// Return true if the basis includes a bound on the first index input.
     bool hasOuterBound() {
       return getMultiIndex().size() == getStaticBasis().size();
