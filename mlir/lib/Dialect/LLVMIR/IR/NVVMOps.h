@@ -21,6 +21,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Casting.h"
 
+namespace llvm {
+class IRBuilderBase;
+class Value;
+} // namespace llvm
+
 namespace mlir::NVVM {
 /// The ID of no intrinsic, used in the intrinsic tables of the ops.
 constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
@@ -35,6 +40,10 @@ inline bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
 inline bool isPtrInSharedCTASpace(mlir::Value ptr) {
   return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
 }
+
+/// Returns `addr` cast to the kernel parameter address space.
+llvm::Value *getParamCastedAddr(llvm::Value *addr,
+                                llvm::IRBuilderBase &builder);
 } // namespace mlir::NVVM
 
 #endif // MLIR_LIB_DIALECT_LLVMIR_IR_NVVMOPS_H

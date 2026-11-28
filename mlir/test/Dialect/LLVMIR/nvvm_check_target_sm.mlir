@@ -230,6 +230,26 @@ gpu.module @tensormap_replace_sm90 [#nvvm.target<chip = "sm_90">] {
 
 // -----
 
+gpu.module @tensormap_replace_alloc_class_sm90 [#nvvm.target<chip = "sm_90">] {
+  func.func @tensormap_replace_alloc_class_sm90(%addr: !llvm.ptr<1>) {
+    // expected-error @below {{'nvvm.tensormap.replace.alloc_class' op is not supported on sm_90}}
+    nvvm.tensormap.replace.alloc_class large in %addr : !llvm.ptr<1>
+    return
+  }
+}
+
+// -----
+
+gpu.module @tensormap_query_alloc_class_large_sm90 [#nvvm.target<chip = "sm_90">] {
+  func.func @tensormap_query_alloc_class_large_sm90(%addr: !llvm.ptr<1>) {
+    // expected-error @below {{'nvvm.tensormap.query.alloc_class_large' op is not supported on sm_90}}
+    %res = nvvm.tensormap.query.alloc_class_large %addr : !llvm.ptr<1> -> i1
+    return
+  }
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // mbarrier
 //===----------------------------------------------------------------------===//

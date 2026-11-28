@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.h"
 
+#include "IR/NVVMOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
@@ -235,8 +236,8 @@ mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
   llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
 }
 
-static llvm::Value *getParamCastedAddr(llvm::Value *addr,
-                                       llvm::IRBuilderBase &builder) {
+llvm::Value *mlir::NVVM::getParamCastedAddr(llvm::Value *addr,
+                                            llvm::IRBuilderBase &builder) {
   return builder.CreateAddrSpaceCast(
       addr, builder.getPtrTy(llvm::NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM));
 }

@@ -127,3 +127,19 @@ llvm.func @tensormap_replace_invalid_fill_mode(%addr : !llvm.ptr<1>) {
   nvvm.tensormap.replace field = fill_mode, new_value = #nvvm.tensormap_elemtype<s32> in %addr : !llvm.ptr<1>
   llvm.return
 }
+
+// -----
+
+llvm.func @tensormap_replace_unsupported_alloc_class(%addr : !llvm.ptr<1>, %new_val : i32) {
+  // expected-error @+1 {{alloc_class is not supported for rank field}}
+  nvvm.tensormap.replace field = rank, new_value = %new_val in %addr, alloc_class = large : !llvm.ptr<1>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @tensormap_replace_alloc_class_same(%addr : !llvm.ptr<1>) {
+  // expected-error @+1 {{attribute 'alloc_class' failed to satisfy constraint: Describes the allocation class of a tensor-map object whose value is one of {small, large}}}
+  nvvm.tensormap.replace.alloc_class same in %addr : !llvm.ptr<1>
+  llvm.return
+}

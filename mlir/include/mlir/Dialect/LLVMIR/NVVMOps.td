@@ -52,7 +52,8 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
 // Op partitions of the NVVM dialect ops, grouped by instruction category:
 //  - `Arith`: integer, floating-point, comparison and logic instructions.
 //  - `Convert`: the `cvt` data conversion instructions.
-//  - `AsyncCopy`: the asynchronous copy instructions and `tensormap.replace`.
+//  - `AsyncCopy`: the asynchronous copy instructions, `tensormap.replace` and
+//    `tensormap.query`.
 //  - `DataMovement`: the other data movement and conversion instructions.
 //  - `MBarrier`: the mbarrier instructions.
 //  - `Sync`: the other parallel synchronization and communication
@@ -7079,6 +7080,12 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     required only for the `box_dim`, `global_dim`, `global_stride`, and 
     `element_stride` fields.
 
+    The optional `alloc_class` modifier specifies the tensor allocation class
+    of the tensor-map object to be set along with the new address and is
+    supported only for the `global_address` field. When it is omitted, the
+    allocation class is set to `small`. To set only the allocation class, use
+    `nvvm.tensormap.replace.alloc_class`.
+
     [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
   }];
   let partition = NVVM_AsyncCopyPartition;
@@ -7089,12 +7096,82 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
     OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
-    OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
+    OptionalAttr<TensormapFieldValueAttr>:$new_value_attr,
+    OptionalAttr<TensormapAllocClassAttr>:$alloc_class
   );
 
   let assemblyFormat = [{
     `field` `=` enum($field) (`[` $ord^ `]`)? `,` `new_value` `=`
-    ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
+    ($new_value_attr^):($new_value)? `in` $addr
+    (`,` `alloc_class` `=` enum($alloc_class)^)? attr-dict `:` type(operands)
+  }];
+}
+
+def NVVM_TensormapReplaceAllocClassOp :
+    NVVM_VoidIntrinsicOp<"tensormap.replace.alloc_class",
+    [NVVMRequiresSMaOrSMf<[90], [100, 110, 120]>]> {
+  let summary = "Modifies the allocation class of the tensor-map object";
+  let description = [{
+    The `nvvm.tensormap.replace.alloc_class` operation sets the tensor
+    allocation class of the tensor-map object at the location specified by
+    `addr` to `alloc_class`, without modifying any other field of the
+    tensor-map object.
+
+    - `alloc_class`: The new allocation class of the tensor-map object. It must
+      be either `small` or `large`.
+    - `addr`: A pointer to the tensor-map object. It must be a global or
+      shared::cta pointer.
+
+    To set the allocation class along with a new global address, use
+    `nvvm.tensormap.replace` with the `global_address` field instead.
+
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
+  }];
+  let partition = NVVM_AsyncCopyPartition;
+
+  let arguments = (ins
+    ConfinedAttr<TensormapAllocClassAttr,
+      [EnumAttrIsOneOf<TensormapAllocClassAttr,
+         [TensormapAllocClassSmall, TensormapAllocClassLarge]>]>:$alloc_class,
+    AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr
+  );
+
+  let assemblyFormat = [{
+    enum($alloc_class) `in` $addr attr-dict `:` type($addr)
+  }];
+}
+
+def NVVM_TensormapQueryAllocClassLargeOp :
+    NVVM_SingleResultIntrinsicOp<"tensormap.query.alloc_class_large",
+    [NVVMRequiresSMaOrSMf<[90], [100, 110, 120]>]> {
+  let summary = "Queries whether the allocation class of a tensor-map object is large";
+  let description = [{
+    The `nvvm.tensormap.query.alloc_class_large` operation queries whether the
+    tensor allocation class of the tensor-map object at the location specified
+    by `addr` has been set to `large` (see `nvvm.tensormap.replace`).
+
+    - `res`: An `i1` that is `true` only if the allocation class of the
+      tensor-map object has been set to `large`.
+    - `addr`: A pointer to the tensor-map object. It must be a generic, global,
+      shared::cta, or const pointer. If `in_param_space` is specified, `addr`
+      must be a generic pointer and is interpreted as referring to the
+      parameter state space.
+
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-query-alloc-class-large)
+  }];
+  let partition = NVVM_AsyncCopyPartition;
+
+  let hasVerifier = 1;
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerGlobal, LLVM_PointerShared,
+               LLVM_PointerConst]>:$addr,
+    UnitAttr:$in_param_space
+  );
+
+  let assemblyFormat = [{
+    (`in_param_space` $in_param_space^ `,`)? $addr attr-dict `:` type($addr)
+    `->` type($res)
   }];
 }
 

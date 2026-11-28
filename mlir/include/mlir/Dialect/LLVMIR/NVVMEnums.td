@@ -941,4 +941,29 @@ def TensormapFillMode : I32Enum<"TensormapFillMode", "NVVM Tensormap Fill Mode",
 def TensormapFillModeAttr : EnumAttr<NVVM_Dialect,
   TensormapFillMode, "tensormap_fill_mode">;
 
+def TensormapAllocClassSmall : I32EnumAttrCase<"SMALL", 0, "small">;
+def TensormapAllocClassLarge : I32EnumAttrCase<"LARGE", 1, "large">;
+def TensormapAllocClassSame  : I32EnumAttrCase<"SAME", 2, "same">;
+
+def TensormapAllocClass : I32EnumAttr<"TensormapAllocClass",
+  "NVVM Tensormap Allocation Class",
+  [TensormapAllocClassSmall, TensormapAllocClassLarge,
+   TensormapAllocClassSame]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def TensormapAllocClassAttr : EnumAttr<NVVM_Dialect, TensormapAllocClass,
+  "tensormap_alloc_class"> {
+  let summary = "Describes the allocation class of a tensor-map object";
+  let description = [{
+    A `nvvm.tensormap_alloc_class` attribute specifies the tensor allocation
+    size class of a tensor-map object. It can be one of the following values:
+    - `small`: The tensor allocation size is small.
+    - `large`: The tensor allocation size is large.
+    - `same`: The tensor allocation size is left unchanged.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
+  }];
+}
+
 #endif // NVVMIR_ENUMS
