@@ -197,11 +197,29 @@ template <class BlockT> bool isLegalToHoistInto(BlockT *Block) {
     return Block->isLegalToHoistInto();
   return false;
 }
+
+template <class BlockT>
+using has_no_terminator_physreg_check =
+    decltype(&BlockT::hasNoTerminatorWithPhysregDefsOrUses);
+
+template <class BlockT>
+using detect_has_no_terminator_physreg_check =
+    llvm::is_detected<has_no_terminator_physreg_check, BlockT>;
+
+/// SFINAE function that dispatches to the hasNoTerminatorWithPhysregDefsOrUses
+/// member function or returns true, if it doesn't exist.
+template <class BlockT>
+bool hasNoTerminatorWithPhysregDefsOrUses(BlockT *Block) {
+  if constexpr (detect_has_no_terminator_physreg_check<BlockT>::value)
+    return Block->hasNoTerminatorWithPhysregDefsOrUses();
+  return true;
+}
 } // namespace detail
 
 /// getLoopPreheader - If there is a preheader for this loop, return it.  A
 /// loop has a preheader if there is only one edge to the header of the loop
-/// from outside of the loop and it is legal to hoist instructions into the
+/// from outside of the loop, the predecessor's terminators do not define or use
+/// physical registers, and it is legal to hoist instructions into the
 /// predecessor. If this is the case, the block branching to the header of the
 /// loop is the preheader node.
 ///
@@ -213,6 +231,11 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPreheader() const {
   // Keep track of nodes outside the loop branching to the header...
   BlockT *Out = getLoopPredecessor();
   if (!Out)
+    return nullptr;
+
+  // Hoisting before the terminators must not clobber physical registers they
+  // read, e.g. a condition code.
+  if (!detail::hasNoTerminatorWithPhysregDefsOrUses(Out))
     return nullptr;
 
   // Make sure we are allowed to hoist instructions into the predecessor.
