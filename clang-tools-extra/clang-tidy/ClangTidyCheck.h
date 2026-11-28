@@ -501,6 +501,9 @@ protected:
   StringRef getCurrentMainFile() const { return Context->getCurrentFile(); }
   /// Returns the language options from the context.
   const LangOptions &getLangOpts() const { return Context->getLangOpts(); }
+  /// Returns the \c Sema of the current translation unit, if available. Checks
+  /// must handle a null result, e.g. by keeping their AST-only behavior.
+  Sema *getSema() const { return Context->getSema(); }
   /// Returns true when the check is run in a use case when only 1 fix will be
   /// applied at a time.
   bool areDiagsSelfContained() const {

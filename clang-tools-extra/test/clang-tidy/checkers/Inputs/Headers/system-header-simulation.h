@@ -15,6 +15,9 @@ using bool_constant = integral_constant<bool, B>;
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
 
+template <class T>
+inline constexpr bool is_enum_v = __is_enum(T);
+
 template<class T>
 struct is_error_code_enum : false_type {};
 
@@ -27,6 +30,12 @@ enum class io_errc {
 
 template <class... Types>
 class tuple;
+
+template <class T>
+struct tuple_size;
+
+template <__SIZE_TYPE__ I, class T>
+struct tuple_element;
 
 template <typename T = void>
 class less;
@@ -55,6 +64,11 @@ struct Outer {
 namespace detail {
 struct X {};
 } // namespace detail
+
+#if __cplusplus >= 202002L
+template <class T, class U>
+concept derived_from = __is_base_of(U, T);
+#endif
 
 } // namespace std
 

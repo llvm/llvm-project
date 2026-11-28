@@ -287,7 +287,9 @@ public:
     // Run the AST-dependent part of the clang-tidy checks.
     // (The preprocessor part ran already, via PPCallbacks).
     trace::Span Tracer("ClangTidyMatch");
+    Context->setSema(CI.hasSema() ? &CI.getSema() : nullptr);
     Finder.matchAST(CI.getASTContext());
+    Context->setSema(nullptr);
   }
 
   void sawDiagnostic(const clang::Diagnostic &Info, clangd::Diag &D) override {
