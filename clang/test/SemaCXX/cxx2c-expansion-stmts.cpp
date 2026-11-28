@@ -1817,3 +1817,14 @@ void default_arg_in_redecl() {
 
 
 } // namespace decl_context_issues
+
+template <> struct std::initializer_list<long> {}; // expected-error {{'std::initializer_list<long>' layout not recognized}}
+
+namespace gh245102 {
+void after_invalid_range_for() {
+  for (auto x : {1L, 2L}) {} // expected-error {{no viable 'begin' function available}}
+  template for (constexpr auto x : {1, 2}) { // expected-note {{in instantiation of expansion statement requested here}}
+    static_assert(x == 1); // expected-error {{static assertion failed}} expected-note {{expression evaluates to '2 == 1'}}
+  }
+}
+} // namespace gh245102
