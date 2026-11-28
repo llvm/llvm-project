@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- \
-// RUN:   -config='{CheckOptions: {bugprone-unused-return-value.CheckedFunctions: "^::std::remove$;^::std::remove_if$;^::std::unique$", bugprone-unused-return-value.CheckedReturnTypes: "", bugprone-unused-return-value.AllowCastToVoid: true}}'
+// RUN:   -config='{CheckOptions: {bugprone-unused-return-value.CheckedFunctions: "^::std::remove$;^::std::remove_if$;^::std::unique$", bugprone-unused-return-value.CheckedReturnTypes: ""}}'
 // RUN: %check_clang_tidy -check-suffixes=NOCAST %s bugprone-unused-return-value %t -- \
 // RUN:   -config='{CheckOptions: {bugprone-unused-return-value.CheckedFunctions: "^::std::remove$;^::std::remove_if$;^::std::unique$", bugprone-unused-return-value.CheckedReturnTypes: "", bugprone-unused-return-value.AllowCastToVoid: false}}'
 
