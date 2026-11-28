@@ -110,6 +110,15 @@ def UsePopc : SubtargetFeature<"popc", "UsePopc", "true",
 def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
                               "Use software emulation for floating point">;
 
+// Assume that lock-free 32-bit atomics are available on a target without
+// compare-and-swap. Atomic loads and stores are done inline, and the other
+// atomic operations become __sync libcalls, which the user has to provide.
+// Code built with this feature is not ABI-compatible with code built without
+// it if atomic variables cross the ABI boundary.
+def FeatureForcedAtomics
+  : SubtargetFeature<"forced-atomics", "HasForcedAtomics", "true",
+                     "Assume that lock-free 32-bit atomics are available">;
+
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget tuning features.
 //
