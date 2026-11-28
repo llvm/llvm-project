@@ -45,7 +45,9 @@ class TestGdbRemote_qSupported(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     def test_qSupported_siginfo_read(self):
         expected = (
-            "+" if lldbplatformutil.getPlatform() in ["freebsd", "linux"] else "-"
+            "+"
+            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
+            else "-"
         )
         supported_dict = self.get_qSupported_dict()
         self.assertEqual(supported_dict.get("qXfer:siginfo:read", "-"), expected)

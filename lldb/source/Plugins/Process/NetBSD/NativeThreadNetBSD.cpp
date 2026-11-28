@@ -326,3 +326,22 @@ NativeThreadNetBSD::CopyWatchpointsFrom(NativeThreadNetBSD &source) {
   }
   return s;
 }
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+NativeThreadNetBSD::GetSiginfo() const {
+  ptrace_siginfo_t info;
+  Status error = NativeProcessNetBSD::PtraceWrapper(
+      PT_GET_SIGINFO, m_process.GetID(), &info, sizeof(info));
+  if (error.Fail())
+    return error.ToError();
+
+  // The siginfo describes the signal which stopped the process. The signal
+  // belongs to this thread if it was sent to it, or to the whole process.
+  if (info.psi_lwpid != 0 &&
+      static_cast<lldb::tid_t>(info.psi_lwpid) != GetID())
+    return llvm::createStringError("no siginfo for thread");
+
+  return llvm::MemoryBuffer::getMemBufferCopy(
+      llvm::StringRef(reinterpret_cast<const char *>(&info.psi_siginfo),
+                      sizeof(info.psi_siginfo)));
+}
