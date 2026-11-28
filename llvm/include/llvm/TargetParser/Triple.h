@@ -99,6 +99,7 @@ public:
     xtensa,         // Tensilica: Xtensa
     nvptx,          // NVPTX: 32-bit
     nvptx64,        // NVPTX: 64-bit
+    pisa,           // PISA: Intel GPU portable ISA (64-bit)
     amdil,          // AMDIL
     amdil64,        // AMDIL with 64-bit pointers
     hsail,          // AMD HSAIL
@@ -994,6 +995,9 @@ public:
     return getArch() == Triple::nvptx || getArch() == Triple::nvptx64;
   }
 
+  /// Tests whether the target is PISA (64-bit only).
+  bool isPISA() const { return getArch() == Triple::pisa; }
+
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgpu; }
 
@@ -1422,7 +1426,9 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const {
+    return isSPIROrSPIRV() || isNVPTX() || isPISA() || isAMDGPU();
+  }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;
