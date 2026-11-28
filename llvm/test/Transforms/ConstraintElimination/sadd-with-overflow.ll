@@ -318,3 +318,113 @@ then:
 else:
   ret i8 0
 }
+
+define void @sadd_positive_constant_lhs(i64 %x) {
+; CHECK-LABEL: define void @sadd_positive_constant_lhs(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %c = icmp slt i64 %x, 0
+  call void @llvm.assume(i1 %c)
+  %s = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 3, i64 %x)
+  %o = extractvalue { i64, i1 } %s, 1
+  call void @use(i1 %o)
+  ret void
+}
+
+define void @sadd_negative_constant_lhs(i64 %x) {
+; CHECK-LABEL: define void @sadd_negative_constant_lhs(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %c = icmp sge i64 %x, 0
+  call void @llvm.assume(i1 %c)
+  %s = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 -3, i64 %x)
+  %o = extractvalue { i64, i1 } %s, 1
+  call void @use(i1 %o)
+  ret void
+}
+
+define void @sadd_opposite_signs_known_non_positive(i64 %v, i64 %w) {
+; CHECK-LABEL: define void @sadd_opposite_signs_known_non_positive(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[W:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[W]], -9223372036854775808
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = lshr i64 %v, 1
+  %b = and i64 %w, -9223372036854775808
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_opposite_signs(i64 %v, i64 %s) {
+; CHECK-LABEL: define void @sadd_opposite_signs(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[S]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[N:%.*]] = xor i64 [[S]], -1
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i64 %v, 1
+  %c = icmp sge i64 %s, 0
+  call void @llvm.assume(i1 %c)
+  %n = xor i64 %s, -1
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %n)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_same_signs(i64 %v, i64 %s) {
+; CHECK-LABEL: define void @sadd_same_signs(
+; CHECK-SAME: i64 [[V:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[V]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[S]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[R:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 [[S]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i64 %v, 1
+  %c = icmp sge i64 %s, 0
+  call void @llvm.assume(i1 %c)
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %s)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_opposite_signs_known_negative(i8 %v, i8 %w) {
+; CHECK-LABEL: define void @sadd_opposite_signs_known_negative(
+; CHECK-SAME: i8 [[V:%.*]], i8 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[V]], 1
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[W]], -128
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = lshr i8 %v, 1
+  %b = or i8 %w, -128
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}

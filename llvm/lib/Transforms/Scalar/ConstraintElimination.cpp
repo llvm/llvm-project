@@ -437,10 +437,12 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
-  /// Returns true if \p V is known to be negative, false if \p V is known to be
-  /// nonnegative, or std::nullopt if neither the signed system nor
-  /// ValueTracking can prove it.
-  std::optional<bool> getKnownSign(Value *V);
+  /// Returns the sign of \p V, if known. The result is false if \p V is known
+  /// to be non-negative. Otherwise it is true if \p V is known to be negative
+  /// (if \p StrictlyNegative), or non-positive (if not \p StrictlyNegative).
+  /// Returns std::nullopt if neither ValueTracking, nor the signed system can
+  /// prove either fact.
+  std::optional<bool> getKnownSign(Value *V, bool StrictlyNegative);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -653,15 +655,22 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   // For a constant Op1, the ranges of Op0 for which the operation does not
   // wrap are known exactly; check if the systems imply one of them.
-  auto *C = dyn_cast<ConstantInt>(Op1);
-  if (!C)
-    return false;
+  if (auto *C = dyn_cast<ConstantInt>(Op1)) {
+    auto Range = ConstantRange::makeExactNoWrapRegion(
+        Opcode, C->getValue(),
+        Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap);
+    return doesHoldInRange(Info, Op0, Range, Signed);
+  }
 
-  return doesHoldInRange(Info, Op0,
-                         ConstantRange::makeExactNoWrapRegion(
-                             Opcode, C->getValue(),
-                             Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
-                         Signed);
+  // A signed sum of operands with opposite signs cannot wrap.
+  if (Signed && Opcode == Instruction::Add) {
+    if (auto Op0Sign = Info.getKnownSign(Op0, /*StrictlyNegative=*/false))
+      if (auto Op1Sign = Info.getKnownSign(Op1, /*StrictlyNegative=*/false))
+        if (*Op0Sign != *Op1Sign)
+          return true;
+  }
+
+  return false;
 }
 
 /// Returns true if \p V is known to not wrap in signed or unsigned, depending
@@ -1196,16 +1205,20 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
 }
 
-std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
+                                                 bool StrictlyNegative) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->isNegative();
   KnownBits Known = computeKnownBits(V, DL);
   if (Known.isNonNegative())
     return false;
-  if (Known.isNegative())
+  if (StrictlyNegative ? Known.isNegative() : Known.isNonPositive())
     return true;
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   if (doesHold(CmpInst::ICMP_SGE, V, Zero))
     return false;
-  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+  auto NegativePred = StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE;
+  if (doesHold(NegativePred, V, Zero))
     return true;
   return std::nullopt;
 }
@@ -2690,8 +2703,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
           if (A->getType()->isIntegerTy()) {
-            std::optional<bool> ASign = Info.getKnownSign(A);
-            std::optional<bool> BSign = Info.getKnownSign(B);
+            std::optional<bool> ASign =
+                Info.getKnownSign(A, /*StrictlyNegative=*/true);
+            std::optional<bool> BSign =
+                Info.getKnownSign(B, /*StrictlyNegative=*/true);
             if (ASign.has_value() != BSign.has_value()) {
               bool IsNegative = ASign ? *ASign : *BSign;
               Value *OtherOp = ASign ? B : A;
