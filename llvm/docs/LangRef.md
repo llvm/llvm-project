@@ -2939,6 +2939,22 @@ fn -> other_fn -> other_fn ; fn is norecurse
     no attempt is made to diagnose unsupported uses. Currently the separate
     `float:` attribute is respected by the AMDGPU and NVPTX backends.
 
+    **NOTE:** Although `denormal_fpenv` is specified to only flush denormal
+    values at the IR level, most backends will lower this to instructions +
+    mode flags or modifiers that can end up flushing the minimum magnitude
+    positive or negative normal values as well.
+
+    This is because most backends flush based on whether IEEE 754 underflow
+    conditions are detected, not on whether the final output is denormal.
+    This can lead to edge cases like `fmul(f0x00800000, f0x3f7fffff)` with
+    `denormal_fpenv(preservesign)` at the IR level, which may be lowered to
+    a hardware f32 addition instruction in the backend which would usually
+    produce `f0x00800000` (the minimum positive normal number) when executed,
+    but will produce `0.0` with the hardware's denormal flushing mode/modifier/flag set.
+
+    Exacty which min-normal results can end up being flushed is target-specific.
+    Only the flushing of denormal result needs to be considered at the IR level.
+
     **Examples:**
 
     - `denormal_fpenv(preservesign)`
