@@ -9006,45 +9006,8 @@ bool CodeGenModule::stopAutoInit() {
 
 void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                                     const Decl *D) const {
-  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
-  // postfix beginning with '.' since the symbol name can be demangled.
-  if (LangOpts.HIP)
-    OS << (isa<VarDecl>(D) ? ".static." : ".intern.");
-  else
-    OS << (isa<VarDecl>(D) ? "__static__" : "__intern__");
-
-  // If the CUID is not specified we try to generate a unique postfix.
-  if (getLangOpts().CUID.empty()) {
-    SourceManager &SM = getContext().getSourceManager();
-    PresumedLoc PLoc = SM.getPresumedLoc(D->getLocation());
-    assert(PLoc.isValid() && "Source location is expected to be valid.");
-
-    // Get the hash of the user defined macros.
-    llvm::MD5 Hash;
-    llvm::MD5::MD5Result Result;
-    for (const auto &Arg : PreprocessorOpts.Macros)
-      Hash.update(Arg.first);
-    Hash.final(Result);
-
-    // Get the UniqueID for the file containing the decl.
-    llvm::sys::fs::UniqueID ID;
-    auto Status = FS->status(PLoc.getFilename());
-    if (!Status) {
-      PLoc = SM.getPresumedLoc(D->getLocation(), /*UseLineDirectives=*/false);
-      assert(PLoc.isValid() && "Source location is expected to be valid.");
-      Status = FS->status(PLoc.getFilename());
-    }
-    if (!Status) {
-      SM.getDiagnostics().Report(diag::err_cannot_open_file)
-          << PLoc.getFilename() << Status.getError().message();
-    } else {
-      ID = Status->getUniqueID();
-    }
-    OS << llvm::format("%x", ID.getFile()) << llvm::format("%x", ID.getDevice())
-       << "_" << llvm::utohexstr(Result.low(), /*LowerCase=*/true, /*Width=*/8);
-  } else {
-    OS << getContext().getCUIDHash();
-  }
+  CodeGenUtils::printPostfixForExternalizedDecl(OS, getContext(), *D,
+                                                PreprocessorOpts, *FS);
 }
 
 void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
