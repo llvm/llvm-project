@@ -123,7 +123,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2}
+!llvm.module.flags = !{!2, !14}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
 !1 = !DIFile(filename: "memprof-dump-matched-alloc-site.cc", directory: "/")
@@ -139,3 +139,4 @@ entry:
 !11 = distinct !DILocation(line: 2, column: 21, scope: !9, inlinedAt: !12)
 !12 = distinct !DILocation(line: 3, column: 47, scope: !13)
 !13 = distinct !DISubprogram(name: "f3", linkageName: "_Z2f3v", scope: !1, file: !1, line: 3, type: !5, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!14 = !{i32 1, !"MemProfModuleId", !"0123456789abcdef"}
