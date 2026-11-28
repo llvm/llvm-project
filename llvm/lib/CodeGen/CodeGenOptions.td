@@ -602,6 +602,10 @@ defm : ValueField<"tail-dup-succ-size", "unsigned", "16",
 defm : BoolField<"tail-dup-verify", "false",
   "Verify sanity of PHI instructions during taildup">;
 
+// OptimizePHIs.cpp
+defm : OptionalBoolField<"hoist-phi-consts",
+  "Hoist duplicate constants feeding a PHI, overriding the target's choice">;
+
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
   "Enable matching and inference when generating basic block sections">;
