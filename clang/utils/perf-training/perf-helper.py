@@ -85,6 +85,9 @@ def perf(args):
         description="perf wrapper for BOLT/CSSPGO profile collection",
     )
     parser.add_argument(
+        "--brstack", action="store_true", help="Use perf with branch stack"
+    )
+    parser.add_argument(
         "--lbr", action="store_true", help="Use perf with branch stacks"
     )
     parser.add_argument("--csspgo", action="store_true", help="Enable CSSPGO flags")
@@ -101,7 +104,7 @@ def perf(args):
         "--freq=max",
         "--output=%d.perf.data" % os.getpid(),
     ]
-    if opts.lbr or opts.csspgo:
+    if opts.brstack or opts.lbr or opts.csspgo:
         perf_args += ["--branch-filter=any,u"]
     if opts.csspgo:
         perf_args += ["-g", "--call-graph=fp"]
@@ -123,6 +126,9 @@ def perf2bolt(args):
     parser.add_argument("bolt", help="Path to llvm-bolt")
     parser.add_argument("path", help="Path containing perf.data files")
     parser.add_argument("binary", help="Input binary")
+    parser.add_argument(
+        "--brstack", action="store_true", help="Use branch stack perf2bolt mode"
+    )
     parser.add_argument("--lbr", action="store_true", help="Use LBR perf2bolt mode")
     opts = parser.parse_args(args)
 
@@ -132,7 +138,7 @@ def perf2bolt(args):
         "--aggregate-only",
         "--profile-format=yaml",
     ]
-    if not opts.lbr:
+    if not (opts.brstack or opts.lbr):
         p2b_args += ["-ba"]
     p2b_args += ["-p"]
     for filename in findFilesWithExtension(opts.path, "perf.data"):
@@ -621,7 +627,7 @@ def filter_bolt_optimized(inputs, instrumented_outputs, readelf):
 
 def bolt_optimize(args):
     parser = argparse.ArgumentParser("%prog  [options] ")
-    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
+    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "BRSTACK", "LBR"])
     parser.add_argument("--input")
     parser.add_argument("--instrumented-output")
     parser.add_argument("--fdata")
@@ -699,10 +705,12 @@ def bolt_optimize(args):
         sys.stdout.write(line)
     process.check_returncode()
 
-    if opts.method in ["PERF", "LBR"]:
+    if opts.method in ["PERF", "BRSTACK", "LBR"]:
         args = [opts.bolt, opts.perf_training_binary_dir, opts.input]
-        if opts.method == "LBR":
-            args.extend("--lbr")
+        if opts.method == "BRSTACK":
+            args.append("--brstack")
+        elif opts.method == "LBR":
+            args.append("--lbr")
         perf2bolt(args)
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])

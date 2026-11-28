@@ -3,7 +3,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %s %cflags -Wl,-q -o %t -mbranch-protection=bti -Wl,-z,force-bti
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
 # RUN:   --hot-functions-at-end --align-text=0x10000000 --lite=0 \
 # RUN:   --print-only=foo,bar --print-longjmp 2>&1 | FileCheck %s

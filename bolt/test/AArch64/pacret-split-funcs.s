@@ -5,7 +5,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %s %cflags -march=armv8.3-a -Wl,-q -o %t
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
 # RUN: --print-only foo --print-split --print-all 2>&1 | FileCheck %s
 

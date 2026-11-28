@@ -5,7 +5,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --relax-exp \
 # RUN:   --max-cluster-size=64 | FileCheck %s --check-prefix=CHECK-BOLT

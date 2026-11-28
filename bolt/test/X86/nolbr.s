@@ -5,7 +5,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 # RUN:   %s -o %t.o
-# RUN: link_fdata --no-lbr %s %t.o %t.fdata
+# RUN: link_fdata --no-brstack %s %t.o %t.fdata
+# RUN: link_fdata --no-lbr %s %t.o %t.legacy.fdata
+# RUN: diff %t.fdata %t.legacy.fdata
 # RUN: FileCheck %s --input-file %t.fdata --check-prefix=CHECK-FDATA
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib

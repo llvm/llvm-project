@@ -2,8 +2,8 @@
 ## estimated by BOLT when TotalChildrenCount is zero and non-zero.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-unknown %s -o %t.o
-# RUN: link_fdata --no-lbr %s %t.o %t.z.fdata FDATA_ZERO
-# RUN: link_fdata --no-lbr %s %t.o %t.nz.fdata FDATA_NONZERO
+# RUN: link_fdata --no-brstack %s %t.o %t.z.fdata FDATA_ZERO
+# RUN: link_fdata --no-brstack %s %t.o %t.nz.fdata FDATA_NONZERO
 # RUN: %clang %cflags -Wl,-q %t.o -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.z.bolt --print-estimate-edge-counts \
 # RUN:   --data=%t.z.fdata 2>&1 | FileCheck %s --check-prefix=ZERO

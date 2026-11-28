@@ -6,7 +6,7 @@
 # RUN: %{link} -Wl,-Ttext=0x180001f8 -o %t.biv
 # RUN: %{link} -Wl,-Ttext=0x080001f8 -o %t.fv
 # RUN: %{link} -Wl,-Ttext=0x080001f4 -o %t.fiv
-# RUN: link_fdata --no-lbr %s %t.bv %t.fdata
+# RUN: link_fdata --no-brstack %s %t.bv %t.fdata
 
 # DEFINE: %{bolt} = llvm-bolt --relocs=0 --data=%t.fdata --split-functions \
 # DEFINE:   --split-all-cold --keep-nops --custom-allocation-vma=0x10000000

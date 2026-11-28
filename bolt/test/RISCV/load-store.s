@@ -1,5 +1,5 @@
 // RUN: %clang %cflags64 -o %t %s
-// RUN: link_fdata --no-lbr %s %t %t.fdata
+// RUN: link_fdata --no-brstack %s %t %t.fdata
 // RUN: llvm-bolt %t -o %t.null --data=%t.fdata --dyno-stats | FileCheck %s
 
 // CHECK: BOLT-INFO: program-wide dynostats after all optimizations before SCTC and FOP (no change):

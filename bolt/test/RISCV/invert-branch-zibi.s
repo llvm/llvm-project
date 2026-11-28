@@ -4,7 +4,7 @@
 
 // RUN: %clang %cflags64 -march=rv64gc_zibi0p1 -menable-experimental-extensions \
 // RUN:   -Wl,-q %s -o %t
-// RUN: link_fdata --no-lbr %s %t %t.fdata
+// RUN: link_fdata --no-brstack %s %t %t.fdata
 // RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp
 // RUN: llvm-objdump -d --no-show-raw-insn --mattr=+experimental-zibi %t.bolt \
 // RUN:   | FileCheck %s
