@@ -88,6 +88,9 @@ TEST(LibraryOptionsTest, Apply) {
               testing::Each(true));
   EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
                                             test::Mode::B));
+  // A RepeatedField appends each whole value.
+  EXPECT_THAT(Apply({"-lib-arg=a,b", "-lib-arg", "c"}), testing::Each(true));
+  EXPECT_THAT(O.arg, testing::ElementsAre("a,b", "c"));
 
   // A rejected value leaves the member unchanged.
   EXPECT_THAT(
@@ -124,6 +127,7 @@ TEST(LibraryOptionsTest, Parser) {
   });
   EXPECT_THAT(Rows,
               testing::ElementsAre(
+                  "lib-arg|=<value>|A repeated string",
                   "lib-count|=<value>|An unsigned", "lib-disable||",
                   "lib-enable||A bool", "lib-in-build||Available",
                   "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
@@ -170,6 +174,26 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(O.mode, test::Mode::A);
   EXPECT_EQ(Parse({"-lib-old-mode=c"}),
             "1 invalid value 'c' in '-lib-old-mode=c'");
+}
+
+// A tool parses its whole command line into the struct.
+TEST(LibraryOptionsTest, ToolArgs) {
+  BumpPtrAllocator Alloc;
+  TestLibraryOptions O;
+  auto Parse = [&](std::vector<const char *> Argv) {
+    Argv.insert(Argv.begin(), "prog");
+    SmallVector<StringRef> Inputs;
+    std::string Err = toString(
+        opt::parseToolArgs(O, Argv.size(), Argv.data(), Alloc, Inputs));
+    return Err + "|" + join(Inputs, " ");
+  };
+  EXPECT_EQ(Parse({"a", "-lib-count", "5", "b", "--", "-lib-enable"}),
+            "|a b -lib-enable");
+  EXPECT_EQ(O.count, 5u);
+
+  EXPECT_EQ(Parse({"-lib-countt=1"}),
+            "unknown argument '-lib-countt=1', did you mean '-lib-count=1'?|");
+  EXPECT_EQ(Parse({"-lib-count=x"}), "invalid value 'x' in '-lib-count=x'|");
 }
 
 // A static RegisterLibraryOptions connects the struct to

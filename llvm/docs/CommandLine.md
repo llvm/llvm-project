@@ -1582,6 +1582,7 @@ defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
 
 The struct is in namespace `llvm` unless the def names another, as in `OptionsStruct<"mlir">`.
+A tool's `OptionsStruct<"">` is in an anonymous namespace.
 A member is named after its option, `enable_foo` for `-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
 `OptionsStruct<prefix = "foo-">` drops that prefix from member names, so `-foo-path` sets `path`.
 
@@ -1592,6 +1593,7 @@ A reader applies a `cl::list_init` default to an empty list, since a given optio
 An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
 An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
 An `EnumListField` is a `ListField` whose values map to enumerators as in an `EnumField`.
+A `RepeatedField` is an `ArrayRef` to which each occurrence appends its whole value, commas included, replacing a `cl::list` without `cl::CommaSeparated`.
 A `FlagOrEnumField` takes one more argument, the enumerator the bare option selects, replacing `cl::ValueOptional`: with `"FooMode::Fast"`, `-foo-mode` sets `FooMode::Fast`, and `-foo-mode safe` does not consume `safe`.
 A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
 Both accept `--` for `-`.
@@ -1606,3 +1608,7 @@ The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `
 A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `llvm_tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
 Code reads `C.get<FooOptions>().enable_foo` from the context `C` that the tool parsed its command line into, usually through an `LLVMContext`.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.
+
+A tool can declare its own options the same way and, including `llvm/Option/OptionsStruct.h`, parse its command line without `cl::`.
+`opt::parseToolArgs(Opts, argc, argv, Alloc, Inputs)` expands response files, sets the members of `Opts`, whose strings refer to `argv` or `Alloc`, and collects the positional arguments, and every argument after `--`, in `Inputs`.
+`T::optTable().printHelp` prints the tool's help.

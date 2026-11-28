@@ -356,8 +356,10 @@ static void emitOptionsStruct(const Record &Struct,
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n";
   OS << "class LibraryOptionsParser;\n";
-  OS << "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "class OptionsStructTable;\n} // namespace opt\n} // namespace "
+        "llvm\n\n";
+  // An empty namespace gives a tool's struct internal linkage.
+  OS << "namespace " << (Namespace.empty() ? "" : Namespace + " ") << "{\n";
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
     OS << "  using StringRef = llvm::StringRef;\n";
@@ -365,7 +367,7 @@ static void emitOptionsStruct(const Record &Struct,
     ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   }
-  OS << "\n  static const llvm::opt::OptTable &optTable();\n";
+  OS << "\n  static const llvm::opt::OptionsStructTable &optTable();\n";
   OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
         "Alloc.\n  /// Returns false if the value is invalid.\n";
   OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
@@ -373,15 +375,21 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "\nprivate:\n  friend class llvm::cl::LibraryOptionsContext;\n"
         "  friend class llvm::opt::LibraryOptionsParser;\n";
   OS << "\n  static const " << Name << " Default;\n";
-  OS << "};\n} // namespace " << Namespace << "\n";
+  OS << "};\n} // namespace";
+  if (!Namespace.empty())
+    OS << " " << Namespace;
+  OS << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
-  std::string Qualified = (Namespace + "::" + Name).str();
+  std::string Qualified =
+      Namespace.empty() ? Name.str() : (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
   OS << "LLVM_REQUIRE_CONSTANT_INITIALIZATION const " << Qualified << " "
      << Qualified << "::Default;\n\n";
-  OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
-  OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
+  OS << "const llvm::opt::OptionsStructTable &" << Qualified
+     << "::optTable() {\n";
+  OS << "  static const llvm::opt::OptionsStructTable T(optionTables(), "
+        "OPT_UNKNOWN);\n";
   OS << "  return T;\n}\n\n";
   OS << "bool " << Qualified
      << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";
@@ -416,7 +424,8 @@ static void emitOptionsStruct(const Record &Struct,
         R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq"
             ? "A.getNumValues() ? A.getValue() : \"true\""
             : "A.getValue()";
-    OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
+    StringRef Fn = R->getValue("Repeated") ? "appendArgValue" : "parseArgValue";
+    OS << "    return llvm::opt::" << Fn << "(" << Value << ", " << Member
        << ", Alloc);\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";

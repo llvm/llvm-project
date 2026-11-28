@@ -15,7 +15,29 @@
 using namespace llvm;
 using namespace llvm::opt;
 
-LibraryOptTable::~LibraryOptTable() = default;
+OptionsStructTable::~OptionsStructTable() = default;
+
+Error OptionsStructTable::parseToolArgs(
+    int Argc, const char *const *Argv, StringSaver &Saver,
+    function_ref<bool(const Arg &)> Apply,
+    SmallVectorImpl<StringRef> &Inputs) const {
+  std::string Err;
+  InputArgList List = parseArgs(Argc, const_cast<char *const *>(Argv),
+                                UnknownID, Saver, [&](StringRef Msg) {
+                                  if (Err.empty())
+                                    Err = Msg;
+                                });
+  if (!Err.empty())
+    return createStringError(Err);
+  for (const Arg *A : List) {
+    if (A->getOption().getKind() == Option::InputClass)
+      Inputs.push_back(A->getValue());
+    else if (!Apply(*A))
+      return createStringError("invalid value '" + Twine(A->getValue()) +
+                               "' in '" + A->getAsString(List) + "'");
+  }
+  return Error::success();
+}
 
 void LibraryOptionsParser::forEachOption(
     function_ref<void(StringRef, StringRef, StringRef)> Fn) const {
