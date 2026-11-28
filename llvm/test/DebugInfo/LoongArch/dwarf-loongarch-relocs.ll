@@ -87,7 +87,7 @@
 ; DWARF-NEXT:  0x0000000000000000      2      0      0   0             0       0  is_stmt
 ; DWARF-NEXT:  0x0000000000000010      3      3      0   0             0       0  is_stmt prologue_end
 ; DWARF-NEXT:  0x0000000000000020     10      3      0   0             0       0  is_stmt
-; DWARF-NEXT:  0x000000000000002c     10      3      0   0             0       0  epilogue_begin
+; DWARF-NEXT:  0x0000000000000024     10      3      0   0             0       0  epilogue_begin
 ; DWARF-NEXT:  0x0000000000000034     10      3      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-loongarch-relocs.c'
