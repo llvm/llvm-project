@@ -446,19 +446,19 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
-  /// Return true if \p I is in the context of \p PP.
+  /// The context of a program point. \see getContext.
+  class Context;
+
+  /// Return the context of \p PP, to answer a batch of queries about it.
   ///
-  /// That is the case if iterating over the context of \p PP visits \p I.
   /// This does not explore the context of every program point separately but
   /// uses summaries of the contexts of basic blocks that are shared by all
-  /// program points.
-  LLVM_ABI bool isInContextOf(const Instruction *I, const Instruction *PP);
+  /// program points. The context remains valid as long as the explorer does
+  /// and the IR does not change.
+  LLVM_ABI Context getContext(const Instruction *PP);
 
-  /// Check \p Pred on all terminators in the context of \p PP and return
-  /// true if it holds for all of them.
-  LLVM_ABI bool
-  checkForAllTerminatorsInContext(const Instruction *PP,
-                                  function_ref<bool(const Instruction *)> Pred);
+  /// Return true if \p I is in the context of \p PP. \see Context::contains.
+  LLVM_ABI bool isInContextOf(const Instruction *I, const Instruction *PP);
 
   /// Return the next instruction that is guaranteed to be executed after \p PP.
   ///
@@ -555,6 +555,47 @@ private:
 
   /// A unique end iterator.
   MustBeExecutedIterator EndIterator;
+};
+
+/// The must-be-executed context of a program point, as returned by
+/// MustBeExecutedContextExplorer::getContext.
+class MustBeExecutedContextExplorer::Context {
+public:
+  /// Return true if \p I is in the context.
+  ///
+  /// That is the case if iterating over the context of the program point
+  /// visits \p I.
+  LLVM_ABI bool contains(const Instruction *I) const;
+
+  /// Check \p Pred on all terminators in the context and return true if it
+  /// holds for all of them.
+  LLVM_ABI bool
+  checkForAllTerminators(function_ref<bool(const Instruction *)> Pred) const;
+
+private:
+  friend MustBeExecutedContextExplorer;
+
+  Context(const Instruction *PP, bool Forward, bool Backward)
+      : PP(PP), Forward(Forward), Backward(Backward) {}
+
+  /// The program point.
+  const Instruction *PP;
+
+  /// Whether the context extends forward and backward from the program point.
+  bool Forward, Backward;
+
+  /// The first instruction at or after the program point in its block that
+  /// might not transfer execution to its successor, if the context extends
+  /// forward.
+  const Instruction *ForwardStop = nullptr;
+
+  /// The forward context after the block of the program point, if the context
+  /// extends forward into other blocks.
+  const ForwardContextTy *ForwardBlocks = nullptr;
+
+  /// The backward context before the block of the program point, if the
+  /// context extends backward into other blocks.
+  const BackwardContextTy *BackwardBlocks = nullptr;
 };
 
 class MustExecutePrinterPass

@@ -792,8 +792,32 @@ MustBeExecutedContextExplorer::getBackwardContext(const BasicBlock *BB) {
   return *Context;
 }
 
+MustBeExecutedContextExplorer::Context
+MustBeExecutedContextExplorer::getContext(const Instruction *PP) {
+  Context Ctx(PP, ExploreCFGForward, ExploreCFGBackward);
+  const BasicBlock *PPBB = PP->getParent();
+  if (ExploreCFGForward) {
+    // Forward, the context contains the instructions up to the first one that
+    // might not transfer execution. If there is none, it continues in the
+    // forward context of the next block.
+    Ctx.ForwardStop = getForwardStop(PP);
+    if (!Ctx.ForwardStop && ExploreInterBlock)
+      Ctx.ForwardBlocks = &getForwardContext(PPBB);
+  }
+  // Backward, the context contains all prior instructions in the block and the
+  // backward context of the backward join point.
+  if (ExploreCFGBackward && ExploreInterBlock)
+    Ctx.BackwardBlocks = &getBackwardContext(PPBB);
+  return Ctx;
+}
+
 bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
                                                   const Instruction *PP) {
+  return getContext(PP).contains(I);
+}
+
+bool MustBeExecutedContextExplorer::Context::contains(
+    const Instruction *I) const {
   if (I == PP)
     return true;
   const BasicBlock *IBB = I->getParent();
@@ -801,56 +825,48 @@ bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
   if (IBB->getParent() != PPBB->getParent())
     return false;
 
-  if (ExploreCFGForward) {
-    // Forward, the context contains the instructions up to the first one that
-    // might not transfer execution. If there is none, it continues in the
-    // forward context of the next block.
-    const Instruction *Stop = getForwardStop(PP);
-    if (IBB == PPBB && PP->comesBefore(I) && (!Stop || !Stop->comesBefore(I)))
+  if (Forward) {
+    if (IBB == PPBB && PP->comesBefore(I) &&
+        (!ForwardStop || !ForwardStop->comesBefore(I)))
       return true;
-    if (!Stop && ExploreInterBlock) {
-      const ForwardContextTy &Context = getForwardContext(PPBB);
-      auto It = Context.find(IBB);
-      if (It != Context.end() && (!It->second || !It->second->comesBefore(I)))
+    if (ForwardBlocks) {
+      auto It = ForwardBlocks->find(IBB);
+      if (It != ForwardBlocks->end() &&
+          (!It->second || !It->second->comesBefore(I)))
         return true;
     }
   }
 
-  if (ExploreCFGBackward) {
-    // Backward, the context contains all prior instructions in the block and
-    // the backward context of the backward join point.
+  if (Backward) {
     if (IBB == PPBB && I->comesBefore(PP))
       return true;
-    if (ExploreInterBlock && getBackwardContext(PPBB).contains(IBB))
+    if (BackwardBlocks && BackwardBlocks->contains(IBB))
       return true;
   }
   return false;
 }
 
-bool MustBeExecutedContextExplorer::checkForAllTerminatorsInContext(
-    const Instruction *PP, function_ref<bool(const Instruction *)> Pred) {
-  // Only the blocks of the forward and backward contexts of the block of PP
-  // can have terminators in the context.
+bool MustBeExecutedContextExplorer::Context::checkForAllTerminators(
+    function_ref<bool(const Instruction *)> Pred) const {
+  // Only the block of the program point and the blocks of the forward and
+  // backward contexts can have terminators in the context.
   SmallPtrSet<const BasicBlock *, 16> Visited;
   auto CheckBlock = [&](const BasicBlock *BB) {
     if (!Visited.insert(BB).second)
       return true;
     const Instruction *Term = BB->getTerminator();
-    return !isInContextOf(Term, PP) || Pred(Term);
+    return !contains(Term) || Pred(Term);
   };
-  const BasicBlock *PPBB = PP->getParent();
-  if (!CheckBlock(PPBB))
+  if (!CheckBlock(PP->getParent()))
     return false;
-  if (!ExploreInterBlock)
-    return true;
-  if (ExploreCFGForward && !getForwardStop(PP)) {
-    for (const auto &[BB, Stop] : getForwardContext(PPBB)) {
+  if (ForwardBlocks) {
+    for (const auto &[BB, Stop] : *ForwardBlocks) {
       if (!CheckBlock(BB))
         return false;
     }
   }
-  if (ExploreCFGBackward) {
-    for (const BasicBlock *BB : getBackwardContext(PPBB)) {
+  if (BackwardBlocks) {
+    for (const BasicBlock *BB : *BackwardBlocks) {
       if (!CheckBlock(BB))
         return false;
     }

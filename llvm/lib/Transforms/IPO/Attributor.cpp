@@ -1068,8 +1068,9 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
   const Instruction *CtxI = IRP.getCtxI();
   if (!CtxI)
     return false;
+  MustBeExecutedContextExplorer::Context Context = Explorer->getContext(CtxI);
   for (const auto &It : A2K) {
-    if (Explorer->isInContextOf(It.first, CtxI))
+    if (Context.contains(It.first))
       Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
   }
   return AttrsSize != Attrs.size();
