@@ -1118,3 +1118,29 @@ define i32 @fold_rot_fshl_i32(i32 %x, i32 %y) {
   %or = or i32 %shl, %lshr
   ret i32 %or
 }
+
+define i16 @check_rotate_masked_16bit_select(i8 %shamt, i32 %cond) {
+; CHECK-LABEL: @check_rotate_masked_16bit_select(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[COND_FR]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP3]], i16 [[TMP3]], i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %maskx = and i32 %cond, 1
+  %masky = and i8 %shamt, 15
+  %z = zext i8 %masky to i32
+
+  %iszero = icmp eq i32 %z, 0
+  %shr = select i1 %iszero, i32 %maskx, i32 0
+
+  %sub = sub i8 0, %shamt
+  %maskw = and i8 %sub, 15
+  %z2 = zext i8 %maskw to i32
+  %shl = shl nuw nsw i32 %maskx, %z2
+
+  %or = or i32 %shr, %shl
+  %trunc = trunc i32 %or to i16
+  ret i16 %trunc
+}
