@@ -1154,8 +1154,16 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
                                         unsigned AllocaNo) {
   if (Opts.hwasan_generate_tags_with_calls)
     return getNextTagWithCall(IRB);
-  return IRB.CreateXor(
+  Value *Tag = IRB.CreateXor(
       StackTag, ConstantInt::get(StackTag->getType(), retagMask(AllocaNo)));
+  // Linux reserves 0xFF for native pointers and 0xFE for inaccessible memory.
+  if (CompileKernel && TargetTriple.isOSLinux() && TargetTriple.isAArch64() &&
+      TagMaskByte == 0xFF) {
+    Value *IsReserved = IRB.CreateICmpEQ(
+        IRB.CreateAnd(Tag, 0xFE), ConstantInt::get(IntptrTy, 0xFE));
+    Tag = IRB.CreateSelect(IsReserved, IRB.CreateXor(Tag, 0x15), Tag);
+  }
+  return Tag;
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
