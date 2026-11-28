@@ -405,8 +405,8 @@ func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f8E5M2FNUZ) ->
 
 // -----
 
-// The NaN 0xFF gives the quiet NaN 0x7FC00000 (2143289344), as the constant
-// folder does.
+// 0x00 decodes to 2^-127 (the f32 subnormal 4194304) and the NaN 0xFF to the
+// quiet NaN 0x7FC00000 (2143289344), as the constant folder does.
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     %0 = arith.extf %arg0 : f8E8M0FNU to f32
     return %0 : f32
@@ -470,6 +470,102 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
 // CHECK: %[[F32_RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
 // CHECK: %[[F16_RESULT:.+]] = arith.truncf %[[F32_RESULT]] : f32 to f16
 // CHECK: return %[[F16_RESULT]]
+
+// -----
+
+func.func @extf_f8E8M0FNU_to_bf16(%arg0 : f8E8M0FNU) -> bf16 {
+    %0 = arith.extf %arg0 : f8E8M0FNU to bf16
+    return %0 : bf16
+}
+
+// bf16 takes the high half of the f32 bits (no truncf): 0x00 gives 0x0040
+// (2^-127, f32 4194304) and the NaN 0xFF gives 0x7FC0 (f32 2143289344).
+// CHECK-LABEL: func.func @extf_f8E8M0FNU_to_bf16(
+// CHECK-SAME:      %[[ARG0:.+]]: f8E8M0FNU) -> bf16
+// CHECK-NEXT:    %[[BITCAST:.+]] = arith.bitcast %[[ARG0]] : f8E8M0FNU to i8
+// CHECK-NEXT:    %[[C23:.+]] = arith.constant 23 : i32
+// CHECK-NEXT:    %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
+// CHECK-NEXT:    %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23]] : i32
+// CHECK-NEXT:    %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-NEXT:    %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK-NEXT:    %[[IS_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK-NEXT:    %[[SELECT_MIN:.+]] = arith.select %[[IS_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
+// CHECK-NEXT:    %[[CF8NAN:.+]] = arith.constant -1 : i8
+// CHECK-NEXT:    %[[CF32NAN:.+]] = arith.constant 2143289344 : i32
+// CHECK-NEXT:    %[[IS_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
+// CHECK-NEXT:    %[[SELECT_NAN:.+]] = arith.select %[[IS_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
+// CHECK-NEXT:    %[[C16:.+]] = arith.constant 16 : i32
+// CHECK-NEXT:    %[[HIGH:.+]] = arith.shrui %[[SELECT_NAN]], %[[C16]] : i32
+// CHECK-NEXT:    %[[BITS:.+]] = arith.trunci %[[HIGH]] : i32 to i16
+// CHECK-NEXT:    %[[RESULT:.+]] = arith.bitcast %[[BITS]] : i16 to bf16
+// CHECK-NEXT:    return %[[RESULT]] : bf16
+
+// -----
+
+func.func @extf_f8E8M0FNU_to_f64(%arg0 : f8E8M0FNU) -> f64 {
+    %0 = arith.extf %arg0 : f8E8M0FNU to f64
+    return %0 : f64
+}
+
+// A finite code c is the normal f64 2^(c - 127), built as (c + 896) << 52; the
+// NaN 0xFF gives 0x7FF8000000000000 (9221120237041090560).
+// CHECK-LABEL: func.func @extf_f8E8M0FNU_to_f64(
+// CHECK-SAME:      %[[ARG0:.+]]: f8E8M0FNU) -> f64
+// CHECK-NEXT:    %[[BITCAST:.+]] = arith.bitcast %[[ARG0]] : f8E8M0FNU to i8
+// CHECK-NEXT:    %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i64
+// CHECK-NEXT:    %[[C896:.+]] = arith.constant 896 : i64
+// CHECK-NEXT:    %[[EXP:.+]] = arith.addi %[[EXTUI]], %[[C896]] : i64
+// CHECK-NEXT:    %[[C52:.+]] = arith.constant 52 : i64
+// CHECK-NEXT:    %[[BITS:.+]] = arith.shli %[[EXP]], %[[C52]] : i64
+// CHECK-NEXT:    %[[CF8NAN:.+]] = arith.constant -1 : i8
+// CHECK-NEXT:    %[[CF64NAN:.+]] = arith.constant 9221120237041090560 : i64
+// CHECK-NEXT:    %[[IS_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
+// CHECK-NEXT:    %[[SELECT:.+]] = arith.select %[[IS_NAN]], %[[CF64NAN]], %[[BITS]] : i64
+// CHECK-NEXT:    %[[RESULT:.+]] = arith.bitcast %[[SELECT]] : i64 to f64
+// CHECK-NEXT:    return %[[RESULT]] : f64
+
+// -----
+
+func.func @extf_f8E8M0FNU_to_f128(%arg0 : f8E8M0FNU) -> f128 {
+    %0 = arith.extf %arg0 : f8E8M0FNU to f128
+    return %0 : f128
+}
+
+// A wider destination extends those f64 bits exactly.
+// CHECK-LABEL: func.func @extf_f8E8M0FNU_to_f128(
+// CHECK-SAME:      %[[ARG0:.+]]: f8E8M0FNU) -> f128
+// CHECK-NEXT:    %[[BITCAST:.+]] = arith.bitcast %[[ARG0]] : f8E8M0FNU to i8
+// CHECK-NEXT:    %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i64
+// CHECK-NEXT:    %[[C896:.+]] = arith.constant 896 : i64
+// CHECK-NEXT:    %[[EXP:.+]] = arith.addi %[[EXTUI]], %[[C896]] : i64
+// CHECK-NEXT:    %[[C52:.+]] = arith.constant 52 : i64
+// CHECK-NEXT:    %[[BITS:.+]] = arith.shli %[[EXP]], %[[C52]] : i64
+// CHECK-NEXT:    %[[CF8NAN:.+]] = arith.constant -1 : i8
+// CHECK-NEXT:    %[[CF64NAN:.+]] = arith.constant 9221120237041090560 : i64
+// CHECK-NEXT:    %[[IS_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
+// CHECK-NEXT:    %[[SELECT:.+]] = arith.select %[[IS_NAN]], %[[CF64NAN]], %[[BITS]] : i64
+// CHECK-NEXT:    %[[F64:.+]] = arith.bitcast %[[SELECT]] : i64 to f64
+// CHECK-NEXT:    %[[RESULT:.+]] = arith.extf %[[F64]] : f64 to f128
+// CHECK-NEXT:    return %[[RESULT]] : f128
+
+// -----
+
+func.func @extf_f8E8M0FNU_to_f64_no_nan(%arg0 : f8E8M0FNU) -> f64 {
+    %0 = arith.extf %arg0 fastmath<nnan> : f8E8M0FNU to f64
+    return %0 : f64
+}
+
+// Without the NaN select, 0xFF gives (255 + 896) << 52 = 2^128.
+// CHECK-LABEL: func.func @extf_f8E8M0FNU_to_f64_no_nan(
+// CHECK-SAME:      %[[ARG0:.+]]: f8E8M0FNU) -> f64
+// CHECK-NEXT:    %[[BITCAST:.+]] = arith.bitcast %[[ARG0]] : f8E8M0FNU to i8
+// CHECK-NEXT:    %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i64
+// CHECK-NEXT:    %[[C896:.+]] = arith.constant 896 : i64
+// CHECK-NEXT:    %[[EXP:.+]] = arith.addi %[[EXTUI]], %[[C896]] : i64
+// CHECK-NEXT:    %[[C52:.+]] = arith.constant 52 : i64
+// CHECK-NEXT:    %[[BITS:.+]] = arith.shli %[[EXP]], %[[C52]] : i64
+// CHECK-NEXT:    %[[RESULT:.+]] = arith.bitcast %[[BITS]] : i64 to f64
+// CHECK-NEXT:    return %[[RESULT]] : f64
 
 // -----
 
