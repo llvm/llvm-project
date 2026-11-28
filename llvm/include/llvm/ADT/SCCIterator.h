@@ -144,6 +144,19 @@ public:
     nodeVisitNumbers[New] = tempVal;
     nodeVisitNumbers.erase(Old);
   }
+
+  /// Returns true if \p N has been reached by this traversal so far.
+  bool isVisited(NodeRef N) const { return nodeVisitNumbers.contains(N); }
+
+  /// Continues a traversal that reached its end from a new root \p N, as in
+  /// the outer loop of Tarjan's algorithm. Nodes reached earlier are treated
+  /// as finished SCCs and are neither entered nor yielded again.
+  void resumeFrom(NodeRef N) {
+    assert(isAtEnd() && "Resuming a traversal that has not finished");
+    assert(!isVisited(N) && "Resuming from an already visited node");
+    DFSVisitOne(N);
+    GetNextSCC();
+  }
 };
 
 template <class GraphT, class GT>
