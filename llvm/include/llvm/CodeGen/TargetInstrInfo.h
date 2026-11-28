@@ -218,6 +218,16 @@ public:
     return false;
   }
 
+  /// MachineCSE normally refuses to reuse a common subexpression whose value
+  /// feeds a PHI, because doing so extends the value's live range across the
+  /// PHI merge and may cause a spill. Return true if MI's result may be reused
+  /// across a PHI anyway, appropriate for a def the register allocator can
+  /// cheaply rematerialize (e.g. a constant materialization) rather than spill.
+  /// The conservative default forbids it.
+  virtual bool isProfitableToCSEAcrossPHI(const MachineInstr &MI) const {
+    return false;
+  }
+
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually

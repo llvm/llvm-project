@@ -66,23 +66,20 @@ define void @simple_urem_to_sel_fail_not_in_loop(i32 %N, i32 %rem_amt) nounwind 
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # %bb.3: # %for.body.preheader
-; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB1_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_4: # %for.body
+; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    cmpl %ebp, %r14d
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:  .LBB1_2: # %for.cond.cleanup
+; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-NEXT:    movl %ebp, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx

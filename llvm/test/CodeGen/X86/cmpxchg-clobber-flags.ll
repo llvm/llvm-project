@@ -122,58 +122,55 @@ f:
 define i32 @test_control_flow(ptr %p, i32 %i, i32 %j) nounwind {
 ; X86-ALL-LABEL: test_control_flow:
 ; X86-ALL:       # %bb.0: # %entry
-; X86-ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ALL-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-ALL-NEXT:    jle .LBB1_6
-; X86-ALL-NEXT:  # %bb.1: # %loop_start
 ; X86-ALL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-ALL-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-ALL-NEXT:    jle .LBB1_5
+; X86-ALL-NEXT:  # %bb.1: # %loop_start
+; X86-ALL-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-ALL-NEXT:    .p2align 4
 ; X86-ALL-NEXT:  .LBB1_2: # %while.condthread-pre-split.i
 ; X86-ALL-NEXT:    # =>This Loop Header: Depth=1
 ; X86-ALL-NEXT:    # Child Loop BB1_3 Depth 2
-; X86-ALL-NEXT:    movl (%ecx), %edx
+; X86-ALL-NEXT:    movl (%edx), %ecx
 ; X86-ALL-NEXT:    .p2align 4
 ; X86-ALL-NEXT:  .LBB1_3: # %while.cond.i
 ; X86-ALL-NEXT:    # Parent Loop BB1_2 Depth=1
 ; X86-ALL-NEXT:    # => This Inner Loop Header: Depth=2
-; X86-ALL-NEXT:    movl %edx, %eax
-; X86-ALL-NEXT:    xorl %edx, %edx
+; X86-ALL-NEXT:    movl %ecx, %eax
+; X86-ALL-NEXT:    xorl %ecx, %ecx
 ; X86-ALL-NEXT:    testl %eax, %eax
 ; X86-ALL-NEXT:    je .LBB1_3
 ; X86-ALL-NEXT:  # %bb.4: # %while.body.i
 ; X86-ALL-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; X86-ALL-NEXT:    lock cmpxchgl %eax, (%ecx)
+; X86-ALL-NEXT:    lock cmpxchgl %eax, (%edx)
 ; X86-ALL-NEXT:    jne .LBB1_2
-; X86-ALL-NEXT:  # %bb.5:
-; X86-ALL-NEXT:    xorl %eax, %eax
-; X86-ALL-NEXT:  .LBB1_6: # %cond.end
+; X86-ALL-NEXT:  .LBB1_5: # %cond.end
+; X86-ALL-NEXT:    movl %ecx, %eax
 ; X86-ALL-NEXT:    retl
 ;
 ; X64-ALL-LABEL: test_control_flow:
 ; X64-ALL:       # %bb.0: # %entry
-; X64-ALL-NEXT:    movl %esi, %eax
 ; X64-ALL-NEXT:    cmpl %edx, %esi
-; X64-ALL-NEXT:    jle .LBB1_5
+; X64-ALL-NEXT:    jle .LBB1_4
 ; X64-ALL-NEXT:    .p2align 4
 ; X64-ALL-NEXT:  .LBB1_1: # %while.condthread-pre-split.i
 ; X64-ALL-NEXT:    # =>This Loop Header: Depth=1
 ; X64-ALL-NEXT:    # Child Loop BB1_2 Depth 2
-; X64-ALL-NEXT:    movl (%rdi), %ecx
+; X64-ALL-NEXT:    movl (%rdi), %esi
 ; X64-ALL-NEXT:    .p2align 4
 ; X64-ALL-NEXT:  .LBB1_2: # %while.cond.i
 ; X64-ALL-NEXT:    # Parent Loop BB1_1 Depth=1
 ; X64-ALL-NEXT:    # => This Inner Loop Header: Depth=2
-; X64-ALL-NEXT:    movl %ecx, %eax
-; X64-ALL-NEXT:    xorl %ecx, %ecx
+; X64-ALL-NEXT:    movl %esi, %eax
+; X64-ALL-NEXT:    xorl %esi, %esi
 ; X64-ALL-NEXT:    testl %eax, %eax
 ; X64-ALL-NEXT:    je .LBB1_2
 ; X64-ALL-NEXT:  # %bb.3: # %while.body.i
 ; X64-ALL-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; X64-ALL-NEXT:    lock cmpxchgl %eax, (%rdi)
 ; X64-ALL-NEXT:    jne .LBB1_1
-; X64-ALL-NEXT:  # %bb.4:
-; X64-ALL-NEXT:    xorl %eax, %eax
-; X64-ALL-NEXT:  .LBB1_5: # %cond.end
+; X64-ALL-NEXT:  .LBB1_4: # %cond.end
+; X64-ALL-NEXT:    movl %esi, %eax
 ; X64-ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %i, %j

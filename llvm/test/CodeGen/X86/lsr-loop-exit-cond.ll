@@ -311,9 +311,8 @@ define i32 @f(i32 %i, ptr nocapture %a) nounwind uwtable readonly ssp {
 ; GENERIC-NEXT:    cmpl $1, %edi
 ; GENERIC-NEXT:    je LBB1_3
 ; GENERIC-NEXT:  ## %bb.1: ## %for.body.lr.ph
-; GENERIC-NEXT:    movslq %edi, %rax
-; GENERIC-NEXT:    leaq (%rsi,%rax,4), %rcx
-; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    movslq %edi, %rcx
+; GENERIC-NEXT:    leaq (%rsi,%rcx,4), %rcx
 ; GENERIC-NEXT:    xorl %edx, %edx
 ; GENERIC-NEXT:    .p2align 4
 ; GENERIC-NEXT:  LBB1_2: ## %for.body
@@ -335,10 +334,9 @@ define i32 @f(i32 %i, ptr nocapture %a) nounwind uwtable readonly ssp {
 ; ATOM-NEXT:    cmpl $1, %edi
 ; ATOM-NEXT:    je LBB1_3
 ; ATOM-NEXT:  ## %bb.1: ## %for.body.lr.ph
-; ATOM-NEXT:    movslq %edi, %rax
+; ATOM-NEXT:    movslq %edi, %rcx
 ; ATOM-NEXT:    xorl %edx, %edx
-; ATOM-NEXT:    leaq (%rsi,%rax,4), %rcx
-; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    leaq (%rsi,%rcx,4), %rcx
 ; ATOM-NEXT:    .p2align 4
 ; ATOM-NEXT:  LBB1_2: ## %for.body
 ; ATOM-NEXT:    ## =>This Inner Loop Header: Depth=1

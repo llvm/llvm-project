@@ -354,6 +354,8 @@ public:
                 Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
                 LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
+  bool isProfitableToCSEAcrossPHI(const MachineInstr &MI) const override;
+
   /// Given an operand within a MachineInstr, insert preceding code to put it
   /// into the right format for a particular kind of LEA instruction. This may
   /// involve using an appropriate super-register instead (with an implicit use
