@@ -105,3 +105,15 @@ gpu.module @test {
     return
   }
 }
+
+// -----
+gpu.module @test {
+  gpu.func @vector_reduction_no_sg_layout(%arg0: memref<16xf32>) kernel {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant dense<1.000000e+00> : vector<16xf32>
+    // expected-error@+1 {{Only lane layout assignment is supported for vector.reduction.}}
+    %red = vector.reduction <add>, %cst : vector<16xf32> into f32
+    memref.store %red, %arg0[%c0] : memref<16xf32>
+    gpu.return
+  }
+}

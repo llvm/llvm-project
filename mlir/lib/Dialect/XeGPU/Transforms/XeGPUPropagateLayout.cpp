@@ -498,6 +498,13 @@ void LayoutPropagation::visitVectorReductionOp(vector::ReductionOp reduction,
   if (!uArch)
     return;
 
+  if (layoutKind != xegpu::LayoutKind::Lane) {
+    markFailure(
+        reduction,
+        "Only lane layout assignment is supported for vector.reduction.");
+    return;
+  }
+
   auto requiredResLayoutAttr =
       xegpu::setupReductionResultLayout(layoutKind, sourceTy, uArch);
   results[0] = requiredResLayoutAttr;
