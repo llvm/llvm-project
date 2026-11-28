@@ -264,6 +264,13 @@ private:
   std::string features_;
 };
 
+/// Append the construct traits contributed by \p directive.
+///
+/// Combined and composite directives contribute their leaf constructs in
+/// source order. Informational directives do not contribute.
+void AppendDirectiveContextTraits(llvm::omp::Directive directive,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
