@@ -10,6 +10,7 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Target/Platform.h"
 
 using namespace lldb;
@@ -68,24 +69,13 @@ void OptionGroupPlatform::OptionParsingStarting(
   m_os_version = llvm::VersionTuple();
 }
 
-static constexpr OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "platform", 'p', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypePlatform, "Specify name of the platform to "
-                                       "use for this target, creating the "
-                                       "platform if necessary."},
-    {LLDB_OPT_SET_ALL, false, "version", 'v', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeNone,
-     "Specify the initial SDK version to use prior to connecting."},
-    {LLDB_OPT_SET_ALL, false, "build", 'b', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeNone,
-     "Specify the initial SDK build number."},
-    {LLDB_OPT_SET_ALL, false, "sysroot", 'S', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeFilename, "Specify the SDK root directory "
-                                       "that contains a root of all "
-                                       "remote system files."}};
+#define LLDB_OPTIONS_platform
+#include "InterpreterOptions.inc"
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatform::GetDefinitions() {
-  llvm::ArrayRef<OptionDefinition> result(g_option_table);
+  llvm::ArrayRef<OptionDefinition> result(g_platform_options);
+  static_assert(g_platform_options[0].short_option == 'p',
+                "--platform must be the first option");
   if (m_include_platform_option)
     return result;
   return result.drop_front();
@@ -96,10 +86,7 @@ OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
                                     llvm::StringRef option_arg,
                                     ExecutionContext *execution_context) {
   Status error;
-  if (!m_include_platform_option)
-    ++option_idx;
-
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
   case 'p':
