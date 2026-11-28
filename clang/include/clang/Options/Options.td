@@ -2323,13 +2323,13 @@ def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">
   HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"ConstexprBacktraceLimit">, "DiagnosticOptions::DefaultConstexprBacktraceLimit">;
 def fcrash_diagnostics_EQ : Joined<["-"], "fcrash-diagnostics=">, Group<f_clang_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Set level of crash diagnostic reporting, (option: off, compiler, all)">;
 def fcrash_diagnostics : Flag<["-"], "fcrash-diagnostics">, Group<f_clang_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Enable crash diagnostic reporting (default)">, Alias<fcrash_diagnostics_EQ>, AliasArgs<["compiler"]>;
 def fno_crash_diagnostics : Flag<["-"], "fno-crash-diagnostics">, Group<f_clang_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<gen_reproducer_eq>, AliasArgs<["off"]>,
   HelpText<"Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash">;
 def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
