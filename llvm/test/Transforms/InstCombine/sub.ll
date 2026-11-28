@@ -1521,6 +1521,50 @@ define i8 @sub_add_sub_reassoc_use2(i8 %w, i8 %x, i8 %y, i8 %z) {
   ret i8 %s2
 }
 
+; Keep the unsigned borrow attached to the first high-word subtraction.
+
+define { i32, i32 } @sub_add_sub_reassoc_borrow(i32 %lo, i32 %lo_sub, i32 %hi, i32 %hi_sub, i32 %other) {
+; CHECK-LABEL: @sub_add_sub_reassoc_borrow(
+; CHECK-NEXT:    [[PAIR:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[LO:%.*]], i32 [[LO_SUB:%.*]])
+; CHECK-NEXT:    [[DIFF:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
+; CHECK-NEXT:    [[BORROW:%.*]] = extractvalue { i32, i1 } [[PAIR]], 1
+; CHECK-NEXT:    [[ADJ:%.*]] = sext i1 [[BORROW]] to i32
+; CHECK-NEXT:    [[HIGH:%.*]] = sub i32 [[HI:%.*]], [[HI_SUB:%.*]]
+; CHECK-NEXT:    [[WITH_BORROW:%.*]] = add i32 [[HIGH]], [[ADJ]]
+; CHECK-NEXT:    [[RESULT:%.*]] = sub i32 [[WITH_BORROW]], [[OTHER:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } poison, i32 [[DIFF]], 0
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i32, i32 } [[R0]], i32 [[RESULT]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[R1]]
+;
+  %pair = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %lo, i32 %lo_sub)
+  %diff = extractvalue { i32, i1 } %pair, 0
+  %borrow = extractvalue { i32, i1 } %pair, 1
+  %adj = sext i1 %borrow to i32
+  %high = sub i32 %hi, %hi_sub
+  %with_borrow = add i32 %high, %adj
+  %result = sub i32 %with_borrow, %other
+  %r0 = insertvalue { i32, i32 } poison, i32 %diff, 0
+  %r1 = insertvalue { i32, i32 } %r0, i32 %result, 1
+  ret { i32, i32 } %r1
+}
+
+; An arbitrary sign-extended boolean still allows reassociation.
+
+define i32 @sub_add_sub_reassoc_sext_bool(i32 %x, i32 %y, i1 %b, i32 %w) {
+; CHECK-LABEL: @sub_add_sub_reassoc_sext_bool(
+; CHECK-NEXT:    [[ADJ:%.*]] = sext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], [[ADJ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[Y:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %diff = sub i32 %x, %y
+  %adj = sext i1 %b to i32
+  %sum = add i32 %diff, %adj
+  %result = sub i32 %sum, %w
+  ret i32 %result
+}
+
 define i8 @sub_mask_lowbits(i8 %x) {
 ; CHECK-LABEL: @sub_mask_lowbits(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -4
@@ -3026,3 +3070,5 @@ define i8 @neg_sub_and_-4_add(i8 %x) {
   %ret = add i8 %and, %x
   ret i8 %ret
 }
+
+declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
