@@ -2564,7 +2564,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   // Evaluate special cases related to the exponent.
 
   // pow(x, -1.0) -> 1.0 / x
-  if (match(Expo, m_SpecificFP(-1.0)))
+  if (match(Expo, m_SpecificFP(-1.0)) && Pow->doesNotAccessMemory())
     return B.CreateFDiv(ConstantFP::get(Ty, 1.0), Base, "reciprocal");
 
   // pow(x, +/-0.0) -> 1.0

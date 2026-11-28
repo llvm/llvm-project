@@ -1215,35 +1215,10 @@ define float @pow2_fast_noerrno(float %x) {
 ; Check pow(x, -1.0) -> 1.0/x.
 
 define float @pow_neg1_strict(float %x) {
-; ANY-LABEL: define float @pow_neg1_strict(
-; ANY-SAME: float [[X:%.*]]) {
-; ANY-NEXT:    [[RECIPROCAL:%.*]] = fdiv float 1.000000e+00, [[X]]
-; ANY-NEXT:    ret float [[RECIPROCAL]]
-;
-; VC32-LABEL: define float @pow_neg1_strict(
-; VC32-SAME: float [[X:%.*]]) {
-; VC32-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float -1.000000e+00)
-; VC32-NEXT:    ret float [[R]]
-;
-; VC51-LABEL: define float @pow_neg1_strict(
-; VC51-SAME: float [[X:%.*]]) {
-; VC51-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float -1.000000e+00)
-; VC51-NEXT:    ret float [[R]]
-;
-; VC64-LABEL: define float @pow_neg1_strict(
-; VC64-SAME: float [[X:%.*]]) {
-; VC64-NEXT:    [[RECIPROCAL:%.*]] = fdiv float 1.000000e+00, [[X]]
-; VC64-NEXT:    ret float [[RECIPROCAL]]
-;
-; VC83-LABEL: define float @pow_neg1_strict(
-; VC83-SAME: float [[X:%.*]]) {
-; VC83-NEXT:    [[RECIPROCAL:%.*]] = fdiv float 1.000000e+00, [[X]]
-; VC83-NEXT:    ret float [[RECIPROCAL]]
-;
-; NOLIB-LABEL: define float @pow_neg1_strict(
-; NOLIB-SAME: float [[X:%.*]]) {
-; NOLIB-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float -1.000000e+00)
-; NOLIB-NEXT:    ret float [[R]]
+; CHECK-LABEL: define float @pow_neg1_strict(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float -1.000000e+00)
+; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @powf(float %x, float -1.0)
   ret float %r
