@@ -566,6 +566,8 @@ public:
                                        MCRegister Reg) const;
   void determineWaitForLDSDMA(AMDGPU::InstCounterType T, VMEMID TID,
                               AMDGPU::Waitcnt &Wait) const;
+  void determineWaitForVGPRBankHazard(unsigned BankMask,
+                                      AMDGPU::Waitcnt &Wait) const;
   AMDGPU::Waitcnt determineAsyncWait(unsigned N, AMDGPU::AsyncStages Stages);
   void tryClearSCCWriteEvent(MachineInstr *Inst);
 
@@ -1593,6 +1595,27 @@ void WaitcntBrackets::determineWaitForLDSDMA(AMDGPU::InstCounterType T,
                                              AMDGPU::Waitcnt &Wait) const {
   assert(TID >= LDSDMA_BEGIN && TID < LDSDMA_END);
   determineWaitForScore(T, getVMemScore(TID, T), Wait);
+}
+
+// VGPR bank of a VGPR register unit, see VGPRBankLoadHazard.
+static unsigned getVGPRBank(MCRegUnit RU, const SIRegisterInfo &TRI) {
+  return TRI.getHWRegIndex(*MCRegUnitRootIterator(RU, &TRI)) % 8;
+}
+
+// VGPRBankLoadHazard: a DS or VMEM load must not be issued while another DS or
+// VMEM load writing a VGPR in the same bank is outstanding. Wait for the whole
+// counter to drain, as the hardware workaround prescribes.
+void WaitcntBrackets::determineWaitForVGPRBankHazard(
+    unsigned BankMask, AMDGPU::Waitcnt &Wait) const {
+  for (const auto &[ID, Info] : VMem) {
+    if (ID >= REGUNITS_END)
+      continue; // LDS DMA slot, not a register.
+    for (AMDGPU::InstCounterType T : {AMDGPU::DS_CNT, AMDGPU::LOAD_CNT}) {
+      if (Info.Scores[T] > getScoreLB(T) &&
+          (BankMask & (1u << getVGPRBank(MCRegUnit(ID), Context->TRI))))
+        Wait.add(T, 0);
+    }
+  }
 }
 
 void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
@@ -2642,6 +2665,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
         if (ST.hasWaitXcnt() && ST.isXNACKEnabled() && Op.isDef())
           ScoreBrackets.determineWaitForPhysReg(AMDGPU::X_CNT, Reg, Wait, MI);
+      }
+
+      if (ST.hasVGPRBankLoadHazard() && MI.mayLoad() &&
+          (TII.isDS(MI) || TII.isVMEM(MI) || TII.isFLAT(MI))) {
+        unsigned BankMask = 0;
+        for (const MachineOperand &Op : MI.defs()) {
+          if (Op.isReg() && TRI.isVGPR(MRI, Op.getReg())) {
+            for (MCRegUnit RU : TRI.regunits(Op.getReg().asMCReg()))
+              BankMask |= 1u << getVGPRBank(RU, TRI);
+          }
+        }
+        if (BankMask)
+          ScoreBrackets.determineWaitForVGPRBankHazard(BankMask, Wait);
       }
     }
   }
