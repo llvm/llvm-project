@@ -1062,9 +1062,48 @@ TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
   ASSERT_EQ(3U, NumFuncs);
 }
 
+TEST_P(CoverageMappingTest, skip_unused_function_record_with_skipped_regions) {
+  ProfileWriter.addRecord({"func", 0x1234, {1}}, Err);
+
+  // A record emitted for a function that's unused in some TU: a single zero
+  // region, possibly accompanied by skipped regions for comments. Since the
+  // function has a non-zero count in the profile, it should be skipped.
+  startFunction("func", 0x1234);
+  addCMR(Counter::getZero(), "file1", 1, 1, 9, 9);
+  addSkipped("file1", 2, 1, 2, 10);
+  addSkipped("file1", 4, 1, 6, 7);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  auto Funcs = LoadedCoverage->getCoveredFunctions();
+  EXPECT_EQ(0, std::distance(Funcs.begin(), Funcs.end()));
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedCovMapTest, CoverageMappingTest,
                          ::testing::Combine(::testing::Bool(),
                                             ::testing::Bool()));
+
+TEST(CoverageMappingTest, dummy_mapping_detection) {
+  auto IsDummy = [](std::vector<CounterMappingRegion> Regions) {
+    std::string Mapping;
+    raw_string_ostream OS(Mapping);
+    unsigned FileIDs[] = {0};
+    CoverageMappingWriter(FileIDs, {}, Regions).write(OS);
+    return RawCoverageMappingDummyChecker(Mapping).isDummy();
+  };
+  auto ZeroRegion =
+      CounterMappingRegion::makeRegion(Counter::getZero(), 0, 1, 1, 9, 9);
+  auto CountedRegion =
+      CounterMappingRegion::makeRegion(Counter::getCounter(0), 0, 1, 1, 9, 9);
+  auto SkippedRegion = CounterMappingRegion::makeSkipped(0, 2, 1, 2, 10);
+
+  EXPECT_THAT_EXPECTED(IsDummy({ZeroRegion}), HasValue(true));
+  EXPECT_THAT_EXPECTED(IsDummy({ZeroRegion, SkippedRegion}), HasValue(true));
+  EXPECT_THAT_EXPECTED(IsDummy({ZeroRegion, ZeroRegion}), HasValue(false));
+  EXPECT_THAT_EXPECTED(IsDummy({CountedRegion}), HasValue(false));
+  EXPECT_THAT_EXPECTED(IsDummy({CountedRegion, SkippedRegion}),
+                       HasValue(false));
+}
 
 TEST(CoverageMappingTest, filename_roundtrip) {
   std::vector<std::string> Paths({"dir", "a", "b", "c", "d", "e"});

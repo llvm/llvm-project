@@ -470,7 +470,8 @@ Error RawCoverageMappingReader::read() {
 }
 
 Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
-  // A dummy coverage mapping data consists of just one region with zero count.
+  // A dummy coverage mapping data consists of just one region with zero count,
+  // possibly accompanied by skipped regions.
   uint64_t NumFileMappings;
   if (Error Err = readSize(NumFileMappings))
     return std::move(Err);
@@ -489,14 +490,40 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   uint64_t NumRegions;
   if (Error Err = readSize(NumRegions))
     return std::move(Err);
-  if (NumRegions != 1)
-    return false;
-  uint64_t EncodedCounterAndRegion;
-  if (Error Err = readIntMax(EncodedCounterAndRegion,
-                             std::numeric_limits<unsigned>::max()))
-    return std::move(Err);
-  unsigned Tag = EncodedCounterAndRegion & Counter::EncodingTagMask;
-  return Tag == Counter::Zero;
+  unsigned NumCodeRegions = 0;
+  for (uint64_t I = 0; I < NumRegions; ++I) {
+    uint64_t EncodedCounterAndRegion;
+    if (Error Err = readIntMax(EncodedCounterAndRegion,
+                               std::numeric_limits<unsigned>::max()))
+      return std::move(Err);
+    unsigned Tag = EncodedCounterAndRegion & Counter::EncodingTagMask;
+    if (Tag != Counter::Zero ||
+        (EncodedCounterAndRegion & EncodingExpansionRegionBit))
+      return false;
+    switch (EncodedCounterAndRegion >>
+            Counter::EncodingCounterTagAndExpansionRegionTagBits) {
+    case CounterMappingRegion::CodeRegion:
+      if (++NumCodeRegions > 1)
+        return false;
+      break;
+    case CounterMappingRegion::SkippedRegion:
+      break;
+    default:
+      return false;
+    }
+    // Skip over the source range.
+    uint64_t LineStartDelta, ColumnStart, NumLines, ColumnEnd;
+    if (Error Err =
+            readIntMax(LineStartDelta, std::numeric_limits<unsigned>::max()))
+      return std::move(Err);
+    if (Error Err = readULEB128(ColumnStart))
+      return std::move(Err);
+    if (Error Err = readIntMax(NumLines, std::numeric_limits<unsigned>::max()))
+      return std::move(Err);
+    if (Error Err = readIntMax(ColumnEnd, std::numeric_limits<unsigned>::max()))
+      return std::move(Err);
+  }
+  return NumCodeRegions == 1;
 }
 
 /// Determine if we should skip the first byte of the section content
