@@ -11,6 +11,8 @@
 void Positives() {
   std::vector<int> I, J;
   std::vector<std::unique_ptr<int>> K;
+  std::vector<int> PointerContainers[2];
+  std::vector<int> *P = PointerContainers;
 
   // Expect to have no check messages
   std::find(K.begin(), K.end(), nullptr);
@@ -27,9 +29,33 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 1);
 
+  std::find(P->cbegin(), P->cend(), 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*P, 2);
+
+  std::find(P->begin(), P->end(), 3);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*P, 3);
+
+  std::find((P)->begin(), (P)->end(), 4);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*P, 4);
+
+  std::find((P + 1)->begin(), (P + 1)->end(), 4);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*(P + 1), 4);
+
+  std::find(PointerContainers->begin(), PointerContainers->end(), 5);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*PointerContainers, 5);
+
   std::find(std::begin(I), std::end(I), 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 2);
+
+  std::find(std::begin(*P), std::end(*P), 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(*P, 2);
 
   std::find(std::cbegin(I), std::cend(I), 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm

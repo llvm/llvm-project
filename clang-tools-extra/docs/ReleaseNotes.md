@@ -382,6 +382,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Kept diagnostics but suppressed unsafe fix-its when no safe
     result-preserving rewrite is available.
 
+- Fixed a bug in {doc}`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` that produced incorrect fix-its
+  for raw pointers to containers.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
