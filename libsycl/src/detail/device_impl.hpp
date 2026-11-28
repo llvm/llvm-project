@@ -24,11 +24,17 @@
 #include <OffloadAPI.h>
 
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
+
+template <typename T> struct is_range : std::false_type {};
+template <int Dimensions>
+struct is_range<range<Dimensions>> : std::true_type {};
+template <typename T> inline constexpr bool is_range_v = is_range<T>::value;
 
 class DeviceImpl {
   // Helper to limit DeviceImpl creation. It must be created in platform ctor
@@ -93,19 +99,84 @@ public:
   /// param.
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type getInfo() const {
+    // TODO: implement caching.
     using namespace info::device;
     using Map = InfoOLMapping<ol_device_info_t>;
 
     constexpr ol_device_info_t OLInfo = mapInfoDesc<Param, ol_device_info_t>(
         Map::M<device_type>{OL_DEVICE_INFO_TYPE},
+        Map::M<vendor_id>{OL_DEVICE_INFO_VENDOR_ID},
+        Map::M<max_compute_units>{OL_DEVICE_INFO_NUM_COMPUTE_UNITS},
+        Map::M<max_work_item_sizes<1>>{
+            OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION},
+        Map::M<max_work_item_sizes<2>>{
+            OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION},
+        Map::M<max_work_item_sizes<3>>{
+            OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION},
+        Map::M<max_work_group_size>{OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE},
+        Map::M<preferred_vector_width_char>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR},
+        Map::M<preferred_vector_width_short>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT},
+        Map::M<preferred_vector_width_int>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT},
+        Map::M<preferred_vector_width_long>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG},
+        Map::M<preferred_vector_width_float>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT},
+        // FIXME: Once aspects are supported, double and half should report 0
+        // if the device does not have the corresponding aspect.
+        Map::M<preferred_vector_width_double>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE},
+        Map::M<preferred_vector_width_half>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF},
+        Map::M<native_vector_width_char>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR},
+        Map::M<native_vector_width_short>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT},
+        Map::M<native_vector_width_int>{OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT},
+        Map::M<native_vector_width_long>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG},
+        Map::M<native_vector_width_float>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT},
+        // FIXME: Once aspects are supported, double and half should report 0
+        // if the device does not have the corresponding aspect.
+        Map::M<native_vector_width_double>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE},
+        Map::M<native_vector_width_half>{
+            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF},
+        Map::M<max_clock_frequency>{OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY},
+        Map::M<address_bits>{OL_DEVICE_INFO_ADDRESS_BITS},
+        Map::M<max_mem_alloc_size>{OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE},
+        Map::M<half_fp_config>{OL_DEVICE_INFO_HALF_FP_CONFIG},
+        Map::M<single_fp_config>{OL_DEVICE_INFO_SINGLE_FP_CONFIG},
+        Map::M<double_fp_config>{OL_DEVICE_INFO_DOUBLE_FP_CONFIG},
+        Map::M<global_mem_size>{OL_DEVICE_INFO_GLOBAL_MEM_SIZE},
+        Map::M<local_mem_size>{OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE},
         Map::M<name>{OL_DEVICE_INFO_PRODUCT_NAME},
         Map::M<vendor>{OL_DEVICE_INFO_VENDOR},
         Map::M<driver_version>{OL_DEVICE_INFO_DRIVER_VERSION});
 
-    size_t ExpectedSize = 0;
-    callAndThrow(olGetDeviceInfoSize, MOffloadDevice, OLInfo, &ExpectedSize);
+    using RetT = typename Param::return_type;
 
-    if constexpr (std::is_same_v<typename Param::return_type, std::string>) {
+    // max_work_group_size returns std::size_t while its liboffload
+    // counterpart returns uint32_t.
+    if constexpr (std::is_same_v<Param, max_work_group_size>) {
+      return static_cast<RetT>(getOLInfoAs<uint32_t>(OLInfo));
+    } else if constexpr (std::is_arithmetic_v<RetT>) {
+      return getOLInfoAs<RetT>(OLInfo);
+    } else if constexpr (std::is_same_v<RetT, std::vector<info::fp_config>>) {
+      // correctly_rounded_divide_sqrt doesn't apply to double precision, whose
+      // divide and sqrt are required to be correctly rounded anyway.
+      return convertFPConfigToSYCL(
+          getOLInfoAs<ol_device_fp_capability_flags_t>(OLInfo),
+          /*AllowCorrectlyRoundedDivideSqrt=*/
+          !std::is_same_v<Param, double_fp_config>);
+    } else if constexpr (std::is_same_v<RetT, info::device_type>) {
+      return convertDeviceTypeToSYCL(getOLInfoAs<ol_device_type_t>(OLInfo));
+    } else if constexpr (std::is_same_v<RetT, std::string>) {
+      size_t ExpectedSize = 0;
+      callAndThrow(olGetDeviceInfoSize, MOffloadDevice, OLInfo, &ExpectedSize);
       assert(ExpectedSize > 0 && "String info descriptor size must account for "
                                  "the null terminator");
       std::string Result;
@@ -115,14 +186,16 @@ public:
       callAndThrow(olGetDeviceInfo, MOffloadDevice, OLInfo, ExpectedSize,
                    Result.data());
       return Result;
-    } else if constexpr (OLInfo == OL_DEVICE_INFO_TYPE) {
-      assert((sizeof(typename Param::return_type) == ExpectedSize) &&
-             "Size of info descriptor reported by backend doesn't match with "
-             "expected.");
-      ol_device_type_t OLType{};
-      callAndThrow(olGetDeviceInfo, MOffloadDevice, OLInfo, sizeof(OLType),
-                   &OLType);
-      return convertDeviceTypeToSYCL(OLType);
+    } else if constexpr (is_range_v<RetT>) {
+      auto Dims = getOLInfoAs<ol_dimensions_t>(OLInfo);
+      // The last SYCL dimension is the fastest varying one, which corresponds
+      // to the first dimension reported by liboffload.
+      if constexpr (RetT::dimensions == 1)
+        return RetT{Dims.x};
+      else if constexpr (RetT::dimensions == 2)
+        return RetT{Dims.y, Dims.x};
+      else
+        return RetT{Dims.z, Dims.y, Dims.x};
     } else {
       static_assert(AlwaysFalse<Param>,
                     "Info descriptor is not properly supported");
@@ -133,6 +206,13 @@ public:
   ol_device_handle_t getOLHandle() const { return MOffloadDevice; }
 
 private:
+  /// Queries liboffload for the Info property and returns it as a T value.
+  template <typename T> T getOLInfoAs(ol_device_info_t Info) const {
+    T Value{};
+    callAndThrow(olGetDeviceInfo, MOffloadDevice, Info, sizeof(Value), &Value);
+    return Value;
+  }
+
   ol_device_handle_t MOffloadDevice = {};
   PlatformImpl &MPlatform;
 };

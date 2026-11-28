@@ -97,7 +97,60 @@ which doesn't currently support Windows.
 
 - `device`:
 
-  - `get_info`: to find an efficient way to map descriptors to liboffload types, add other descriptors, add cache of info data
+  - `get_info`:
+    - Add caching
+    - Change double and half widths to return 0 if the corresponding aspect is absent.
+    - Implement missing descriptors:
+      - max_num_sub_groups
+      - sub_group_sizes
+      - preferred_vector_width_long_long
+      - native_vector_width_long_long
+      - image_support
+      - max_read_image_args
+      - max_write_image_args
+      - image2d_max_width
+      - image2d_max_height
+      - image3d_max_width
+      - image3d_max_height
+      - image3d_max_depth
+      - image_max_buffer_size
+      - max_samplers
+      - max_parameter_size
+      - mem_base_addr_align
+      - global_mem_cache_type
+      - global_mem_cache_line_size
+      - global_mem_cache_size
+      - max_constant_buffer_size
+      - max_constant_args
+      - local_mem_type
+      - error_correction_support
+      - host_unified_memory
+      - atomic_memory_order_capabilities
+      - atomic_fence_order_capabilities
+      - atomic_memory_scope_capabilities
+      - atomic_fence_scope_capabilities
+      - profiling_timer_resolution
+      - is_endian_little
+      - is_available
+      - is_compiler_available
+      - is_linker_available
+      - execution_capabilities
+      - queue_profiling
+      - built_in_kernel_ids
+      - built_in_kernels
+      - profile
+      - version
+      - backend_version
+      - aspects
+      - extensions
+      - printf_buffer_size
+      - preferred_interop_user_sync
+      - parent_device
+      - partition_max_sub_devices
+      - partition_properties
+      - partition_affinity_domains
+      - partition_type_property
+      - partition_type_affinity_domain
   - `has(aspect)`: same as get_info
   - `create_sub_devices`: partitioning is not supported by liboffload now, blocked
   - `has_extension`: deprecated API, to implement on RT level with `device::has`

@@ -20,6 +20,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
+#include <sycl/__impl/info/device.hpp>
 #include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
 
@@ -28,6 +29,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -161,6 +163,18 @@ ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 ///
 /// \return SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
+
+/// Converts liboffload floating point capability flags to SYCL fp_config list.
+///
+/// \param Flags liboffload floating point capability bitfield.
+/// \param AllowCorrectlyRoundedDivideSqrt whether
+/// info::fp_config::correctly_rounded_divide_sqrt may be reported. SYCL does
+/// not define it for info::device::double_fp_config.
+///
+/// \return SYCL fp_config values matching the bits set in \p Flags.
+std::vector<info::fp_config>
+convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags,
+                      bool AllowCorrectlyRoundedDivideSqrt);
 
 /// Converts a SYCL USM kind to a liboffload type.
 ///
