@@ -47,8 +47,6 @@
 #define kMidShadowBeg 0
 #define kMidShadowEnd 0
 
-#define kGaplessShadow (false)
-
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.
 #define kZeroBaseShadowStart 0

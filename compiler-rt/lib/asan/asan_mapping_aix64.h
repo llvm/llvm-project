@@ -116,10 +116,6 @@
 #define kShadowGap4Beg 0
 #define kShadowGap4End 0
 
-// The shadow is placed in the middle of the address space, not above all
-// application memory.
-#define kGaplessShadow (false)
-
 namespace __asan {
 
 static inline bool AddrIsInLowMem(uptr a) {

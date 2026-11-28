@@ -322,15 +322,6 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #    define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
 #    define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
 
-// If the first byte of shadow can be placed after the last byte of app mem,
-// we don't need a gap since the shadow's shadow won't be in the middle
-// of app mem.
-#    if SANITIZER_APPLE
-#      define kGaplessShadow (kLowShadowBeg > kHighMemEnd)
-#    else
-#      define kGaplessShadow (false)
-#    endif
-
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.
 #    define kZeroBaseShadowStart 0
@@ -395,6 +386,16 @@ static inline bool AddrIsInShadowGap(uptr a) {
 
 }  // namespace __asan
 
+#  endif
+
+// If the first byte of shadow can be placed after the last byte of app mem,
+// we don't need a gap since the shadow's shadow won't be in the middle
+// of app mem. This is defined here rather than in each mapping so that every
+// mapping gets it.
+#  if SANITIZER_APPLE
+#    define kGaplessShadow (kLowShadowBeg > kHighMemEnd)
+#  else
+#    define kGaplessShadow (false)
 #  endif
 
 namespace __asan {
