@@ -1675,7 +1675,10 @@ void TemplateParamObjectDecl::printAsExpr(llvm::raw_ostream &OS) const {
 
 void TemplateParamObjectDecl::printAsExpr(llvm::raw_ostream &OS,
                                           const PrintingPolicy &Policy) const {
-  getType().getUnqualifiedType().print(OS, Policy);
+  // Template parameter objects are uniqued by canonical type and value, so the
+  // sugar on getType() is whatever the first use happened to spell. It says
+  // nothing about the use being printed; print the canonical type instead.
+  getType().getCanonicalType().getUnqualifiedType().print(OS, Policy);
   printAsInit(OS, Policy);
 }
 
