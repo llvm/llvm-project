@@ -408,6 +408,7 @@ private:
   SDValue combineSTORE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineVECTOR_SHUFFLE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineEXTRACT_VECTOR_ELT(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineBITCAST(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineJOIN_DWORDS(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;

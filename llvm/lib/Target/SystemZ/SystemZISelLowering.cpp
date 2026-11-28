@@ -795,6 +795,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::STORE,
                        ISD::VECTOR_SHUFFLE,
                        ISD::EXTRACT_VECTOR_ELT,
+                       ISD::BITCAST,
                        ISD::FP_ROUND,
                        ISD::STRICT_FP_ROUND,
                        ISD::FP_EXTEND,
@@ -8635,6 +8636,105 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   return SDValue();
 }
 
+// Return true if all users of N are ANDs with a constant mask that together
+// demand at most MaxBits bits of N.
+static bool demandsFewBits(SDNode *N, unsigned MaxBits) {
+  APInt Demanded = APInt::getZero(N->getValueType(0).getSizeInBits());
+  for (SDNode *User : N->users()) {
+    if (User->getOpcode() != ISD::AND)
+      return false;
+    auto *Mask = dyn_cast<ConstantSDNode>(User->getOperand(1));
+    if (!Mask || User->getOperand(0).getNode() != N)
+      return false;
+    Demanded |= Mask->getAPIntValue();
+  }
+  return Demanded.popcount() <= MaxBits;
+}
+
+// Convert a bitcast of a vector of i1 (typically the result of a vector
+// compare) to an integer, i.e. a "movemask", into a VECTOR BIT PERMUTE that
+// gathers the low bit of each lane into the low bits of a halfword, followed
+// by an extraction of that halfword.  The bit permute effectively performs
+// the truncation of the lanes to i1, so there is no need to widen the i1
+// vector to a full mask first.
+SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
+                                              DAGCombinerInfo &DCI) const {
+  if (!Subtarget.hasVectorEnhancements1())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT ResVT = N->getValueType(0);
+  if (!SrcVT.isFixedLengthVector() || SrcVT.getScalarType() != MVT::i1 ||
+      !ResVT.isScalarInteger())
+    return SDValue();
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  if (NumElts < 2 || NumElts > 16 || !isPowerOf2_32(NumElts))
+    return SDValue();
+
+  // Leave icmp_eq/ne(bitcast(icmp(X,Y)),0/-1) reductions to combineSETCC.
+  for (SDNode *User : N->users())
+    if (User->getOpcode() == ISD::SETCC &&
+        (cast<CondCodeSDNode>(User->getOperand(2))->get() == ISD::SETEQ ||
+         cast<CondCodeSDNode>(User->getOperand(2))->get() == ISD::SETNE) &&
+        (isNullConstant(User->getOperand(1)) ||
+         isAllOnesConstant(User->getOperand(1))))
+      return SDValue();
+
+  // If only a few bits of the result are used, extracting those lanes
+  // individually is cheaper than loading the index vector and permuting.
+  if (demandsFewBits(N, 2))
+    return SDValue();
+
+  // Get the lanes widened to fill a 128-bit register.  Only the least
+  // significant bit of each lane, i.e. the i1 value itself, is ever read (see
+  // the index vector below), so the upper bits of the lanes are don't-care and
+  // any extension will do.  This does not rely on the source being an
+  // all-ones/all-zeros mask: ANY_EXTEND of an i1 vector preserves the i1
+  // values in the low bit of each lane for every producer.  If the source is a
+  // truncation from such a vector, use its operand directly.  If it is a
+  // vector compare, the extension folds into the compare.
+  SDLoc DL(N);
+  unsigned EltBits = 128 / NumElts;
+  EVT MaskVT =
+      EVT::getVectorVT(*DAG.getContext(),
+                       EVT::getIntegerVT(*DAG.getContext(), EltBits), NumElts);
+  SDValue Mask;
+  if (Src.getOpcode() == ISD::TRUNCATE &&
+      Src.getOperand(0).getValueType() == MaskVT)
+    Mask = Src.getOperand(0);
+  else
+    Mask = DAG.getNode(ISD::ANY_EXTEND, DL, MaskVT, Src);
+  Mask = DAG.getBitcast(MVT::v16i8, Mask);
+
+  // The i'th byte of the index vector selects the bit that ends up in bit
+  // 63-i of the first doubleword's result.  Lane 0 must end up in the most
+  // significant bit of the result, and the bit selected within a lane is its
+  // least significant bit.  Note that VBPERM numbers the bits of the source
+  // from the left, so the least significant bit of a lane is the last one,
+  // EltBits-1, and not bit 0.  Bytes that are not needed select a bit
+  // position >= 128, which yields zero.
+  SmallVector<SDValue, 16> Indices;
+  for (unsigned I = 0; I < 16; ++I) {
+    unsigned Lane = I - (16 - NumElts);
+    unsigned Idx = I < 16 - NumElts ? 128 : Lane * EltBits + (EltBits - 1);
+    Indices.push_back(DAG.getConstant(Idx, DL, MVT::i32));
+  }
+  SDValue IndexVec = DAG.getBuildVector(MVT::v16i8, DL, Indices);
+
+  SDValue Perm =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i64,
+                  DAG.getTargetConstant(Intrinsic::s390_vbperm, DL, MVT::i32),
+                  Mask, IndexVec);
+
+  // The result is in bits 48-63, which is halfword element 3.
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                            DAG.getBitcast(MVT::v8i16, Perm),
+                            DAG.getVectorIdxConstant(3, DL));
+  return DAG.getZExtOrTrunc(Res, DL, ResVT);
+}
+
 SDValue SystemZTargetLowering::combineJOIN_DWORDS(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9648,6 +9748,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:              return combineSTORE(N, DCI);
   case ISD::VECTOR_SHUFFLE:     return combineVECTOR_SHUFFLE(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT: return combineEXTRACT_VECTOR_ELT(N, DCI);
+  case ISD::BITCAST:            return combineBITCAST(N, DCI);
   case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
