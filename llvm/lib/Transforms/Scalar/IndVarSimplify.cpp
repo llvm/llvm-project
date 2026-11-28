@@ -1383,8 +1383,17 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(LIP->Pred, LIP->LHS, LIP->RHS, BI))
     return createFoldedExitCond(L, ExitingBB, /*IsTaken*/ false);
-  else
-    return createInvariantCond(L, ExitingBB, *LIP, Rewriter);
+
+  // The condition is expanded in the preheader, i.e. before any exit of the
+  // loop has been checked. Don't do that if it contains an expression that
+  // may trap (e.g. a division by a possibly-zero value).
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader ||
+      !Rewriter.isSafeToExpandAt(LIP->LHS, Preheader->getTerminator()) ||
+      !Rewriter.isSafeToExpandAt(LIP->RHS, Preheader->getTerminator()))
+    return std::nullopt;
+
+  return createInvariantCond(L, ExitingBB, *LIP, Rewriter);
 }
 
 static bool optimizeLoopExitWithUnknownExitCount(
