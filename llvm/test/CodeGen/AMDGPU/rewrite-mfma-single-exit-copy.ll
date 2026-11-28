@@ -439,41 +439,46 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, s8
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, s9
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, s10
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, s11
+; CHECK-NEXT:    v_accvgpr_write_b32 a12, s12
+; CHECK-NEXT:    v_accvgpr_write_b32 a13, s13
+; CHECK-NEXT:    v_accvgpr_write_b32 a14, s14
+; CHECK-NEXT:    v_accvgpr_write_b32 a15, s15
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x28
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, v2
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a19, v3
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[8:11], a[12:15], a[0:3]
+; CHECK-NEXT:    v_accvgpr_write_b32 a18, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a17, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a16, v0
+; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[4:7], a[8:11], a[12:15], a[0:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:2032
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2016
+; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[12:15], a[8:11], a[0:3]
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[244:247], s[0:1] offset:2000
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[240:243], s[0:1] offset:1984
-; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
-; CHECK-NEXT:    v_mov_b64_e32 v[250:251], s[14:15]
-; CHECK-NEXT:    v_mov_b64_e32 v[246:247], s[10:11]
-; CHECK-NEXT:    v_mov_b64_e32 v[244:245], s[8:9]
-; CHECK-NEXT:    v_mov_b64_e32 v[248:249], s[12:13]
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[236:239], s[0:1] offset:1968
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[244:247], v[248:251], a[0:3]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    v_accvgpr_read_b32 v243, a3
-; CHECK-NEXT:    v_accvgpr_read_b32 v242, a2
-; CHECK-NEXT:    v_accvgpr_read_b32 v241, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v240, a0
-; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
-; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[236:239], v[244:247], v[248:251], v[240:243]
-; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[238:241], v[248:251], v[244:247], v[240:243]
-; CHECK-NEXT:    s_nop 6
+; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2016
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v238, a6
+; CHECK-NEXT:    v_accvgpr_read_b32 v237, a5
+; CHECK-NEXT:    v_accvgpr_read_b32 v236, a4
+; CHECK-NEXT:    v_accvgpr_read_b32 v238, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v239, a7
 ; CHECK-NEXT:    v_add_f32_e32 v236, 1.0, v236
 ; CHECK-NEXT:    v_add_f32_e32 v237, 2.0, v238
 ; CHECK-NEXT:    v_mov_b32_e32 v238, 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v241, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v240, a2
+; CHECK-NEXT:    v_accvgpr_read_b32 v239, a1
 ; CHECK-NEXT:    global_store_dwordx2 v238, v[236:237], s[0:1]
 ; CHECK-NEXT:    global_store_dwordx4 v238, v[232:235], s[0:1] offset:1952
 ; CHECK-NEXT:    global_store_dwordx4 v238, v[228:231], s[0:1] offset:1936
@@ -533,7 +538,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v238, v[12:15], s[0:1] offset:1072
 ; CHECK-NEXT:    global_store_dwordx4 v238, v[8:11], s[0:1] offset:1056
 ; CHECK-NEXT:    global_store_dwordx4 v238, v[4:7], s[0:1] offset:1040
-; CHECK-NEXT:    global_store_dwordx4 v238, a[4:7], s[0:1] offset:1024
+; CHECK-NEXT:    global_store_dwordx4 v238, a[16:19], s[0:1] offset:1024
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .Ltmp2:
 ; Loop body: MFMAs in AGPR form.

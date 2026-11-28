@@ -1,0 +1,56 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+
+# The MFMA's dst is restored because of a partial redef. The redef's value is
+# bridged for the chain but also read by the store, the multiply and the KILL,
+# so its VGPR stays live to the last of them.
+
+# CHECK: region 0: ArchVGPR 295 -> 295, AGPR 0 -> 4, spills 39 -> 39
+# CHECK: region 1: ArchVGPR 299 -> 295, AGPR 0 -> 8, spills 43 -> 39
+# CHECK: region 2: ArchVGPR 297 -> 293, AGPR 0 -> 8, spills 41 -> 37
+
+--- |
+  define void @partial_redef_with_use() #0 {
+  entry:
+    unreachable
+  }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+name:            partial_redef_with_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %mfma:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %ptr:vreg_64_align2 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORD %ptr, %mfma.sub0, 0, 0, implicit $exec
+    %val:vgpr_32 = GLOBAL_LOAD_DWORD %ptr, 0, 0, implicit $exec
+    %mfma.sub2:vreg_128_align2 = COPY %val
+    %result:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %mfma.sub2, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+  bb.1:
+    successors: %bb.1(0x7e000000), %bb.2(0x02000000)
+    %c0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %mfma, 0, 0, 0, implicit $mode, implicit $exec
+    %c1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %c0, 0, 0, 0, implicit $mode, implicit $exec
+    %c2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %c1, 0, 0, 0, implicit $mode, implicit $exec
+    %c3:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %c2, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+    S_BRANCH %bb.1
+  bb.2:
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    KILL %c3, %result, %mfma
+    S_ENDPGM 0
+...

@@ -96,6 +96,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerVGPREncoding.cpp
   AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp
+  AMDGPUMFMAToAGPR.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUNextUseAnalysis.cpp
   AMDGPUPerfHintAnalysis.cpp
@@ -141,6 +142,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNPreRALongBranchReg.cpp
   GCNRegPressure.cpp
   GCNRematStrategy.cpp
+  GCNRewriteMFMAForm.cpp
   GCNRewritePartialRegUses.cpp
   GCNSchedStrategy.cpp
   GCNSubtarget.cpp

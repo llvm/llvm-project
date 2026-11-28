@@ -1,0 +1,55 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+
+# The VALUs read the last MFMA's result lane by lane, so the rewrite makes a
+# VGPR copy of it before the first read. The estimate has to count the copy,
+# which keeps only the lanes the later reads still need.
+
+# CHECK: region 2: ArchVGPR 294 -> 293, AGPR 0 -> 4, spills 38 -> 37
+
+--- |
+  define void @bridge_copy_pressure() #0 {
+  entry:
+    unreachable
+  }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+name:            bridge_copy_pressure
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %a:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %b:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %a, 0, 0, 0, implicit $mode, implicit $exec
+    %c:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %b, 0, 0, 0, implicit $mode, implicit $exec
+    %v0:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %c.sub0, implicit $mode, implicit $exec
+    %v1:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %c.sub1, implicit $mode, implicit $exec
+    %v2:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %c.sub2, implicit $mode, implicit $exec
+    %v3:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %c.sub3, implicit $mode, implicit $exec
+    S_NOP 0, implicit %v0, implicit %v1, implicit %v2, implicit %v3
+    SCHED_BARRIER 0
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
