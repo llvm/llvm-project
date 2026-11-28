@@ -87,6 +87,7 @@ TRIPLE_OS(ChipStar, "chipstar", "Generic")
 TRIPLE_OS(Firmware, "firmware", "Generic")
 TRIPLE_OS(QURT, "qurt", "Generic")
 TRIPLE_OS(H2, "h2", "Generic")
+TRIPLE_OS(Trusty, "trusty", "Generic")
 
 #undef TRIPLE_OS
 #undef TRIPLE_OS_ALIAS
