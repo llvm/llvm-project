@@ -282,7 +282,14 @@ int VNCoercion::analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
   if (const auto *Memset = dyn_cast<MemSetInst>(MI)) {
-    if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
+    // Non-integral pointers and target extension types can't be built from
+    // bytes, so only zero bytes are forwarded to them, as their null value, if
+    // they have one.
+    Type *ScalarTy = LoadTy->getScalarType();
+    auto *TETy = dyn_cast<TargetExtType>(ScalarTy);
+    if (TETy && !TETy->hasProperty(TargetExtType::HasZeroInit))
+      return -1;
+    if (TETy || DL.isNonIntegralPointerType(ScalarTy)) {
       auto *CI = dyn_cast<ConstantInt>(Memset->getValue());
       if (!CI || !CI->isZero())
         return -1;
@@ -442,6 +449,10 @@ Value *VNCoercion::getMemInstValueForLoad(MemIntrinsic *SrcInst,
   // We know that this method is only called when the mem transfer fully
   // provides the bits for the load.
   if (MemSetInst *MSI = dyn_cast<MemSetInst>(SrcInst)) {
+    // Only zero bytes are forwarded to a target extension type.
+    if (LoadTy->getScalarType()->isTargetExtTy())
+      return Constant::getNullValue(LoadTy);
+
     // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
     // independently of what the offset is.
     Value *Val = MSI->getValue();
