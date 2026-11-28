@@ -9859,8 +9859,13 @@ Currently supported built-ins:
 * `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be a scalar
   `float`, or a `half` when native 16-bit types are not enabled (it is then
   treated as `float`). Can be used as a vertex or mesh shader output, or as a
-  hull, domain or geometry shader input or output. It cannot be used in a pixel
-  shader.
+  hull, domain or geometry shader input or output. It can be declared as a
+  pixel shader input, so that a pixel shader can reuse the vertex shader's
+  output struct, but Vulkan does not allow the pixel shader to use it.
+  Compilation fails if a read of the value survives optimization. At `-O0`,
+  it also fails for an unread struct field, because the entry point copies
+  every field of the struct. An unread scalar input compiles at every
+  optimization level. It cannot be a pixel shader output.
 
 A declaration annotated with `[[vk::builtin]]` does not take part in
 `vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.

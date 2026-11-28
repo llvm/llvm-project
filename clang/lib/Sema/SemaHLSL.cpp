@@ -1077,7 +1077,11 @@ static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
         ((Stage == llvm::Triple::Vertex && IsOut) ||
          Stage == llvm::Triple::Hull || Stage == llvm::Triple::Domain ||
          Stage == llvm::Triple::Geometry ||
-         (Stage == llvm::Triple::Mesh && IsOut));
+         (Stage == llvm::Triple::Mesh && IsOut) ||
+         // Allowed so a pixel shader can take the vertex shader's output
+         // struct. The SPIR-V backend rejects the module if the input is
+         // still used after optimization.
+         (Stage == llvm::Triple::Pixel && IsIn && !IsOut));
     if (!LegalStage) {
       StringRef IOTypeName = (IsIn && IsOut) ? "inputs and outputs"
                              : IsIn          ? "inputs"
