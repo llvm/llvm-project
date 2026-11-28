@@ -30,6 +30,9 @@ class GlobalValueSummary;
 class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
+namespace cl {
+class LibraryOptionsContext;
+}
 
 inline constexpr StringLiteral MemProfCloneSuffix = ".memprof.";
 
@@ -45,9 +48,9 @@ class MemProfContextDisambiguation
       Module &M,
       function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
 
-  /// In the ThinLTO backend, apply the cloning decisions in ImportSummary to
-  /// the IR.
-  bool applyImport(Module &M);
+  /// In the ThinLTO backend, apply the cloning decisions in \p Summary to the
+  /// IR.
+  bool applyImport(Module &M, const ModuleSummaryIndex *Summary);
 
   // Builds the symtab and analysis used for ICP during ThinLTO backends.
   bool initializeIndirectCallPromotionInfo(Module &M);
@@ -90,10 +93,6 @@ class MemProfContextDisambiguation
   /// Import summary containing cloning decisions for the ThinLTO backend.
   const ModuleSummaryIndex *ImportSummary;
 
-  // Owns the import summary specified by internal options for testing the
-  // ThinLTO backend via opt (to simulate distributed ThinLTO).
-  std::unique_ptr<ModuleSummaryIndex> ImportSummaryForTesting;
-
   // Whether we are building with SamplePGO. This is needed for correctly
   // updating profile metadata on speculatively promoted calls.
   bool isSamplePGO;
@@ -122,6 +121,12 @@ public:
       LLVMContext &Ctx,
       function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
           nullptr);
+
+  /// Return -memprof-context-disambiguation.
+  LLVM_ABI static bool isEnabled(const cl::LibraryOptionsContext &C);
+
+  /// Return -supports-hot-cold-new.
+  LLVM_ABI static bool supportsHotColdNew(const cl::LibraryOptionsContext &C);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

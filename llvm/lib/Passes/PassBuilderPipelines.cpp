@@ -164,8 +164,6 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<std::string> UseCtxProfile;
 
-extern cl::opt<bool> EnableMemProfContextDisambiguation;
-
 extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
@@ -1856,7 +1854,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
-    if (EnableMemProfContextDisambiguation)
+    if (MemProfContextDisambiguation::isEnabled(Context.getLibraryOptions()))
       MPM.addPass(MemProfContextDisambiguation(
           ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
@@ -2119,7 +2117,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Perform context disambiguation after inlining, since that would reduce the
   // amount of additional cloning required to distinguish the allocation
   // contexts.
-  if (EnableMemProfContextDisambiguation)
+  if (MemProfContextDisambiguation::isEnabled(Context.getLibraryOptions()))
     MPM.addPass(MemProfContextDisambiguation(
         /*Summary=*/nullptr,
         PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));

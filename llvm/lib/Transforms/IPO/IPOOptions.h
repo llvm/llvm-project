@@ -27,6 +27,13 @@ enum class PassSummaryAction;
 /// with WPD. Fallback mode is useful for ensuring safety when whole program
 /// visibility may be compromised.
 enum class WPDCheckMode { None, Trap, Fallback };
+
+/// How much of the MemProf context graph to export to dot.
+enum class MemProfDotScope {
+  All,     // The full CCG graph.
+  Alloc,   // Only contexts for the specified allocation.
+  Context, // Only the specified context.
+};
 } // namespace llvm
 
 #define OPTIONS_STRUCT_DECL

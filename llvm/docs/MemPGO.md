@@ -72,7 +72,7 @@ Merge MemProf profiles with standard PGO instrumentation profiles if you have bo
 Feed the indexed profile back into the compiler using the `-fmemory-profile-use=` option (or low-level passes options).
 
 ```bash
-clang++ -fmemory-profile-use=memprof.memprofdata -O2 -flto=thin -fuse-ld=lld -gmlt -fdebug-info-for-profiling -Wl,-mllvm,-enable-memprof-context-disambiguation -Wl,-mllvm,-optimize-hot-cold-new -Wl,-mllvm,-supports-hot-cold-new source.cpp -o optimized_app -ltcmalloc
+clang++ -fmemory-profile-use=memprof.memprofdata -O2 -flto=thin -fuse-ld=lld -gmlt -fdebug-info-for-profiling -Wl,-mllvm,-memprof-context-disambiguation -Wl,-mllvm,-optimize-hot-cold-new -Wl,-mllvm,-supports-hot-cold-new source.cpp -o optimized_app -ltcmalloc
 ```
 
 If invoking the optimizer directly via `opt`:
