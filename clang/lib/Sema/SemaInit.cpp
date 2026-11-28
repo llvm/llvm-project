@@ -2157,30 +2157,30 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     IList->setInit(0, Embed->getDataStringLiteral());
   }
 
-  // Check for the special-case of initializing an array with a string.
-  if (Index < IList->getNumInits()) {
-    if (IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
-        SIF_None) {
-      // We place the string literal directly into the resulting
-      // initializer list. This is the only place where the structure
-      // of the structured initializer list doesn't match exactly,
-      // because doing so would involve allocating one character
-      // constant for each string.
-      // FIXME: Should we do these checks in verify-only mode too?
-      if (!VerifyOnly)
-        CheckStringInit(
-            IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
-            SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
-      if (StructuredList) {
-        UpdateStructuredListElement(StructuredList, StructuredIndex,
-                                    IList->getInit(Index));
-        StructuredList->resizeInits(SemaRef.Context, StructuredIndex);
-      }
-      ++Index;
-      if (AggrDeductionCandidateParamTypes)
-        AggrDeductionCandidateParamTypes->push_back(DeclType);
-      return;
+  // Check for the special-case of initializing an array with a string. After a
+  // designator the string is the initializer of the next element instead.
+  if (Index < IList->getNumInits() && elementIndex.isZero() &&
+      IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
+          SIF_None) {
+    // We place the string literal directly into the resulting
+    // initializer list. This is the only place where the structure
+    // of the structured initializer list doesn't match exactly,
+    // because doing so would involve allocating one character
+    // constant for each string.
+    // FIXME: Should we do these checks in verify-only mode too?
+    if (!VerifyOnly)
+      CheckStringInit(
+          IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
+          SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
+    if (StructuredList) {
+      UpdateStructuredListElement(StructuredList, StructuredIndex,
+                                  IList->getInit(Index));
+      StructuredList->resizeInits(SemaRef.Context, StructuredIndex);
     }
+    ++Index;
+    if (AggrDeductionCandidateParamTypes)
+      AggrDeductionCandidateParamTypes->push_back(DeclType);
+    return;
   }
   if (const VariableArrayType *VAT = dyn_cast<VariableArrayType>(arrayType)) {
     // Check for VLAs; in standard C it would be possible to check this
