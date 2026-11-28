@@ -221,6 +221,46 @@ firstbithigh(vector<T, N> X) {
 }
 
 //===----------------------------------------------------------------------===//
+// frexp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T frexp(T X, out T Exp)
+/// \brief Returns the mantissa and exponent of the specified floating-point
+/// value.
+/// \param X The specified floating-point value.
+/// \param Exp The returned exponent of X.
+///
+/// The mantissa has the same sign as X and an absolute value in [0.5, 1), such
+/// that X = mantissa * 2^Exp, including when X is a denormal. If X is 0, both
+/// the mantissa and the exponent are 0. The result is unspecified if the
+/// exponent would be outside the range of a 32-bit integer, which is the case
+/// for infinities and NaNs.
+inline float frexp(float X, out float Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+inline float2 frexp(float2 X, out float2 Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+inline float3 frexp(float3 X, out float3 Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+inline float4 frexp(float4 X, out float4 Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+template <int N>
+inline vector<__detail::enable_if_t<(N > 4), float>, N>
+frexp(vector<__detail::enable_if_t<(N > 4), float>, N> X,
+      out __detail::type_identity_t<vector<float, N>> Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+template <int R, int C>
+inline matrix<float, R, C>
+frexp(matrix<float, R, C> X,
+      out __detail::type_identity_t<matrix<float, R, C>> Exp) {
+  return __detail::frexp_impl(X, Exp);
+}
+
+//===----------------------------------------------------------------------===//
 // mul builtins
 //===----------------------------------------------------------------------===//
 
