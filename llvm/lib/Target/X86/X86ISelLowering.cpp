@@ -43648,6 +43648,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorOfConstantFPSDNodes(Op) ||
            getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
            (Op.getOpcode() == Opc && Op->hasOneUse()) ||
+           (Op.getOpcode() == X86ISD::VTRUNC && Op->hasOneUse() &&
+            Op.getOperand(0).getValueType().is128BitVector()) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::CONCAT_VECTORS && Op->hasOneUse()) ||
            (FoldShuf && isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
@@ -45710,10 +45712,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
   case X86ISD::VZEXT_MOVL: {
     // If upper demanded elements are already zero then we have nothing to do.
+    // KnownBits doesn't handle POISON/UNDEF values so check the source value.
     SDValue Src = Op.getOperand(0);
     APInt DemandedUpperElts = DemandedElts;
     DemandedUpperElts.clearLowBits(1);
-    if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1))
+    if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1) &&
+        TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            Src, DemandedUpperElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
       return TLO.CombineTo(Op, Src);
     break;
   }
@@ -46978,6 +46983,23 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::SETCC:
   case X86ISD::SETCC_CARRY:
     return true;
+  case X86ISD::VSHLI:
+  case X86ISD::VSRAI:
+  case X86ISD::VSRLI: {
+    // If Op can't create undef/poison and none of its operands are
+    // undef/poison then Op is never undef/poison. A difference from the default
+    // check, outside the switch, is that we handle elementwise operations for
+    // which the DemandedElts mask is valid for all operands here.
+    // TODO: Handle other opcodes when we have test coverage.
+    return !DAG.canCreateUndefOrPoison(Op, DemandedElts, Kind,
+                                       /*ConsiderFlags*/ true, Depth) &&
+           all_of(Op->ops(), [&](SDValue V) {
+             if (V.getValueType().isVector())
+               return DAG.isGuaranteedNotToBeUndefOrPoison(V, DemandedElts,
+                                                           Kind, Depth + 1);
+             return DAG.isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
+           });
+  }
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {
     APInt DemandedLHS, DemandedRHS;
@@ -47042,6 +47064,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
   }
+  case X86ISD::VZEXT_LOAD:
   case X86ISD::VBROADCAST_LOAD:
   case X86ISD::SUBV_BROADCAST_LOAD: {
     // If we're loading from the constant pool, check if the constant
@@ -47056,6 +47079,58 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
         return ::isGuaranteedNotToBePoison(Cst);
       assert(includesUndef(Kind) && "UndefOnly expected");
       return ::isGuaranteedNotToBeUndef(Cst);
+    }
+    break;
+  }
+  case X86ISD::MOVQ2DQ: {
+    // Move from MMX to XMM. Upper half of XMM are known zero.
+    assert(Op.getValueType().is128BitVector() && "Unknown vector type");
+    if (DemandedElts.countr_zero() >= (NumElts / 2))
+      return true;
+    break;
+  }
+  case X86ISD::VTRUNC:
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:
+  case X86ISD::CVTSI2P:
+  case X86ISD::CVTUI2P:
+  case X86ISD::CVTP2SI:
+  case X86ISD::CVTP2UI:
+  case X86ISD::MCVTP2SI:
+  case X86ISD::MCVTP2UI:
+  case X86ISD::CVTTP2SI:
+  case X86ISD::CVTTP2UI:
+  case X86ISD::MCVTTP2SI:
+  case X86ISD::MCVTTP2UI:
+  case X86ISD::MCVTSI2P:
+  case X86ISD::MCVTUI2P:
+  case X86ISD::VFPROUND:
+  case X86ISD::VMFPROUND:
+  case X86ISD::CVTPS2PH:
+  case X86ISD::MCVTPS2PH:
+  case X86ISD::MCVTTP2SIS:
+  case X86ISD::MCVTTP2UIS: {
+    // Truncations/Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts && DemandedElts.countr_zero() >= NumSrcElts)
+        return true;
+    }
+    break;
+  }
+  case X86ISD::STRICT_CVTTP2SI:
+  case X86ISD::STRICT_CVTTP2UI:
+  case X86ISD::STRICT_CVTSI2P:
+  case X86ISD::STRICT_CVTUI2P:
+  case X86ISD::STRICT_VFPROUND:
+  case X86ISD::STRICT_CVTPS2PH: {
+    // Strict Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(1).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts && DemandedElts.countr_zero() >= NumSrcElts)
+        return true;
     }
     break;
   }
