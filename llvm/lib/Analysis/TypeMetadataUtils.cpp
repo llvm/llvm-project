@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -238,6 +239,29 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
     return std::pair<Function *, Constant *>(nullptr, nullptr);
 
   return std::pair<Function *, Constant *>(Fn, C);
+}
+
+// NOTE: this function only handles absolute pointer slots, not relative ones.
+bool llvm::isNullVTableSlot(GlobalVariable *GV, uint64_t Offset, Module &M) {
+  if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return false;
+
+  const DataLayout &DL = M.getDataLayout();
+  Type *FnPtrTy = PointerType::get(M.getContext(), DL.getProgramAddressSpace());
+  Constant *Init = GV->getInitializer();
+
+  TypeSize InitSize = DL.getTypeAllocSize(Init->getType());
+  TypeSize PtrSize = DL.getTypeStoreSize(FnPtrTy);
+  if (InitSize.isScalable() || PtrSize.isScalable())
+    return false;
+  uint64_t InitBytes = InitSize.getFixedValue();
+  uint64_t PtrBytes = PtrSize.getFixedValue();
+  if (Offset > InitBytes || InitBytes - Offset < PtrBytes ||
+      Offset > std::numeric_limits<int64_t>::max())
+    return false;
+
+  Constant *C = ConstantFoldLoadFromConst(Init, FnPtrTy, APInt(64, Offset), DL);
+  return C && C->isNullValue();
 }
 
 static void replaceRelativePointerUserWithZero(User *U) {
