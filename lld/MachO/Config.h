@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LibraryOptionsContext.h"
@@ -259,7 +260,7 @@ struct Configuration {
   SymbolPatterns localSymbolPatterns;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   llvm::cl::LibraryOptionsContext libraryOptions;
-  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::PassPlugin, 0> passPlugins;
   llvm::SmallVector<llvm::StringRef, 0> passPluginArgs;
 
   bool zeroModTime = true;

@@ -20,6 +20,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -44,8 +45,8 @@ static lto::Config createConfig() {
                           config->icfLevel == ICFLevel::safe_thunks;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
-  for (StringRef pluginFn : config->passPlugins)
-    c.PassPluginFilenames.push_back(std::string(pluginFn));
+  for (PassPlugin &plugin : config->passPlugins)
+    c.LoadedPassPlugins.push_back(&plugin);
   for (StringRef arg : config->passPluginArgs)
     c.PassPluginArgs.push_back(std::string(arg));
   c.OptPipeline = std::string(config->ltoNewPmPasses);

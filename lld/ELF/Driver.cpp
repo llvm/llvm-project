@@ -47,12 +47,14 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
@@ -77,6 +79,24 @@ using namespace llvm::sys;
 using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
+// Pass "<plugin>,<arg>" values to loaded and statically linked pass plugins
+static Error passPluginArgs(ArrayRef<PassPlugin> plugins,
+                            ArrayRef<StringRef> args) {
+  if (args.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> infos;
+  for (const PassPlugin &plugin : plugins)
+    infos.push_back(plugin.getInfo());
+#define HANDLE_EXTENSION(Ext) infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return passPluginArguments(
+      infos, map_to_vector(args, [](StringRef arg) { return arg.str(); }));
+}
 
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
@@ -1853,6 +1873,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
+  // -plugin-opt=- forwards LLVM options for compatibility with LTO linker
+  // plugins like LLVMgold.so
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
     parseClangOption(ctx, std::string("-") + arg->getValue(),
                      arg->getSpelling());
@@ -1868,14 +1890,23 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      << arg->getValue() << "'";
   }
 
-  ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
-  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
-
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
     parseClangOption(ctx, arg->getValue(), arg->getSpelling());
     ctx.arg.mllvmOpts.emplace_back(arg->getValue());
   }
+
+  // Load plugins upfront, so load errors are reported even without LTO
+  for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
+    Expected<PassPlugin> plugin = PassPlugin::load(path);
+    if (!plugin)
+      ErrAlways(ctx) << plugin.takeError();
+    else
+      ctx.arg.passPlugins.push_back(std::move(*plugin));
+  }
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
+  if (Error e = passPluginArgs(ctx.arg.passPlugins, ctx.arg.passPluginArgs))
+    ErrAlways(ctx) << std::move(e);
 
   ctx.arg.ltoKind = LtoKind::Default;
   if (auto *arg = args.getLastArg(OPT_lto)) {

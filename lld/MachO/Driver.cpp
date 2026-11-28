@@ -34,6 +34,7 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -43,6 +44,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -71,6 +73,24 @@ using namespace lld::macho;
 
 std::unique_ptr<Configuration> macho::config;
 std::unique_ptr<DependencyTracker> macho::depTracker;
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
+// Pass "<plugin>,<arg>" values to loaded and statically linked pass plugins
+static Error passPluginArgs(ArrayRef<PassPlugin> plugins,
+                            ArrayRef<StringRef> args) {
+  if (args.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> infos;
+  for (const PassPlugin &plugin : plugins)
+    infos.push_back(plugin.getInfo());
+#define HANDLE_EXTENSION(Ext) infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return passPluginArguments(
+      infos, map_to_vector(args, [](StringRef arg) { return arg.str(); }));
+}
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
@@ -2512,8 +2532,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->mllvmOpts.emplace_back(arg->getValue());
     }
 
-    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+    // Load plugins upfront, so load errors are reported even without LTO
+    for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
+      Expected<PassPlugin> plugin = PassPlugin::load(path);
+      if (!plugin)
+        error(toString(plugin.takeError()));
+      else
+        config->passPlugins.push_back(std::move(*plugin));
+    }
     config->passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
+    if (Error e = passPluginArgs(config->passPlugins, config->passPluginArgs))
+      error(toString(std::move(e)));
 
     createSyntheticSections();
     createSyntheticSymbols();

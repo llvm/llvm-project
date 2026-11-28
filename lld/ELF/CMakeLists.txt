@@ -69,11 +69,13 @@ add_lld_library(lldELF
   DebugInfoDWARF
   Demangle
   DTLTO
+  Extensions
   LTO
   MC
   Object
   Option
   Passes
+  Plugins
   ProfileData
   Support
   TargetParser

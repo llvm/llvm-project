@@ -46,12 +46,14 @@ add_lld_library(lldMachO
   Core
   DebugInfoDWARF
   Demangle
+  Extensions
   LTO
   MC
   ObjCARCOpts
   Object
   Option
   Passes
+  Plugins
   ProfileData
   Support
   TargetParser

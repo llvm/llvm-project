@@ -39,6 +39,11 @@ from the [LLVM releases web site](https://llvm.org/releases/).
   `-z lrodata-after-bss` is the default and selects this order: compared with its previous behavior, `.ltext` moves after `.bss` and `.lbss` moves after `.ldata`.
   `-z nolrodata-after-bss` restores the previous default layout.
 
+* ELF and MachO: `--load-pass-plugin` now loads plugins while options are
+  parsed, so a plugin that fails to load is an error even if the link doesn't
+  run LTO. Before, such errors went unnoticed in links without LTO. The same
+  applies to invalid `--pass-plugin-arg` values.
+
 ### COFF Improvements
 
 ### MinGW Improvements
