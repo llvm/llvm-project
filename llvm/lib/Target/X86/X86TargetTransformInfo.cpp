@@ -6386,6 +6386,10 @@ InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
+  // X86 doesn't support scalable vectors.
+  if (isa<ScalableVectorType>(ValTy))
+    return InstructionCost::getInvalid();
+
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
@@ -6773,6 +6777,10 @@ InstructionCost
 X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
                                    FastMathFlags FMF,
                                    TTI::TargetCostKind CostKind) const {
+  // X86 doesn't support scalable vectors.
+  if (isa<ScalableVectorType>(ValTy))
+    return InstructionCost::getInvalid();
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   MVT MTy = LT.second;
