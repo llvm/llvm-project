@@ -934,6 +934,12 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_Or(m_Value(), m_APInt(C2))) && *C2 == -*C)
     return BinaryOperator::CreateXor(Op0, ConstantInt::get(Add.getType(), *C2));
 
+  // (X & C2) + C --> X & (C2 & ~-C) iff -C is a subset of C2 and its bits are
+  // known one in X, so the subtraction cannot borrow.
+  if (match(Op0, m_OneUse(m_And(m_Value(X), m_APInt(C2)))) &&
+      (-*C).isSubsetOf(*C2) && (-*C).isSubsetOf(computeKnownBits(X, &Add).One))
+    return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *C2 & ~-*C));
+
   if (C->isSignMask()) {
     // If wrapping is not allowed, then the addition must set the sign bit:
     // X + (signmask) --> X | signmask
