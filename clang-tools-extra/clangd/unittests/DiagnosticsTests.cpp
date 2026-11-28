@@ -450,6 +450,26 @@ TEST(DiagnosticsTest, ClangTidyEOF) {
                 diagSource(Diag::ClangTidy), diagName("llvm-include-order")))));
 }
 
+TEST(DiagnosticsTest, ClangTidyStaticInitializationCycleInitInInclude) {
+  Annotations Main(R"cpp(
+    extern int X;
+    int $a[[A]] = A;
+    #include "init.inc"
+  )cpp");
+  auto TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["init.inc"] = "int X = X;";
+  TU.ClangTidyProvider = addTidyChecks("misc-static-initialization-cycle");
+  Config Cfg;
+  Cfg.Diagnostics.ClangTidy.FastCheckFilter = Config::FastCheckPolicy::None;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(ElementsAre(AllOf(
+                  Diag(Main.range("a"), "static variable initialization cycle "
+                                        "detected involving 'A'"),
+                  diagSource(Diag::ClangTidy),
+                  diagName("misc-static-initialization-cycle")))));
+}
+
 TEST(DiagnosticTest, TemplatesInHeaders) {
   // Diagnostics from templates defined in headers are placed at the expansion.
   Annotations Main(R"cpp(

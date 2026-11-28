@@ -327,6 +327,11 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Improved {doc}`misc-static-initialization-cycle
+  <clang-tidy/checks/misc/static-initialization-cycle>` check by fixing a
+  crash while using it with clangd when the initializer of a variable is
+  defined in an included file.
+
 - Fixed false positive in {doc}`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
   or deleted destructor.
