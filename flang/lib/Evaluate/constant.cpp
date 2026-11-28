@@ -11,6 +11,7 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include <limits>
 #include <string>
 
 namespace Fortran::evaluate {
@@ -251,6 +252,18 @@ Constant<Type<TypeCategory::Character>>::Constant(int kind,
   CHECK(at == static_cast<ConstantSubscript>(values_.size()));
 }
 
+auto Constant<Type<TypeCategory::Character>>::FromContiguous(int kind,
+    ConstantSubscript length, Scalar<Result> &&values,
+    ConstantSubscripts &&shape) -> Constant {
+  Constant result{kind, std::move(values)};
+  std::optional<uint64_t> n{TotalElementCount(shape)};
+  CHECK(n && length >= 0 &&
+      result.values_.size() == *n * static_cast<uint64_t>(length));
+  result.length_ = length;
+  static_cast<ConstantBounds &>(result) = ConstantBounds{std::move(shape)};
+  return result;
+}
+
 Constant<Type<TypeCategory::Character>>::~Constant() {}
 
 bool Constant<Type<TypeCategory::Character>>::empty() const {
@@ -300,17 +313,19 @@ auto Constant<Type<TypeCategory::Character>>::Reshape(
   CHECK(optN);
   uint64_t n{*optN};
   CHECK(!empty() || n == 0);
-  std::vector<Element> elements;
-  ConstantSubscript at{0},
-      limit{static_cast<ConstantSubscript>(values_.size())};
-  while (n-- > 0) {
-    elements.push_back(values_.substr(at, length_));
-    at += length_;
-    if (at == limit) { // subtle: at > limit somehow? substr() will catch it
-      at = 0;
-    }
+  // Repeat the element values in the contiguous string by doubling it, rather
+  // than making a separate string for each element (which costs memory even
+  // when LEN() is zero).
+  CHECK(length_ == 0 ||
+      n <= std::numeric_limits<std::size_t>::max() /
+              static_cast<std::uint64_t>(length_));
+  std::size_t total{static_cast<std::size_t>(n * length_)};
+  Scalar<Result> values{values_.substr(0, std::min(total, values_.size()))};
+  values.reserve(total);
+  while (values.size() < total) {
+    values += values.substr(0, std::min(values.size(), total - values.size()));
   }
-  return {kind(), length_, std::move(elements), std::move(dims)};
+  return FromContiguous(kind(), length_, std::move(values), std::move(dims));
 }
 
 std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
