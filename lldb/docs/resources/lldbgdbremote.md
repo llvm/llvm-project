@@ -1153,7 +1153,8 @@ two packets per thread to fetch the data at every private stop.
 ## QRestoreRegisterState:\<save_id\> / QRestoreRegisterState:\<save_id\>;thread:XXXX;
 
 The `QRestoreRegisterState` packet tells the remote debugserver to
-restore all registers using the `save_id` which is an unsigned
+restore all registers (and any other state saved by
+`QSaveRegisterState`) using the `save_id` which is an unsigned
 integer that was returned from a previous call to
 `QSaveRegisterState`. The restoration process can only be done once
 as the data backing the register state will be freed upon the
@@ -1182,6 +1183,12 @@ ensure the registers that are saved are correct. On macOS this
 involves calling `thread_abort_safely(mach_port_t thread)` to
 ensure we get the correct registers for a thread in case it is
 currently having code run on its behalf in the kernel.
+
+Running the expression can also change parts of the thread state
+which are not registers. The server can save those as well, and
+restore them in `QRestoreRegisterState`. On linux, lldb-server does
+this with the siginfo of the thread, so that the thread gets the
+original siginfo if lldb resumes it with the signal it stopped with.
 
 The response is either:
 * `<unsigned int>` - The save_id result is a non-zero unsigned integer value
