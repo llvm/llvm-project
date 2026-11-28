@@ -380,7 +380,7 @@ func.func @destination_passing_style(
 // CHECK-SAME:       %[[ARG11:[a-zA-Z0-9_]+]]: f32
 // CHECK-SAME:       %[[ARG12:[a-zA-Z0-9_]+]]: f32
 // CHECK-SAME:       %[[ARG13:[a-zA-Z0-9_]+]]: f32
-// CHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG10]], %[[ARG12]]
+// CHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG10]], %[[ARG13]]
 // CHECK-NEXT:     linalg.yield %[[ARG11]], %[[S2]]
 //      CHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]]#1
 
@@ -403,19 +403,17 @@ func.func @destination_passing_style(
 // CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-NEXT:     %[[S1:.+]] = arith.addf %[[ARG4]], %[[ARG5]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S1]]
-//      CANONICALIZECHECK:   %[[GENERIC2:.+]]:2 = linalg.generic
-// CANONICALIZECHECK-SAME:       indexing_maps = [#[[MAP2]], #[[MAP1]], #[[MAP1]], #[[MAP3]]]
+//      CANONICALIZECHECK:   %[[GENERIC2:.+]] = linalg.generic
+// CANONICALIZECHECK-SAME:       indexing_maps = [#[[MAP2]], #[[MAP3]]]
 // CANONICALIZECHECK-SAME:       iterator_types = ["parallel", "parallel"]
-// CANONICALIZECHECK-SAME:       ins(%[[ARG1]], %[[GENERIC1]] :
-// CANONICALIZECHECK-SAME:       outs(%[[ARG2]], %[[ARG3]] :
+// CANONICALIZECHECK-SAME:       ins(%[[ARG1]] :
+// CANONICALIZECHECK-SAME:       outs(%[[ARG3]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
 // CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG6:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG7:[a-zA-Z0-9_]+]]: f32
-// CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG6]]
-// CANONICALIZECHECK-NEXT:     linalg.yield %[[ARG5]], %[[S2]]
-//      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]#1
+// CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG5]]
+// CANONICALIZECHECK-NEXT:     linalg.yield %[[S2]]
+//      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]
 
 // -----
 
@@ -452,3 +450,48 @@ func.func @first_statement_no_result(%arg0 : tensor<27xi32>) -> tensor<27xi32> {
 //      CANONICALIZECHECK:   arith.addi
 //      CANONICALIZECHECK:   linalg.yield
 //      CANONICALIZECHECK:   return %[[GENERIC]]
+
+// -----
+
+// The residual op gets the results of the peeled op as extra inputs, placed
+// before the original outputs, so uses of an original output block argument
+// must be remapped past those extra inputs.
+#map0 = affine_map<(d0) -> (d0)>
+func.func @use_output_block_arg(%arg0 : tensor<4xf32>, %arg1 : tensor<4xf32>)
+    -> tensor<4xf32> {
+  %r = linalg.generic {
+    indexing_maps = [#map0, #map0],
+    iterator_types = ["parallel"]}
+    ins(%arg0 : tensor<4xf32>)
+    outs(%arg1 : tensor<4xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32):
+      %0 = arith.mulf %b0, %b0 : f32
+      %1 = arith.addf %0, %b1 : f32
+      linalg.yield %1 : f32
+  } -> tensor<4xf32>
+  return %r : tensor<4xf32>
+}
+//      CHECK: func.func @use_output_block_arg(
+//      CHECK:   %[[GENERIC0:.+]]:2 = linalg.generic
+//      CHECK:     arith.mulf
+//      CHECK:   %[[GENERIC1:.+]] = linalg.generic
+// CHECK-SAME:       ins(%{{.+}}, %[[GENERIC0]]#1 :
+// CHECK-NEXT:   ^bb0(
+// CHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: f32
+// CHECK-NEXT:     %[[S:.+]] = arith.addf %[[B1]], %[[B2]] : f32
+// CHECK-NEXT:     linalg.yield %[[S]]
+//      CHECK:   return %[[GENERIC1]]
+
+//      CANONICALIZECHECK: func.func @use_output_block_arg(
+//      CANONICALIZECHECK:   %[[GENERIC0:.+]] = linalg.generic
+//      CANONICALIZECHECK:     arith.mulf
+//      CANONICALIZECHECK:   %[[GENERIC1:.+]] = linalg.generic
+// CANONICALIZECHECK-SAME:       ins(%[[GENERIC0]] :
+// CANONICALIZECHECK-NEXT:   ^bb0(
+// CANONICALIZECHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-NEXT:     %[[S:.+]] = arith.addf %[[B0]], %[[B1]] : f32
+// CANONICALIZECHECK-NEXT:     linalg.yield %[[S]]
+//      CANONICALIZECHECK:   return %[[GENERIC1]]
