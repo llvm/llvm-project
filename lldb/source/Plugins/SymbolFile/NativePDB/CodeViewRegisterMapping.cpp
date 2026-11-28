@@ -10,10 +10,12 @@
 
 #include "lldb/lldb-defines.h"
 
+#include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/lldb-arm64-register-enums.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
 
 using namespace lldb_private;
+using llvm::codeview::RegisterId;
 
 static const uint32_t g_code_view_to_lldb_registers_arm64[] = {
     LLDB_INVALID_REGNUM, // NONE
@@ -646,6 +648,299 @@ uint32_t lldb_private::npdb::GetLLDBRegisterNumber(
 
     return LLDB_INVALID_REGNUM;
   default:
+    return LLDB_INVALID_REGNUM;
+  }
+}
+
+// Maps a CodeView register id to the architecture-standard DWARF register
+// number, for the subset of registers where that mapping is unambiguous
+// (whole GPRs, not their 8/16-bit sub-register aliases, whose DWARF
+// representation would require an explicit byte offset/size that a bare
+// DW_OP_reg/DW_OP_breg opcode can't carry).
+//
+// Unlike GetLLDBRegisterNumber()'s "LLDB-kind" numbering above -- which is
+// only meaningful relative to one particular RegisterContext's own,
+// implementation-defined register ordering, and is baked in here at PDB
+// parse time, long before any RegisterContext exists to validate it against
+// -- DWARF register numbers are a fixed, architecture-standard numbering
+// that every RegisterContext (including one built from
+// GDBRemoteRegisterFallback.cpp's generic register list, used for gdbstubs
+// that don't support target description XML / qRegisterInfo) reports
+// correctly per-register. Resolving through eRegisterKindDWARF lets
+// RegisterContext::ConvertRegisterKindToRegisterNumber() do the real
+// translation at evaluation time, instead of gambling that the live
+// RegisterContext happens to agree with this plugin's own static table.
+static uint32_t GetDWARFRegisterNumber_x86(RegisterId register_id) {
+  switch (register_id) {
+  case RegisterId::EAX:
+    return dwarf_eax_i386;
+  case RegisterId::ECX:
+    return dwarf_ecx_i386;
+  case RegisterId::EDX:
+    return dwarf_edx_i386;
+  case RegisterId::EBX:
+    return dwarf_ebx_i386;
+  case RegisterId::ESP:
+    return dwarf_esp_i386;
+  case RegisterId::EBP:
+    return dwarf_ebp_i386;
+  case RegisterId::ESI:
+    return dwarf_esi_i386;
+  case RegisterId::EDI:
+    return dwarf_edi_i386;
+  case RegisterId::EIP:
+    return dwarf_eip_i386;
+  case RegisterId::EFLAGS:
+    return dwarf_eflags_i386;
+  case RegisterId::ES:
+    return dwarf_es_i386;
+  case RegisterId::CS:
+    return dwarf_cs_i386;
+  case RegisterId::SS:
+    return dwarf_ss_i386;
+  case RegisterId::DS:
+    return dwarf_ds_i386;
+  case RegisterId::FS:
+    return dwarf_fs_i386;
+  case RegisterId::GS:
+    return dwarf_gs_i386;
+  case RegisterId::ST0:
+    return dwarf_st0_i386;
+  case RegisterId::ST1:
+    return dwarf_st1_i386;
+  case RegisterId::ST2:
+    return dwarf_st2_i386;
+  case RegisterId::ST3:
+    return dwarf_st3_i386;
+  case RegisterId::ST4:
+    return dwarf_st4_i386;
+  case RegisterId::ST5:
+    return dwarf_st5_i386;
+  case RegisterId::ST6:
+    return dwarf_st6_i386;
+  case RegisterId::ST7:
+    return dwarf_st7_i386;
+  case RegisterId::MM0:
+    return dwarf_mm0_i386;
+  case RegisterId::MM1:
+    return dwarf_mm1_i386;
+  case RegisterId::MM2:
+    return dwarf_mm2_i386;
+  case RegisterId::MM3:
+    return dwarf_mm3_i386;
+  case RegisterId::MM4:
+    return dwarf_mm4_i386;
+  case RegisterId::MM5:
+    return dwarf_mm5_i386;
+  case RegisterId::MM6:
+    return dwarf_mm6_i386;
+  case RegisterId::MM7:
+    return dwarf_mm7_i386;
+  case RegisterId::XMM0:
+    return dwarf_xmm0_i386;
+  case RegisterId::XMM1:
+    return dwarf_xmm1_i386;
+  case RegisterId::XMM2:
+    return dwarf_xmm2_i386;
+  case RegisterId::XMM3:
+    return dwarf_xmm3_i386;
+  case RegisterId::XMM4:
+    return dwarf_xmm4_i386;
+  case RegisterId::XMM5:
+    return dwarf_xmm5_i386;
+  case RegisterId::XMM6:
+    return dwarf_xmm6_i386;
+  case RegisterId::XMM7:
+    return dwarf_xmm7_i386;
+  case RegisterId::MXCSR:
+    return dwarf_mxcsr_i386;
+  case RegisterId::BND0:
+    return dwarf_bnd0_i386;
+  case RegisterId::BND1:
+    return dwarf_bnd1_i386;
+  case RegisterId::BND2:
+    return dwarf_bnd2_i386;
+  default:
+    return LLDB_INVALID_REGNUM;
+  }
+}
+
+static uint32_t GetDWARFRegisterNumber_x86_64(RegisterId register_id) {
+  switch (register_id) {
+  case RegisterId::RAX:
+    return dwarf_rax_x86_64;
+  case RegisterId::RDX:
+    return dwarf_rdx_x86_64;
+  case RegisterId::RCX:
+    return dwarf_rcx_x86_64;
+  case RegisterId::RBX:
+    return dwarf_rbx_x86_64;
+  case RegisterId::RSI:
+    return dwarf_rsi_x86_64;
+  case RegisterId::RDI:
+    return dwarf_rdi_x86_64;
+  case RegisterId::RBP:
+    return dwarf_rbp_x86_64;
+  case RegisterId::RSP:
+    return dwarf_rsp_x86_64;
+  case RegisterId::R8:
+    return dwarf_r8_x86_64;
+  case RegisterId::R9:
+    return dwarf_r9_x86_64;
+  case RegisterId::R10:
+    return dwarf_r10_x86_64;
+  case RegisterId::R11:
+    return dwarf_r11_x86_64;
+  case RegisterId::R12:
+    return dwarf_r12_x86_64;
+  case RegisterId::R13:
+    return dwarf_r13_x86_64;
+  case RegisterId::R14:
+    return dwarf_r14_x86_64;
+  case RegisterId::R15:
+    return dwarf_r15_x86_64;
+  // The 32-bit sub-register aliases: DWARF has no distinct register number
+  // for "the low 32 bits of RAX" etc. on x86_64, so this uses the
+  // containing 64-bit register's number -- exactly how clang/DWARF already
+  // represents a 32-bit value that lives in a 64-bit GPR on this target. A
+  // DW_OP_reg/DW_OP_breg opcode names *where* the value lives; the
+  // variable's own (smaller) type size is what later limits how many
+  // (low-order, little-endian) bytes of that register are actually read.
+  case RegisterId::EAX:
+    return dwarf_rax_x86_64;
+  case RegisterId::EDX:
+    return dwarf_rdx_x86_64;
+  case RegisterId::ECX:
+    return dwarf_rcx_x86_64;
+  case RegisterId::EBX:
+    return dwarf_rbx_x86_64;
+  case RegisterId::ESI:
+    return dwarf_rsi_x86_64;
+  case RegisterId::EDI:
+    return dwarf_rdi_x86_64;
+  case RegisterId::EBP:
+    return dwarf_rbp_x86_64;
+  case RegisterId::ESP:
+    return dwarf_rsp_x86_64;
+  case RegisterId::R8D:
+    return dwarf_r8_x86_64;
+  case RegisterId::R9D:
+    return dwarf_r9_x86_64;
+  case RegisterId::R10D:
+    return dwarf_r10_x86_64;
+  case RegisterId::R11D:
+    return dwarf_r11_x86_64;
+  case RegisterId::R12D:
+    return dwarf_r12_x86_64;
+  case RegisterId::R13D:
+    return dwarf_r13_x86_64;
+  case RegisterId::R14D:
+    return dwarf_r14_x86_64;
+  case RegisterId::R15D:
+    return dwarf_r15_x86_64;
+  case RegisterId::EFLAGS:
+    return dwarf_rflags_x86_64;
+  case RegisterId::ES:
+    return dwarf_es_x86_64;
+  case RegisterId::CS:
+    return dwarf_cs_x86_64;
+  case RegisterId::SS:
+    return dwarf_ss_x86_64;
+  case RegisterId::DS:
+    return dwarf_ds_x86_64;
+  case RegisterId::FS:
+    return dwarf_fs_x86_64;
+  case RegisterId::GS:
+    return dwarf_gs_x86_64;
+  case RegisterId::ST0:
+    return dwarf_st0_x86_64;
+  case RegisterId::ST1:
+    return dwarf_st1_x86_64;
+  case RegisterId::ST2:
+    return dwarf_st2_x86_64;
+  case RegisterId::ST3:
+    return dwarf_st3_x86_64;
+  case RegisterId::ST4:
+    return dwarf_st4_x86_64;
+  case RegisterId::ST5:
+    return dwarf_st5_x86_64;
+  case RegisterId::ST6:
+    return dwarf_st6_x86_64;
+  case RegisterId::ST7:
+    return dwarf_st7_x86_64;
+  case RegisterId::MM0:
+    return dwarf_mm0_x86_64;
+  case RegisterId::MM1:
+    return dwarf_mm1_x86_64;
+  case RegisterId::MM2:
+    return dwarf_mm2_x86_64;
+  case RegisterId::MM3:
+    return dwarf_mm3_x86_64;
+  case RegisterId::MM4:
+    return dwarf_mm4_x86_64;
+  case RegisterId::MM5:
+    return dwarf_mm5_x86_64;
+  case RegisterId::MM6:
+    return dwarf_mm6_x86_64;
+  case RegisterId::MM7:
+    return dwarf_mm7_x86_64;
+  case RegisterId::XMM0:
+    return dwarf_xmm0_x86_64;
+  case RegisterId::XMM1:
+    return dwarf_xmm1_x86_64;
+  case RegisterId::XMM2:
+    return dwarf_xmm2_x86_64;
+  case RegisterId::XMM3:
+    return dwarf_xmm3_x86_64;
+  case RegisterId::XMM4:
+    return dwarf_xmm4_x86_64;
+  case RegisterId::XMM5:
+    return dwarf_xmm5_x86_64;
+  case RegisterId::XMM6:
+    return dwarf_xmm6_x86_64;
+  case RegisterId::XMM7:
+    return dwarf_xmm7_x86_64;
+  case RegisterId::XMM8:
+    return dwarf_xmm8_x86_64;
+  case RegisterId::XMM9:
+    return dwarf_xmm9_x86_64;
+  case RegisterId::XMM10:
+    return dwarf_xmm10_x86_64;
+  case RegisterId::XMM11:
+    return dwarf_xmm11_x86_64;
+  case RegisterId::XMM12:
+    return dwarf_xmm12_x86_64;
+  case RegisterId::XMM13:
+    return dwarf_xmm13_x86_64;
+  case RegisterId::XMM14:
+    return dwarf_xmm14_x86_64;
+  case RegisterId::XMM15:
+    return dwarf_xmm15_x86_64;
+  case RegisterId::MXCSR:
+    return dwarf_mxcsr_x86_64;
+  case RegisterId::BND0:
+    return dwarf_bnd0_x86_64;
+  case RegisterId::BND1:
+    return dwarf_bnd1_x86_64;
+  case RegisterId::BND2:
+    return dwarf_bnd2_x86_64;
+  default:
+    return LLDB_INVALID_REGNUM;
+  }
+}
+
+uint32_t lldb_private::npdb::GetDWARFRegisterNumber(
+    llvm::Triple::ArchType arch_type, RegisterId register_id) {
+  switch (arch_type) {
+  case llvm::Triple::x86:
+    return GetDWARFRegisterNumber_x86(register_id);
+  case llvm::Triple::x86_64:
+    return GetDWARFRegisterNumber_x86_64(register_id);
+  default:
+    // Not yet needed: no live-register-numbering mismatch has been observed
+    // for other architectures' fallback register lists (see
+    // GDBRemoteRegisterFallback.cpp) versus their static LLDB-kind tables
+    // above, so there's no demonstrated bug here to fix for them yet.
     return LLDB_INVALID_REGNUM;
   }
 }

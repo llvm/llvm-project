@@ -42,8 +42,21 @@ uint32_t GetGenericRegisterNumber(llvm::codeview::RegisterId register_id) {
 static uint32_t GetRegisterNumber(llvm::Triple::ArchType arch_type,
                                   llvm::codeview::RegisterId register_id,
                                   RegisterKind &register_kind) {
+  // Prefer the architecture-standard DWARF register number when one is
+  // defined: unlike the "LLDB-kind" numbering below, it's independent of any
+  // particular live RegisterContext's own register ordering, so
+  // RegisterContext::ConvertRegisterKindToRegisterNumber() can correctly
+  // translate it at evaluation time no matter how that RegisterContext was
+  // built (including from a raw gdb-remote connection with no target
+  // description, which numbers its registers differently than lldb-server
+  // does -- see GetDWARFRegisterNumber()'s doc comment for details).
+  register_kind = eRegisterKindDWARF;
+  uint32_t reg_num = GetDWARFRegisterNumber(arch_type, register_id);
+  if (reg_num != LLDB_INVALID_REGNUM)
+    return reg_num;
+
   register_kind = eRegisterKindLLDB;
-  uint32_t reg_num = GetLLDBRegisterNumber(arch_type, register_id);
+  reg_num = GetLLDBRegisterNumber(arch_type, register_id);
   if (reg_num != LLDB_INVALID_REGNUM)
     return reg_num;
 
