@@ -198,6 +198,74 @@ TEST(FoldingSetTest, ClearOnEmpty) {
   EXPECT_TRUE(Trivial.empty());
 }
 
+// An empty default-sized set allocates no buckets until the first insert.
+TEST(FoldingSetTest, OperationsBeforeFirstInsert) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 10);
+  TrivialPair T2(2, 20);
+  EXPECT_EQ(Set.begin(), Set.end());
+  EXPECT_FALSE(Set.erase(&T1));
+  Set.clear();
+
+  FoldingSet<TrivialPair> Moved(std::move(Set));
+  FoldingSet<TrivialPair> Assigned;
+  Assigned = std::move(Moved);
+  EXPECT_EQ(Assigned.begin(), Assigned.end());
+
+  FoldingSetNodeID ID;
+  T1.Profile(ID);
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Assigned.lookup(ID, Token));
+  Assigned.insert(&T1, Token);
+  Assigned.insert(&T2);
+  EXPECT_THAT(Assigned, SizeIs(2));
+  EXPECT_EQ(&T1, Assigned.lookup(ID, Token));
+  EXPECT_TRUE(Assigned.erase(&T1));
+  EXPECT_TRUE(Assigned.erase(&T2));
+}
+
+// Empty sets share their bucket; inserting into one must not affect another.
+TEST(FoldingSetTest, EmptySetsAreIndependent) {
+  FoldingSet<TrivialPair> A, B;
+  TrivialPair T(1, 10);
+  A.insert(&T);
+  EXPECT_EQ(B.begin(), B.end());
+  FoldingSetNodeID ID;
+  T.Profile(ID);
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, B.lookup(ID, Token));
+  EXPECT_FALSE(B.erase(&T));
+  EXPECT_TRUE(A.erase(&T));
+}
+
+// A moved-from set is an empty set that can be used again.
+TEST(FoldingSetTest, MovedFromIsEmpty) {
+  TrivialPair T1(1, 10);
+  TrivialPair T2(2, 20);
+  FoldingSetNodeID ID;
+  T2.Profile(ID);
+  auto CheckEmptyAndReusable = [&](FoldingSet<TrivialPair> &Set) {
+    EXPECT_TRUE(Set.empty());
+    EXPECT_EQ(Set.begin(), Set.end());
+    FoldingSetInsertToken Token;
+    EXPECT_EQ(nullptr, Set.lookup(ID, Token));
+    EXPECT_FALSE(Set.erase(&T1));
+    Set.insert(&T2, Token);
+    EXPECT_EQ(&T2, Set.lookup(ID, Token));
+    EXPECT_TRUE(Set.erase(&T2));
+  };
+
+  FoldingSet<TrivialPair> Src(/*Log2InitSize=*/10);
+  Src.insert(&T1);
+  FoldingSet<TrivialPair> Dst(std::move(Src));
+  CheckEmptyAndReusable(Src);
+
+  FoldingSet<TrivialPair> Other;
+  Other = std::move(Dst);
+  CheckEmptyAndReusable(Dst);
+  EXPECT_TRUE(Other.erase(&T1));
+}
+
 TEST(FoldingSetTest, ClearOnNonEmpty) {
   FoldingSet<TrivialPair> Trivial;
   TrivialPair T(99, 42);

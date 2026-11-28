@@ -111,17 +111,39 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 
+// Smallest table, and the default size (Log2InitSize = 6).
+constexpr unsigned MinTableSize = 64;
+
+// Empty default-sized and moved-from sets use this shared bucket
+// (NumBuckets == 1) and allocate on first insert, since most sets are never
+// inserted into. insert() grows before placing a node, so the bucket is never
+// written.
+static FoldingSetNode *const EmptyBucket[1] = {};
+
+static FoldingSetNode **emptyBuckets() {
+  return const_cast<FoldingSetNode **>(EmptyBucket);
+}
+
+static FoldingSetNode **allocBuckets(unsigned N) {
+  return static_cast<FoldingSetNode **>(
+      safe_calloc(N, sizeof(FoldingSetNode *)));
+}
+
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
-  NumBuckets = 1 << Log2InitSize;
-  Buckets = static_cast<FoldingSetNode **>(
-      safe_calloc(NumBuckets, sizeof(FoldingSetNode *)));
+  NumBuckets = 1u << Log2InitSize;
+  if (NumBuckets == MinTableSize) {
+    Buckets = emptyBuckets();
+    NumBuckets = 1;
+  } else {
+    Buckets = allocBuckets(NumBuckets);
+  }
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
-    : Buckets(std::exchange(Arg.Buckets, nullptr)),
-      NumBuckets(std::exchange(Arg.NumBuckets, 0)),
+    : Buckets(std::exchange(Arg.Buckets, emptyBuckets())),
+      NumBuckets(std::exchange(Arg.NumBuckets, 1)),
       NumNodes(std::exchange(Arg.NumNodes, 0)) {
   Arg.incrementEpoch();
 }
@@ -132,19 +154,24 @@ FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
 
   incrementEpoch();
   RHS.incrementEpoch();
-  free(Buckets); // This may be null if the set is in a moved-from state.
-  Buckets = std::exchange(RHS.Buckets, nullptr);
-  NumBuckets = std::exchange(RHS.NumBuckets, 0);
+  if (NumBuckets > 1)
+    free(Buckets);
+  Buckets = std::exchange(RHS.Buckets, emptyBuckets());
+  NumBuckets = std::exchange(RHS.NumBuckets, 1);
   NumNodes = std::exchange(RHS.NumNodes, 0);
   return *this;
 }
 
-FoldingSetBase::~FoldingSetBase() { free(Buckets); }
+FoldingSetBase::~FoldingSetBase() {
+  if (NumBuckets > 1)
+    free(Buckets);
+}
 
 void FoldingSetBase::clear() {
   incrementEpoch();
-  // Stale hashes are unreachable, so only the occupancy needs resetting.
-  if (NumBuckets)
+  // Stale hashes are unreachable, so only the occupancy needs resetting. Erase
+  // leaves no tombstones, so an empty table is already all null.
+  if (NumNodes)
     memset(Buckets, 0, NumBuckets * sizeof(FoldingSetNode *));
   NumNodes = 0;
 }
@@ -161,16 +188,20 @@ void FoldingSetBase::placeNode(FoldingSetNode *N, uint32_t Hash) {
 }
 
 void FoldingSetBase::grow(unsigned MinNumBuckets) {
-  // The floor is the smallest size the constructor accepts.
-  unsigned NewBucketCount = std::max(64u, llvm::bit_ceil(MinNumBuckets));
-  assert(NewBucketCount > NumBuckets && "Can't shrink a folding set");
+  unsigned NewNumBuckets =
+      std::max(MinTableSize, llvm::bit_ceil(MinNumBuckets));
+  assert(NewNumBuckets > NumBuckets && "Can't shrink a folding set");
 
-  FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
-  for (unsigned I = 0; I != NumBuckets; ++I)
-    if (FoldingSetNode *N = Buckets[I])
-      Tmp.placeNode(N, N->getFoldingSetHash());
-
-  *this = std::move(Tmp);
+  incrementEpoch();
+  FoldingSetNode **OldBuckets =
+      std::exchange(Buckets, allocBuckets(NewNumBuckets));
+  unsigned OldNumBuckets = std::exchange(NumBuckets, NewNumBuckets);
+  NumNodes = 0;
+  for (unsigned I = 0; I != OldNumBuckets; ++I)
+    if (FoldingSetNode *N = OldBuckets[I])
+      placeNode(N, N->getFoldingSetHash());
+  if (OldNumBuckets > 1)
+    free(OldBuckets);
 }
 
 void FoldingSetBase::reserve(unsigned N) {
