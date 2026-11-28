@@ -65,17 +65,10 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   // Get the CFG and the Decl of this block.
   C = RootSF->getCFG();
 
-  unsigned total = 0, unreachable = 0;
-
   // Find CFGBlocks that were not covered by any node
-  for (CFG::const_iterator I = C->begin(); I != C->end(); ++I) {
-    const CFGBlock *CB = *I;
-    ++total;
-    // Check if the block is unreachable
-    if (!reachable.count(CB)) {
-      ++unreachable;
-    }
-  }
+  unsigned total = llvm::size(*C);
+  auto IsUnreachable = [&](const CFGBlock *CB) { return !reachable.count(CB); };
+  unsigned unreachable = llvm::count_if(*C, IsUnreachable);
 
   // We never 'reach' the entry block, so correct the unreachable count
   unreachable--;
