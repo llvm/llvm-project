@@ -114,12 +114,13 @@ endfunction()
 #   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
 #   PATTERN_FILE: (Optional) Pattern file (see https://nanobind.readthedocs.io/en/latest/typing.html#pattern-files).
 #   VERBOSE: Emit logging/status messages during stub generation (default: OFF).
+#   TARGET_NAME: Optional custom target name, instead of concatenating all deps.
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
 function(mlir_generate_type_stubs)
   cmake_parse_arguments(ARG
     "VERBOSE"
-    "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE"
+    "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE;TARGET_NAME"
     "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
 
@@ -232,8 +233,12 @@ function(mlir_generate_type_stubs)
     COMMENT "Generating type stubs using: ${_nb_stubgen_cmd}"
   )
 
-  list(JOIN ARG_DEPENDS_TARGETS "." _name)
-  set(_name "${_name}.${ARG_MODULE_NAME}.type_stubs")
+  if(ARG_TARGET_NAME)
+    set(_name "${ARG_TARGET_NAME}")
+  else()
+    list(JOIN ARG_DEPENDS_TARGETS "." _name)
+    set(_name "${_name}.${ARG_MODULE_NAME}.type_stubs")
+  endif()
   add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
 endfunction()
@@ -253,9 +258,11 @@ endfunction()
 #   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
+#   GENERATE_TYPE_STUBS: Generate a stub for this leaf extension in each package
+#     that builds it, using that package's module name and native extension.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    "_PRIVATE_SUPPORT_LIB"
+    "_PRIVATE_SUPPORT_LIB;GENERATE_TYPE_STUBS"
     "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
@@ -274,11 +281,12 @@ function(declare_mlir_python_extension name)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_GENERATE_TYPE_STUBS"
     mlir_python_SOURCES_TYPE "${SOURCES_TYPE}"
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
+    mlir_python_GENERATE_TYPE_STUBS "${ARG_GENERATE_TYPE_STUBS}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -440,6 +448,35 @@ function(build_nanobind_lib)
   )
 endfunction()
 
+# Generate a leaf extension stub after its concrete package has been assembled.
+# Source declarations can be embedded by several packages with different names;
+# generated files and dependencies must belong to each concrete package.
+function(_mlir_python_add_extension_type_stub modules_target sources_target)
+  cmake_parse_arguments(ARG "" "ROOT_PREFIX;INSTALL_PREFIX;PACKAGE_PREFIX"
+    "DEPENDS_TARGETS" ${ARGN})
+  get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+  get_target_property(_extension_srcs ${sources_target} INTERFACE_SOURCES)
+  set(_import_root "${ARG_ROOT_PREFIX}")
+  string(REPLACE "." ";" _package_components "${ARG_PACKAGE_PREFIX}")
+  foreach(_component IN LISTS _package_components)
+    cmake_path(GET _import_root PARENT_PATH _import_root)
+  endforeach()
+  set(_stub_dir "${ARG_ROOT_PREFIX}/_mlir_libs")
+  mlir_generate_type_stubs(
+    TARGET_NAME ${modules_target}.generate_type_stubs.${_module_name}
+    MODULE_NAME ${ARG_PACKAGE_PREFIX}._mlir_libs.${_module_name}
+    DEPENDS_TARGETS ${ARG_DEPENDS_TARGETS}
+    OUTPUT_DIR "${_stub_dir}"
+    OUTPUTS ${_module_name}.pyi
+    DEPENDS_TARGET_SRC_DEPS "${_extension_srcs}"
+    IMPORT_PATHS "${_import_root}"
+  )
+  add_dependencies(${modules_target} ${NB_STUBGEN_CUSTOM_TARGET})
+  install(FILES "${_stub_dir}/${_module_name}.pyi"
+    DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
+    COMPONENT ${modules_target})
+endfunction()
+
 # Function: add_mlir_python_modules
 # Adds python modules to a project, building them from a list of declared
 # source groupings (see declare_mlir_python_sources and
@@ -456,6 +493,8 @@ endfunction()
 #     will share nanobind types with other bindings packages. Expected to be unique
 #     per project (and per specific set of bindings, for projects with multiple
 #     bindings packages).
+#   STUBGEN_DEPENDS_TARGETS: Extra package preparation targets needed before
+#     importing extensions (for example, colocating DLLs in the package).
 #   DECLARED_SOURCES: List of declared source groups to include. The entire
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
@@ -472,10 +511,9 @@ function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES;STUBGEN_DEPENDS_TARGETS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS"
     ${ARGN})
 
-  # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
   if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) AND MLIR_BINDINGS_PYTHON_NB_DOMAIN)
     set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
   endif()
@@ -597,6 +635,32 @@ function(add_mlir_python_modules name)
   foreach(sources_target ${_flat_targets})
     _process_target(${name} ${sources_target} "${_mlir_python_support_libs}")
   endforeach()
+
+  if(MLIR_PYTHON_STUBGEN_ENABLED)
+    # Import package initializers only after its native extensions and Python
+    # sources are ready. Depend on concrete targets, not the package aggregate:
+    # the latter also depends on the generated stubs and would form a cycle.
+    set(_stubgen_inputs ${ARG_STUBGEN_DEPENDS_TARGETS})
+    foreach(sources_target ${_flat_targets})
+      get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
+      if(_source_type STREQUAL "extension")
+        get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+        list(APPEND _stubgen_inputs "${name}.extension.${_module_name}.dso")
+      elseif(_source_type STREQUAL "pure")
+        list(APPEND _stubgen_inputs "${name}.sources.${sources_target}")
+      endif()
+    endforeach()
+    foreach(sources_target ${_flat_targets})
+      get_target_property(_generate_stub ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
+      if(_generate_stub)
+        _mlir_python_add_extension_type_stub(${name} ${sources_target}
+          ROOT_PREFIX "${ARG_ROOT_PREFIX}"
+          INSTALL_PREFIX "${ARG_INSTALL_PREFIX}"
+          PACKAGE_PREFIX "${MLIR_PYTHON_PACKAGE_PREFIX}"
+          DEPENDS_TARGETS ${_stubgen_inputs})
+      endif()
+    endforeach()
+  endif()
 
   # Create an install target.
   if(NOT LLVM_ENABLE_IDE)
