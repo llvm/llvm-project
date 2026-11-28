@@ -395,3 +395,37 @@ then:
 else:
   ret i1 false
 }
+
+define i1 @test_overflow_eq_fact_reproducer(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @"{{.+}}test_overflow_eq_fact_reproducerrepro"(i8 %x, i8 %y, i8 %u) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp sge i8 %x, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %1 = icmp sge i8 %y, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %1)
+; CHECK-NEXT:   %c = icmp sge i8 %u, %x
+; CHECK-NEXT:   ret i1 %c
+; CHECK-NEXT: }
+;
+entry:
+  %wo = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
+  %ov = extractvalue { i8, i1 } %wo, 1
+  br i1 %ov, label %exit, label %no.ov
+
+no.ov:
+  %u = extractvalue { i8, i1 } %wo, 0
+  %x.pos = icmp sge i8 %x, 0
+  br i1 %x.pos, label %x.ok, label %exit
+
+x.ok:
+  %y.pos = icmp sge i8 %y, 0
+  br i1 %y.pos, label %y.ok, label %exit
+
+y.ok:
+  %c = icmp sge i8 %u, %x
+  ret i1 %c
+
+exit:
+  ret i1 false
+}
+

@@ -797,14 +797,30 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
   auto MergeResults = [&Info, IsSigned,
-                       &DL](Value *A, Value *B,
+                       &DL](Instruction::BinaryOps Opc, Value *A, Value *B,
                             bool IsSignedB) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (ResA.add(ResB))
+    if (Opc == Instruction::Sub ? ResA.sub(ResB) : ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
+
+  // An add/sub.with.overflow is only decomposed for the fact queued on its
+  // no-overflow edge, where it does not overflow.
+  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
+    // Skip undef and poison operands, e.g. set by replaceOverflowUses. This
+    // also guards against ssub(undef, undef) decomposing as 0.
+    if (any_of(WO->args(), IsaPred<UndefValue>))
+      return V;
+    Instruction::BinaryOps Opc = WO->getBinaryOp();
+    if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
+        isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
+                      Info, IsSigned))
+      if (auto Decomp = MergeResults(Opc, WO->getLHS(), WO->getRHS(), IsSigned))
+        return *Decomp;
+    return V;
+  }
 
   Type *Ty = V->getType()->getScalarType();
   if (Ty->isPointerTy() && !IsSigned) {
@@ -854,7 +870,7 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
 
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
     if (isKnownNoWrap(V, Info, IsSigned)) {
-      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+      if (auto Decomp = MergeResults(Instruction::Add, Op0, Op1, IsSigned))
         return *Decomp;
       return V;
     }
@@ -864,7 +880,8 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
         canUseSExt(CI) &&
         Info.doesHold(CmpInst::ICMP_UGE, Op0,
                       ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
-      if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
+      if (auto Decomp =
+              MergeResults(Instruction::Add, Op0, CI, /*IsSignedB=*/true))
         return *Decomp;
     return V;
   }
@@ -1858,6 +1875,17 @@ void State::addInfoFor(BasicBlock &BB) {
 
   Value *Cond = Br->getCondition();
 
+  // On the false successor of a branch on the overflow bit of an add/sub
+  // overflow intrinsic, its results equal the plain add/sub.
+  WithOverflowInst *WO;
+  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+      WO->getBinaryOp() != Instruction::Mul &&
+      canAddSuccessor(BB, Br->getSuccessor(1)))
+    for (User *U : WO->users())
+      if (match(U, m_ExtractValue<0>(m_Value())))
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DT.getNode(Br->getSuccessor(1)), CmpInst::ICMP_EQ, U, WO));
+
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.
   Value *Op0, *Op1;
@@ -2677,7 +2705,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       }
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
-      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
+      // A fact between an integer and an overflow intrinsic (a struct) cannot
+      // be materialized as an icmp; a placeholder is added below instead.
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size() &&
+          A->getType() == B->getType())
         ReproducerCondStack.emplace_back(Pred, A, B);
 
       if (ICmpInst::isRelational(Pred)) {
@@ -2853,6 +2884,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Pred = CB.Cond.Pred;
       A = CB.Cond.Op0;
       B = CB.Cond.Op1;
+      // The EQ fact for an add/sub.with.overflow result holds only while the
+      // result still extracts from the intrinsic. replaceOverflowUses may have
+      // replaced the intrinsic after the fact was queued.
+      if (isa<WithOverflowInst>(B) &&
+          cast<ExtractValueInst>(A)->getAggregateOperand() != B) {
+        LLVM_DEBUG({
+          dbgs() << "Not adding fact ";
+          dumpUnpackedICmp(dbgs(), Pred, A, B);
+          dbgs() << " because the intrinsic was replaced.\n";
+        });
+        continue;
+      }
       if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
           !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
         LLVM_DEBUG({
