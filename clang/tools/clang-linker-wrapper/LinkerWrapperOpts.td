@@ -2,6 +2,8 @@ include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
 def DeviceOnlyOption : OptionFlag;
+// Options that only exist for GNU-style linkers (ld, ld.lld).
+def GNULinkerVis : OptionVisibility;
 
 def help : Flag<["--"], "help">,
   HelpText<"Display available options (--help-hidden for more)">;
@@ -113,19 +115,24 @@ def output_EQ : Joined<["--"], "output=">, Alias<o>, Flags<[HelpHidden]>,
 def output : Separate<["--"], "output">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
+// GNU-style library and library path options. MSVC-style linkers have no such
+// options (the driver renders them as 'foo.lib' and '-libpath:'), so they are
+// not visible for an MSVC-style linker; see GNULinkerVis.
 def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  Visibility<[GNULinkerVis]>,
   HelpText<"Add <dir> to the library search path">;
-def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
-  Alias<library_path>;
-def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+def library_path_S : Separate<["--", "-"], "library-path">,
+  Flags<[HelpHidden]>, Visibility<[GNULinkerVis]>, Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">,
+  Flags<[HelpHidden]>, Visibility<[GNULinkerVis]>, Alias<library_path>;
 
 def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  Visibility<[GNULinkerVis]>,
   HelpText<"Search for library <libname>">;
-def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
-  Alias<library>;
-def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
-  Alias<library>;
+def library_S : Separate<["--", "-"], "library">,
+  Flags<[HelpHidden]>, Visibility<[GNULinkerVis]>, Alias<library>;
+def library_EQ : Joined<["--", "-"], "library=">,
+  Flags<[HelpHidden]>, Visibility<[GNULinkerVis]>, Alias<library>;
 
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;

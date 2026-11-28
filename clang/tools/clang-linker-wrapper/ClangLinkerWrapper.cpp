@@ -160,6 +160,11 @@ enum WrapperFlags {
   DeviceOnlyOption = (1 << 5),  // Options only used for device linking.
 };
 
+/// Must not overlap with llvm::opt::DriverVisibility.
+enum WrapperVisibility {
+  GNULinkerVis = (1 << 1), // Options only valid for GNU-style linkers.
+};
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -195,6 +200,68 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   logAllUnhandledErrors(std::move(E),
                         WithColor::error(errs(), LinkerExecutable));
   exit(EXIT_FAILURE);
+}
+
+/// Return true if \p LinkerPath names an MSVC-style linker: 'link',
+/// 'lld-link' or a versioned 'lld-link-19', with or without '.exe'.
+static bool isMSVCLinkerName(StringRef LinkerPath) {
+  StringRef Name = sys::path::filename(LinkerPath);
+  if (Name.ends_with_insensitive(".exe"))
+    Name = Name.drop_back(4);
+  return Name.equals_insensitive("link") ||
+         Name.starts_with_insensitive("lld-link");
+}
+
+/// Return true if the linker takes MSVC-style arguments. Every linker uses one
+/// of two styles:
+/// - MSVC style (link.exe, lld-link) reads '-link' as one option.
+/// - GNU style (ld, ld.bfd, ld.lld, mold, others) reads '-link' as '-l ink'.
+///
+/// The linker name decides the style. If no linker is given (as in '--help'),
+/// a Windows MSVC target means MSVC style.
+bool usesMSVCStyleLinker(ArrayRef<const char *> ArgStrings) {
+  StringRef HostTriple, LinkerPath;
+  for (StringRef Arg : ArgStrings) {
+    if (Arg.consume_front("--host-triple="))
+      HostTriple = Arg;
+    else if (Arg.consume_front("--linker-path="))
+      LinkerPath = Arg;
+  }
+  if (!LinkerPath.empty())
+    return isMSVCLinkerName(LinkerPath);
+  return llvm::Triple(HostTriple.empty() ? sys::getDefaultTargetTriple()
+                                         : HostTriple.str())
+      .isWindowsMSVCEnvironment();
+}
+
+/// Return the options to parse. MSVC-style linkers have no -l or -L, so hide
+/// them. Otherwise -link and -LTCG would be read as "-l ink" and "-L TCG".
+Visibility getWrapperVisibility(ArrayRef<const char *> ArgStrings) {
+  unsigned VisibilityMask = DefaultVis;
+  if (!usesMSVCStyleLinker(ArgStrings))
+    VisibilityMask |= GNULinkerVis;
+  return Visibility(VisibilityMask);
+}
+
+/// Parse the wrapper's command line. Expanded response file strings are owned
+/// by \p Saver, which must outlive the returned list. If \p VisibilityOut is
+/// set, it receives the visibility mask used for parsing.
+InputArgList parseWrapperArgs(int Argc, char **Argv, StringSaver &Saver,
+                              Visibility *VisibilityOut = nullptr) {
+  SmallVector<const char *, 0> ArgStrings;
+  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
+
+  Visibility VisibilityMask = getWrapperVisibility(ArgStrings);
+  if (VisibilityOut)
+    *VisibilityOut = VisibilityMask;
+
+  unsigned MissingArgIndex, MissingArgCount;
+  InputArgList Args = getOptTable().ParseArgs(ArgStrings, MissingArgIndex,
+                                              MissingArgCount, VisibilityMask);
+  if (MissingArgCount)
+    reportError(createStringError(Twine(Args.getArgString(MissingArgIndex)) +
+                                  ": missing argument"));
+  return Args;
 }
 
 std::string getExecutableDir(const char *Name) {
@@ -1197,13 +1264,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
 
     // Each thread needs its own copy of the base arguments to maintain
     // per-device argument storage of synthetic strings.
-    const OptTable &Tbl = getOptTable();
     BumpPtrAllocator Alloc;
     StringSaver Saver(Alloc);
-    auto BaseArgs =
-        Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [](StringRef Err) {
-          reportError(createStringError(Err));
-        });
+    auto BaseArgs = parseWrapperArgs(Argc, Argv, Saver);
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
     uint16_t ActiveOffloadKindMask = 0u;
@@ -1636,9 +1699,8 @@ int main(int Argc, char **Argv) {
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
-  auto Args = Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [&](StringRef Err) {
-    reportError(createStringError(Err));
-  });
+  Visibility VisibilityMask;
+  auto Args = parseWrapperArgs(Argc, Argv, Saver, &VisibilityMask);
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
@@ -1648,7 +1710,8 @@ int main(int Argc, char **Argv) {
         "for sections that require additional processing prior to linking.\n"
         "It will then transparently pass all arguments and input to the\n"
         "specified host linker to create the final binary.\n",
-        Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
+        Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden),
+        VisibilityMask);
     return EXIT_SUCCESS;
   }
   if (Args.hasArg(OPT_version)) {
