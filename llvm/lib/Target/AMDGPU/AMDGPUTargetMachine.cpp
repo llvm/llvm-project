@@ -1269,7 +1269,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
   if (valueOr(CLOpts.enable_vopd, getOptLevel() >= CodeGenOptLevel::Less))
-    DAG->addMutation(createVOPDPairingMutation());
+    DAG->addMutation(createVOPDPairingMutation(*C->MF));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));

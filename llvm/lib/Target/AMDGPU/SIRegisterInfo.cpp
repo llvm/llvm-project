@@ -4628,6 +4628,34 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   return 0;
 }
 
+unsigned SIRegisterInfo::getNumReportedVGPRs(const MachineFunction &MF) const {
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  bool HasCalls = FrameInfo.hasCalls() || FrameInfo.hasTailCall();
+  unsigned NumVGPRs = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end())) {
+      // A BUNDLE only repeats the operands of the instructions inside it.
+      if (MI.isBundle())
+        continue;
+      if (HasCalls && (MI.isCall() || MI.isMetaInstruction()))
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+        const TargetRegisterClass *RC = getPhysRegBaseClass(MO.getReg());
+        if (!RC || !isVGPRClass(RC))
+          continue;
+        unsigned Width =
+            static_cast<unsigned>(divideCeil(getRegSizeInBits(*RC), 32));
+        NumVGPRs = std::max(NumVGPRs, getHWRegIndex(MO.getReg()) + Width);
+      }
+    }
+  }
+  return NumVGPRs;
+}
+
 SmallVector<StringLiteral>
 SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
                                   const MachineFunction &MF) const {

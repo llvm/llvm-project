@@ -312,6 +312,7 @@ public:
     LLVM_DEBUG(dbgs() << "CreateVOPD Pass:\n");
 
     const SIInstrInfo *SII = ST->getInstrInfo();
+    unsigned NumVGPRs = getNumVGPRsForVOPDPairing(MF);
     bool Changed = false;
 
     for (MachineBasicBlock &MBB : MF) {
@@ -327,7 +328,7 @@ public:
         MachineInstr *SecondMI = &*MII;
 
         if (std::optional<VOPDMatchInfo> Match =
-                tryMatchVOPDPair(*SII, *FirstMI, *SecondMI))
+                tryMatchVOPDPair(*SII, *FirstMI, *SecondMI, NumVGPRs))
           Candidates.push_back({std::move(*Match), Register()});
       }
 
