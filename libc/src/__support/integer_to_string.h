@@ -70,6 +70,7 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/wctype_basics.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -363,8 +364,6 @@ class IntegerToString {
 
     LIBC_INLINE static CharT digit_char(uint8_t digit) {
       if constexpr (cpp::is_same_v<CharT, char>) {
-        // char may be EBCDIC, whose letters are not contiguous, so the table
-        // in ctype_utils is used.
         const char result = internal::int_to_b36_char(digit);
         if constexpr (Fmt::BASE <= 10) {
           return result;
@@ -372,12 +371,12 @@ class IntegerToString {
           return Fmt::IS_UPPERCASE ? internal::toupper(result) : result;
         }
       } else {
-        // wchar_t is Unicode whatever char is, and its digits and letters are
-        // contiguous, so they are formed from wide literals.
-        if (digit < 10)
-          return static_cast<CharT>(L'0' + digit);
-        return static_cast<CharT>((Fmt::IS_UPPERCASE ? L'A' : L'a') + digit -
-                                  10);
+        const wchar_t result = internal::int_to_b36_wchar(digit);
+        if constexpr (Fmt::BASE <= 10) {
+          return result;
+        } else {
+          return Fmt::IS_UPPERCASE ? internal::ascii::toupper(result) : result;
+        }
       }
     }
 

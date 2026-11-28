@@ -17,6 +17,7 @@ namespace ascii_mode {
 #undef LIBC_CONF_WCTYPE_MODE
 #define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
 
+#undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_BASICS_H
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 namespace LIBC_NAMESPACE_DECL {
@@ -40,6 +41,7 @@ using ::LIBC_NAMESPACE::wctype_internal::toupper;
 namespace cpp = ::LIBC_NAMESPACE::cpp;
 } // namespace LIBC_NAMESPACE_DECL
 
+#undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_BASICS_H
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "src/__support/wctype_utils.h"
