@@ -2080,6 +2080,21 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
 void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
                                       const PredicateBase *PI) {
   ValueLatticeElement CopyOfVal = getValueState(CopyOf);
+
+  if (const auto *PRA = dyn_cast<PredicateBundleAssume>(PI);
+      PRA && PRA->AttrKind == BundleAttr::Range) {
+    auto Range = getAssumeRangeInfo(PRA->OBU).Range;
+    auto CR =
+        CopyOfVal.isUnknown()
+            ? Range
+            : CopyOfVal
+                  .asConstantRange(CopyOf->getType(), /*UndefAllowed=*/true)
+                  .intersectWith(Range);
+    mergeInValue(ValueState[I], I,
+                 ValueLatticeElement::getRange(std::move(CR)));
+    return;
+  }
+
   const std::optional<PredicateConstraint> &Constraint = PI->getConstraint();
   if (!Constraint) {
     mergeInValue(ValueState[I], I, CopyOfVal);

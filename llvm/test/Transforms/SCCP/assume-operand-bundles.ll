@@ -126,6 +126,53 @@ false1:
   ret void
 }
 
+define void @range(i32 %v1, i32 %v2, i32 %v3) {
+; CHECK-LABEL: define void @range(
+; CHECK-SAME: i32 [[V1:%.*]], i32 [[V2:%.*]], i32 [[V3:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V1]], i32 33, i32 155) ]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V2]], i32 0, i32 10) ]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C7:%.*]] = icmp slt i32 [[V2]], 5
+; CHECK-NEXT:    call void @use(i1 [[C7]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V2]], i32 15, i32 0) ]
+; CHECK-NEXT:    [[C8:%.*]] = icmp ult i32 [[V2]], 15
+; CHECK-NEXT:    call void @use(i1 [[C8]])
+; CHECK-NEXT:    [[C9:%.*]] = icmp uge i32 [[V2]], 15
+; CHECK-NEXT:    call void @use(i1 [[C9]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i32 %v1, i32 33, i32 155) ]
+  %c1 = icmp eq i32 %v1, 170
+  call void @use(i1 %c1)
+  %c2 = icmp ne i32 %v1, 170
+  call void @use(i1 %c2)
+  %c3 = icmp eq i32 170, %v1
+  call void @use(i1 %c3)
+  %c4 = icmp ne i32 170, %v1
+  call void @use(i1 %c4)
+
+  call void @llvm.assume(i1 true) [ "range"(i32 %v2, i32 0, i32 10) ]
+  %c5 = icmp ult i32 %v2, 15
+  call void @use(i1 %c5)
+  %c6 = icmp slt i32 %v2, 15
+  call void @use(i1 %c6)
+  %c7 = icmp slt i32 %v2, 5
+  call void @use(i1 %c7)
+
+  call void @llvm.assume(i1 true) [ "range"(i32 %v2, i32 15, i32 0) ]
+  %c8 = icmp ult i32 %v2, 15
+  call void @use(i1 %c8)
+  %c9 = icmp uge i32 %v2, 15
+  call void @use(i1 %c9)
+
+  ret void
+}
+
 define void @check_for_constant() {
 ; CHECK-LABEL: define void @check_for_constant() {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ]
