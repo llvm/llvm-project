@@ -152,6 +152,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  Ptr,
 // CHECK-NEXT:  SSizeT,
 // CHECK-NEXT:  Same,
+// CHECK-NEXT:  ShiftCount,
 // CHECK-NEXT:  SizeT,
 // CHECK-NEXT:  Struct,
 // CHECK-NEXT:  ThreadLocalVariable,

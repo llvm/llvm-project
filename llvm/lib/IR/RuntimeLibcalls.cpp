@@ -287,6 +287,11 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     if (TT.isAVR())
       return Type::getInt8Ty(Ctx);
     return IntegerType::get(Ctx, TT.getArchPointerBitWidth());
+  case ShiftCount:
+    // Wasm only has compiler-rt, which takes an int.
+    if (TT.isWasm())
+      return Type::getInt32Ty(Ctx);
+    return IntegerType::get(Ctx, TT.getArchPointerBitWidth());
   case Half:
     return Type::getHalfTy(Ctx);
   case BFloat:
@@ -369,6 +374,7 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
   case LLong:
   case Int128:
   case SSizeT:
+  case ShiftCount:
     return true;
   case UInt8:
   case UInt16:
