@@ -18,7 +18,9 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstraintSystem.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -2169,7 +2171,7 @@ static bool checkAndReplaceCondition(
     ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
-    SmallVectorImpl<Instruction *> &ToRemove) {
+    EphemeralValuesCache &EVC, SmallVectorImpl<Instruction *> &ToRemove) {
   auto ReplaceCmpWithConstant = [&](Instruction *CheckInst, bool IsTrue) {
     generateReproducer(CheckInst, ICmpInst::isSigned(Pred), ReproducerModule,
                        ReproducerCondStack, Info, DT);
@@ -2185,9 +2187,13 @@ static bool checkAndReplaceCondition(
         return false;
 
       // Conditions in an assume trivially simplify to true. Skip uses
-      // in assume calls to not destroy the available information.
-      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      return !II || II->getIntrinsicID() != Intrinsic::assume;
+      // in assume calls and in values only used to compute assume conditions
+      // to not destroy available information.
+      if (!IsTrue)
+        return true;
+      if (match(U.getUser(), m_Intrinsic<Intrinsic::assume>()))
+        return false;
+      return !EVC.ephValues().contains(U.getUser());
     });
     NumCondsRemoved++;
 
@@ -2548,7 +2554,7 @@ tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
-                                 TargetLibraryInfo &TLI) {
+                                 TargetLibraryInfo &TLI, AssumptionCache &AC) {
   const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
   DT.updateDFSNumbers();
@@ -2559,6 +2565,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Opts.constraint_elimination_dump_reproducers
           ? new Module(F.getName(), F.getContext())
           : nullptr);
+
+  EphemeralValuesCache EVC(F, AC);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -2646,7 +2654,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       } else if (match(Inst, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
         bool Simplified = checkAndReplaceCondition(
             Pred, A, B, Inst, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
-            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
+            ReproducerModule.get(), ReproducerCondStack, S.DT, EVC, ToRemove);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
           Simplified = checkOrAndOpImpliedByOther(
@@ -2907,7 +2915,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
   auto *SE = LI.empty() ? nullptr : &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI, AC))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
