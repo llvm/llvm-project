@@ -110,7 +110,6 @@ void cleanup_in_case(int x) {
 // CIR:         cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z15cleanup_in_casei
-// LLVMCIR:      %[[CLEANUP_FLAG:.*]] = alloca i32
 // LLVM:         alloca %struct.BitVector
 // LLVM:         switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
 // LLVM:           i32 0, label %[[CASE_ZERO:.*]]
@@ -118,12 +117,6 @@ void cleanup_in_case(int x) {
 // LLVM:       [[DEFAULT]]:
 // LLVM:         br label %[[EPILOG:.*]]
 // LLVM:       [[CASE_ZERO]]:
-// LLVMCIR:      store i32 1, ptr %[[CLEANUP_FLAG]]
-// LLVMCIR:      br label %[[CASE_ZERO_CLEANUP:.*]]
-// LLVMCIR:    [[DEAD_BLOCK:.*]]:
-// LLVMCIR:      store i32 0, ptr %[[CLEANUP_FLAG]]
-// LLVMCIR:      br label %[[CASE_ZERO_CLEANUP]]
-// LLVMCIR:    [[CASE_ZERO_CLEANUP]]:
 // LLVM:         call void @_ZN9BitVectorD1Ev
 // LLVMCIR:      br label %[[CLEANUP_CONTINUE:.*]]
 // LLVM:         br label %[[EPILOG]]

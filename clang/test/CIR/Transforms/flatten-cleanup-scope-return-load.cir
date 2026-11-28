@@ -312,7 +312,7 @@ cir.func @multi_exit(%arg0: !cir.bool) -> !s32i {
 
 // CHECK-LABEL: cir.func @nested_outer_clobbers(
 // CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
-// CHECK:         %[[DEST:.*]] = cir.alloca "__cleanup_dest_slot"
+// CHECK-NOT:     "__cleanup_dest_slot"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
 // CHECK-NOT:     cir.load %[[X]]
 // CHECK:         cir.call @may_write()
@@ -320,14 +320,10 @@ cir.func @multi_exit(%arg0: !cir.bool) -> !s32i {
 // CHECK:       ^[[INNER_EXIT]]:
 // CHECK-NEXT:    %[[VAL:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
-// CHECK-NEXT:    %[[RET_ID:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT:    cir.store %[[RET_ID]], %[[DEST]]
 // CHECK-NEXT:    cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[OUTER_CLEANUP]]:
 // CHECK-NEXT:    cir.lifetime.end %[[X]]
-// CHECK:         cir.switch.flat
-// CHECK-NEXT:      0: ^{{bb[0-9]+}},
-// CHECK-NEXT:      1: ^[[OUTER_RET:bb[0-9]+]]
+// CHECK-NEXT:    cir.br ^[[OUTER_RET:bb[0-9]+]]
 // CHECK:       ^[[OUTER_RET]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
@@ -353,8 +349,8 @@ cir.func @nested_outer_clobbers() -> !s32i {
 // is not touched by the outer cleanup, so its reload is sunk past both.
 
 // CHECK-LABEL: cir.func @nested_inner_clobbers(
-// CHECK-DAG:     %[[DEST:.*]] = cir.alloca "__cleanup_dest_slot"
-// CHECK-DAG:     %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
+// CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
+// CHECK-NOT:     "__cleanup_dest_slot"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
 // CHECK:         %[[VAL:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
@@ -364,14 +360,10 @@ cir.func @nested_outer_clobbers() -> !s32i {
 // CHECK-NEXT:    cir.store %[[SEVEN]], %[[X]]
 // CHECK-NEXT:    cir.br ^[[INNER_EXIT:bb[0-9]+]]
 // CHECK:       ^[[INNER_EXIT]]:
-// CHECK-NEXT:    %[[RET_ID:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT:    cir.store %[[RET_ID]], %[[DEST]]
 // CHECK-NEXT:    cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[OUTER_CLEANUP]]:
 // CHECK-NEXT:    cir.call @may_write()
-// CHECK:         cir.switch.flat
-// CHECK-NEXT:      0: ^{{bb[0-9]+}},
-// CHECK-NEXT:      1: ^[[OUTER_RET:bb[0-9]+]]
+// CHECK-NEXT:    cir.br ^[[OUTER_RET:bb[0-9]+]]
 // CHECK:       ^[[OUTER_RET]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i

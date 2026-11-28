@@ -351,13 +351,12 @@ int test_copy_ctor_extra_args() {
 
 // --- CIR-FLAT ---
 //
-// Because the catch handler does `return 0`, the function uses a
-// `__cleanup_dest_slot` to dispatch through the catch end_catch and into
-// either the inner-`return 0` or the outer-`return -1`. We don't pin the
-// exact switch shape here, but we do verify the EH-relevant control flow.
+// The catch handler's `return 0` is the only exit of its cleanups, so it
+// branches through the destructor and end_catch straight to the return,
+// without a `__cleanup_dest_slot` dispatch.
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z25test_copy_ctor_extra_argsv()
-// CIR-FLAT:         %{{.*}} = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CIR-FLAT-NOT:     __cleanup_dest_slot
 // CIR-FLAT:         cir.try_call @_Z8mayThrowv() ^[[T2F_CONT:bb[0-9]+]], ^[[T2F_LPAD:bb[0-9]+]]
 
 // CIR-FLAT:       ^[[T2F_LPAD]]:
@@ -375,19 +374,16 @@ int test_copy_ctor_extra_args() {
 // CIR-FLAT:         cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR-FLAT:         cir.init_catch_param non_trivial_copy %{{.*}} to %{{.*}}
 
-// Catch body sets retval=0 and cleanup_dest=1.
-// CIR-FLAT:         cir.store %{{.*}}
+// Catch body sets retval=0.
 // CIR-FLAT:         cir.store %{{.*}}
 
 // `w`'s destructor.
 // CIR-FLAT:         cir.call @_ZN11WithDefaultD1Ev(%{{.*}}) nothrow
 
-// Cleanup-dest dispatch and end_catch.
-// CIR-FLAT:         cir.switch.flat
+// end_catch, then the return.
+// CIR-FLAT-NOT:     cir.switch.flat
 // CIR-FLAT:         cir.end_catch
-
-// Return-or-fallthrough switch on cleanup_dest_slot.
-// CIR-FLAT:         cir.switch.flat
+// CIR-FLAT-NOT:     cir.switch.flat
 // CIR-FLAT:         cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR-FLAT:         cir.return %{{.*}} : !s32i
 
@@ -423,11 +419,11 @@ int test_copy_ctor_extra_args() {
 // On the inlined copy's normal-edge fallthrough chain: __cxa_begin_catch.
 // CIR-AFTER-EHABI:         cir.call @__cxa_begin_catch(%[[T2E_RAW]])
 
-// Catch body and dispatch out via cleanup_dest_slot.
+// Catch body, then straight through end_catch to the return.
 // CIR-AFTER-EHABI:         cir.call @_ZN11WithDefaultD1Ev(%{{.*}}) nothrow
-// CIR-AFTER-EHABI:         cir.switch.flat
+// CIR-AFTER-EHABI-NOT:     cir.switch.flat
 // CIR-AFTER-EHABI:         cir.call @__cxa_end_catch()
-// CIR-AFTER-EHABI:         cir.switch.flat
+// CIR-AFTER-EHABI-NOT:     cir.switch.flat
 // CIR-AFTER-EHABI:         cir.return %{{.*}} : !s32i
 
 // CIR-AFTER-EHABI:       ^[[T2E_RESUME]](%{{.*}}: !cir.ptr<!void>, %{{.*}}: !u32i):
@@ -466,9 +462,9 @@ int test_copy_ctor_extra_args() {
 // LLVM:         call ptr @__cxa_begin_catch(
 
 // LLVM:         call void @_ZN11WithDefaultD1Ev(
-// LLVM:         switch i32 %{{.*}}
+// LLVM-NOT:     switch
 // LLVM:         call void @__cxa_end_catch()
-// LLVM:         switch i32 %{{.*}}
+// LLVM-NOT:     switch
 // LLVM:         ret i32 %{{.*}}
 
 // LLVM:       [[T2L_RESUME]]:

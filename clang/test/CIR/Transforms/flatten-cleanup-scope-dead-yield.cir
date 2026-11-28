@@ -1,0 +1,71 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// CIRGen ends a cleanup scope body with a fallthrough yield even when the code
+// before it left the scope. That yield is alone in a block without
+// predecessors and is not an exit, so it does not make the scope dispatch
+// through a cleanup destination slot.
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @dtor()
+cir.func private @may_throw()
+
+// The return is the only exit: the cleanup branches straight to it.
+// CHECK-LABEL: cir.func @return_then_dead_yield(
+// CHECK-NOT:     __cleanup_dest_slot
+// CHECK:         cir.call @dtor()
+// CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+// CHECK:       ^[[RET]]:
+// CHECK-NEXT:    %[[V:.*]] = cir.load
+// CHECK-NEXT:    cir.return %[[V]] : !s32i
+// CHECK-NOT:     cir.switch.flat
+cir.func @return_then_dead_yield(%arg0: !s32i) -> !s32i {
+  cir.cleanup.scope {
+    cir.return %arg0 : !s32i
+  ^bb1:  // no predecessors
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor() : () -> ()
+    cir.yield
+  }
+  cir.trap
+}
+
+// No path leaves the body normally, so the normal cleanup is not emitted.
+// CHECK-LABEL: cir.func @unreachable_then_dead_yield(
+// CHECK:         cir.call @may_throw()
+// CHECK-NEXT:    cir.unreachable
+// CHECK-NOT:     cir.call @dtor()
+// CHECK:         cir.return
+cir.func @unreachable_then_dead_yield() {
+  cir.cleanup.scope {
+    cir.call @may_throw() : () -> ()
+    cir.unreachable
+  ^bb1:  // no predecessors
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor() : () -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// A goto can reach a block that starts with a label, so its yield is a real
+// exit and the scope keeps its dispatch.
+// CHECK-LABEL: cir.func @label_block_is_kept(
+// CHECK:         cir.alloca "__cleanup_dest_slot"
+// CHECK:         cir.label "l"
+// CHECK:         cir.switch.flat
+cir.func @label_block_is_kept(%arg0: !s32i) -> !s32i {
+  cir.cleanup.scope {
+    cir.return %arg0 : !s32i
+  ^bb1:  // no predecessors
+    cir.label "l"
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor() : () -> ()
+    cir.yield
+  }
+  cir.return %arg0 : !s32i
+}

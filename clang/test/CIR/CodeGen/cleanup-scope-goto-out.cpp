@@ -47,9 +47,8 @@ end:;
 // LLVM:       [[CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[A_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
-// LLVM:         switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
-// LLVM:           i32 1, label %[[GOTO_DEST:.*]]
-// LLVM:         ]
+// LLVM-NOT:     switch
+// LLVM:         br label %[[GOTO_DEST:.*]]
 // LLVM:       [[GOTO_DEST]]:
 // LLVM:         br label %[[END:.*]]
 // LLVM:       [[END]]:
