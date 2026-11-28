@@ -30,9 +30,195 @@ exit:
   ret void
 }
 
+; The first condition is true half of the time, and the second one 1% of the
+; time.
+define void @and_weights(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @and_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false, !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %bb, label %exit, !prof !2
+bb:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %then, label %exit, !prof !3
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
+define void @or_weights(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @or_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]], !prof [[PROF2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF4:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %then, label %bb, !prof !2
+bb:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %then, label %exit, !prof !3
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
+; The first condition is false half of the time.
+define void @and_inverted_weights(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @and_inverted_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp uge i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false, !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF6:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %exit, label %bb, !prof !4
+bb:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %then, label %exit, !prof !3
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
+define void @and3_weights(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define void @and3_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false, !prof [[PROF2]]
+; CHECK-NEXT:    [[COND3:%.*]] = icmp ult i32 [[C]], 30
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[OR_COND]], i1 [[COND3]], i1 false, !prof [[PROF7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND1]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF8:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %bb1, label %exit, !prof !2
+bb1:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %bb2, label %exit, !prof !5
+bb2:
+  %cond3 = icmp ult i32 %c, 30
+  br i1 %cond3, label %then, label %exit, !prof !3
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
+; Only the second branch has weights.
+define void @and_second_weights_only(i32 %a, i32 %b) !prof !0 {
+; CHECK-LABEL: define void @and_second_weights_only(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false, !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF9:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %bb, label %exit
+bb:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %then, label %exit, !prof !3
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
+; Only the first branch has weights.
+define void @and_first_weights_only(i32 %a, i32 %b) !prof !0 {
+; CHECK-LABEL: define void @and_first_weights_only(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false, !prof [[PROF10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[THEN:.*]], label %[[EXIT:.*]], !prof [[PROF11:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond1 = icmp ult i32 %a, 10
+  br i1 %cond1, label %bb, label %exit, !prof !5
+bb:
+  %cond2 = icmp ult i32 %b, 20
+  br i1 %cond2, label %then, label %exit
+then:
+  call void @foo()
+  br label %exit
+exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 100}
 !1 = !{!"unknown", !"test"}
+!2 = !{!"branch_weights", i32 50, i32 50}
+!3 = !{!"branch_weights", i32 1, i32 99}
+!4 = !{!"branch_weights", i32 40, i32 60}
+!5 = !{!"branch_weights", i32 90, i32 10}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 100}
 ; CHECK: [[PROF1]] = !{!"unknown", !"simplifycfg"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 50, i32 50}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 50, i32 9950}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 5050, i32 4950}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 60, i32 40}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 60, i32 9940}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 4500, i32 5500}
+; CHECK: [[PROF8]] = !{!"branch_weights", i32 4500, i32 995500}
+; CHECK: [[PROF9]] = !{!"branch_weights", i32 1, i32 199}
+; CHECK: [[PROF10]] = !{!"branch_weights", i32 90, i32 10}
+; CHECK: [[PROF11]] = !{!"branch_weights", i32 90, i32 110}
 ;.

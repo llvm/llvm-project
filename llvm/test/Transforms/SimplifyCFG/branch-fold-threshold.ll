@@ -32,7 +32,7 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, ptr %input) {
 ; AGGRESSIVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], [[A]]
 ; AGGRESSIVE-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B]]
 ; AGGRESSIVE-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false, !prof [[PROF0:![0-9]+]]
-; AGGRESSIVE-NEXT:    br i1 [[OR_COND]], label %[[COND_FALSE:.*]], label %[[COND_END:.*]], !prof [[PROF0]]
+; AGGRESSIVE-NEXT:    br i1 [[OR_COND]], label %[[COND_FALSE:.*]], label %[[COND_END:.*]], !prof [[PROF1:![0-9]+]]
 ; AGGRESSIVE:       [[COND_FALSE]]:
 ; AGGRESSIVE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INPUT]], align 4
 ; AGGRESSIVE-NEXT:    br label %[[COND_END]]
@@ -48,7 +48,7 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, ptr %input) {
 ; WAYAGGRESSIVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], [[A]]
 ; WAYAGGRESSIVE-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[ADD]], [[B]]
 ; WAYAGGRESSIVE-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false, !prof [[PROF0:![0-9]+]]
-; WAYAGGRESSIVE-NEXT:    br i1 [[OR_COND]], label %[[COND_FALSE:.*]], label %[[COND_END:.*]], !prof [[PROF0]]
+; WAYAGGRESSIVE-NEXT:    br i1 [[OR_COND]], label %[[COND_FALSE:.*]], label %[[COND_END:.*]], !prof [[PROF1:![0-9]+]]
 ; WAYAGGRESSIVE:       [[COND_FALSE]]:
 ; WAYAGGRESSIVE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INPUT]], align 4
 ; WAYAGGRESSIVE-NEXT:    br label %[[COND_END]]
@@ -167,7 +167,9 @@ cond.end:
 ; BASELINE: [[PROF0]] = !{!"branch_weights", i32 7, i32 11}
 ; BASELINE: [[PROF1]] = !{!"branch_weights", i32 13, i32 5}
 ;.
-; AGGRESSIVE: [[PROF0]] = !{!"branch_weights", i32 143, i32 181}
+; AGGRESSIVE: [[PROF0]] = !{!"branch_weights", i32 11, i32 7}
+; AGGRESSIVE: [[PROF1]] = !{!"branch_weights", i32 143, i32 181}
 ;.
-; WAYAGGRESSIVE: [[PROF0]] = !{!"branch_weights", i32 143, i32 181}
+; WAYAGGRESSIVE: [[PROF0]] = !{!"branch_weights", i32 11, i32 7}
+; WAYAGGRESSIVE: [[PROF1]] = !{!"branch_weights", i32 143, i32 181}
 ;.

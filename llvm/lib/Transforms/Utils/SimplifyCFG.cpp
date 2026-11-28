@@ -4238,6 +4238,10 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
   SmallVector<uint64_t, 2> MDWeights;
+  // The select created below is on PBI's condition, so it takes PBI's weights.
+  SmallVector<uint64_t, 2> PredWeights;
+  if (extractBranchWeights(*PBI, PredTrueWeight, PredFalseWeight))
+    PredWeights = {PredTrueWeight, PredFalseWeight};
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
 
@@ -4303,10 +4307,10 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
   if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition())) {
-    if (!MDWeights.empty()) {
+    if (!PredWeights.empty()) {
       assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-      setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
-                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+      setFittedBranchWeights(*SI, PredWeights, /*IsExpected=*/false,
+                             /*ElideAllZero=*/true);
     } else {
       setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     }
