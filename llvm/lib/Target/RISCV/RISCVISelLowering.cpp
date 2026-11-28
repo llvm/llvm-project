@@ -21696,7 +21696,8 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
 
 /// According to the property that indexed load/store instructions zero-extend
 /// their indices, try to narrow the type of index operand.
-static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &DAG) {
+static bool narrowIndex(SDValue Base, SDValue &N, ISD::MemIndexType IndexType,
+                        SelectionDAG &DAG) {
   if (isIndexTypeSigned(IndexType))
     return false;
 
@@ -21705,6 +21706,22 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
 
   EVT VT = N.getValueType();
   SDLoc DL(N);
+
+  // Narrow known nonnegative byte offsets without adjusting the base.
+  if (VT.getVectorElementType() == Base.getValueType()) {
+    KnownBits Known = DAG.computeKnownBits(N);
+    if (Known.isNonNegative()) {
+      unsigned Bits = VT.getScalarSizeInBits();
+      unsigned ActiveBits = std::max(8U, Bits - Known.countMinLeadingZeros());
+      unsigned NewBits = PowerOf2Ceil(ActiveBits);
+      if (NewBits < Bits) {
+        EVT NewVT = VT.changeVectorElementType(
+            *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), NewBits));
+        N = DAG.getNode(ISD::TRUNCATE, DL, NewVT, N);
+        return true;
+      }
+    }
+  }
 
   // In general, what we're doing here is seeing if we can sink a truncate to
   // a smaller element type into the expression tree building our index.
@@ -26634,12 +26651,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
            MGN->getBasePtr(), Index, ScaleOp},
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
 
-    if (narrowIndex(Index, IndexType, DAG))
-      return DAG.getMaskedGather(
-          N->getVTList(), MGN->getMemoryVT(), DL,
-          {MGN->getChain(), MGN->getPassThru(), MGN->getMask(),
-           MGN->getBasePtr(), Index, ScaleOp},
-          MGN->getMemOperand(), IndexType, MGN->getExtensionType());
+    SDValue BasePtr = MGN->getBasePtr();
+    if (narrowIndex(BasePtr, Index, IndexType, DAG))
+      return DAG.getMaskedGather(N->getVTList(), MGN->getMemoryVT(), DL,
+                                 {MGN->getChain(), MGN->getPassThru(),
+                                  MGN->getMask(), BasePtr, Index, ScaleOp},
+                                 MGN->getMemOperand(), IndexType,
+                                 MGN->getExtensionType());
 
     if (Index.getOpcode() == ISD::BUILD_VECTOR &&
         MGN->getExtensionType() == ISD::NON_EXTLOAD && isTypeLegal(VT)) {
@@ -26733,12 +26751,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
            Index, ScaleOp},
           MSN->getMemOperand(), IndexType, MSN->isTruncatingStore());
 
-    if (narrowIndex(Index, IndexType, DAG))
-      return DAG.getMaskedScatter(
-          N->getVTList(), MSN->getMemoryVT(), DL,
-          {MSN->getChain(), MSN->getValue(), MSN->getMask(), MSN->getBasePtr(),
-           Index, ScaleOp},
-          MSN->getMemOperand(), IndexType, MSN->isTruncatingStore());
+    SDValue BasePtr = MSN->getBasePtr();
+    if (narrowIndex(BasePtr, Index, IndexType, DAG))
+      return DAG.getMaskedScatter(N->getVTList(), MSN->getMemoryVT(), DL,
+                                  {MSN->getChain(), MSN->getValue(),
+                                   MSN->getMask(), BasePtr, Index, ScaleOp},
+                                  MSN->getMemOperand(), IndexType,
+                                  MSN->isTruncatingStore());
 
     EVT VT = MSN->getValue()->getValueType(0);
     SmallVector<int> ShuffleMask;
@@ -26769,11 +26788,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                               VPGN->getVectorLength()},
                              VPGN->getMemOperand(), IndexType);
 
-    if (narrowIndex(Index, IndexType, DAG))
+    SDValue BasePtr = VPGN->getBasePtr();
+    if (narrowIndex(BasePtr, Index, IndexType, DAG))
       return DAG.getGatherVP(N->getVTList(), VPGN->getMemoryVT(), DL,
-                             {VPGN->getChain(), VPGN->getBasePtr(), Index,
-                              ScaleOp, VPGN->getMask(),
-                              VPGN->getVectorLength()},
+                             {VPGN->getChain(), BasePtr, Index, ScaleOp,
+                              VPGN->getMask(), VPGN->getVectorLength()},
                              VPGN->getMemOperand(), IndexType);
 
     break;
@@ -26794,11 +26813,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                VPSN->getMask(), VPSN->getVectorLength()},
                               VPSN->getMemOperand(), IndexType);
 
-    if (narrowIndex(Index, IndexType, DAG))
+    SDValue BasePtr = VPSN->getBasePtr();
+    if (narrowIndex(BasePtr, Index, IndexType, DAG))
       return DAG.getScatterVP(N->getVTList(), VPSN->getMemoryVT(), DL,
-                              {VPSN->getChain(), VPSN->getValue(),
-                               VPSN->getBasePtr(), Index, ScaleOp,
-                               VPSN->getMask(), VPSN->getVectorLength()},
+                              {VPSN->getChain(), VPSN->getValue(), BasePtr,
+                               Index, ScaleOp, VPSN->getMask(),
+                               VPSN->getVectorLength()},
                               VPSN->getMemOperand(), IndexType);
     break;
   }
