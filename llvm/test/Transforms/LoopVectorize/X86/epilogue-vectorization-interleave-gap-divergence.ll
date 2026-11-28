@@ -533,7 +533,7 @@ define i32 @interleave_gap_divergent_epilogue_decision(ptr %p, i64 %n) {
 ; UF4-EVF2-LABEL: define i32 @interleave_gap_divergent_epilogue_decision(
 ; UF4-EVF2-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; UF4-EVF2-NEXT:  [[ITER_CHECK:.*]]:
-; UF4-EVF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; UF4-EVF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[N]], 2
 ; UF4-EVF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; UF4-EVF2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; UF4-EVF2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 4
