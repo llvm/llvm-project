@@ -1196,7 +1196,16 @@ void Rollbacker::rematerializerNoteRegWillBeDeleted(
       const MachineInstr &CandMI = *ValidPos;
       if (NextDef && &CandMI == NextDef)
         return LastValidPos;
-      if (!isRollbackableMI(CandMI, Remater))
+      // Move over instructions which will be deleted if we were to rollback.
+      // If we hit the deleted register's own rematerializations we should not
+      // move over them; this ensures that the register is always re-created
+      // before its rematerializations in the same block. It is safe because
+      // registers are re-created before their rematerializations are deleted.
+      RegisterIdx CandRegIdx = Remater.getDefRegIdx(CandMI);
+      if ((CandRegIdx != Rematerializer::NoReg &&
+           Remater.getOriginOrSelf(CandRegIdx) ==
+               Remater.getOriginOrSelf(RegIdx)) ||
+          !isRollbackableRegIdx(CandRegIdx, Remater))
         break;
 
       // Move to the next candidate position.
@@ -1237,7 +1246,8 @@ void Rollbacker::rematerializerNoteMIWillBeDeleted(
   // position should instead be re-created at a valid position after it.
   MachineBasicBlock *ParentMBB = MI.getParent();
   MachineBasicBlock::iterator ValidPos = std::next(MI.getIterator());
-  while (ValidPos != ParentMBB->end() && isRollbackableMI(*ValidPos, Remater))
+  while (ValidPos != ParentMBB->end() &&
+         isRollbackableRegIdx(Remater.getDefRegIdx(*ValidPos), Remater))
     ValidPos = std::next(ValidPos);
   invalidatePosition(&MI, ValidPos);
 }
@@ -1306,15 +1316,15 @@ void Rollbacker::rollback(Rematerializer &Remater) {
   RollingBack = false;
 }
 
-bool Rollbacker::isRollbackableMI(const MachineInstr &MI,
-                                  const Rematerializer &Remater) const {
-  RegisterIdx RegIdx = Remater.getDefRegIdx(MI);
+bool Rollbacker::isRollbackableRegIdx(RegisterIdx RegIdx,
+                                      const Rematerializer &Remater) const {
   if (RegIdx == Rematerializer::NoReg ||
       !Remater.isRematerializedRegister(RegIdx))
     return false;
-  // It is possible that the MI defines a rematerializable register that was not
+  // It is possible that this is a rematerializable register that was not
   // recorded if the rollbacker was attached to the rematerializer after the
-  // rematerialization happened. In such cases the MI won't be rolled back.
+  // rematerialization happened. In such cases the register won't be rolled
+  // back.
   auto RematsOf = Rematerializations.find(Remater.getOriginOf(RegIdx));
   if (RematsOf == Rematerializations.end())
     return false;

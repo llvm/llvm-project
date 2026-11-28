@@ -1436,3 +1436,62 @@ TEST_F(RematerializerTest, RecedeRegionBeginBeforeDebug) {
     ASSERT_REGION_SIZES();
   });
 }
+
+/// The rollbacker used to re-create a register at a correct IR position but an
+/// incorrect rematerialization region in a situation where two successive
+/// regions with no gap in-between them would see the last instruction of the
+/// first region be rematerialized at the beginning of the second region. Here,
+/// %cst initially in the top region would end up in the bottom region after
+/// rematerialization before S_NOP and rollback, failing the last assert.
+TEST_F(RematerializerTest, RollbackZeroGapRegion) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %cst:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    S_NOP 0, implicit %cst
+    S_ENDPGM 0
+)MIR";
+  // The two regions are directly adjacent (zero gap): the first ends on the
+  // S_NOP where the second (containing %cst's only user) begins.
+  BuildRegionsFn BuildRegions =
+      [](MachineFunction &MF,
+         SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
+        MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
+        MachineInstr *Nop = &*std::next(MBB0.begin());
+        MachineInstr *EndPgm = &*std::prev(MBB0.end());
+        Regions.push_back({MBB0.begin(), Nop->getIterator()});
+        Regions.push_back({Nop->getIterator(), EndPgm->getIterator()});
+      };
+
+  rematerializerTest(
+      MIRBody,
+      [&](RematerializerWrapper &RW) {
+        Rematerializer::DependencyReuseInfo DRI;
+        Rollbacker Rollback;
+        RW->addListener(&Rollback);
+
+        const unsigned MBB0Top = 0, MBB0Bot = 1;
+        const RegisterIdx Cst = 0;
+
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, RW->getRegion(MBB0Bot).first);
+        ASSERT_REGION_SIZES();
+
+        RegisterIdx R1 = RW->rematerializeToRegion(Cst, MBB0Bot, DRI);
+        RW.removeMIs(MBB0Top, 1).addMIs(MBB0Bot, 1);
+        ASSERT_REGION_SIZES();
+
+        // Rematerialize the rematerialization in the same region. This
+        // invalidates %cst's re-creation position (the first rematerialization)
+        // in the rollbacker and replaces it with the next valid position (the
+        // second rematerialization).
+        RW->rematerializeToRegion(R1, MBB0Bot, DRI.clear());
+        ASSERT_REGION_SIZES();
+
+        // Rolling back must leave region sizes and boundaries identical to the
+        // beginning.
+        Rollback.rollback(*RW);
+        RW.addMIs(MBB0Top, 1).removeMIs(MBB0Bot, 1);
+        ASSERT_REGION_SIZES();
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, RW->getRegion(MBB0Bot).first);
+      },
+      doNothing, BuildRegions);
+}
