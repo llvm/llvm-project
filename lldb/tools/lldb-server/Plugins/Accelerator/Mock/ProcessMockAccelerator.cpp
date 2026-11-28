@@ -12,6 +12,7 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "llvm/Support/Error.h"
 
+#include <cstdlib>
 #include <cstring>
 
 using namespace lldb;
@@ -167,4 +168,19 @@ ProcessMockAccelerator::GetAcceleratorDynamicLoaderLibraryInfos(
   info.load_address = 0x10000000;
   response.library_infos.push_back(std::move(info));
   return response;
+}
+
+std::optional<AcceleratorActions>
+ProcessMockAccelerator::GetAcceleratorActions() {
+  if (!::getenv("LLDB_MOCK_ACCELERATOR_PROCESS_STOP_ACTIONS") ||
+      m_sent_accelerator_stop_actions.exchange(true))
+    return std::nullopt;
+
+  AcceleratorActions actions("mock", kStopReplyActionID);
+  AcceleratorBreakpointInfo bp;
+  bp.identifier = kStopReplyBreakpointID;
+  bp.by_name = AcceleratorBreakpointByName{
+      std::nullopt, "mock_gpu_accelerator_process_stop_action"};
+  actions.breakpoints.push_back(std::move(bp));
+  return actions;
 }

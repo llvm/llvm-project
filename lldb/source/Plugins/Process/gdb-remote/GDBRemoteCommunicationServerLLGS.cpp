@@ -1111,6 +1111,28 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   if (response.Empty())
     return SendErrorResponse(42);
 
+  auto append_actions = [&](const AcceleratorActions &actions) {
+    response.PutCString("accelerator-actions:");
+    StreamGDBRemote encoded_actions;
+    encoded_actions.PutAsJSON(actions, /*hex_ascii=*/true);
+    response.PutCString(encoded_actions.GetString());
+    response.PutChar(';');
+  };
+
+  // Plugins installed on the native connection can react to native stops.
+  for (const std::unique_ptr<LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
+    if (std::optional<AcceleratorActions> actions =
+            plugin_up->NativeProcessIsStopping())
+      append_actions(*actions);
+  }
+
+  // An accelerator process can request actions in its associated native
+  // process through the accelerator connection's stop reply.
+  if (std::optional<AcceleratorActions> actions =
+          process.GetAcceleratorActions())
+    append_actions(*actions);
+
   if (m_non_stop && !force_synchronous) {
     PacketResult ret = SendNotificationPacketNoLock(
         "Stop", m_stop_notification_queue, response.GetString());
