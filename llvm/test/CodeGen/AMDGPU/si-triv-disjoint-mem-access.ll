@@ -236,6 +236,7 @@ define amdgpu_kernel void @reorder_constant_load_global_store_constant_load(ptr 
 ; CI-NEXT:    v_readfirstlane_b32 s3, v1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x63
 ; CI-NEXT:    s_load_dword s12, s[2:3], 0x1
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; CI-NEXT:    s_load_dword s2, s[2:3], 0x3
 ; CI-NEXT:    s_mov_b32 s4, s0
@@ -256,6 +257,7 @@ define amdgpu_kernel void @reorder_constant_load_global_store_constant_load(ptr 
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x4
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v2, v3, s[2:3]
 ; GFX9-NEXT:    s_load_dword s2, s[4:5], 0xc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
