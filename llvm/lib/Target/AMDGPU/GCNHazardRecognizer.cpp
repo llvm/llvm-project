@@ -4271,13 +4271,12 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
 static bool ensureEntrySetPrio(MachineFunction *MF, int Priority,
                                const SIInstrInfo &TII) {
   MachineBasicBlock &EntryMBB = MF->front();
-  if (EntryMBB.begin() != EntryMBB.end()) {
-    auto &EntryMI = *EntryMBB.begin();
-    if (EntryMI.getOpcode() == AMDGPU::S_SETPRIO &&
-        EntryMI.getOperand(0).getImm() >= Priority)
-      return false;
-  }
+  auto EntryI = skipMetaInstructionsForward(EntryMBB.begin(), EntryMBB.end());
+  if (EntryI != EntryMBB.end() && EntryI->getOpcode() == AMDGPU::S_SETPRIO &&
+      EntryI->getOperand(0).getImm() >= Priority)
+    return false;
 
+  // Insert at the start of the block, before any meta instructions.
   BuildMI(EntryMBB, EntryMBB.begin(), DebugLoc(), TII.get(AMDGPU::S_SETPRIO))
       .addImm(Priority);
   return true;
@@ -4321,8 +4320,10 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
     // Raise minimum priority unless in workaround.
     auto &PrioOp = MI->getOperand(0);
     int Prio = static_cast<int>(PrioOp.getImm());
-    bool InWA = (Prio == PostExportPriority) &&
-                (It != MBB->begin() && TII.isEXP(*std::prev(It)));
+    bool InWA =
+        (Prio == PostExportPriority) &&
+        (It != MBB->instr_begin() && TII.isEXP(*skipMetaInstructionsBackward(
+                                         std::prev(It), MBB->instr_begin())));
     if (InWA || Prio >= NormalPriority)
       return false;
     PrioOp.setImm(std::min(Prio + NormalPriority, MaxPriority));
@@ -4340,9 +4341,10 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_Gfx_WholeWave)
     Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
 
-  auto NextMI = std::next(It);
+  auto InsertPt = std::next(It);
+  auto NextMI = skipMetaInstructionsForward(InsertPt, MBB->instr_end());
   bool EndOfShader = false;
-  if (NextMI != MBB->end()) {
+  if (NextMI != MBB->instr_end()) {
     // Only need WA at end of sequence of exports.
     if (TII.isEXP(*NextMI))
       return Changed;
@@ -4356,37 +4358,26 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   const DebugLoc &DL = MI->getDebugLoc();
 
   // Lower priority.
-  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
+  BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::S_SETPRIO))
       .addImm(PostExportPriority);
 
   if (!EndOfShader) {
     // Wait for exports to complete.
-    BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_WAITCNT_EXPCNT))
+    BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::S_WAITCNT_EXPCNT))
         .addReg(AMDGPU::SGPR_NULL)
         .addImm(0);
   }
 
-  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
-  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
+  BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
+  BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
 
   if (!EndOfShader) {
     // Return to normal (higher) priority.
-    BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
+    BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::S_SETPRIO))
         .addImm(NormalPriority);
   }
 
   return true;
-}
-
-// Advance past meta instructions (debug values, labels, CFI, KILL, etc.) to the
-// next instruction that actually issues. Unlike skipDebugInstructionsForward /
-// next_nodbg, this skips the full isMetaInstruction() set.
-static MachineBasicBlock::iterator
-skipMetaInstructionsForward(MachineBasicBlock::iterator I,
-                            MachineBasicBlock::iterator End) {
-  while (I != End && I->isMetaInstruction())
-    ++I;
-  return I;
 }
 
 bool GCNHazardRecognizer::fixVPermPk16Hazard(MachineInstr *MI) {
@@ -4404,8 +4395,8 @@ bool GCNHazardRecognizer::fixVPermPk16Hazard(MachineInstr *MI) {
 
   // Requirement #2 of 2:
   // V_PERM_PK16 must be immediately followed by a safe instruction.
-  MachineBasicBlock::iterator NextI =
-      skipMetaInstructionsForward(std::next(MI->getIterator()), MBB->end());
+  auto NextI = skipMetaInstructionsForward(
+      std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   if (NextI != MBB->end() && TII.isVPermPk16SafeInstr(*NextI))
     return false;
 
