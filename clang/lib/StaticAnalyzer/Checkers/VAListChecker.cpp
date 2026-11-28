@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
@@ -42,11 +43,77 @@ static StringRef describeState(const VAListState S) {
 
 REGISTER_MAP_WITH_PROGRAMSTATE(VAListStateMap, const MemRegion *, VAListState)
 
+// If Reg is a by-value va_list parameter of an inlined callee, return the
+// region of the corresponding argument in the caller frame. Otherwise, return
+// nullptr: there is no caller information to recover the state from.
+static const MemRegion *getCallerVAListRegion(const MemRegion *Reg,
+                                              ProgramStateRef State) {
+  const auto *VR = dyn_cast<VarRegion>(Reg);
+  if (!VR)
+    return nullptr;
+
+  const auto *PVD = dyn_cast<ParmVarDecl>(VR->getDecl());
+  if (!PVD)
+    return nullptr;
+
+  // Handle only the by-value struct form of va_list that loses the state
+  // when the argument is copied into the callee frame.
+  if (!PVD->getType()->isRecordType())
+    return nullptr;
+
+  const StackFrame *SFC = VR->getStackFrame();
+  if (!SFC->getParent())
+    return nullptr; // Top-level function or a non-inlined call.
+
+  // Recover the CallEvent that created the current frame.
+  CallEventRef<> CallerCall =
+      State->getStateManager().getCallEventManager().getCaller(SFC, State);
+  if (!CallerCall)
+    return nullptr;
+
+  unsigned Idx = PVD->getFunctionScopeIndex();
+  if (Idx >= CallerCall->getNumArgs())
+    return nullptr;
+
+  SVal ArgV = CallerCall->getArgSVal(Idx);
+
+  // A struct passed by value is represented as a lazy copy of the caller's
+  // region; that region is exactly the one carrying the caller's state.
+  if (auto LCV = ArgV.getAs<nonloc::LazyCompoundVal>())
+    return LCV->getRegion();
+
+  return ArgV.getAsRegion();
+}
+
 static VAListState getVAListState(ProgramStateRef State, const MemRegion *Reg) {
-  if (const VAListState *Res = State->get<VAListStateMap>(Reg))
-    return *Res;
-  return Reg->getSymbolicBase() ? VAListState::Unknown
-                                : VAListState::Uninitialized;
+  llvm::SmallPtrSet<const MemRegion *, 4> Visited;
+  const MemRegion *Cur = Reg;
+  const MemRegion *Last = Reg;
+
+  // On targets where va_list is a struct passed by value (e.g. AArch64), the
+  // VAListStateMap entry of the caller's argument is not propagated to the
+  // parameter region. Recover the state by walking up the stack of inlined
+  // calls.
+  while (Cur && Visited.insert(Cur).second) {
+    if (const VAListState *Res = State->get<VAListStateMap>(Cur))
+      return *Res;
+    Last = Cur;
+    Cur = getCallerVAListRegion(Cur, State);
+  }
+
+  // If the walk stopped at a by-value parameter whose caller is not visible
+  // (a non-inlined call or a standalone top-level analysis of this function),
+  // its state is genuinely unknown: the caller may well have initialized it.
+  if (const auto *VR = dyn_cast<VarRegion>(Last))
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VR->getDecl());
+        PVD && PVD->getType()->isRecordType())
+      return VAListState::Unknown;
+
+  // Otherwise the walk reached a region whose history is fully visible (e.g.
+  // a local variable in the caller). An empty map entry there is a fact, not
+  // a lack of information: the list really was never initialized.
+  return Last->getSymbolicBase() ? VAListState::Unknown
+                                 : VAListState::Uninitialized;
 }
 
 namespace {
@@ -176,6 +243,11 @@ void VAListChecker::checkPreCall(const CallEvent &Call,
 
 const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
                                                   CheckerContext &C) const {
+  // A by-value struct va_list (e.g. AArch64) may reach here as a lazy copy
+  // of the caller's region. That region carries the caller's state.
+  if (auto LCV = SV.getAs<nonloc::LazyCompoundVal>())
+    return LCV->getRegion();
+
   const MemRegion *Reg = SV.getAsRegion();
   if (!Reg)
     return nullptr;
@@ -187,7 +259,11 @@ const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
         Ty->isPointerType() && Ty->getPointeeType()->isRecordType();
   }
   if (const auto *DeclReg = Reg->getAs<DeclRegion>()) {
-    if (isa<ParmVarDecl>(DeclReg->getDecl()))
+    // Dereferencing is only meaningful for pointer-like (array-decayed)
+    // va_list parameters. A by-value struct parameter stores a
+    // LazyCompoundVal, which does not provide a region via getAsRegion().
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DeclReg->getDecl());
+        PVD && !PVD->getType()->isRecordType())
       Reg = C.getState()->getSVal(SV.castAs<Loc>()).getAsRegion();
   }
   // Some VarRegion based VA lists reach here as ElementRegions.
@@ -213,10 +289,35 @@ void VAListChecker::checkPreStmt(const VAArgExpr *VAA,
 void VAListChecker::checkDeadSymbols(SymbolReaper &SR,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
+
+  // Cleanup runs before PreCall, and getVAListState may need these entries
+  // from any caller frame while the callee is analyzed.
+  llvm::SmallPtrSet<const MemRegion *, 2> CallArguments;
+  if (std::optional<PreStmtPurgeDeadSymbols> PP =
+          C.getLocation().getAs<PreStmtPurgeDeadSymbols>();
+      PP && CallEvent::isCallStmt(PP->getStmt())) {
+    CallEventRef<> Call =
+        State->getStateManager().getCallEventManager().getCall(
+            PP->getStmt(), State, C.getStackFrame(), C.getCFGElementRef());
+    if (Call) {
+      for (unsigned I = 0, E = Call->getNumArgs(); I != E; ++I) {
+        const Expr *ArgExpr = Call->getArgExpr(I);
+        if (!ArgExpr->getType()->isRecordType())
+          continue;
+        if (const MemRegion *Arg =
+                getVAListAsRegion(Call->getArgSVal(I), ArgExpr, C))
+          CallArguments.insert(Arg);
+      }
+    }
+  }
+
   VAListStateMapTy Tracked = State->get<VAListStateMap>();
   RegionVector Leaked;
   for (const auto &[Reg, S] : Tracked) {
-    if (SR.isLiveRegion(Reg))
+    const auto *VR = dyn_cast<VarRegion>(Reg);
+    const bool NeededByCallee =
+        VR && VR->getStackFrame()->isParentOf(C.getStackFrame());
+    if (SR.isLiveRegion(Reg) || CallArguments.contains(Reg) || NeededByCallee)
       continue;
     if (S == VAListState::Initialized)
       Leaked.push_back(Reg);
