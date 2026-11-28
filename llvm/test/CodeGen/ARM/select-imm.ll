@@ -768,7 +768,7 @@ define i1 @t11() {
 ; THUMB2-NEXT:    movw r2, #40960
 ; THUMB2-NEXT:    movt r2, #65024
 ; THUMB2-NEXT:    ands r1, r2
-; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    add r0, r1
 ; THUMB2-NEXT:    str r0, [sp]
 ; THUMB2-NEXT:    and r0, r0, #15
 ; THUMB2-NEXT:    subs r0, #3
