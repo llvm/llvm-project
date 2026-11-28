@@ -3389,13 +3389,25 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.ModuleLocalHints) {
     const auto *FD = dyn_cast<FunctionDecl>(D);
     const SourceManager &SM = getContext().getSourceManager();
-    // D->getLocation(), for a template instantiation, is the location of the
-    // template's definition, not instantiation.
     // TODO: Also consider template instantiations where a template argument is
     // a class declared in the main file.
-    bool InMainFile = SM.isInMainFile(D->getLocation());
-    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
-      B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation())) {
+      // Usually, check the decl directly...
+      const FunctionDecl *DeclToCheck = FD;
+      // ...but for a template instantiation, check the pattern it was
+      // instantiated from, so that we also see the template's declarations
+      // (e.g. one in a header), which aren't redeclarations of the
+      // instantiation.
+      if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+        DeclToCheck = Pattern;
+
+      bool AllDeclsInMainFile =
+          llvm::all_of(DeclToCheck->redecls(), [&](const FunctionDecl *R) {
+            return SM.isInMainFile(R->getLocation());
+          });
+      if (AllDeclsInMainFile)
+        B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+    }
   }
 
   F->addFnAttrs(B);
