@@ -341,7 +341,11 @@ extern const short *_tolower_tab_;
 #endif
 
 #ifndef COMMON_INTERCEPTOR_COPY_STRING
-#define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) {}
+#  define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) \
+    do {                                                      \
+      (void)(from);                                           \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, to, (size) + 1);    \
+    } while (false)
 #endif
 
 #ifndef COMMON_INTERCEPTOR_STRNDUP_IMPL
