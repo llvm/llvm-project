@@ -489,7 +489,9 @@ bool vputils::isElementwise(const VPValue *V) {
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
-bool vputils::isSingleScalar(const VPValue *VPV) {
+static bool isSingleScalarImpl(
+    const VPValue *VPV,
+    function_ref<void(VPUser::const_operand_range)> AddToWorklist) {
   // Live-in, symbolic and canonical-IV region values are single-scalar.
   if (auto *RV = dyn_cast<VPRegionValue>(VPV))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -503,19 +505,31 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
+    if (Rep->isSingleScalar())
+      return true;
+    if (!preservesUniformity(Rep->getOpcode()))
+      return false;
+    AddToWorklist(Rep->operands());
+    return true;
   }
-  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV)) {
+    AddToWorklist(VPV->getDefiningRecipe()->operands());
+    return true;
+  }
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
+    if (!preservesUniformity(WidenR->getOpcode()))
+      return false;
+    AddToWorklist(WidenR->operands());
+    return true;
   }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar() ||
-           (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
+  if (auto *VPI = dyn_cast<VPInstruction>(VPV)) {
+    if (VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar())
+      return true;
+    if (!preservesUniformity(VPI->getOpcode()))
+      return false;
+    AddToWorklist(VPI->operands());
+    return true;
+  }
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
@@ -526,6 +540,22 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
+}
+
+bool vputils::isSingleScalar(const VPValue *VPV) {
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(VPV);
+
+  auto AddToWorklist = [&Worklist](VPUser::const_operand_range Operands) {
+    Worklist.insert_range(Operands);
+  };
+
+  // All operand checks are conjunctive, so each value needs checking once.
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isSingleScalarImpl(Worklist[I], AddToWorklist))
+      return false;
+  }
+  return true;
 }
 
 static bool isUniformAcrossVFsAndUFsImpl(
