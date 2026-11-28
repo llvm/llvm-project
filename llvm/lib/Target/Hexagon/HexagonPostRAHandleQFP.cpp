@@ -80,6 +80,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <optional>
+
 #define DEBUG_TYPE "handle-qfp"
 
 using namespace llvm;
@@ -242,6 +244,8 @@ private:
   MCPhysReg findAllocatableReg(MachineInstr *MI) const;
   void insertIEEEToQF(MachineInstr *, Register, MachineOperand, bool is32bit);
   void collectLivenessForSubregs(NodeAddr<UseNode *> &);
+  std::optional<bool> doesDefReachSubRegUse(NodeAddr<DefNode *>,
+                                            NodeAddr<StmtNode *>, Register);
   void insertInstr(MachineInstr *, unsigned, unsigned, unsigned, RegState);
 };
 } // namespace
@@ -825,7 +829,7 @@ bool HexagonPostRAHandleQFP::HandleNonSatInstr() {
           insertInstr(MI, Hexagon::V6_vconv_sf_qf32, DefHi, DefHi,
                       getRegState(Op) | RegState::Kill);
 
-      } else { // It.second == ConvOperand::Lo
+      } else if (It.second == ConvOperand::Lo) {
         insertIEEEToQF(MI, DefLo, Op, true /* sf type */);
         if (!Op.isKill())
           insertInstr(MI, Hexagon::V6_vconv_sf_qf32, DefLo, DefLo,
@@ -931,6 +935,26 @@ void HexagonPostRAHandleQFP::collectQFPStackRefill(
   RefillMIs.push_back(DfNode);
 }
 
+std::optional<bool> HexagonPostRAHandleQFP::doesDefReachSubRegUse(
+    NodeAddr<DefNode *> RegDef, NodeAddr<StmtNode *> UseStmt, Register SubReg) {
+  NodeAddr<RefNode *> Nearest =
+      LV->getNearestAliasedRef(RegisterRef(SubReg), UseStmt);
+  if (!Nearest.Id)
+    return std::nullopt;
+
+  // A non-phi definition is the value present in this subregister at the use.
+  // Do not walk beyond it to an older pair definition.
+  if (DFG->IsDef(Nearest) && !(Nearest.Addr->getFlags() & NodeAttrs::PhiRef))
+    return Nearest.Id == RegDef.Id;
+
+  NodeSet Visited, Defs;
+  const auto &P =
+      LV->getAllReachingDefsRec(RegisterRef(SubReg), Nearest, Visited, Defs);
+  if (!P.second)
+    return std::nullopt;
+  return P.first.count(RegDef.Id) != 0;
+}
+
 // Iterate over the uses of the qf generating instruction in RDG graph
 // If we get a qf to IEEE convert instruction, add it to a list.
 void HexagonPostRAHandleQFP::collectConvQFInstr(NodeAddr<DefNode *> &RegDef) {
@@ -960,15 +984,29 @@ void HexagonPostRAHandleQFP::collectConvQFInstr(NodeAddr<DefNode *> &RegDef) {
         if (QFNonSatMIs.contains(QFConvInstr))
           Op = QFNonSatMIs[QFConvInstr];
 
-        // Def is double type
-        if (Hexagon::HvxWRRegClass.contains(DefReg))
-          Op = ConvOperand::HiLo;
-        // Def is lo of double type
-        else if (DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo))
-          Op |= ConvOperand::Lo;
-        // Def is hi of double type
-        else
-          Op |= ConvOperand::Hi;
+        // Determine which halves of the pair are actually reached by this
+        // definition. A pair definition may have one half redefined before
+        // the use, in which case only the other half still needs conversion.
+        std::optional<bool> ReachesLo = doesDefReachSubRegUse(
+            RegDef, UseStmt, HRI->getSubReg(UseReg, Hexagon::vsub_lo));
+        std::optional<bool> ReachesHi = doesDefReachSubRegUse(
+            RegDef, UseStmt, HRI->getSubReg(UseReg, Hexagon::vsub_hi));
+
+        // If reaching-definition information is unavailable for a half,
+        // fall back to whether this definition covers it. Preserve known
+        // results for the other half, including a known redefinition.
+        bool DefCoversLo = Hexagon::HvxWRRegClass.contains(DefReg) ||
+                           DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo);
+        bool DefCoversHi = Hexagon::HvxWRRegClass.contains(DefReg) ||
+                           DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_hi);
+
+        unsigned ReachedOp = ConvOperand::Undefined;
+        if (ReachesLo.value_or(DefCoversLo))
+          ReachedOp |= ConvOperand::Lo;
+        if (ReachesHi.value_or(DefCoversHi))
+          ReachedOp |= ConvOperand::Hi;
+
+        Op |= ReachedOp;
         QFNonSatMIs[QFConvInstr] = Op;
       } else // for other def-use, BothOp is used as default
         QFNonSatMIs[QFConvInstr] = ConvOperand::HiLo;
