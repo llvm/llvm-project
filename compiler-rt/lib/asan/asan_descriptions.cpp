@@ -117,8 +117,16 @@ static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
   } else if (chunk.AddrIsAtRight(addr, access_size, &descr->offset)) {
     descr->access_type = kAccessTypeRight;
     if (descr->offset < 0) {
-      descr->bad_addr -= descr->offset;
-      descr->offset = 0;
+      // The access begins inside the chunk and ends past it.
+      if (chunk.IsAllocated()) {
+        // Normally the first bad byte is the one right after the chunk.
+        descr->bad_addr -= descr->offset;
+        descr->offset = 0;
+      } else {
+        // The chunk is freed, so the first byte of the access is bad already.
+        descr->access_type = kAccessTypeInside;
+        descr->offset = addr - chunk.Beg();
+      }
     }
   } else if (chunk.AddrIsInside(addr, access_size, &descr->offset)) {
     descr->access_type = kAccessTypeInside;
