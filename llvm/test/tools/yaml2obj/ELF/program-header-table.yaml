@@ -1,0 +1,229 @@
+## Check that the ProgramHeaderTable chunk places the program header table at
+## its position in the list of sections, and that program headers can include
+## it by name like any other chunk.
+
+## Default placement: the table follows the previous chunk, aligned to the
+## size of an address.
+# RUN: yaml2obj %s --docnum=1 -o %t64
+# RUN: llvm-readelf --file-headers --program-headers --sections %t64 | \
+# RUN:   FileCheck %s --check-prefix=ELF64
+
+# ELF64:      Start of program headers: 72 (bytes into file)
+# ELF64:      Size of program headers:  56 (bytes)
+# ELF64:      Number of program headers: 2
+# ELF64:      [Nr] Name Type     Address          Off    Size
+# ELF64:      [ 1] .foo PROGBITS {{.*}}             000040 000003
+## The table is placed at alignTo(0x43, 8) == 0x48 and takes 2 * 56 == 0x70
+## bytes, so .bar follows it at 0x48 + 0x70 == 0xb8.
+# ELF64-NEXT: [ 2] .bar PROGBITS {{.*}}             0000b8 000001
+# ELF64:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# ELF64-NEXT: PHDR 0x000048 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
+# ELF64-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000079 0x000079 R   0x8
+
+# RUN: yaml2obj %s --docnum=1 -DBITS=32 -o %t32
+# RUN: llvm-readelf --file-headers --program-headers --sections %t32 | \
+# RUN:   FileCheck %s --check-prefix=ELF32
+
+# ELF32:      Start of program headers: 56 (bytes into file)
+# ELF32:      Size of program headers:  32 (bytes)
+# ELF32:      Number of program headers: 2
+# ELF32:      [Nr] Name Type     Address  Off    Size
+# ELF32:      [ 1] .foo PROGBITS {{.*}}     000034 000003
+## alignTo(0x37, 4) == 0x38; 0x38 + 2 * 32 == 0x78.
+# ELF32-NEXT: [ 2] .bar PROGBITS {{.*}}     000078 000001
+# ELF32:      Type Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+# ELF32-NEXT: PHDR 0x000038 0x00000000 0x00000000 0x00040 0x00040 R   0x4
+# ELF32-NEXT: LOAD 0x000034 0x00000000 0x00000000 0x00045 0x00045 R   0x4
+
+## The Offset key places the table at an explicit file offset.
+# RUN: yaml2obj %s --docnum=1 -DOFFSET=0x100 -o %t.offset
+# RUN: llvm-readelf --file-headers --program-headers --sections %t.offset | \
+# RUN:   FileCheck %s --check-prefix=OFFSET
+
+# OFFSET:      Start of program headers: 256 (bytes into file)
+# OFFSET:      [ 2] .bar PROGBITS {{.*}} 000170 000001
+# OFFSET:      PHDR 0x000100 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
+# OFFSET-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000131 0x000131 R   0x8
+
+## An explicit Offset does not have to be aligned.
+# RUN: yaml2obj %s --docnum=1 -DOFFSET=0x101 -o %t.unaligned
+# RUN: llvm-readelf --file-headers --program-headers --sections %t.unaligned | \
+# RUN:   FileCheck %s --check-prefix=UNALIGNED
+
+# UNALIGNED:      Start of program headers: 257 (bytes into file)
+# UNALIGNED:      [ 2] .bar PROGBITS {{.*}} 000171 000001
+# UNALIGNED:      PHDR 0x000101 0x0000000000000000 0x0000000000000000 0x000070 0x000070 R   0x8
+# UNALIGNED-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000132 0x000132 R   0x8
+
+## EPhOff overrides e_phoff, but does not move the table.
+# RUN: yaml2obj %s --docnum=1 -DPHOFF=0x1234 -o %t.phoff
+# RUN: llvm-readelf --file-headers --sections %t.phoff | \
+# RUN:   FileCheck %s --check-prefix=PHOFF
+# RUN: od -A n -t x1 -v -j 72 -N 8 %t.phoff | FileCheck %s --check-prefix=PHOFF-DATA
+
+# PHOFF:      Start of program headers: 4660 (bytes into file)
+# PHOFF:      [ 2] .bar PROGBITS {{.*}} 0000b8 000001
+## p_type == PT_PHDR (6), p_flags == PF_R (4).
+# PHOFF-DATA: 06 00 00 00 04 00 00 00
+
+## An Offset below the current position is an error.
+# RUN: not yaml2obj %s --docnum=1 -DOFFSET=0x10 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BACKWARD
+
+# BACKWARD: error: the 'Offset' value (0x10) goes backward
+
+## A section that follows the table cannot be placed before the table's end.
+# RUN: not yaml2obj %s --docnum=1 -DBAROFF=0xb0 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAR-BACKWARD
+
+# BAR-BACKWARD: error: the 'Offset' value (0xb0) goes backward
+
+--- !ELF
+FileHeader:
+  Class:  ELFCLASS[[BITS=64]]
+  Data:   ELFDATA2LSB
+  Type:   ET_EXEC
+  EPhOff: [[PHOFF=<none>]]
+Sections:
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC ]
+    Size:   0x3
+  - Type:   ProgramHeaderTable
+    Name:   .phdrs
+    Offset: [[OFFSET=<none>]]
+  - Name:   .bar
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC ]
+    Size:   0x1
+    Offset: [[BAROFF=<none>]]
+ProgramHeaders:
+  - Type:     PT_PHDR
+    Flags:    [ PF_R ]
+    FirstSec: .phdrs
+    LastSec:  .phdrs
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .bar
+
+## The table does not have to be covered by a program header.
+# RUN: yaml2obj %s --docnum=2 -o %t.nophdr64
+# RUN: llvm-readelf --file-headers --program-headers --sections %t.nophdr64 | \
+# RUN:   FileCheck %s --check-prefix=NOPHDR64
+# RUN: yaml2obj %s --docnum=2 -DBITS=32 -o %t.nophdr32
+# RUN: llvm-readelf --file-headers --program-headers --sections %t.nophdr32 | \
+# RUN:   FileCheck %s --check-prefix=NOPHDR32
+# RUN: yaml2obj %s --docnum=2 -DOFFSET=0x100 -o %t.nophdr.offset
+# RUN: llvm-readelf --file-headers --program-headers --sections \
+# RUN:   %t.nophdr.offset | FileCheck %s --check-prefix=NOPHDR-OFFSET
+
+# NOPHDR64:      Start of program headers: 72 (bytes into file)
+# NOPHDR64:      Number of program headers: 2
+# NOPHDR64:      [ 1] .foo PROGBITS {{.*}} 000040 000003
+# NOPHDR64-NEXT: [ 2] .bar PROGBITS {{.*}} 0000b8 000001
+# NOPHDR64:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOPHDR64-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000003 0x000003 R   0x1
+# NOPHDR64-NEXT: LOAD 0x0000b8 0x0000000000000000 0x0000000000000000 0x000001 0x000001 R   0x1
+
+# NOPHDR32:      Start of program headers: 56 (bytes into file)
+# NOPHDR32:      Number of program headers: 2
+# NOPHDR32:      [ 1] .foo PROGBITS {{.*}} 000034 000003
+# NOPHDR32-NEXT: [ 2] .bar PROGBITS {{.*}} 000078 000001
+# NOPHDR32:      Type Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+# NOPHDR32-NEXT: LOAD 0x000034 0x00000000 0x00000000 0x00003 0x00003 R   0x1
+# NOPHDR32-NEXT: LOAD 0x000078 0x00000000 0x00000000 0x00001 0x00001 R   0x1
+
+# NOPHDR-OFFSET:      Start of program headers: 256 (bytes into file)
+# NOPHDR-OFFSET:      [ 2] .bar PROGBITS {{.*}} 000170 000001
+# NOPHDR-OFFSET:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOPHDR-OFFSET-NEXT: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000003 0x000003 R   0x1
+# NOPHDR-OFFSET-NEXT: LOAD 0x000170 0x0000000000000000 0x0000000000000000 0x000001 0x000001 R   0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x3
+  - Type:   ProgramHeaderTable
+    Offset: [[OFFSET=<none>]]
+  - Name:  .bar
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .foo
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .bar
+    LastSec:  .bar
+
+## A SHT_NOBITS section followed by the table in the same segment gets file
+## space, as it does when followed by a section with contents.
+# RUN: yaml2obj %s --docnum=3 -o %t.nobits
+# RUN: llvm-readelf --file-headers --program-headers %t.nobits | \
+# RUN:   FileCheck %s --check-prefix=NOBITS
+
+## The table follows the 0x10 bytes of .bss at 0x40 + 0x10 == 0x50.
+# NOBITS: Start of program headers: 80 (bytes into file)
+# NOBITS: LOAD 0x000040 0x0000000000000000 0x0000000000000000 0x000048 0x000048 RW  0x8
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Size:  0x10
+  - Type:  ProgramHeaderTable
+    Name:  .phdrs
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    FirstSec: .bss
+    LastSec:  .phdrs
+
+## Without program headers, e_phoff is still the offset of the table.
+# RUN: yaml2obj %s --docnum=4 -o %t.empty
+# RUN: llvm-readelf --file-headers %t.empty | FileCheck %s --check-prefix=EMPTY
+
+## alignTo(0x43, 8) == 0x48 == 72.
+# EMPTY: Start of program headers:  72 (bytes into file)
+# EMPTY: Number of program headers: 0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 0x3
+  - Type: ProgramHeaderTable
+
+## Only one program header table is allowed.
+# RUN: not yaml2obj %s --docnum=5 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MULTIPLE
+
+# MULTIPLE: error: multiple program header tables are not allowed
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Type: ProgramHeaderTable
+  - Type: ProgramHeaderTable
