@@ -70,11 +70,12 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
   clang::QualType qt = m_ast_builder.GetOrCreateClangType(type_id);
 
   CVType udt_cvt = m_index.tpi().getType(ti);
-
+  bool base_of_class =
+      udt_cvt.kind() == LF_CLASS || udt_cvt.kind() == LF_CLASS2;
   std::unique_ptr<clang::CXXBaseSpecifier> base_spec =
       m_ast_builder.clang().CreateBaseClassSpecifier(
           qt.getAsOpaquePtr(), TranslateMemberAccess(access),
-          vtable_idx.has_value(), udt_cvt.kind() == LF_CLASS);
+          vtable_idx.has_value(), base_of_class);
   if (!base_spec)
     return {};
 

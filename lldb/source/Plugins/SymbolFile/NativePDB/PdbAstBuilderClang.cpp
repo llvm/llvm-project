@@ -104,12 +104,16 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   switch (cr.Kind) {
   case TypeRecordKind::Class:
+  case TypeRecordKind::Class2:
     return clang::TagTypeKind::Class;
   case TypeRecordKind::Struct:
+  case TypeRecordKind::Struct2:
     return clang::TagTypeKind::Struct;
   case TypeRecordKind::Union:
+  case TypeRecordKind::Union2:
     return clang::TagTypeKind::Union;
   case TypeRecordKind::Interface:
+  case TypeRecordKind::Interface2:
     return clang::TagTypeKind::Interface;
   case TypeRecordKind::Enum:
     return clang::TagTypeKind::Enum;
