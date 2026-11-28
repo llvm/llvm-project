@@ -628,8 +628,10 @@ static bool isUnpackedVectorVT(EVT VecVT) {
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
-static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
-                                        const IntrinsicCostAttributes &ICA) {
+InstructionCost
+AArch64TTIImpl::getHistogramCost(const AArch64Subtarget *ST,
+                                 const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind) const {
   // We need to know at least the number of elements in the vector of buckets
   // and the size of each element to update.
   if (ICA.getArgTypes().size() < 2)
@@ -639,35 +641,43 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   if (!ST->isSVEAvailable() || !ST->hasSVE2())
     return InstructionCost::getInvalid();
 
-  Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
-  Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
-  unsigned TotalHistCnts = 1;
+  // FIXME: We should be able to generate histcnt for fixed-length vectors
+  //        using ptrue with a specific VL.
+  auto *BucketPtrsTy = cast<VectorType>(ICA.getArgTypes()[0]);
+  unsigned MinEC = BucketPtrsTy->getElementCount().getKnownMinValue();
+  if (!isPowerOf2_64(MinEC) || !BucketPtrsTy->isScalableTy() || MinEC == 1)
+    return InstructionCost::getInvalid();
 
+  Type *EltTy = ICA.getArgTypes()[1];
   unsigned EltSize = EltTy->getScalarSizeInBits();
-  // Only allow (up to 64b) integers or pointers
+  // Only allow (up to 64b) integers or pointers for bucket elements.
   if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) || EltSize > 64)
     return InstructionCost::getInvalid();
 
-  // FIXME: We should be able to generate histcnt for fixed-length vectors
-  //        using ptrue with a specific VL.
-  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
-    unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
-      return InstructionCost::getInvalid();
+  InstructionCost Cost = 0;
+  /// Get gather/scatter costs.
+  /// TODO: Find a way to get more info about the pointers, so we can determine
+  ///       whether we can use 32b indices or require full 64b pointers.
+  Type *DataTy = VectorType::get(EltTy, BucketPtrsTy->getElementCount());
+  MemIntrinsicCostAttributes GMICA(Intrinsic::masked_gather, DataTy, Align(1));
+  Cost += getGatherScatterOpCost(GMICA, CostKind);
+  MemIntrinsicCostAttributes SMICA(Intrinsic::masked_scatter, DataTy, Align(1));
+  Cost += getGatherScatterOpCost(SMICA, CostKind);
 
-    // HistCnt only supports 32b and 64b element types
-    unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
+  // HistCnt only supports 32b and 64b element types. If the element size
+  // is smaller we may need multiple histcnts, even if the vector would
+  // otherwise be legal.
+  unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
 
-    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
-      return InstructionCost(ST->getCLOpts().base_histcnt_cost);
+  // HistCnt is the same cost as a vector integer add on 128b implementations,
+  // but will likely increase on wider vector types. Multiply by vscale as
+  // a quick estimate.
+  unsigned VScale = ST->getVScaleForTuning();
+  unsigned NaturalMinEC = AArch64::SVEBitsPerBlock / LegalEltSize;
+  unsigned TotalHistCnts = MinEC / NaturalMinEC;
+  Cost += VScale * TotalHistCnts;
 
-    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
-    TotalHistCnts = EC / NaturalVectorWidth;
-
-    return InstructionCost(ST->getCLOpts().base_histcnt_cost * TotalHistCnts);
-  }
-
-  return InstructionCost::getInvalid();
+  return Cost;
 }
 
 InstructionCost
@@ -687,7 +697,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   switch (ICA.getID()) {
   case Intrinsic::experimental_vector_histogram_add: {
-    InstructionCost HistCost = getHistogramCost(ST, ICA);
+    InstructionCost HistCost = getHistogramCost(ST, ICA, CostKind);
     // If the cost isn't valid, we may still be able to scalarize
     if (HistCost.isValid())
       return HistCost;

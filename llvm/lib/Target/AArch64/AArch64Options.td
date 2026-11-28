@@ -311,9 +311,6 @@ defm : BoolField<"aarch64-emit-debug-tls-location", "false",
   "Emit the TLS DWARF location with DTPREL relocation for AArch64">;
 
 // AArch64TargetTransformInfo.cpp
-// A complete guess as to a reasonable cost.
-defm : ValueField<"aarch64-base-histcnt-cost", "unsigned", "8",
-  "The cost of a histcnt instruction">;
 defm : ValueField<"aarch64-force-unroll-threshold", "int", "0",
   "Threshold for forced unrolling of small loops in AArch64">;
 defm : ValueField<"call-penalty-sm-change", "unsigned", "5",

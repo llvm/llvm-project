@@ -2705,11 +2705,9 @@ Intrinsic::ID VPHistogramRecipe::getHistogramIntrinsicID() const {
 
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
-  // FIXME: Take the gather and scatter into account as well. For now we're
-  //        generating the same cost as the fallback path, but we'll likely
-  //        need to create a new TTI method for determining the cost, including
+  // FIXME: Improve the TTI method for determining the cost, including
   //        whether we can use base + vec-of-smaller-indices or just
-  //        vec-of-pointers.
+  //        vec-of-pointers for the gather and scatter.
   assert(VF.isVector() && "Invalid VF for histogram cost");
   Type *AddressTy = getOperand(0)->getScalarType();
   VPValue *IncAmt = getOperand(1);
