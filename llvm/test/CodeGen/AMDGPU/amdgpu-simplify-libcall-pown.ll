@@ -1260,5 +1260,3 @@ entry:
 attributes #0 = { nobuiltin }
 attributes #1 = { strictfp }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
