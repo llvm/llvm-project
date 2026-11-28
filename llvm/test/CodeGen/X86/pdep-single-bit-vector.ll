@@ -9,69 +9,71 @@ define <4 x i32> @pdep_single_bit_v4i32(<4 x i32> %mask, <4 x i32> %n) nounwind 
 ; SWAR:       # %bb.0:
 ; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [1431655765,1431655765,1431655765,1431655765]
 ; SWAR-NEXT:    vpsrld $1, %xmm0, %xmm3
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm7 = [16711935,16711935,16711935,16711935]
 ; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
 ; SWAR-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [858993459,858993459,858993459,858993459]
-; SWAR-NEXT:    vpsubd %xmm3, %xmm0, %xmm3
-; SWAR-NEXT:    vpsrld $2, %xmm3, %xmm6
-; SWAR-NEXT:    vpand %xmm4, %xmm3, %xmm5
-; SWAR-NEXT:    vpand %xmm4, %xmm6, %xmm4
+; SWAR-NEXT:    vpsubd %xmm3, %xmm0, %xmm4
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [858993459,858993459,858993459,858993459]
+; SWAR-NEXT:    vpsrld $2, %xmm4, %xmm6
+; SWAR-NEXT:    vpand %xmm3, %xmm4, %xmm5
+; SWAR-NEXT:    vpand %xmm3, %xmm6, %xmm3
 ; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm6 = [252645135,252645135,252645135,252645135]
-; SWAR-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
-; SWAR-NEXT:    vpsrld $4, %xmm4, %xmm5
-; SWAR-NEXT:    vpaddd %xmm5, %xmm4, %xmm5
-; SWAR-NEXT:    vpand %xmm6, %xmm5, %xmm5
-; SWAR-NEXT:    vpsrld $8, %xmm5, %xmm6
-; SWAR-NEXT:    vpaddd %xmm6, %xmm5, %xmm6
-; SWAR-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6
-; SWAR-NEXT:    vpmaxud %xmm6, %xmm1, %xmm7
-; SWAR-NEXT:    vpcmpeqd %xmm7, %xmm1, %xmm7
-; SWAR-NEXT:    vpand %xmm6, %xmm7, %xmm6
+; SWAR-NEXT:    vpaddd %xmm3, %xmm5, %xmm5
+; SWAR-NEXT:    vpsrld $4, %xmm5, %xmm3
+; SWAR-NEXT:    vpaddd %xmm3, %xmm5, %xmm3
+; SWAR-NEXT:    vpand %xmm6, %xmm3, %xmm6
+; SWAR-NEXT:    vpsrld $8, %xmm6, %xmm3
+; SWAR-NEXT:    vpaddd %xmm3, %xmm6, %xmm3
+; SWAR-NEXT:    vpand %xmm7, %xmm3, %xmm7
+; SWAR-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; SWAR-NEXT:    vpblendw {{.*#+}} xmm7 = xmm7[0],xmm3[1],xmm7[2],xmm3[3],xmm7[4],xmm3[5],xmm7[6],xmm3[7]
+; SWAR-NEXT:    vpmaxud %xmm7, %xmm1, %xmm8
+; SWAR-NEXT:    vpcmpeqd %xmm1, %xmm8, %xmm8
+; SWAR-NEXT:    vpand %xmm7, %xmm8, %xmm7
+; SWAR-NEXT:    vpsubd %xmm7, %xmm1, %xmm1
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm7 = [16,16,16,16]
+; SWAR-NEXT:    vpand %xmm7, %xmm8, %xmm7
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm8 = [255,255,255,255]
+; SWAR-NEXT:    vpsrlvd %xmm7, %xmm6, %xmm6
+; SWAR-NEXT:    vpand %xmm6, %xmm8, %xmm6
+; SWAR-NEXT:    vpmaxud %xmm6, %xmm1, %xmm8
+; SWAR-NEXT:    vpcmpeqd %xmm1, %xmm8, %xmm8
+; SWAR-NEXT:    vpand %xmm6, %xmm8, %xmm6
 ; SWAR-NEXT:    vpsubd %xmm6, %xmm1, %xmm1
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm6 = [16,16,16,16]
-; SWAR-NEXT:    vpand %xmm6, %xmm7, %xmm6
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm7 = [255,255,255,255]
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm6 = [8,8,8,8]
+; SWAR-NEXT:    vpand %xmm6, %xmm8, %xmm6
+; SWAR-NEXT:    vpor %xmm6, %xmm7, %xmm6
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm7 = [15,15,15,15]
 ; SWAR-NEXT:    vpsrlvd %xmm6, %xmm5, %xmm5
 ; SWAR-NEXT:    vpand %xmm7, %xmm5, %xmm5
 ; SWAR-NEXT:    vpmaxud %xmm5, %xmm1, %xmm7
 ; SWAR-NEXT:    vpcmpeqd %xmm7, %xmm1, %xmm7
 ; SWAR-NEXT:    vpand %xmm5, %xmm7, %xmm5
 ; SWAR-NEXT:    vpsubd %xmm5, %xmm1, %xmm1
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [8,8,8,8]
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [4,4,4,4]
 ; SWAR-NEXT:    vpand %xmm5, %xmm7, %xmm5
 ; SWAR-NEXT:    vpor %xmm5, %xmm6, %xmm5
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm6 = [15,15,15,15]
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm6 = [3,3,3,3]
 ; SWAR-NEXT:    vpsrlvd %xmm5, %xmm4, %xmm4
 ; SWAR-NEXT:    vpand %xmm6, %xmm4, %xmm4
 ; SWAR-NEXT:    vpmaxud %xmm4, %xmm1, %xmm6
 ; SWAR-NEXT:    vpcmpeqd %xmm6, %xmm1, %xmm6
 ; SWAR-NEXT:    vpand %xmm4, %xmm6, %xmm4
 ; SWAR-NEXT:    vpsubd %xmm4, %xmm1, %xmm1
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [4,4,4,4]
+; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [2,2,2,2]
 ; SWAR-NEXT:    vpand %xmm4, %xmm6, %xmm4
 ; SWAR-NEXT:    vpor %xmm4, %xmm5, %xmm4
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [3,3,3,3]
-; SWAR-NEXT:    vpsrlvd %xmm4, %xmm3, %xmm3
-; SWAR-NEXT:    vpand %xmm5, %xmm3, %xmm3
-; SWAR-NEXT:    vpmaxud %xmm3, %xmm1, %xmm5
-; SWAR-NEXT:    vpcmpeqd %xmm5, %xmm1, %xmm5
-; SWAR-NEXT:    vpand %xmm3, %xmm5, %xmm3
-; SWAR-NEXT:    vpsubd %xmm3, %xmm1, %xmm1
-; SWAR-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,2,2,2]
-; SWAR-NEXT:    vpand %xmm3, %xmm5, %xmm3
-; SWAR-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; SWAR-NEXT:    vpsrlvd %xmm3, %xmm0, %xmm4
-; SWAR-NEXT:    vpand %xmm2, %xmm4, %xmm4
-; SWAR-NEXT:    vpmaxud %xmm4, %xmm1, %xmm5
-; SWAR-NEXT:    vpcmpeqd %xmm5, %xmm1, %xmm5
-; SWAR-NEXT:    vpand %xmm4, %xmm5, %xmm4
+; SWAR-NEXT:    vpsrlvd %xmm4, %xmm0, %xmm5
 ; SWAR-NEXT:    vpand %xmm2, %xmm5, %xmm5
-; SWAR-NEXT:    vpor %xmm5, %xmm3, %xmm3
-; SWAR-NEXT:    vpsubd %xmm4, %xmm1, %xmm1
-; SWAR-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; SWAR-NEXT:    vpsllvd %xmm3, %xmm2, %xmm2
-; SWAR-NEXT:    vpcmpeqd %xmm4, %xmm1, %xmm1
+; SWAR-NEXT:    vpmaxud %xmm5, %xmm1, %xmm6
+; SWAR-NEXT:    vpcmpeqd %xmm6, %xmm1, %xmm6
+; SWAR-NEXT:    vpand %xmm5, %xmm6, %xmm5
+; SWAR-NEXT:    vpsubd %xmm5, %xmm1, %xmm1
+; SWAR-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; SWAR-NEXT:    vpsrld $31, %xmm6, %xmm3
+; SWAR-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; SWAR-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; SWAR-NEXT:    vpsllvd %xmm3, %xmm2, %xmm2
 ; SWAR-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; SWAR-NEXT:    retq
 ;
@@ -129,8 +131,8 @@ define <4 x i32> @pdep_single_bit_v4i32(<4 x i32> %mask, <4 x i32> %n) nounwind 
 ; VPOPCNT-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; VPOPCNT-NEXT:    vpopcntd %xmm1, %xmm1
 ; VPOPCNT-NEXT:    vpcmpnltud %xmm1, %xmm4, %k5
-; VPOPCNT-NEXT:    vpbroadcastd {{.*#+}} xmm3 {%k1} {z} = [16,16,16,16]
-; VPOPCNT-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm3, %xmm3 {%k2}
+; VPOPCNT-NEXT:    vpbroadcastd {{.*#+}} xmm3 {%k2} {z} = [8,8,8,8]
+; VPOPCNT-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm3, %xmm3 {%k1}
 ; VPOPCNT-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm3, %xmm3 {%k3}
 ; VPOPCNT-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm3, %xmm3 {%k4}
 ; VPOPCNT-NEXT:    vpord %xmm2, %xmm3, %xmm3 {%k5}
@@ -278,8 +280,8 @@ define <2 x i64> @pdep_single_bit_v2i64(<2 x i64> %mask, <2 x i64> %n) nounwind 
 ; VPOPCNT-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; VPOPCNT-NEXT:    vpopcntq %xmm1, %xmm1
 ; VPOPCNT-NEXT:    vpcmpnltuq %xmm1, %xmm5, %k6
-; VPOPCNT-NEXT:    vpbroadcastq {{.*#+}} xmm3 {%k1} {z} = [32,32]
-; VPOPCNT-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm3, %xmm3 {%k2}
+; VPOPCNT-NEXT:    vpbroadcastq {{.*#+}} xmm3 {%k2} {z} = [16,16]
+; VPOPCNT-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm3, %xmm3 {%k1}
 ; VPOPCNT-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm3, %xmm3 {%k3}
 ; VPOPCNT-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm3, %xmm3 {%k4}
 ; VPOPCNT-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm3, %xmm3 {%k5}
