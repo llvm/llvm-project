@@ -6,7 +6,7 @@
 ; CHECK: .set .Lqux.num_vgpr, max(71, .Lfoo.num_vgpr)
 ; CHECK: .set .Lqux.num_agpr, max(0, .Lfoo.num_agpr)
 ; CHECK: .set .Lqux.numbered_sgpr, max(46, .Lfoo.numbered_sgpr)
-; CHECK: .set .Lqux.private_seg_size, 16
+; CHECK: .set .Lqux.private_seg_size, 16+max(.Lfoo.private_seg_size)
 ; CHECK: .set .Lqux.uses_vcc, or(1, .Lfoo.uses_vcc)
 ; CHECK: .set .Lqux.uses_flat_scratch, or(0, .Lfoo.uses_flat_scratch)
 ; CHECK: .set .Lqux.has_dyn_sized_stack, or(0, .Lfoo.has_dyn_sized_stack)
@@ -36,9 +36,9 @@
 ; CHECK: .set .Lbar.has_indirect_call, or(0, .Lbaz.has_indirect_call)
 
 ; CHECK-LABEL: {{^}}foo
-; CHECK: .set .Lfoo.num_vgpr, max(46, 71)
-; CHECK: .set .Lfoo.num_agpr, max(0, 0)
-; CHECK: .set .Lfoo.numbered_sgpr, max(71, 61)
+; CHECK: .set .Lfoo.num_vgpr, 71
+; CHECK: .set .Lfoo.num_agpr, 0
+; CHECK: .set .Lfoo.numbered_sgpr, 71
 ; CHECK: .set .Lfoo.private_seg_size, 16
 ; CHECK: .set .Lfoo.uses_vcc, 1
 ; CHECK: .set .Lfoo.uses_flat_scratch, 0
@@ -107,9 +107,9 @@ define amdgpu_kernel void @usefoo() {
 ; CHECK: .set .LD.has_indirect_call, or(0, .LC.has_indirect_call)
 
 ; CHECK-LABEL: {{^}}C
-; CHECK: .set .LC.num_vgpr, max(42, .LA.num_vgpr, 71)
-; CHECK: .set .LC.num_agpr, max(0, .LA.num_agpr, 0)
-; CHECK: .set .LC.numbered_sgpr, max(71, .LA.numbered_sgpr, 71)
+; CHECK: .set .LC.num_vgpr, max(71, .LA.num_vgpr)
+; CHECK: .set .LC.num_agpr, max(0, .LA.num_agpr)
+; CHECK: .set .LC.numbered_sgpr, max(71, .LA.numbered_sgpr)
 ; CHECK: .set .LC.private_seg_size, 16+max(.LA.private_seg_size)
 ; CHECK: .set .LC.uses_vcc, or(1, .LA.uses_vcc)
 ; CHECK: .set .LC.uses_flat_scratch, or(0, .LA.uses_flat_scratch)
@@ -129,9 +129,9 @@ define amdgpu_kernel void @usefoo() {
 ; CHECK: .set .LB.has_indirect_call, or(0, .LC.has_indirect_call)
 
 ; CHECK-LABEL: {{^}}A
-; CHECK: .set .LA.num_vgpr, max(42, 71)
-; CHECK: .set .LA.num_agpr, max(0, 0)
-; CHECK: .set .LA.numbered_sgpr, max(71, 71)
+; CHECK: .set .LA.num_vgpr, 71
+; CHECK: .set .LA.num_agpr, 0
+; CHECK: .set .LA.numbered_sgpr, 71
 ; CHECK: .set .LA.private_seg_size, 16
 ; CHECK: .set .LA.uses_vcc, 1
 ; CHECK: .set .LA.uses_flat_scratch, 0
