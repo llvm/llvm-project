@@ -1681,8 +1681,18 @@ def : GCNPat <
                              SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-let SubtargetPredicate = Has16BitInsts in
+let SubtargetPredicate = isGFX8Only, OtherPredicates = [Has16BitInsts] in
 def : FMADPat <f16, V_MAC_F16_e64>;
+
+// On GFX9 also don't allow sources that need op_sel, so that v_mad_f16 is
+// selected for them instead.
+let SubtargetPredicate = isGFX9Only in
+def : GCNPat <(f16 (any_fmad (f16 (VOP3NoOpSelMods f16:$src0)),
+                             (f16 (VOP3NoOpSelMods f16:$src1)),
+                             (f16 (VOP3NoOpSelMods f16:$src2)))),
+    (V_MAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                   SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
 } // AddedComplexity = 9
 
 let OtherPredicates = [HasMadMacF32Insts, NoFP32Denormals] in

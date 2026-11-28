@@ -234,7 +234,6 @@ bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
   case AMDGPUISD::FMIN3:
   case AMDGPUISD::FMAX3:
   case AMDGPUISD::FMED3:
-  case AMDGPUISD::FMAD_FTZ:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RCP_IFLAG:
@@ -247,7 +246,10 @@ bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
     return Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS;
   case ISD::FMA:
   case ISD::FMAD:
+  case AMDGPUISD::FMAD_FTZ:
   case AMDGPUISD::DIV_FIXUP:
+    // On gfx9 these may be selected to the op_sel versions of the
+    // instructions, which do not zero the high bits.
     return Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS;
   default:
     // fcopysign, select and others may be lowered to 32-bit bit operations

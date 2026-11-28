@@ -80,7 +80,7 @@ define half @test_f16_sub_ext_neg_mul(half %x, half %y, half %z) {
 ; GFX9-DENORM-LABEL: test_f16_sub_ext_neg_mul:
 ; GFX9-DENORM:       ; %bb.0: ; %entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_mad_legacy_f16 v0, v0, -v1, -v2
+; GFX9-DENORM-NEXT:    v_mad_f16 v0, v0, -v1, -v2
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_f16_sub_ext_neg_mul:
@@ -113,7 +113,7 @@ define half @test_f16_sub_ext_neg_mul_contract(half %x, half %y, half %z) {
 ; GFX9-DENORM-LABEL: test_f16_sub_ext_neg_mul_contract:
 ; GFX9-DENORM:       ; %bb.0: ; %entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_mad_legacy_f16 v0, v0, -v1, -v2
+; GFX9-DENORM-NEXT:    v_mad_f16 v0, v0, -v1, -v2
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_f16_sub_ext_neg_mul_contract:
