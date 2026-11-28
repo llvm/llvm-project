@@ -32,10 +32,13 @@ void test(void) {
   c >>= -1; // expected-warning {{shift count is negative}}
   c <<= 999999; // expected-warning {{shift count >= width of type}}
   c >>= 999999; // expected-warning {{shift count >= width of type}}
-  c <<= CHAR_BIT; // expected-warning {{shift count >= width of type}}
-  c >>= CHAR_BIT; // expected-warning {{shift count >= width of type}}
-  c <<= CHAR_BIT+1; // expected-warning {{shift count >= width of type}}
-  c >>= CHAR_BIT+1; // expected-warning {{shift count >= width of type}}
+  // These do not warn: the shift count is checked against the promoted left
+  // operand's width, not the LHS's storage width, so the compound forms are
+  // diagnosed just like their non-compound equivalents.
+  c <<= CHAR_BIT;
+  c >>= CHAR_BIT;
+  c <<= CHAR_BIT+1;
+  c >>= CHAR_BIT+1;
   (void)((long)c << CHAR_BIT);
 
   int i;
@@ -69,6 +72,41 @@ void test_shift_too_much(char x) {
   if (0)
     (void) (x >> 80); // no-warning
   (void) (x >> 80); // expected-warning {{shift count >= width of type}}
+}
+
+// For compound shift assignments, check the shift count against the width of
+// the promoted LHS, just like regular shift assignments.
+// https://github.com/llvm/llvm-project/issues/234217
+unsigned char char_compound(unsigned char x) {
+  x >>= 8;
+  return x;
+}
+
+unsigned char char_ordinary(unsigned char x) {
+  x = x >> 8;
+  return x;
+}
+
+unsigned short short_compound(unsigned short x) {
+  x >>= 16;
+  return x;
+}
+
+unsigned short short_ordinary(unsigned short x) {
+  x = x >> 16;
+  return x;
+}
+
+unsigned char count_32(unsigned char x) {
+  x >>= 32; // expected-warning {{shift count >= width of type}}
+  x = x >> 32; // expected-warning {{shift count >= width of type}}
+  return x;
+}
+
+unsigned char count_negative(unsigned char x) {
+  x >>= -1; // expected-warning {{shift count is negative}}
+  x = x >> -1; // expected-warning {{shift count is negative}}
+  return x;
 }
 
 typedef unsigned vec16 __attribute__((vector_size(16)));
