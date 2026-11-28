@@ -225,3 +225,197 @@ define i32 @shl_cttz_false_neg(i32) {
   %cttz = call i32 @llvm.cttz.i32(i32 %shl, i1 false)
   ret i32 %cttz
 }
+
+declare i64 @llvm.cttz.i64(i64, i1)
+declare i16 @llvm.cttz.i16(i16, i1)
+
+define i64 @cttz_exact_shift_add(i64 %x, i64 %k) {
+; CHECK-LABEL: define i64 @cttz_exact_shift_add(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[K:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, %k
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %result = add i64 %k, %count
+  ret i64 %result
+}
+
+define i32 @cttz_exact_shift_trunc_add(i64 %x) {
+; CHECK-LABEL: define i32 @cttz_exact_shift_trunc_add(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i64 [[COUNT]] to i32
+; CHECK-NEXT:    ret i32 [[NARROW]]
+;
+  %shift = lshr exact i64 %x, 1
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %narrow = trunc nuw nsw i64 %count to i32
+  %result = add nuw nsw i32 %narrow, 1
+  ret i32 %result
+}
+
+define i32 @cttz_exact_shift_trunc_add_variable(i64 %x, i64 %k) {
+; CHECK-LABEL: define i32 @cttz_exact_shift_trunc_add_variable(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[K:%.*]]) {
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i64 [[COUNT]] to i32
+; CHECK-NEXT:    ret i32 [[NARROW]]
+;
+  %shift = lshr exact i64 %x, %k
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %narrow = trunc i64 %count to i32
+  %amount = trunc i64 %k to i32
+  %result = add i32 %narrow, %amount
+  ret i32 %result
+}
+
+define <2 x i32> @cttz_exact_shift_add_vector(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_add_vector(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %shift = lshr exact <2 x i32> %x, <i32 1, i32 2>
+  %count = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %shift, i1 true)
+  %result = add <2 x i32> %count, <i32 1, i32 2>
+  ret <2 x i32> %result
+}
+
+define i4 @cttz_exact_shift_trunc_add_drop_nsw(i16 %x) {
+; CHECK-LABEL: define i4 @cttz_exact_shift_trunc_add_drop_nsw(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw i16 [[TMP1]] to i4
+; CHECK-NEXT:    ret i4 [[RESULT]]
+;
+  %shift = lshr exact i16 %x, 1
+  %count = call i16 @llvm.cttz.i16(i16 %shift, i1 true)
+  %narrow = trunc nsw i16 %count to i4
+  %result = add i4 %narrow, 1
+  ret i4 %result
+}
+
+define i64 @cttz_shift_add_not_exact(i64 %x) {
+; CHECK-LABEL: define i64 @cttz_shift_add_not_exact(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[X]], 1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i64 [[COUNT]], 1
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr i64 %x, 1
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %result = add i64 %count, 1
+  ret i64 %result
+}
+
+define i64 @cttz_exact_shift_add_zero_defined(i64 %x) {
+; CHECK-LABEL: define i64 @cttz_exact_shift_add_zero_defined(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 false)
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i64 [[COUNT]], 1
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, 1
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 false)
+  %result = add i64 %count, 1
+  ret i64 %result
+}
+
+define i64 @cttz_exact_shift_add_wrong_amount(i64 %x) {
+; CHECK-LABEL: define i64 @cttz_exact_shift_add_wrong_amount(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 2
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i64 [[COUNT]], 1
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, 2
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %result = add i64 %count, 1
+  ret i64 %result
+}
+
+define i64 @cttz_exact_shift_add_count_multiuse(i64 %x, ptr %p) {
+; CHECK-LABEL: define i64 @cttz_exact_shift_add_count_multiuse(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    store i64 [[COUNT]], ptr [[P]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i64 [[COUNT]], 1
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, 1
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  store i64 %count, ptr %p
+  %result = add i64 %count, 1
+  ret i64 %result
+}
+
+define i32 @cttz_exact_shift_add_trunc_multiuse(i64 %x, ptr %p) {
+; CHECK-LABEL: define i32 @cttz_exact_shift_add_trunc_multiuse(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i64 [[COUNT]] to i32
+; CHECK-NEXT:    store i32 [[NARROW]], ptr [[P]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[NARROW]], 1
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, 1
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %narrow = trunc i64 %count to i32
+  store i32 %narrow, ptr %p
+  %result = add i32 %narrow, 1
+  ret i32 %result
+}
+
+define i64 @cttz_exact_shift_add_shift_multiuse(i64 %x, ptr %p) {
+; CHECK-LABEL: define i64 @cttz_exact_shift_add_shift_multiuse(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
+; CHECK-NEXT:    store i64 [[SHIFT]], ptr [[P]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %shift = lshr exact i64 %x, 1
+  store i64 %shift, ptr %p
+  %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
+  %result = add i64 %count, 1
+  ret i64 %result
+}
+
+; Non-splat shift amounts with a truncated count need not fold.
+define <2 x i32> @cttz_exact_shift_trunc_add_nonsplat(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_trunc_add_nonsplat(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact <2 x i64> [[X]], <i64 1, i64 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw nsw <2 x i32> [[RESULT]], <i32 1, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT1]]
+;
+  %shift = lshr exact <2 x i64> %x, <i64 1, i64 2>
+  %count = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %shift, i1 true)
+  %narrow = trunc <2 x i64> %count to <2 x i32>
+  %result = add <2 x i32> %narrow, <i32 1, i32 2>
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @cttz_exact_shift_trunc_add_splat(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_trunc_add_splat(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %shift = lshr exact <2 x i64> %x, <i64 2, i64 2>
+  %count = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %shift, i1 true)
+  %narrow = trunc <2 x i64> %count to <2 x i32>
+  %result = add <2 x i32> %narrow, <i32 2, i32 2>
+  ret <2 x i32> %result
+}
+
+declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1)
