@@ -13,6 +13,8 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
@@ -20,6 +22,11 @@
 #include <cstdio>
 #include <cstring>
 #include <string_view>
+#if defined(__unix__) || defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
@@ -330,6 +337,506 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
   ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for Close";
+}
+
+namespace {
+// Shrinks the subrecord payload limit so that tests can drive the subrecord
+// paths without writing multi-gigabyte records.
+struct ScopedMaxSubrecordLength {
+  explicit ScopedMaxSubrecordLength(std::size_t bytes)
+      : saved_{executionEnvironment.maxSubrecordLength} {
+    executionEnvironment.maxSubrecordLength = bytes;
+  }
+  ~ScopedMaxSubrecordLength() {
+    executionEnvironment.maxSubrecordLength = saved_;
+  }
+
+private:
+  std::size_t saved_;
+};
+
+// Removes the file at scope exit, including after a failed assertion.  Each
+// test uses its own name so concurrent llvm-lit shards don't collide.
+struct ScopedTempFile {
+  explicit ScopedTempFile(const char *name) : name_{name} { std::remove(name); }
+  ~ScopedTempFile() { std::remove(name_); }
+  const char *name() const { return name_; }
+
+private:
+  const char *name_;
+};
+
+// OPEN(UNIT=unit,FILE=fileName,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+//   FORM='UNFORMATTED',STATUS='REPLACE')
+void OpenSequentialUnformatted(
+    int unit, const char *fileName, const char *convert) {
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fileName, std::strlen(fileName)))
+      << "SetFile";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  if (convert) {
+    ASSERT_TRUE(IONAME(SetConvert)(io, convert, std::strlen(convert)))
+        << "SetConvert";
+  }
+  ASSERT_TRUE(IONAME(SetStatus)(io, "REPLACE", 7)) << "SetStatus(REPLACE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+}
+
+std::int32_t MarkerAt(const char *raw, std::size_t at) {
+  std::int32_t marker;
+  std::memcpy(&marker, raw + at, sizeof marker);
+  return marker;
+}
+} // namespace
+
+TEST(ExternalIOTests, TestSequentialUnformattedSubrecords) {
+  ScopedTempFile tempFile{"subrecord_read_test.tmp"};
+  const char *fileName{tempFile.name()};
+
+  auto emitMarker{[](std::FILE *fp, std::int32_t marker) {
+    ASSERT_EQ(std::fwrite(&marker, sizeof marker, 1, fp), 1u);
+  }};
+  auto emitValue{[](std::FILE *fp, std::int64_t value) {
+    ASSERT_EQ(std::fwrite(&value, sizeof value, 1, fp), 1u);
+  }};
+
+  static constexpr std::int64_t kRecord1[]{100, 101, 102, 103, 104, 105};
+  static constexpr std::int64_t kRecord2{999};
+  static constexpr std::int32_t kSub{16};
+
+  {
+    std::FILE *fp{std::fopen(fileName, "wb")};
+    ASSERT_NE(fp, nullptr) << "fopen for write";
+    emitMarker(fp, -kSub);
+    emitValue(fp, kRecord1[0]);
+    emitValue(fp, kRecord1[1]);
+    emitMarker(fp, kSub);
+    emitMarker(fp, -kSub);
+    emitValue(fp, kRecord1[2]);
+    emitValue(fp, kRecord1[3]);
+    emitMarker(fp, -kSub);
+    emitMarker(fp, kSub);
+    emitValue(fp, kRecord1[4]);
+    emitValue(fp, kRecord1[5]);
+    emitMarker(fp, -kSub);
+    emitMarker(fp, sizeof kRecord2);
+    emitValue(fp, kRecord2);
+    emitMarker(fp, sizeof kRecord2);
+    ASSERT_EQ(std::fclose(fp), 0) << "fclose after write";
+  }
+
+  // OPEN(UNIT=unit,FILE=fileName,ACCESS='SEQUENTIAL',ACTION='READ',&
+  //   FORM='UNFORMATTED',STATUS='OLD')
+  static constexpr int unit{20};
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fileName, std::strlen(fileName)))
+      << "SetFile";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READ", 4)) << "SetAction(READ)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+
+  auto readRecord1{[&](const char *what) {
+    std::int64_t buffer[6]{};
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() " << what;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for READ record #1 " << what;
+    for (int k{0}; k < 6; ++k) {
+      ASSERT_EQ(buffer[k], kRecord1[k])
+          << "record #1 " << what << " element " << k << " read back "
+          << buffer[k] << ", expected " << kRecord1[k];
+    }
+  }};
+
+  auto readRecord2{[&](const char *what) {
+    std::int64_t value{0};
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    desc.Establish(TypeCode{sizeof value}, sizeof value, &value, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() " << what;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for READ record #2 " << what;
+    ASSERT_EQ(value, kRecord2) << "record #2 " << what << " read back " << value
+                               << ", expected " << kRecord2;
+  }};
+
+  readRecord1("forward");
+  readRecord2("forward");
+
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #2";
+  readRecord2("after backspace");
+
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #2 (second time)";
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #1";
+  readRecord1("after backspace");
+
+  // CLOSE(UNIT=unit,STATUS='DELETE')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
+TEST(ExternalIOTests, TestSequentialUnformattedSubrecordWrite) {
+  // A 48-byte record with a 13-byte subrecord limit is laid out by gfortran
+  // -fmax-subrecord-length=13 as
+  //   -13 [13] 13 | -13 [13] -13 | -13 [13] -13 | 9 [9] -9
+  ScopedMaxSubrecordLength maxSubrecordLength{13};
+  ScopedTempFile tempFile{"subrecord_write_test.tmp"};
+  const char *fileName{tempFile.name()};
+  static constexpr std::int64_t values[]{100, 101, 102, 103, 104, 105};
+  static constexpr int unit{21};
+
+  OpenSequentialUnformatted(unit, fileName, nullptr);
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer[6];
+  std::memcpy(buffer, values, sizeof buffer);
+
+  // WRITE(UNIT=unit) buffer
+  Cookie io{IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__)};
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc)) << "OutputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for WRITE";
+
+  // REWIND(UNIT=unit); READ(UNIT=unit) buffer
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+  std::memset(buffer, 0, sizeof buffer);
+  io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc)) << "InputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for READ";
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(buffer[j], values[j]) << "element " << j;
+  }
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "KEEP", 4)) << "SetStatus(KEEP)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+
+  std::FILE *fp{std::fopen(fileName, "rb")};
+  ASSERT_NE(fp, nullptr) << "fopen for read";
+  char raw[80];
+  ASSERT_EQ(std::fread(raw, 1, sizeof raw, fp), sizeof raw) << "fread";
+  EXPECT_EQ(std::fgetc(fp), EOF) << "file is longer than 80 bytes";
+  ASSERT_EQ(std::fclose(fp), 0) << "fclose";
+
+  EXPECT_EQ(MarkerAt(raw, 0), -13) << "subrecord #1 header";
+  EXPECT_EQ(MarkerAt(raw, 17), 13) << "subrecord #1 footer";
+  EXPECT_EQ(MarkerAt(raw, 21), -13) << "subrecord #2 header";
+  EXPECT_EQ(MarkerAt(raw, 38), -13) << "subrecord #2 footer";
+  EXPECT_EQ(MarkerAt(raw, 42), -13) << "subrecord #3 header";
+  EXPECT_EQ(MarkerAt(raw, 59), -13) << "subrecord #3 footer";
+  EXPECT_EQ(MarkerAt(raw, 63), 9) << "subrecord #4 header";
+  EXPECT_EQ(MarkerAt(raw, 76), -9) << "subrecord #4 footer";
+
+  char payload[sizeof values];
+  std::memcpy(payload, raw + 4, 13);
+  std::memcpy(payload + 13, raw + 25, 13);
+  std::memcpy(payload + 26, raw + 46, 13);
+  std::memcpy(payload + 39, raw + 67, 9);
+  EXPECT_EQ(std::memcmp(payload, values, sizeof payload), 0)
+      << "concatenated subrecord payloads";
+}
+
+TEST(ExternalIOTests, TestSequentialUnformattedSubrecordSwap) {
+  // 13 is not a multiple of 8, so every subrecord boundary splits an
+  // INTEGER(8) element; byte swapping must still reverse whole elements.
+  ScopedMaxSubrecordLength maxSubrecordLength{13};
+  ScopedTempFile tempFile{"subrecord_swap_test.tmp"};
+  const char *fileName{tempFile.name()};
+  static constexpr std::int64_t values[]{0x0102030405060708, 2, 3, 4, 5, 6};
+  static constexpr int unit{22};
+
+  OpenSequentialUnformatted(unit, fileName, "SWAP");
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer[6];
+  std::memcpy(buffer, values, sizeof buffer);
+
+  Cookie io{IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__)};
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc)) << "OutputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for WRITE";
+
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+  std::memset(buffer, 0, sizeof buffer);
+  io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc)) << "InputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for READ";
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(buffer[j], values[j]) << "element " << j;
+  }
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
+TEST(ExternalIOTests, TestSequentialUnformattedSubrecordRecl) {
+  // RECL= is checked by the footer Emit() on the single-marker path; the
+  // subrecord path emits no footer and has to check for itself.  RECL=46
+  // is large enough that writing the data does not trip the Emit() check.
+  ScopedMaxSubrecordLength maxSubrecordLength{13};
+  ScopedTempFile tempFile{"subrecord_recl_test.tmp"};
+  const char *fileName{tempFile.name()};
+  static constexpr int unit{23};
+
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fileName, std::strlen(fileName)))
+      << "SetFile";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetRecl)(io, 46)) << "SetRecl(46)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "REPLACE", 7)) << "SetStatus(REPLACE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer[6]{1, 2, 3, 4, 5, 6}; // 48 bytes > RECL=46
+
+  io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, true /*IOSTAT=*/);
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  IONAME(OutputDescriptor)(io, desc);
+  EXPECT_EQ(IONAME(EndIoStatement)(io), IostatRecordWriteOverrun)
+      << "EndIoStatement() for WRITE past RECL=";
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
+TEST(ExternalIOTests, TestSequentialUnformattedBadRecordRecovery) {
+  // A record whose header and footer disagree is reported once; the next
+  // READ must make progress rather than report the same record forever.
+  ScopedTempFile tempFile{"bad_record_test.tmp"};
+  const char *fileName{tempFile.name()};
+  {
+    std::FILE *fp{std::fopen(fileName, "wb")};
+    ASSERT_NE(fp, nullptr) << "fopen for write";
+    auto emit32{[&](std::int32_t v) {
+      ASSERT_EQ(std::fwrite(&v, sizeof v, 1, fp), 1u);
+    }};
+    auto emit64{[&](std::int64_t v) {
+      ASSERT_EQ(std::fwrite(&v, sizeof v, 1, fp), 1u);
+    }};
+    emit32(8), emit64(11), emit32(9); // corrupt: footer != header
+    emit32(8), emit64(22), emit32(8); // valid
+    ASSERT_EQ(std::fclose(fp), 0) << "fclose after write";
+  }
+
+  static constexpr int unit{24};
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fileName, std::strlen(fileName)))
+      << "SetFile";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READ", 4)) << "SetAction(READ)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  auto readValue{[&](std::int64_t &value) {
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true /*IOSTAT=*/, false, true /*END=*/);
+    desc.Establish(TypeCode{sizeof value}, sizeof value, &value, 0);
+    desc.Check();
+    IONAME(InputDescriptor)(io, desc);
+    return IONAME(EndIoStatement)(io);
+  }};
+
+  std::int64_t value{0};
+  EXPECT_NE(readValue(value), IostatOk) << "READ of the corrupt record";
+  value = 0;
+  EXPECT_EQ(readValue(value), IostatOk) << "READ after the corrupt record";
+  EXPECT_EQ(value, 22) << "value of the record after the corrupt one";
+  EXPECT_EQ(readValue(value), IostatEnd) << "READ at end of file";
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
+#if defined(__unix__) || defined(__APPLE__)
+namespace {
+// Closes a file descriptor at scope exit, including after a failed assertion.
+class ScopedFd {
+public:
+  explicit ScopedFd(int fd) : fd_{fd} {}
+  ~ScopedFd() { reset(); }
+  int get() const { return fd_; }
+  void reset() {
+    if (fd_ >= 0) {
+      close(fd_);
+      fd_ = -1;
+    }
+  }
+
+private:
+  int fd_;
+};
+} // namespace
+
+TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
+  // Sequential unformatted input must not depend on being able to seek.
+  ScopedTempFile tempFifo{"sequential_unformatted_fifo.tmp"};
+  const char *fifoName{tempFifo.name()};
+  ASSERT_EQ(mkfifo(fifoName, 0600), 0) << "mkfifo";
+
+  static constexpr std::int64_t values[]{100, 101, 102};
+
+  // Open both ends without blocking and fill the FIFO before the runtime's
+  // OPEN, which then finds a writer.  No second process is needed.
+  ScopedFd readEnd{open(fifoName, O_RDONLY | O_NONBLOCK)};
+  ASSERT_GE(readEnd.get(), 0) << "open read end";
+  ScopedFd writeEnd{open(fifoName, O_WRONLY | O_NONBLOCK)};
+  ASSERT_GE(writeEnd.get(), 0) << "open write end";
+  std::int32_t marker(sizeof values);
+  char data[sizeof marker + sizeof values + sizeof marker];
+  std::memcpy(data, &marker, sizeof marker);
+  std::memcpy(data + sizeof marker, values, sizeof values);
+  std::memcpy(data + sizeof marker + sizeof values, &marker, sizeof marker);
+  ASSERT_EQ(write(writeEnd.get(), data, sizeof data),
+      static_cast<ssize_t>(sizeof data))
+      << "write";
+
+  static constexpr int unit{25};
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fifoName, std::strlen(fifoName)))
+      << "SetFile";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READ", 4)) << "SetAction(READ)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+  writeEnd.reset();
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer[3]{};
+  io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+  desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+  desc.Check();
+  EXPECT_TRUE(IONAME(InputDescriptor)(io, desc)) << "InputDescriptor()";
+  EXPECT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for READ from a FIFO";
+  for (int j{0}; j < 3; ++j) {
+    EXPECT_EQ(buffer[j], values[j]) << "element " << j;
+  }
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  EXPECT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+#endif
+
+namespace {
+struct KnownMarker {
+  std::int64_t offset;
+  std::int32_t value;
+};
+
+// Finds the start of the record at the end of a file image whose only known
+// contents are the given markers; the rest reads as payload bytes.
+std::int64_t RecordStart(
+    std::initializer_list<KnownMarker> markers, std::int64_t size) {
+  struct Image {
+    std::initializer_list<KnownMarker> markers;
+    std::int64_t size;
+  } image{markers, size};
+  return FindUnformattedRecordStart(
+      size,
+      [](void *context, std::int64_t offset, std::int32_t &marker) {
+        auto &image{*static_cast<Image *>(context)};
+        if (offset < 0 || offset + 4 > image.size) {
+          return false;
+        }
+        marker = 0x01010101;
+        for (const KnownMarker &m : image.markers) {
+          if (m.offset == offset) {
+            marker = m.value;
+          }
+        }
+        return true;
+      },
+      &image);
+}
+} // namespace
+
+TEST(ExternalIOTests, TestUnformattedRecordStart) {
+  // A single header and footer, including the 2 GiB to 4 GiB lengths that
+  // earlier versions wrote as an unsigned marker.
+  for (std::int64_t n : {16LL, 2147483640LL, 2147483647LL, 2147483648LL,
+           2147483664LL, 4294967295LL}) {
+    std::int32_t m{static_cast<std::int32_t>(static_cast<std::uint32_t>(n))};
+    EXPECT_EQ(RecordStart({{0, m}, {n + 4, m}}, n + 8), 0)
+        << "single marker, length " << n;
+  }
+
+  // Four subrecords of 1073741820 bytes.  Stepping back from the end by the
+  // unsigned footer would land on the second header, which has the footer's
+  // bits but does not start the record.
+  static constexpr std::int64_t m{1073741820};
+  static constexpr std::int64_t step{m + 8};
+  EXPECT_EQ(RecordStart({{0, -m}, {4 + m, m}, {step, -m}, {step + 4 + m, -m},
+                            {2 * step, -m}, {2 * step + 4 + m, -m},
+                            {3 * step, m}, {3 * step + 4 + m, -m}},
+                4 * step),
+      0)
+      << "subrecord chain larger than 4 GiB";
+
+  EXPECT_EQ(RecordStart({{20, 16}}, 24), -1) << "footer without a header";
+  EXPECT_EQ(RecordStart({{20, -16}}, 24), -1) << "negative footer, no chain";
 }
 
 TEST(ExternalIOTests, TestDirectFormatted) {
