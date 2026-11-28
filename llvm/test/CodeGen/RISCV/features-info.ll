@@ -111,6 +111,7 @@
 ; CHECK-NEXT:   optimized-nf6-segment-load-store - vlseg6eN.v and vsseg6eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-stride-access          - Optimized (perform fewer memory operations) strided vector access.
 ; CHECK-NEXT:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
 ; CHECK-NEXT:   permissive-zalrsc                - Implementation permits non-base instructions between LR/SC pairs.
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.

@@ -94,7 +94,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
   list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
-defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+defvar GenericTuneFeatures = [TuneOptimizedStrideAccess,
+                              TuneOptimizedNF2SegmentLoadStore,
                               TuneOptimizedNF3SegmentLoadStore,
                               TuneOptimizedNF4SegmentLoadStore,
                               TuneEnableSelectOptimize];
