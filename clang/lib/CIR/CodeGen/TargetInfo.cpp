@@ -1,5 +1,6 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
@@ -8,6 +9,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/TargetUtils.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -176,7 +178,38 @@ class X8664TargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   X8664TargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<X8664ABIInfo>(cgt)) {}
+
+  bool isNoProtoCallVariadic(const CallArgList &args,
+                             const FunctionNoProtoType *fnType) const override;
 };
+
+bool X8664TargetCIRGenInfo::isNoProtoCallVariadic(
+    const CallArgList &args, const FunctionNoProtoType *fnType) const {
+  ASTContext &context = getABIInfo().cgt.getASTContext();
+  const llvm::Triple &triple = context.getTargetInfo().getTriple();
+  // CIRGen also uses this class as a fallback for unsupported targets.
+  if (triple.getArch() != llvm::Triple::x86_64 || triple.isOSWindowsOrUEFI() ||
+      fnType->getCallConv() != CC_C)
+    return false;
+
+  // SysV puts the number of vector registers used in %al for variadic calls.
+  // The backend passes wide vector arguments to variadic calls on the stack.
+  // The caller can enable AVX through a target attribute. Keep the fixed
+  // convention for wide vectors, records, and matrices, which may reach the
+  // backend as vectors when calling-convention lowering is disabled.
+  return llvm::none_of(args, [&](const CallArg &arg) {
+    // The x86 backend legalizes packed Boolean vector lanes to bytes.
+    if (const auto *vector = arg.ty->getAs<VectorType>();
+        vector && vector->getElementType()->isBooleanType())
+      return context.getTypeSize(vector->getElementType()) *
+                 vector->getNumElements() >
+             128;
+
+    return (arg.ty->isVectorType() || arg.ty->isRecordType() ||
+            arg.ty->isConstantMatrixType()) &&
+           context.getTypeSize(arg.ty) > 128;
+  });
+}
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>
@@ -192,7 +225,7 @@ clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
 ABIInfo::~ABIInfo() = default;
 
 bool TargetCIRGenInfo::isNoProtoCallVariadic(
-    const FunctionNoProtoType *fnType) const {
+    const CallArgList &args, const FunctionNoProtoType *fnType) const {
   // The following conventions are known to require this to be false:
   //   x86_stdcall
   //   MIPS

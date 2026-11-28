@@ -1009,8 +1009,9 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
     if (proto->isVariadic())
       required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
   } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
-                 cast<FunctionNoProtoType>(fnType)))
-    cgm.errorNYI("call to function without a prototype");
+                 args, cast<FunctionNoProtoType>(fnType))) {
+    required = RequiredArgs(args.size());
+  }
 
   SmallVector<CanQualType, 16> argTypes;
   for (const CallArg &arg : args)
@@ -1413,11 +1414,15 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(op)) {
       // FIXME(cir): This peephole optimization avoids indirect calls for
       // builtins. This should be fixed in the builtin declaration instead by
-      // not emitting an unecessary get_global in the first place. However,
-      // this is also used for no-prototype functions.
+      // not emitting an unnecessary get_global in the first place.
       mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
       assert(globalOp && "undefined global function");
-      return cast<cir::FuncOp>(globalOp);
+      auto fnOp = cast<cir::FuncOp>(globalOp);
+      // Keep the call-site ellipsis even if a later declaration changes the
+      // signature of an unprototyped function.
+      if (fnOp.getNoProto() && cirFuncTy.isVarArg())
+        return nullptr;
+      return fnOp;
     }
     return nullptr;
   };

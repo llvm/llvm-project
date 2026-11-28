@@ -2819,6 +2819,75 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
   op->erase();
 }
 
+// C permits some signed/unsigned and pointer type mismatches in calls
+// without a prototype. These parameters use the same ABI representation.
+static bool hasCompatibleNoProtoParamType(mlir::Type from, mlir::Type to) {
+  if (from == to)
+    return true;
+  if (auto fromInt = mlir::dyn_cast<cir::IntType>(from)) {
+    auto toInt = mlir::dyn_cast<cir::IntType>(to);
+    return toInt && fromInt.getWidth() >= 32 &&
+           fromInt.getWidth() == toInt.getWidth();
+  }
+  auto fromPtr = mlir::dyn_cast<cir::PointerType>(from);
+  auto toPtr = mlir::dyn_cast<cir::PointerType>(to);
+  return fromPtr && toPtr && fromPtr.getAddrSpace() == toPtr.getAddrSpace();
+}
+
+// A no-prototype call to a matching definition can use its fixed signature.
+// Recover the direct call before ABI lowering so it can be inlined at -O0.
+static void resolveNoProtoCall(cir::CallOp call, const llvm::Triple &triple,
+                               mlir::SymbolTableCollection &symbolTables) {
+  if (!call.isIndirect() || call.getMusttail() ||
+      call.getCallingConv() != cir::CallingConv::C ||
+      triple.getArch() != llvm::Triple::x86_64 || triple.isOSWindowsOrUEFI())
+    return;
+  mlir::Value target = call.getIndirectCall();
+  auto callType = mlir::cast<cir::FuncType>(
+      mlir::cast<cir::PointerType>(target.getType()).getPointee());
+  if (!callType.isVarArg() ||
+      call.getNumArgOperands() != callType.getNumInputs())
+    return;
+
+  while (auto cast = target.getDefiningOp<cir::CastOp>()) {
+    if (cast.getKind() != cir::CastKind::bitcast)
+      return;
+    target = cast.getSrc();
+  }
+  auto address = target.getDefiningOp<cir::GetGlobalOp>();
+  if (!address)
+    return;
+  auto callee = symbolTables.lookupNearestSymbolFrom<cir::FuncOp>(
+      call, address.getNameAttr());
+  if (!callee || !callee.getNoProto() || callee.isDeclaration() ||
+      callee.getAliasee() || callee.getCallingConv() != call.getCallingConv() ||
+      callee->hasAttr(cir::CIRDialect::getNakedAttrName()))
+    return;
+
+  cir::FuncType calleeType = callee.getFunctionType();
+  if (calleeType.isVarArg() ||
+      calleeType.getReturnType() != callType.getReturnType() ||
+      calleeType.getNumInputs() != callType.getNumInputs())
+    return;
+  for (auto [from, to] :
+       llvm::zip_equal(callType.getInputs(), calleeType.getInputs()))
+    if (!hasCompatibleNoProtoParamType(from, to))
+      return;
+
+  CIRBaseBuilderTy builder(*call.getContext());
+  builder.setInsertionPoint(call);
+  for (auto [index, arg] : llvm::enumerate(call.getArgOperands())) {
+    mlir::Type paramType = calleeType.getInput(index);
+    if (arg.getType() != paramType)
+      call.setArg(index,
+                  mlir::isa<cir::IntType>(paramType)
+                      ? builder.createIntCast(arg, paramType)
+                      : builder.createBitcast(call.getLoc(), arg, paramType));
+  }
+  call->eraseOperand(0);
+  call.setCalleeAttr(address.getNameAttr());
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -2848,6 +2917,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
+    resolveNoProtoCall(callOp, getTargetInfo().getTriple(), symbolTables);
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
     lowerStoreOfConstAggregate(storeOp);

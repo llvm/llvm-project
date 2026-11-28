@@ -2625,15 +2625,13 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   //   of the parameters after promotion, the behavior is undefined [except in
   //   some trivial cases].
   // That is, in the general case, we should assume that a call through an
-  // unprototyped function type works like a *non-variadic* call. The way we
-  // make this work is to cast to the exxact type fo the promoted arguments.
+  // unprototyped function type works like a *non-variadic* call. Cast to the
+  // type arranged for the promoted arguments, including the ellipsis on
+  // targets that use the variadic calling convention.
   if (isa<FunctionNoProtoType>(fnType)) {
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
     cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
-    // get non-variadic function type
-    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
-                                  calleeTy.getReturnType(), false);
     auto calleePtrTy = cir::PointerType::get(calleeTy);
 
     mlir::Operation *fn = callee.getFunctionPointer();
