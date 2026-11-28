@@ -186,8 +186,8 @@ body:             |
 
     ; CHECK-LABEL: name: testleaadd_64_32_1
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags, implicit $rax, implicit $rbp
     ; CHECK: $eax = ADD32ri $eax, -5, implicit-def $eflags
+    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags, implicit $rax, implicit $rbp
     ; CHECK: RET64 $eax
     $eax = LEA64_32r killed $rax, 1, killed $rbp, -5, $noreg
     RET64 $eax
@@ -223,8 +223,8 @@ body:             |
 
     ; CHECK-LABEL: name: testleaadd_rbp_64_32_1
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
     ; CHECK: $ebp = ADD32ri $ebp, -5, implicit-def $eflags
+    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
     ; CHECK: RET64 $ebp
     $ebp = LEA64_32r killed $rbp, 1, killed $rax, -5, $noreg
     RET64 $ebp
@@ -296,8 +296,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2add_64
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $rax = ADD64rr $rax, $rbp, implicit-def $eflags
     ; CHECK: $rax = ADD64ri32 $rax, -5, implicit-def $eflags
+    ; CHECK: $rax = ADD64rr $rax, $rbp, implicit-def $eflags
     ; CHECK: RET64 $eax
     $rax = LEA64r killed $rax, 1, killed $rbp, -5, $noreg
     RET64 $eax
@@ -333,8 +333,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2add_rbp_64
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $rbp = ADD64rr $rbp, $rax, implicit-def $eflags
     ; CHECK: $rbp = ADD64ri32 $rbp, -5, implicit-def $eflags
+    ; CHECK: $rbp = ADD64rr $rbp, $rax, implicit-def $eflags
     ; CHECK: RET64 $ebp
     $rbp = LEA64r killed $rbp, 1, killed $rax, -5, $noreg
     RET64 $ebp
@@ -672,8 +672,8 @@ body:             |
 
     ; CHECK-LABEL: name: testleaaddi32_64_32
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags, implicit $rax, implicit $rbp
     ; CHECK: $eax = ADD32ri $eax, 129, implicit-def $eflags
+    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags, implicit $rax, implicit $rbp
     ; CHECK: RET64 $eax
     $eax = LEA64_32r killed $rax, 1, killed $rbp, 129, $noreg
     RET64 $eax
@@ -817,8 +817,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2addi32_64
     ; CHECK: liveins: $rax, $rbp
-    ; CHECK: $rax = ADD64rr $rax, $rbp, implicit-def $eflags
     ; CHECK: $rax = ADD64ri32 $rax, 129, implicit-def $eflags
+    ; CHECK: $rax = ADD64rr $rax, $rbp, implicit-def $eflags
     ; CHECK: RET64 $eax
     $rax = LEA64r killed $rax, 1, killed $rbp, 129, $noreg
     RET64 $eax

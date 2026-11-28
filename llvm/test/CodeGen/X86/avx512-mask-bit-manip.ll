@@ -382,8 +382,8 @@ define <64 x i8> @blci_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-NEXT:    vpmovmskb %ymm4, %ecx
 ; AVX512F-NEXT:    shlq $32, %rcx
 ; AVX512F-NEXT:    leaq (%rax,%rcx), %rdx
-; AVX512F-NEXT:    addq %rcx, %rax
 ; AVX512F-NEXT:    addq $1, %rax
+; AVX512F-NEXT:    addq %rcx, %rax
 ; AVX512F-NEXT:    notq %rax
 ; AVX512F-NEXT:    orq %rdx, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
@@ -664,8 +664,8 @@ define <32 x i16> @t1mskc_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
 ; AVX512F-NEXT:    shll $16, %ecx
 ; AVX512F-NEXT:    leal (%rax,%rcx), %edx
 ; AVX512F-NEXT:    notl %edx
-; AVX512F-NEXT:    addl %ecx, %eax
 ; AVX512F-NEXT:    addl $1, %eax
+; AVX512F-NEXT:    addl %ecx, %eax
 ; AVX512F-NEXT:    orl %edx, %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    shrl $16, %eax
@@ -716,8 +716,8 @@ define <64 x i8> @tzmsk_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-NEXT:    vpmovmskb %ymm4, %ecx
 ; AVX512F-NEXT:    shlq $32, %rcx
 ; AVX512F-NEXT:    leaq (%rax,%rcx), %rdx
-; AVX512F-NEXT:    addq %rcx, %rax
 ; AVX512F-NEXT:    addq $-1, %rax
+; AVX512F-NEXT:    addq %rcx, %rax
 ; AVX512F-NEXT:    andnq %rax, %rdx, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    movl %eax, %edx

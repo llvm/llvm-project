@@ -12,8 +12,8 @@ define ptr @skip(ptr %p, ptr %end) {
 ; SPLIT-NEXT:  .LBB0_1: # %loop
 ; SPLIT-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SPLIT-NEXT:    movzbl (%rax), %ecx
-; SPLIT-NEXT:    addq %rcx, %rax
 ; SPLIT-NEXT:    addq $-94, %rax
+; SPLIT-NEXT:    addq %rcx, %rax
 ; SPLIT-NEXT:    cmpq %rsi, %rax
 ; SPLIT-NEXT:    jb .LBB0_1
 ; SPLIT-NEXT:  .LBB0_2: # %exit

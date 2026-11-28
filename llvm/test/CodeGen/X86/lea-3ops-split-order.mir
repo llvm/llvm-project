@@ -11,8 +11,8 @@ body:             |
     ; CHECK-LABEL: name: destIsBase
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rax = ADD64ri32 $rax, -94, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rax, 1, $rcx, -94, $noreg
     RET64 implicit $rax
@@ -26,8 +26,8 @@ body:             |
     ; CHECK-LABEL: name: destIsIndex
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rax = ADD64ri32 $rax, -94, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rcx, 1, $rax, -94, $noreg
     RET64 implicit $rax
@@ -41,8 +41,8 @@ body:             |
     ; CHECK-LABEL: name: displacement1
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rax = INC64r $rax, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rax, 1, $rcx, 1, $noreg
     RET64 implicit $rax
@@ -56,8 +56,8 @@ body:             |
     ; CHECK-LABEL: name: displacement128
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rax = SUB64ri32 $rax, -128, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rax, 1, $rcx, 128, $noreg
     RET64 implicit $rax
@@ -71,8 +71,8 @@ body:             |
     ; CHECK-LABEL: name: lea64toreg32
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $eax = ADD32rr $eax, $ecx, implicit-def $eflags, implicit $rax, implicit $rcx
     ; CHECK-NEXT: $eax = ADD32ri $eax, -94, implicit-def $eflags
+    ; CHECK-NEXT: $eax = ADD32rr $eax, $ecx, implicit-def $eflags, implicit $rax, implicit $rcx
     ; CHECK-NEXT: RET64 implicit $rax
     $eax = LEA64_32r $rax, 1, $rcx, -94, $noreg
     RET64 implicit $rax
@@ -86,8 +86,8 @@ body:             |
     ; CHECK-LABEL: name: disp_minus1
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rax = DEC64r $rax, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rax, 1, $rcx, -1, $noreg
     RET64 implicit $rax
@@ -101,8 +101,8 @@ body:             |
     ; CHECK-LABEL: name: debug_instr
     ; CHECK: liveins: $rax, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags
-    ; CHECK-NEXT: $rax = ADD64ri32 $rax, -94, implicit-def $eflags, debug-instr-number 2
+    ; CHECK-NEXT: $rax = ADD64ri32 $rax, -94, implicit-def $eflags
+    ; CHECK-NEXT: $rax = ADD64rr $rax, $rcx, implicit-def $eflags, debug-instr-number 2
     ; CHECK-NEXT: RET64 implicit $rax
     $rax = LEA64r $rax, 1, $rcx, -94, $noreg, debug-instr-number 1
     RET64 implicit $rax
@@ -116,8 +116,8 @@ body:             |
     ; CHECK-LABEL: name: disp_symbol
     ; CHECK: liveins: $rbp, $rcx
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rbp = ADD64rr $rbp, $rcx, implicit-def $eflags
     ; CHECK-NEXT: $rbp = ADD64ri32 $rbp, target-flags(x86-gotoff) <mcsymbol foo>, implicit-def $eflags
+    ; CHECK-NEXT: $rbp = ADD64rr $rbp, $rcx, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $rbp
     $rbp = LEA64r $rbp, 1, $rcx, target-flags(x86-gotoff) <mcsymbol foo>, $noreg
     RET64 implicit $rbp
