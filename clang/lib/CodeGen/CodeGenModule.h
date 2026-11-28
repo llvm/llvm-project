@@ -870,6 +870,8 @@ public:
   bool lookupRepresentativeDecl(StringRef MangledName,
                                 GlobalDecl &Result) const;
 
+  void forgetDecl(StringRef MangleName);
+
   llvm::Constant *getAtomicSetterHelperFnMap(QualType Ty) {
     return AtomicSetterHelperFnMap[Ty];
   }
