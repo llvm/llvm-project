@@ -596,3 +596,25 @@ void f() {
 }
 // CHECK: CXXTemporaryObjectExpr {{.*}} <col:5, col:11> 'S' 'void (int, int)'
 }
+
+// static_cast<T&&> of a bit-field lvalue.
+// FIXME: Clang binds the reference directly to the bit-field without inserting
+// an LValueToRValue conversion or MaterializeTemporaryExpr, which crashes
+// CodeGen (see CodeGenCXX/rvalue-ref-bitfield.cpp).
+namespace BitFieldRvalueRef {
+struct BF {
+  int a : 4;
+};
+void test(BF obj) {
+  int &&r = static_cast<int &&>(obj.a);
+  // CHECK: VarDecl 0x{{[^ ]*}} <col:3, col:38> col:9 r 'int &&' cinit
+  // CHECK-NEXT: CXXStaticCastExpr 0x{{[^ ]*}} <col:13, col:38> 'int' xvalue static_cast<int &&> <NoOp>
+  // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:33, col:37> 'int' lvalue bitfield .a
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:33> 'BF' lvalue ParmVar 0x{{[^ ]*}} 'obj' 'BF'
+  const int &&cr = static_cast<const int &&>(obj.a);
+  // CHECK: VarDecl 0x{{[^ ]*}} <col:3, col:51> col:15 cr 'const int &&' cinit
+  // CHECK-NEXT: CXXStaticCastExpr 0x{{[^ ]*}} <col:20, col:51> 'const int' xvalue static_cast<const int &&> <NoOp>
+  // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:46, col:50> 'int' lvalue bitfield .a
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:46> 'BF' lvalue ParmVar 0x{{[^ ]*}} 'obj' 'BF'
+}
+} // namespace BitFieldRvalueRef
