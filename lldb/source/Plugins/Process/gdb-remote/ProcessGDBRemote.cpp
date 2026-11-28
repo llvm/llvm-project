@@ -3705,6 +3705,24 @@ llvm::Error ProcessGDBRemote::DoDisableBreakpointSite(BreakpointSite &bp_site) {
   return llvm::Error::success();
 }
 
+Process::BreakpointUpdateGuard ProcessGDBRemote::HoldForBreakpointUpdates() {
+  if (!StateIsRunningState(GetPrivateState()))
+    return {};
+
+  struct Guard {
+    Guard(ProcessGDBRemote &remote)
+        : process(remote.shared_from_this()),
+          lock(remote.m_gdb_comm, remote.GetInterruptTimeout()) {}
+
+    // The lock references the process's transport. Keep it alive until the
+    // lock is destroyed.
+    ProcessSP process;
+    GDBRemoteClientBase::Lock lock;
+  };
+
+  return std::make_shared<Guard>(*this);
+}
+
 Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   assert(bp_site != nullptr);
 

@@ -1,0 +1,25 @@
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: "c3c3"
+Symbols:
+  - Name: site_first
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x1000
+    Size: 1
+  - Name: site_second
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x1001
+    Size: 1
