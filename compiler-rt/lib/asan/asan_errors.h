@@ -16,6 +16,7 @@
 #include "asan_descriptions.h"
 #include "asan_scariness_score.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_report_receiver.h"
 
 namespace __asan {
 
@@ -34,6 +35,10 @@ struct ErrorBase {
     scariness.Clear();
     scariness.Scare(initial_score, reason);
   }
+
+  // Prints the stack of the offending operation and notifies the receiver.
+  void PrintFaultStack(ScopedSanitizerReport& srep,
+                       const StackTrace& stack) const;
 };
 
 struct ErrorDeadlySignal : ErrorBase {
@@ -61,7 +66,7 @@ struct ErrorDeadlySignal : ErrorBase {
       scariness.Scare(25, "wild-addr");
     }
   }
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorDoubleFree : ErrorBase {
@@ -75,7 +80,7 @@ struct ErrorDoubleFree : ErrorBase {
     CHECK_GT(second_free_stack->size, 0);
     GetHeapAddressInformation(addr, 1, &addr_description);
   }
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorNewDeleteTypeMismatch : ErrorBase {
@@ -93,7 +98,7 @@ struct ErrorNewDeleteTypeMismatch : ErrorBase {
         delete_alignment(delete_alignment_) {
     GetHeapAddressInformation(addr, 1, &addr_description);
   }
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorFreeSizeMismatch : ErrorBase {
@@ -111,7 +116,7 @@ struct ErrorFreeSizeMismatch : ErrorBase {
         delete_alignment(delete_alignment) {
     GetHeapAddressInformation(addr, 1, &addr_description);
   }
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
   bool isFreeAlignedSized() const { return delete_alignment != 0; }
 };
 
@@ -124,7 +129,7 @@ struct ErrorFreeNotMalloced : ErrorBase {
       : ErrorBase(tid, 40, "bad-free"),
         free_stack(stack),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorAllocTypeMismatch : ErrorBase {
@@ -140,7 +145,7 @@ struct ErrorAllocTypeMismatch : ErrorBase {
         alloc_type(alloc_type_),
         dealloc_type(dealloc_type_),
         addr_description(addr, 1, false) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorMallocUsableSizeNotOwned : ErrorBase {
@@ -152,7 +157,7 @@ struct ErrorMallocUsableSizeNotOwned : ErrorBase {
       : ErrorBase(tid, 10, "bad-malloc_usable_size"),
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
@@ -165,7 +170,7 @@ struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
       : ErrorBase(tid, 10, "bad-__sanitizer_get_allocated_size"),
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorCallocOverflow : ErrorBase {
@@ -180,7 +185,7 @@ struct ErrorCallocOverflow : ErrorBase {
         stack(stack_),
         count(count_),
         size(size_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorReallocArrayOverflow : ErrorBase {
@@ -195,7 +200,7 @@ struct ErrorReallocArrayOverflow : ErrorBase {
         stack(stack_),
         count(count_),
         size(size_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorPvallocOverflow : ErrorBase {
@@ -207,7 +212,7 @@ struct ErrorPvallocOverflow : ErrorBase {
       : ErrorBase(tid, 10, "pvalloc-overflow"),
         stack(stack_),
         size(size_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorInvalidAllocationAlignment : ErrorBase {
@@ -220,7 +225,7 @@ struct ErrorInvalidAllocationAlignment : ErrorBase {
       : ErrorBase(tid, 10, "invalid-allocation-alignment"),
         stack(stack_),
         alignment(alignment_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorInvalidAlignedAllocAlignment : ErrorBase {
@@ -235,7 +240,7 @@ struct ErrorInvalidAlignedAllocAlignment : ErrorBase {
         stack(stack_),
         size(size_),
         alignment(alignment_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorInvalidPosixMemalignAlignment : ErrorBase {
@@ -248,7 +253,7 @@ struct ErrorInvalidPosixMemalignAlignment : ErrorBase {
       : ErrorBase(tid, 10, "invalid-posix-memalign-alignment"),
         stack(stack_),
         alignment(alignment_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorAllocationSizeTooBig : ErrorBase {
@@ -265,7 +270,7 @@ struct ErrorAllocationSizeTooBig : ErrorBase {
         user_size(user_size_),
         total_size(total_size_),
         max_size(max_size_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorRssLimitExceeded : ErrorBase {
@@ -275,7 +280,7 @@ struct ErrorRssLimitExceeded : ErrorBase {
   ErrorRssLimitExceeded(u32 tid, BufferedStackTrace *stack_)
       : ErrorBase(tid, 10, "rss-limit-exceeded"),
         stack(stack_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorOutOfMemory : ErrorBase {
@@ -287,7 +292,7 @@ struct ErrorOutOfMemory : ErrorBase {
       : ErrorBase(tid, 10, "out-of-memory"),
         stack(stack_),
         requested_size(requested_size_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
@@ -313,7 +318,7 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
     scariness.Clear();
     scariness.Scare(10, bug_type);
   }
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorStringFunctionSizeOverflow : ErrorBase {
@@ -330,7 +335,7 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
         addr_description(addr, /*shouldLockThreadRegistry=*/false),
         size(size),
         is_write(is_write) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
@@ -349,7 +354,7 @@ struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
         end(end_),
         old_mid(old_mid_),
         new_mid(new_mid_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorBadParamsToAnnotateDoubleEndedContiguousContainer : ErrorBase {
@@ -371,7 +376,7 @@ struct ErrorBadParamsToAnnotateDoubleEndedContiguousContainer : ErrorBase {
         old_container_end(old_container_end_),
         new_container_beg(new_container_beg_),
         new_container_end(new_container_end_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorODRViolation : ErrorBase {
@@ -386,7 +391,7 @@ struct ErrorODRViolation : ErrorBase {
         global2(*g2),
         stack_id1(stack_id1_),
         stack_id2(stack_id2_) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorInvalidPointerPair : ErrorBase {
@@ -403,7 +408,7 @@ struct ErrorInvalidPointerPair : ErrorBase {
         sp(sp_),
         addr1_description(p1, 1, /*shouldLockThreadRegistry=*/false),
         addr2_description(p2, 1, /*shouldLockThreadRegistry=*/false) {}
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 struct ErrorGeneric : ErrorBase {
@@ -423,7 +428,7 @@ struct ErrorGeneric : ErrorBase {
   ErrorGeneric() = default;  // (*)
   ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
                AccessType access_type_, uptr access_size_);
-  void Print();
+  void Print(ScopedSanitizerReport& srep);
 };
 
 // clang-format off
@@ -462,7 +467,7 @@ struct ErrorGeneric : ErrorBase {
   }
 #define ASAN_ERROR_DESCRIPTION_PRINT(name) \
   case kErrorKind##name:                   \
-    return name.Print();
+    return name.Print(srep);
 
 enum ErrorKind {
   kErrorKindInvalid = 0,
@@ -486,7 +491,7 @@ struct ErrorDescription {
   ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_CONSTRUCTOR)
 
   bool IsValid() { return kind != kErrorKindInvalid; }
-  void Print() {
+  void Print(ScopedSanitizerReport& srep) {
     switch (kind) {
       ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_PRINT)
       case kErrorKindInvalid:

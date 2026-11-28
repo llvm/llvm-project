@@ -72,6 +72,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_libc.cpp
 	../../sanitizer_common/sanitizer_mutex.cpp
 	../../sanitizer_common/sanitizer_printf.cpp
+	../../sanitizer_common/sanitizer_report_receiver.cpp
 	../../sanitizer_common/sanitizer_suppressions.cpp
 	../../sanitizer_common/sanitizer_thread_registry.cpp
 	../../sanitizer_common/sanitizer_stack_store.cpp

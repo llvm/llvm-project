@@ -32,6 +32,7 @@ type ^
   ..\..\sanitizer_common\sanitizer_termination.cpp ^
   ..\..\sanitizer_common\sanitizer_file.cpp ^
   ..\..\sanitizer_common\sanitizer_symbolizer_report.cpp ^
+  ..\..\sanitizer_common\sanitizer_report_receiver.cpp ^
   ..\..\sanitizer_common\sanitizer_mutex.cpp ^
   ..\rtl\tsan_external.cpp ^
   > gotsan.cpp
