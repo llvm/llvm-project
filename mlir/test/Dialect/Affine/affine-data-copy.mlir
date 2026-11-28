@@ -495,3 +495,30 @@ func.func @multiple_blocks(%arg0: index) -> memref<1x2x1xi32> {
 ^bb3:  // pred: ^bb1
   return %1 : memref<1x2x1xi32>
 }
+
+// -----
+
+// The regions accessed by the two loads have incomparable symbolic bounds
+// (%i floordiv 2 and %j floordiv 2); their union falls back to constant bounds,
+// which must cover all six elements that are accessed.
+
+// CHECK-LABEL: func @union_bounding_box_floordiv
+func.func @union_bounding_box_floordiv(%A: memref<64xf32>, %B: memref<64xf32>) {
+  affine.for %i = 0 to 11 step 2 {
+    affine.for %j = 0 to 11 step 2 {
+      affine.for %k = 0 to 4 {
+        %a = affine.load %A[%i floordiv 2] : memref<64xf32>
+        %b = affine.load %A[%j floordiv 2] : memref<64xf32>
+        %c = arith.addf %a, %b : f32
+        affine.store %c, %B[%k] : memref<64xf32>
+      }
+    }
+  }
+  return
+}
+// CHECK:      affine.for %[[I:.*]] = 0 to 11 step 2 {
+// CHECK-NEXT:   affine.for %[[J:.*]] = 0 to 11 step 2 {
+// CHECK:          %[[BUF:.*]] = memref.alloc() : memref<6xf32>
+// CHECK:          affine.for %{{.*}} = 0 to 6 {
+// CHECK:          affine.load %[[BUF]][%[[I]] floordiv 2] : memref<6xf32>
+// CHECK:          affine.load %[[BUF]][%[[J]] floordiv 2] : memref<6xf32>
