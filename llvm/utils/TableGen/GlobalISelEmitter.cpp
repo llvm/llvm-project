@@ -502,6 +502,20 @@ private:
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                       unsigned ResIdx) const;
 
+  /// Return the class to use for the result of extracting sub-register \p
+  /// SubIdx from a register of class \p SuperRC, also accounting for the
+  /// result's value type \p Ty.
+  const CodeGenRegisterClass *
+  inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                          const CodeGenSubRegIndex &SubIdx,
+                          const TypeSetByHwMode &Ty) const;
+
+  /// Return \p SubRegRC if it can hold \p Ty, otherwise an allocatable class
+  /// covering the same registers that can.
+  const CodeGenRegisterClass *
+  pickSubRegClassForType(const CodeGenRegisterClass &SubRegRC,
+                         const TypeSetByHwMode &Ty) const;
+
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
                           unsigned InsnID, const TreePatternNode &Dst) const;
 
@@ -1955,8 +1969,10 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     }
 
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+    const CodeGenRegisterClass *SubRegRC =
+        pickSubRegClassForType(*SrcRCDstRCPair->second, Dst.getExtType(0));
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     *SrcRCDstRCPair->second);
+                                                     *SubRegRC);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
                                                      *SrcRCDstRCPair->first);
   } else if (DstIName == "INSERT_SUBREG") {
@@ -2082,6 +2098,53 @@ GlobalISelEmitter::inferRegClassFromRegisterClassLike(
 }
 
 const CodeGenRegisterClass *
+GlobalISelEmitter::inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                                           const CodeGenSubRegIndex &SubIdx,
+                                           const TypeSetByHwMode &Ty) const {
+  const auto SubRCAndSubRegRC =
+      SuperRC.getMatchingSubClassWithSubRegs(CGRegs, &SubIdx);
+  if (!SubRCAndSubRegRC)
+    return nullptr;
+  return pickSubRegClassForType(*SubRCAndSubRegRC->second, Ty);
+}
+
+const CodeGenRegisterClass *
+GlobalISelEmitter::pickSubRegClassForType(const CodeGenRegisterClass &SubRegRC,
+                                          const TypeSetByHwMode &Ty) const {
+  if (!Ty.isValueTypeByHwMode(false))
+    return &SubRegRC;
+
+  const ValueTypeByHwMode &VT = Ty.getValueTypeByHwMode();
+  if (VT.empty())
+    return &SubRegRC;
+
+  // hasType() only looks at the types of each HW mode for a simple VT, so
+  // check every mode of VT explicitly. A class's default type applies to all
+  // modes.
+  auto HasType = [&VT](const CodeGenRegisterClass &RC) {
+    for (const auto &[Mode, T] : VT) {
+      bool Found = llvm::any_of(
+          RC.getValueTypes(), [Mode = Mode, T = T](const ValueTypeByHwMode &V) {
+            return (V.hasMode(Mode) || V.hasDefault()) && V.getType(Mode) == T;
+          });
+      if (!Found)
+        return false;
+    }
+    return true;
+  };
+
+  // A vreg's size comes from its class, and classes covering the same registers
+  // can differ in size. Prefer an allocatable class that has the extracted
+  // type, and keep SubRegRC if there is none.
+  for (const CodeGenRegisterClass &RC : CGRegs.getRegClasses()) {
+    if (RC.Allocatable && RC.getMembers() == SubRegRC.getMembers() &&
+        HasType(RC))
+      return &RC;
+  }
+  return &SubRegRC;
+}
+
+const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                                        unsigned ResIdx) const {
   const CodeGenInstruction &Inst = Target.getInstruction(N.getOperator());
@@ -2133,12 +2196,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
     if (!SubIdx)
       return nullptr;
 
-    const auto SubRCAndSubRegRC =
-        SuperRC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
-    if (!SubRCAndSubRegRC)
-      return nullptr;
-
-    return SubRCAndSubRegRC->second;
+    return inferSubRegClassForType(*SuperRC, *SubIdx, N.getExtType(0));
   }
 
   if (InstName == "SUBREG_TO_REG") {
