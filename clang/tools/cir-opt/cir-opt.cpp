@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
@@ -107,6 +108,7 @@ int main(int argc, char **argv) {
     return mlir::createCallConvLoweringPass();
   });
 
+  mlir::acc::registerOpenACCPasses();
   mlir::omp::registerOpenMPPasses();
   mlir::registerTransformsPasses();
 
