@@ -2,6 +2,7 @@
 # These components are shared between AddressSanitizer and ThreadSanitizer.
 
 set(SANITIZER_SOURCES_NOTERMINATION
+  sanitizer_aix.cpp
   sanitizer_allocator.cpp
   sanitizer_common.cpp
   sanitizer_deadlock_detector1.cpp
