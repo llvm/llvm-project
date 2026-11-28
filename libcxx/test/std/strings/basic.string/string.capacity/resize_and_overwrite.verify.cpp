@@ -15,12 +15,15 @@
 
 // Verify that the operation's return type must be integer-like
 
+// When hardening is enabled, the checks on the result add errors after the static_assert.
+
 #include <string>
 
 void test_bool_return_type() {
   std::string s;
   s.resize_and_overwrite(10, [](char*, std::size_t) {
     return true; // expected-error-re@*:* {{{{(static_assertion|static assertion)}}{{.*}}integer-like}}
+                 // expected-error@*:* 0-1 {{no matching function for call to '__to_unsigned_like'}}
   });
 }
 
@@ -29,6 +32,8 @@ void test_pointer_return_type() {
   s.resize_and_overwrite(10, [](char* p, std::size_t) {
     return p; // expected-error-re@*:* {{{{(static_assertion|static assertion)}}{{.*}}integer-like}}
               // expected-error@*:* {{cannot initialize}}
+              // expected-error@*:* 0-1 {{ordered comparison between pointer and zero}}
+              // expected-error@*:* 0-1 {{no matching function for call to '__to_unsigned_like'}}
   });
 }
 
@@ -36,5 +41,6 @@ void test_float_return_type() {
   std::string s;
   s.resize_and_overwrite(10, [](char*, std::size_t) {
     return 5.0f; // expected-error-re@*:* {{{{(static_assertion|static assertion)}}{{.*}}integer-like}}
+                 // expected-error@*:* 0-1 {{no matching function for call to '__to_unsigned_like'}}
   });
 }
