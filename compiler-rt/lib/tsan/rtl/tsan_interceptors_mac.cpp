@@ -20,6 +20,7 @@
 #  include <os/lock.h>
 #  include <sys/ucontext.h>
 
+#  include "BlocksRuntime/Block_private.h"
 #  include "interception/interception.h"
 #  include "sanitizer_common/sanitizer_addrhashmap.h"
 #  include "tsan_interceptors.h"
@@ -588,6 +589,60 @@ STDCXX_INTERCEPTOR(bool, _ZNSt3__114__shared_count16__release_sharedEv,
     return true;
   }
   return false;
+}
+
+namespace {
+enum {
+  kBlockDeallocating = (0x0001),
+  kBlockRefcountMask = (0xfffe),
+  kBlockAllCopyDisposeFlags = BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_BLOCK |
+      BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK | BLOCK_BYREF_CALLER,
+};
+}  // namespace
+
+// Heap-allocated __block (byref) variables rely on ref-counting; TSan can't
+// see the refcount updates, so can report races in the compiler generated
+// __Block_byref_object_dispose_ helper. To fix that we need to add a
+// happens-before edge between previous releases, and the dispose helper.
+TSAN_INTERCEPTOR(void, _Block_object_dispose, const void* object, int flags) {
+  SCOPED_TSAN_INTERCEPTOR(_Block_object_dispose, object, flags);
+  int field_flags = flags & kBlockAllCopyDisposeFlags;
+  if (object && (field_flags == BLOCK_FIELD_IS_BYREF ||
+                 field_flags == (BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK))) {
+    Block_byref* byref = ((const Block_byref*)object)->forwarding;
+    auto* flags_atomic = reinterpret_cast<atomic_uint32_t*>(&byref->flags);
+    u32 old_flags = atomic_load(flags_atomic, memory_order_acquire);
+
+    while (old_flags & BLOCK_NEEDS_FREE) {
+      u32 refcount = old_flags & kBlockRefcountMask;
+      if (refcount == kBlockRefcountMask || refcount == 0) {
+        // If we hit max refcount, then fallthrough to REAL
+        break;
+      }
+
+      // Bit 0 is used to indicate that the block is deallocating, therefore
+      // the refcount is really (old_flags >> 1)
+      if ((old_flags & (kBlockRefcountMask | kBlockDeallocating)) == 2) {
+        // We are the final owner - Acquire to synchronize with other threads
+        // previous Releases, and let REAL do the teardown
+        Acquire(thr, pc, (uptr)byref);
+        break;
+      }
+
+      Release(thr, pc, (uptr)byref);
+
+      if (atomic_compare_exchange_strong(flags_atomic, &old_flags,
+                                         old_flags - 2, memory_order_acq_rel)) {
+        // We must do the CAS decrement ourselves, see the note in the comment
+        // above the _ZNSt3__119__shared_weak_count16__release_sharedEv
+        // interceptor
+        return;
+      }
+    }
+  }
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  REAL(_Block_object_dispose)(object, flags);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
 }
 
 namespace {
