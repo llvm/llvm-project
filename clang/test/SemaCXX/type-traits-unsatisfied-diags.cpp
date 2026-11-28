@@ -892,3 +892,20 @@ static_assert(__is_abstract(U));
 // expected-note@-1 {{because it is not a struct or class type}}
 
 }
+
+namespace is_const_tests {
+
+static_assert(__is_const(void () const));
+// expected-error@-1 {{static assertion failed due to requirement '__is_const(void () const)'}} \
+// expected-note@-1 {{'void () const' is not const}} \
+// expected-note@-1 {{because it is a function type, which are never const-qualified}}
+
+static_assert(__is_const(int &));
+// expected-error@-1 {{static assertion failed due to requirement '__is_const(int &)'}} \
+// expected-note@-1 {{'int &' is not const}} \
+// expected-note@-1 {{because it is a reference type, which are never const-qualified}}
+
+static_assert(__is_const(int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_const(int)'}} \
+// expected-note@-1 {{'int' is not const}}
+}
