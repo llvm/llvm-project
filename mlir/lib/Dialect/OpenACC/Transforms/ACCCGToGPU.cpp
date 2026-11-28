@@ -500,7 +500,9 @@ public:
         accSupport(accSupport), options(options),
         sharedMemBudget(
             options.maxWorkgroupSharedMemory,
-            sumExistingSharedMemoryBytes(computeRegion.getRegion())) {}
+            sumExistingSharedMemoryBytes(computeRegion.getRegion())) {
+    reserveRoutineSlots();
+  }
 
   /// Main entry point: emit launch (if needed) and lower the region body.
   LogicalResult rewrite();
@@ -534,6 +536,15 @@ private:
   Value allocatePrivatizeHeapStorage(acc::PrivatizeOp privatize,
                                      MemRefType baseTy,
                                      ValueRange mappedDynamicSizes);
+  /// Reserve the slot cap of every distinct routine the region calls.
+  void reserveRoutineSlots();
+
+  /// Place static privatize storage of a routine in a workgroup attribution
+  /// of its own, one copy per ThreadY row for a ThreadX routine; returns null
+  /// if over the routine slot budget.
+  Value allocateRoutineSharedSlot(acc::PrivatizeOp privatize, MemRefType baseTy,
+                                  gpu::GPUFuncOp gpuFuncOp,
+                                  GPUParallelDimAttr routineDim);
   /// Clone and lower an `scf.execute_region`.
   void processExecuteRegion(scf::ExecuteRegionOp op);
   /// Lower `acc.reduction_accumulate`.
@@ -789,6 +800,25 @@ private:
 
   // Reusable privatize broadcast slots per type; disabled for kernels.
   llvm::DenseMap<Type, Value> privatizeBroadcastCache;
+
+  // Each gang or worker routine adds up to this many bytes of private data
+  // slots, and each vector routine as many per ThreadY row, reserved in the
+  // budget of its callers. Routines defined in other files are opaque, so
+  // the routines they call are not counted.
+  static constexpr int64_t kMaxRoutineSharedSlotBytes = 256;
+  static constexpr int64_t kMaxRoutineRowSlotBytes = 64;
+  static constexpr int64_t kMaxThreadYRows = 32;
+  static int64_t getRoutineSlotCapBytes(GPUParallelDimAttr routineDim) {
+    if (!routineDim)
+      return 0;
+    if (routineDim.isThreadX())
+      return kMaxRoutineRowSlotBytes * kMaxThreadYRows;
+    if (routineDim.isAnyBlock() || routineDim.isThreadY())
+      return kMaxRoutineSharedSlotBytes;
+    return 0;
+  }
+  std::optional<bool> routineCallsItself;
+  Block *routineSlotBarrierBlock = nullptr;
 
   int64_t staticBlockDimX = 1024;
   int64_t staticBlockDimY = 1024;
@@ -3194,6 +3224,142 @@ Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
   return mem;
 }
 
+void ACCCGToGPULowering::reserveRoutineSlots() {
+  DenseSet<StringAttr> seen;
+  int64_t slotBytes = 0;
+  SmallVector<Operation *> worklist = {computeRegion};
+  while (!worklist.empty()) {
+    worklist.pop_back_val()->walk([&](CallOpInterface call) {
+      auto callee =
+          dyn_cast_if_present<SymbolRefAttr>(call.getCallableForCallee());
+      if (!callee || !seen.insert(callee.getLeafReference()).second)
+        return;
+      slotBytes +=
+          getRoutineSlotCapBytes(getAccRoutineCallParDim(call, defaultPolicy));
+      // Count the slots of routines the callee calls when it is defined here.
+      auto calleeFunc =
+          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(call,
+                                                                    callee);
+      if (calleeFunc && !calleeFunc.isExternal())
+        worklist.push_back(calleeFunc);
+    });
+  }
+  if (slotBytes == 0)
+    return;
+  // Over budget: leave no room for shared memory privates of this region.
+  if (!sharedMemBudget.tryAllocate(slotBytes))
+    sharedMemBudget.setMaxTotalBytes(sharedMemBudget.bytesUsed());
+}
+
+Value ACCCGToGPULowering::allocateRoutineSharedSlot(
+    acc::PrivatizeOp privatize, MemRefType baseTy, gpu::GPUFuncOp gpuFuncOp,
+    GPUParallelDimAttr routineDim) {
+  Location loc = privatize.getLoc();
+  Type elemTy = baseTy.getElementType();
+  if (!baseTy.hasStaticShape() || !baseTy.getLayout().isIdentity() ||
+      baseTy.getMemorySpace() || isa<BaseMemRefType>(elemTy))
+    return {};
+  // Query without a diagnostic: an unsized type keeps the heap path.
+  std::optional<acc::TypeSizeAndAlignment> sizeAndAlignment =
+      accSupport.getTypeSizeAndAlignment(
+          elemTy, computeRegion->getParentOfType<ModuleOp>());
+  if (!sizeAndAlignment)
+    return {};
+  int64_t bytes =
+      sizeAndAlignment->first.getFixedValue() * baseTy.getNumElements();
+  int64_t alignment = sizeAndAlignment->second.getFixedValue();
+  if (bytes <= 0 || !llvm::isPowerOf2_64(alignment))
+    return {};
+  // At least 16, as for the broadcast slot: packed 16-byte stores misalign.
+  alignment = std::max(alignment, SharedMemoryBudget::kDefaultAlignmentBytes);
+  // ThreadY rows call a ThreadX routine independently: one copy per row.
+  bool perRow = routineDim.isThreadX();
+  int64_t rowStride = llvm::alignTo(bytes, alignment);
+  if (perRow)
+    bytes = rowStride * kMaxThreadYRows;
+  // The slot is reused by the next call: every thread must reach the barrier
+  // placed before this block's terminator on the way out.
+  Block *slotBlock = rewriter.getInsertionBlock();
+  if (!slotBlock->mightHaveTerminator() ||
+      slotBlock->getTerminator()->getNumSuccessors() != 0 ||
+      isInsideConditional(slotBlock))
+    return {};
+  // Activations of a recursive routine would share the slot.
+  if (!routineCallsItself) {
+    StringRef funcName = gpuFuncOp.getName();
+    routineCallsItself =
+        gpuFuncOp
+            .walk([&](CallOpInterface call) {
+              auto callee = dyn_cast_if_present<SymbolRefAttr>(
+                  call.getCallableForCallee());
+              return callee && callee.getLeafReference() == funcName
+                         ? WalkResult::interrupt()
+                         : WalkResult::advance();
+            })
+            .wasInterrupted();
+  }
+  if (*routineCallsItself)
+    return {};
+  // Count the slots of earlier compute regions of this routine as well.
+  ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
+  SharedMemoryBudget slotBudget(getRoutineSlotCapBytes(routineDim));
+  for (BlockArgument attribution : gpuFuncOp.getWorkgroupAttributionBBArgs()) {
+    auto attributionTy = cast<MemRefType>(attribution.getType());
+    if (isa<BaseMemRefType>(attributionTy.getElementType()))
+      continue;
+    std::optional<acc::TypeSizeAndAlignment> slotSizeAndAlignment =
+        accSupport.getTypeSizeAndAlignment(attributionTy.getElementType(),
+                                           module);
+    if (!slotSizeAndAlignment ||
+        !slotBudget.tryAllocate(
+            slotSizeAndAlignment->first.getFixedValue() *
+                attributionTy.getNumElements(),
+            std::max<int64_t>(slotSizeAndAlignment->second.getFixedValue(),
+                              SharedMemoryBudget::kDefaultAlignmentBytes)))
+      return {};
+  }
+  if (!slotBudget.tryAllocate(bytes, alignment))
+    return {};
+
+  auto workgroupAS = gpu::AddressSpaceAttr::get(
+      rewriter.getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
+  MemRefType slotTy =
+      MemRefType::get(baseTy.getShape(), baseTy.getElementType(),
+                      MemRefLayoutAttrInterface{}, workgroupAS);
+  Value slot = gpuFuncOp.addWorkgroupAttribution(
+      perRow ? MemRefType::get({bytes}, rewriter.getI8Type(),
+                               MemRefLayoutAttrInterface{}, workgroupAS)
+             : slotTy,
+      loc);
+  gpuFuncOp.setWorkgroupAttributionAttr(
+      gpuFuncOp.getNumWorkgroupAttributions() - 1,
+      LLVM::LLVMDialect::getAlignAttrName(),
+      rewriter.getI32IntegerAttr(alignment));
+  if (perRow) {
+    Value offset = arith::MulIOp::create(
+        rewriter, loc, getThreadId(loc, gpu::Dimension::y),
+        arith::ConstantIndexOp::create(rewriter, loc, rowStride));
+    slot = memref::ViewOp::create(rewriter, loc, slotTy, slot, offset,
+                                  ValueRange{});
+  }
+  Value mem = castPointerLikeTypeIfNeeded(rewriter, loc, slot, baseTy);
+  if (routineSlotBarrierBlock != slotBlock) {
+    routineSlotBarrierBlock = slotBlock;
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(slotBlock->getTerminator());
+    createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
+                           rewriter.getContext(),
+                           {perRow ? mlir::acc::GPUParallelDimAttr::threadXDim(
+                                         rewriter.getContext())
+                                   : mlir::acc::GPUParallelDimAttr::threadYDim(
+                                         rewriter.getContext())}));
+  }
+  mapping.map(privatize.getResult(), mem);
+  if (!privatize->getParentOfType<acc::ComputeRegionOp>())
+    rewriter.replaceOp(privatize, mem);
+  return mem;
+}
+
 Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   LLVM_DEBUG(llvm::dbgs() << "processing privatize: ";
              privatize->print(llvm::dbgs()); llvm::dbgs() << "\n");
@@ -3270,11 +3436,11 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   //   variables at routine level are shared across ThreadY threads (single
   //   slot)
   bool needsWorkgroupBarrier = false;
+  mlir::acc::GPUParallelDimAttr routineParDim;
   if (isInsideACCSpecializedRoutine(computeRegion)) {
     FunctionOpInterface funcOp =
         computeRegion->getParentOfType<FunctionOpInterface>();
-    mlir::acc::GPUParallelDimAttr routineParDim =
-        getSpecializedRoutineDim(funcOp, defaultPolicy);
+    routineParDim = getSpecializedRoutineDim(funcOp, defaultPolicy);
     if (routineParDim.isThreadX()) {
       // ThreadX routine: always per-ThreadY slots since called from ThreadY
       // loops
@@ -3313,6 +3479,21 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
     // is unknown. Heap-allocate in both cases so a large runtime extent
     // cannot overflow the stack. Each lane still owns its own copy.
     return allocatePrivatizeHeapStorage(privatize, baseTy, mappedDynamicSizes);
+  }
+
+  // A small static private shared by a routine's threads can live in a
+  // workgroup slot instead of a broadcast heap copy made on every call.
+  if (getRoutineSlotCapBytes(routineParDim) &&
+      (!threadYIsActive || routineParDim.isThreadX()) &&
+      mappedDynamicSizes.empty()) {
+    if (Value slot = allocateRoutineSharedSlot(privatize, baseTy, gpuFuncOp,
+                                               routineParDim)) {
+      std::string varName = accSupport.getVariableName(privatize.getResult());
+      if (!varName.empty() &&
+          !llvm::is_contained(sharedMemPrivateVarNames, varName))
+        sharedMemPrivateVarNames.push_back(varName);
+      return slot;
+    }
   }
 
   // Predication - when threadYIsActive, don't predicate on ThreadY dimension
