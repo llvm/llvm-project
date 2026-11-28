@@ -811,6 +811,8 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64:
       UseJITLink = TT.isPPC64ELFv2ABI();
       break;
+    case Triple::ppc:
+    case Triple::ppcle:
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;

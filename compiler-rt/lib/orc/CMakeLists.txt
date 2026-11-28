@@ -120,6 +120,7 @@ else() # not Apple
       elfnix_tls.x86-64.S
       elfnix_tls.aarch64.S
       elfnix_tls.mips.S
+      elfnix_tls.ppc32.S
       elfnix_tls.ppc64.S
       elfnix_tls.systemz.S
       sysv_reenter.arm64.S
