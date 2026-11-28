@@ -40,10 +40,17 @@
 
 using namespace llvm;
 
-[[noreturn]] static void
-diagnoseNonUniqueResourceAccess(Instruction *I,
-                                ArrayRef<IntrinsicInst *> Handles) {
+static void diagnoseNonUniqueResourceAccess(Instruction *I,
+                                            ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
+  const char *Msg =
+      "Resource access is not guaranteed to map to a unique global resource";
+  if (I->getDebugLoc())
+    Context.diagnose(
+        DiagnosticInfoUnsupported(*I->getFunction(), Msg, I->getDebugLoc()));
+  else
+    Context.diagnose(DiagnosticInfoGeneric(Msg, DS_Error));
+
   std::string InstStr;
   raw_string_ostream InstOS(InstStr);
   I->print(InstOS);
@@ -57,9 +64,6 @@ diagnoseNonUniqueResourceAccess(Instruction *I,
     Context.diagnose(DiagnosticInfoGeneric(
         "Uses resource handle:" + Twine(HandleStr), DS_Note));
   }
-  report_fatal_error(
-      "Resource access is not guaranteed to map to a unique global resource",
-      /*gen_crash_diag=*/false);
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
@@ -1104,7 +1108,7 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
   uint32_t LowerBound =
       cast<ConstantInt>(Handle->getArgOperand(1))->getZExtValue();
   uint32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
-  uint32_t UpperBound = Size == UINT32_MAX ? UINT32_MAX : LowerBound + Size - 1;
+  uint32_t UpperBound = Size == 0 ? UINT32_MAX : LowerBound + Size - 1;
 
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
@@ -1413,6 +1417,9 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
   for (auto *I : llvm::reverse(DeadInsts))
     if (I->hasNUses(0)) { // Handle can still be used outside of replaced path
+      // Debug users of a resource handle would be left as poison of a target
+      // extension type, which can't be emitted in DXIL.
+      dropDebugUsers(*I);
       I->eraseFromParent();
       MadeChanges = true;
     }
