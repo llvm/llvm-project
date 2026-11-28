@@ -4061,7 +4061,17 @@ struct FormatStyle {
     ///      }
     ///    }
     /// \endcode
-    NI_All
+    NI_All,
+    /// Indent in named namespaces.
+    /// \code
+    ///    namespace out {
+    ///      int i;
+    ///      namespace {
+    ///      int i;
+    ///      }
+    ///    }
+    /// \endcode
+    NI_Named
   };
 
   /// The indentation used for namespaces.

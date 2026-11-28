@@ -601,6 +601,7 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
     IO.enumCase(Value, "None", FormatStyle::NI_None);
     IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
     IO.enumCase(Value, "All", FormatStyle::NI_All);
+    IO.enumCase(Value, "Named", FormatStyle::NI_Named);
   }
 };
 

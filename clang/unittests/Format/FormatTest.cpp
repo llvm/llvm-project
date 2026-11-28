@@ -4505,6 +4505,28 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "} // namespace out",
                Style);
 
+  Style.NamespaceIndentation = FormatStyle::NI_Named;
+  verifyFormat("namespace A {\n"
+               "  int A;\n"
+               "}\n"
+               "namespace {\n"
+               "int A;\n"
+               "}",
+               Style);
+
+  Style.FixNamespaceComments = false;
+  verifyFormat("namespace A {\n"
+               "  namespace {\n"
+               "  int A;\n"
+               "  }\n"
+               "}\n"
+               "namespace {\n"
+               "namespace B {\n"
+               "  int B;\n"
+               "}\n"
+               "}",
+               Style);
+
   FormatStyle ShortInlineFunctions = getLLVMStyle();
   ShortInlineFunctions.NamespaceIndentation = FormatStyle::NI_All;
   ShortInlineFunctions.AllowShortFunctionsOnASingleLine =
