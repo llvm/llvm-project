@@ -110,27 +110,16 @@ inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   return false;
 }
 
-inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
-  // TODO: Enable ObjectiveC later when we know it's stable enough.
-  if (S.getLangOpts().ObjC)
-    return false;
-
-  // TODO: Default this flag to on in the future.
-  if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().EnableLifetimeSafetyInC)
-    return false;
-
-  // Translation-unit mode: whole-program analysis runs once on TU.
-  // Individual function analysis is disabled when TU mode is enabled.
-  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
-    return isa<TranslationUnitDecl>(D);
-
-  // Per-function mode: analysis runs on each function/method individually.
-  // Skip TU-level calls when per-function mode is enabled.
-  if (isa<TranslationUnitDecl>(D))
-    return false;
-
-  // Enable per-function mode via debug flag or specific diagnostics.
+/// Whether the analysis should run on the function \p D, regardless of whether
+/// it runs per-function or in TU mode.
+inline bool ShouldAnalyzeFunction(Sema &S, const Decl *D) {
   if (S.getLangOpts().DebugRunLifetimeSafety)
+    return true;
+
+  // Callers analyzed later in TU mode rely on the annotations inferred for
+  // their callees, even if no diagnostic is enabled for the callee.
+  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
+      S.getLangOpts().EnableLifetimeSafetyInference)
     return true;
 
   return ShouldCheckSafety(S, D) || ShouldCheckNoescapeViolations(S, D) ||
@@ -141,6 +130,26 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
          ShouldCheckFieldOriginEscape(S, D) ||
          ShouldCheckDestructorUses(S, D) ||
          ShouldSuggestLifetimeAnnotations(S, D);
+}
+
+inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
+  // TODO: Enable ObjectiveC later when we know it's stable enough.
+  if (S.getLangOpts().ObjC)
+    return false;
+
+  // TODO: Default this flag to on in the future.
+  if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().EnableLifetimeSafetyInC)
+    return false;
+
+  // In TU mode, the analysis is driven once from the TU, which then decides
+  // per function using ShouldAnalyzeFunction.
+  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+    return isa<TranslationUnitDecl>(D);
+
+  if (isa<TranslationUnitDecl>(D))
+    return false;
+
+  return ShouldAnalyzeFunction(S, D);
 }
 
 inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {

@@ -3077,7 +3077,7 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (!CanonicalFD)
       continue;
     const FunctionDecl *FD = CanonicalFD->getDefinition();
-    if (!FD)
+    if (!FD || !lifetimes::ShouldAnalyzeFunction(S, FD))
       continue;
     AnalysisDeclContext AC(nullptr, FD);
     setLifetimeSafetyCFGBuildOptions(AC);
