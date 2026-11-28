@@ -108,6 +108,8 @@ void __llvm_profile_set_page_size(unsigned PageSize);
  */
 uint8_t __llvm_profile_get_num_padding_bytes(uint64_t SizeInBytes);
 
+/* These bounds identify the module's records. On Windows they need not form
+ * a C array; use the runtime's data-range helpers to traverse them. */
 const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);

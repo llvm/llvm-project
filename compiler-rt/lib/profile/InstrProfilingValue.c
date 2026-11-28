@@ -77,6 +77,16 @@ __llvm_profile_set_num_value_sites(__llvm_profile_data *Data,
 /* This method is only used in value profiler mock testing.  */
 COMPILER_RT_VISIBILITY const __llvm_profile_data *
 __llvm_profile_iterate_data(const __llvm_profile_data *Data) {
+#ifdef LPROF_COFF_RECORD_RVAS
+  ProfDataRange R = lprofGetModuleData();
+  if ((uintptr_t)Data < (uintptr_t)R.Begin) {
+    const __llvm_profile_data *Next;
+    while ((Next = lprofNextData(&R)) && Next != Data)
+      ;
+    Next = lprofNextData(&R);
+    return Next ? Next : __llvm_profile_end_data();
+  }
+#endif
   return Data + 1;
 }
 
