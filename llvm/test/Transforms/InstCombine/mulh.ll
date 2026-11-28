@@ -326,10 +326,9 @@ define i32 @not_half_source_width(i12 %a, i12 %b) {
 define i16 @different_source_widths(i8 %a, i4 %b) {
 ; CHECK-LABEL: define i16 @different_source_widths(
 ; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = zext i4 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[B]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = zext i8 %a to i16
@@ -413,6 +412,137 @@ define i16 @constant_operand_too_wide(i8 %a) {
 ;
   %ea = zext i8 %a to i16
   %mul = mul i16 %ea, 300
+  %shr = lshr i16 %mul, 8
+  ret i16 %shr
+}
+
+define i16 @different_source_widths_commuted(i8 %a, i4 %b) {
+; CHECK-LABEL: define i16 @different_source_widths_commuted(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[B]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext nneg i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = zext i8 %a to i16
+  %eb = zext i4 %b to i16
+  %mul = mul i16 %eb, %ea
+  %shr = lshr i16 %mul, 8
+  ret i16 %shr
+}
+
+define i8 @umulh_different_source_widths_trunc(i8 %a, i4 %b) {
+; CHECK-LABEL: define i8 @umulh_different_source_widths_trunc(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[B]] to i8
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %ea = zext i8 %a to i16
+  %eb = zext i4 %b to i16
+  %mul = mul i16 %ea, %eb
+  %shr = lshr i16 %mul, 8
+  %res = trunc i16 %shr to i8
+  ret i8 %res
+}
+
+define i16 @smulh_different_source_widths(i8 %a, i4 %b) {
+; CHECK-LABEL: define i16 @smulh_different_source_widths(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[B]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smulh.i8(i8 [[A]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHR:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = sext i8 %a to i16
+  %eb = sext i4 %b to i16
+  %mul = mul i16 %ea, %eb
+  %shr = ashr i16 %mul, 8
+  ret i16 %shr
+}
+
+define <2 x i16> @umulh_different_source_widths_vec(<2 x i8> %a, <2 x i4> %b) {
+; CHECK-LABEL: define <2 x i16> @umulh_different_source_widths_vec(
+; CHECK-SAME: <2 x i8> [[A:%.*]], <2 x i4> [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i4> [[B]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.umulh.v2i8(<2 x i8> [[A]], <2 x i8> [[TMP1]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext nneg <2 x i8> [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[SHR]]
+;
+  %ea = zext <2 x i8> %a to <2 x i16>
+  %eb = zext <2 x i4> %b to <2 x i16>
+  %mul = mul <2 x i16> %ea, %eb
+  %shr = lshr <2 x i16> %mul, splat (i16 8)
+  ret <2 x i16> %shr
+}
+
+define i16 @different_source_widths_operands_multiuse(i8 %a, i4 %b) {
+; CHECK-LABEL: define i16 @different_source_widths_operands_multiuse(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[EB:%.*]] = zext i4 [[B]] to i16
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i16 [[EA]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i16 [[EB]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[B]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext nneg i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = zext i8 %a to i16
+  %eb = zext i4 %b to i16
+  call void (...) @llvm.fake.use(i16 %ea)
+  call void (...) @llvm.fake.use(i16 %eb)
+  %mul = mul i16 %ea, %eb
+  %shr = lshr i16 %mul, 8
+  ret i16 %shr
+}
+
+define i16 @different_source_widths_mixed_extends(i8 %a, i4 %b) {
+; CHECK-LABEL: define i16 @different_source_widths_mixed_extends(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[EB:%.*]] = sext i4 [[B]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[EA]], [[EB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = zext i8 %a to i16
+  %eb = sext i4 %b to i16
+  %mul = mul i16 %ea, %eb
+  %shr = lshr i16 %mul, 8
+  ret i16 %shr
+}
+
+define i16 @different_source_widths_mul_multiuse(i8 %a, i4 %b) {
+; CHECK-LABEL: define i16 @different_source_widths_mul_multiuse(
+; CHECK-SAME: i8 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[EB:%.*]] = zext i4 [[B]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[EA]], [[EB]]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i16 [[MUL]])
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = zext i8 %a to i16
+  %eb = zext i4 %b to i16
+  %mul = mul i16 %ea, %eb
+  call void (...) @llvm.fake.use(i16 %mul)
+  %shr = lshr i16 %mul, 8
+  ret i16 %shr
+}
+
+define i16 @different_source_widths_not_half(i6 %a, i4 %b) {
+; CHECK-LABEL: define i16 @different_source_widths_not_half(
+; CHECK-SAME: i6 [[A:%.*]], i4 [[B:%.*]]) {
+; CHECK-NEXT:    [[EA:%.*]] = zext i6 [[A]] to i16
+; CHECK-NEXT:    [[EB:%.*]] = zext i4 [[B]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[EA]], [[EB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %ea = zext i6 %a to i16
+  %eb = zext i4 %b to i16
+  %mul = mul i16 %ea, %eb
   %shr = lshr i16 %mul, 8
   ret i16 %shr
 }

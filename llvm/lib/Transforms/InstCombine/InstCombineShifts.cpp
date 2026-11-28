@@ -928,8 +928,10 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return CastInst::Create(ExtOpcode, Cmp, Ty);
   }
 
-  // (ext(A) * ext(B)) >> (Width / 2)  -->  ext([su]mulh(A, B))
-  // A and B must be equally extended to double their original width.
+  // (ext(A) * ext(B)) >> (Width / 2)  -->  ext([su]mulh(A, ext(B)))
+  // A and B must use the same extension, and the wider of the two
+  // must be exactly half the multiply width. The narrower one is
+  // extended to the wider type first.
   // The result is sign/zero-extended for an arithmetic/logical shift.
   Value *A, *B;
   Instruction *ExtA, *ExtB;
@@ -937,14 +939,20 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
       match(Op0,
             m_OneUse(m_Mul(m_Instruction(ExtA, m_ZExtOrSExt(m_Value(A))),
                            m_Instruction(ExtB, m_ZExtOrSExt(m_Value(B)))))) &&
-      ExtA->getOpcode() == ExtB->getOpcode() && A->getType() == B->getType() &&
-      TypeBits == 2 * A->getType()->getScalarSizeInBits()) {
-    auto IID = ExtA->getOpcode() == Instruction::SExt ? Intrinsic::smulh
-                                                      : Intrinsic::umulh;
-    Value *MulHigh = Builder.CreateBinaryIntrinsic(IID, A, B);
-    auto ExtOp = I.getOpcode() == Instruction::LShr ? Instruction::ZExt
-                                                    : Instruction::SExt;
-    return CastInst::Create(ExtOp, MulHigh, Ty);
+      ExtA->getOpcode() == ExtB->getOpcode()) {
+    // Make A the wider operand, so that we can use it for the mulh intrinsic.
+    if (A->getType()->getScalarSizeInBits() <
+        B->getType()->getScalarSizeInBits())
+      std::swap(A, B);
+    if (TypeBits == 2 * A->getType()->getScalarSizeInBits()) {
+      bool IsSigned = ExtA->getOpcode() == Instruction::SExt;
+      B = Builder.CreateIntCast(B, A->getType(), IsSigned);
+      auto IID = IsSigned ? Intrinsic::smulh : Intrinsic::umulh;
+      Value *MulHigh = Builder.CreateBinaryIntrinsic(IID, A, B);
+      auto ExtOp = I.getOpcode() == Instruction::LShr ? Instruction::ZExt
+                                                      : Instruction::SExt;
+      return CastInst::Create(ExtOp, MulHigh, Ty);
+    }
   }
 
   const APInt *Op1C;
