@@ -5466,6 +5466,9 @@ public:
   /// implicitly define the namespace.
   NamespaceDecl *getOrCreateStdNamespace();
 
+  /// Look up the special "std::meta" namespace (C++26).
+  NamespaceDecl *lookupStdMetaNamespace();
+
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
 
@@ -6719,6 +6722,9 @@ public:
 
   /// The C++ "std" namespace, where the standard library resides.
   LazyDeclPtr StdNamespace;
+
+  /// The C++ "std::meta" namespace (C++26).
+  LazyDeclPtr StdMetaNamespace;
 
   /// The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
