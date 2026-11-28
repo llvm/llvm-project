@@ -532,8 +532,69 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
 Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   GetElementPtrInst *FirstInst =cast<GetElementPtrInst>(PN.getIncomingValue(0));
 
-  SmallVector<Value*, 16> FixedOperands(FirstInst->op_begin(),
-                                        FirstInst->op_end());
+  // Constant GEPs are canonicalized to i8, so merge in the units of the first
+  // non-i8 GEP and rescale constant byte offsets to it.
+  Type *ElemTy = FirstInst->getSourceElementType();
+  for (Value *V : PN.incoming_values()) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(V);
+    if (!GEP)
+      return nullptr;
+    if (!GEP->getSourceElementType()->isIntegerTy(8)) {
+      ElemTy = GEP->getSourceElementType();
+      break;
+    }
+  }
+  // Operand \p Op of \p GEP in ElemTy units, or nullptr if it has none.
+  auto GetOperand = [&](GetElementPtrInst *GEP, unsigned Op) -> Value * {
+    Value *V = GEP->getOperand(Op);
+    if (Op == 0 || GEP->getSourceElementType() == ElemTy)
+      return V;
+    // Only an i8 index counts bytes.
+    if (!GEP->getSourceElementType()->isIntegerTy(8))
+      return nullptr;
+    auto *C = dyn_cast<ConstantInt>(V);
+    if (!C || GEP->getNumOperands() != 2)
+      return nullptr;
+    TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
+    if (ElemSize.isScalable() || ElemSize.isZero() ||
+        C->getValue().srem(ElemSize.getFixedValue()) != 0)
+      return nullptr;
+    return ConstantInt::get(C->getType(),
+                            C->getValue().sdiv(ElemSize.getFixedValue()));
+  };
+
+  SmallVector<Value *, 16> FirstOps(FirstInst->op_begin(), FirstInst->op_end());
+  for (unsigned Op = 1, E = FirstOps.size(); Op != E; ++Op)
+    if (!(FirstOps[Op] = GetOperand(FirstInst, Op)))
+      return nullptr;
+  SmallVector<Value *, 16> FixedOperands(FirstOps);
+
+  // PHI of this block whose incoming values are operand \p Op of the incoming
+  // GEPs. Bounded to keep the scan cheap in blocks with many PHIs.
+  auto FindOperandPhi = [&](unsigned Op) -> PHINode * {
+    unsigned NumPhis = 0;
+    for (PHINode &OpPN : PN.getParent()->phis()) {
+      if (NumPhis++ > CLOpts.max_num_phis)
+        break;
+      if (&OpPN == &PN || OpPN.getType() != FirstOps[Op]->getType())
+        continue;
+      bool Match = true;
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E && Match;
+           ++I) {
+        BasicBlock *BB = PN.getIncomingBlock(I);
+        // PHIs of a block usually list the predecessors in the same order.
+        Value *V = OpPN.getIncomingBlock(I) == BB
+                       ? OpPN.getIncomingValue(I)
+                       : OpPN.getIncomingValueForBlock(BB);
+        Match = V &&
+                V == GetOperand(cast<GetElementPtrInst>(PN.getIncomingValue(I)),
+                                Op);
+      }
+      if (Match)
+        return &OpPN;
+    }
+    return nullptr;
+  };
   // This is true if all GEP bases are allocas and if all indices into them are
   // constants.
   bool AllBasePointersAreAllocas = true;
@@ -548,9 +609,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
-    GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V);
-    if (!GEP || !GEP->hasOneUser() ||
-        GEP->getSourceElementType() != FirstInst->getSourceElementType() ||
+    GetElementPtrInst *GEP = cast<GetElementPtrInst>(V);
+    if (!GEP->hasOneUser() ||
         GEP->getNumOperands() != FirstInst->getNumOperands())
       return nullptr;
 
@@ -564,20 +624,35 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
     // Compare the operand lists.
     for (unsigned Op = 0, E = FirstInst->getNumOperands(); Op != E; ++Op) {
-      if (FirstInst->getOperand(Op) == GEP->getOperand(Op))
+      Value *GEPOp = GetOperand(GEP, Op);
+      if (!GEPOp)
+        return nullptr;
+      if (FirstOps[Op] == GEPOp)
         continue;
+      // A settled slot holds a PHI matched against every predecessor, or
+      // already needs a new PHI.
+      if (FixedOperands[Op] != FirstOps[Op]) {
+        if (FixedOperands[Op])
+          continue;
+        return nullptr;
+      }
+
+      // A reused PHI has the first GEP's operand type.
+      if (FirstOps[Op]->getType() != GEPOp->getType())
+        return nullptr;
+
+      // Reusing an existing PHI adds none and keeps a constant index free.
+      if (PHINode *OpPN = FindOperandPhi(Op)) {
+        FixedOperands[Op] = OpPN;
+        continue;
+      }
 
       // Don't merge two GEPs when two operands differ (introducing phi nodes)
       // if one of the PHIs has a constant for the index.  The index may be
       // substantially cheaper to compute for the constants, so making it a
       // variable index could pessimize the path.  This also handles the case
       // for struct indices, which must always be constant.
-      if (isa<Constant>(FirstInst->getOperand(Op)) ||
-          isa<Constant>(GEP->getOperand(Op)))
-        return nullptr;
-
-      if (FirstInst->getOperand(Op)->getType() !=
-          GEP->getOperand(Op)->getType())
+      if (isa<Constant>(FirstOps[Op]) || isa<Constant>(GEPOp))
         return nullptr;
 
       // If we already needed a PHI for an earlier operand, and another operand
@@ -609,7 +684,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   for (unsigned I = 0, E = FixedOperands.size(); I != E; ++I) {
     if (FixedOperands[I])
       continue; // operand doesn't need a phi.
-    Value *FirstOp = FirstInst->getOperand(I);
+    Value *FirstOp = GetOperand(FirstInst, I);
     PHINode *NewPN =
         PHINode::Create(FirstOp->getType(), E, FirstOp->getName() + ".pn");
     InsertNewInstBefore(NewPN, PN.getIterator());
@@ -629,14 +704,13 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
       for (unsigned Op = 0, E = OperandPhis.size(); Op != E; ++Op)
         if (PHINode *OpPhi = OperandPhis[Op])
-          OpPhi->addIncoming(InGEP->getOperand(Op), InBB);
+          OpPhi->addIncoming(GetOperand(InGEP, Op), InBB);
     }
   }
 
   Value *Base = FixedOperands[0];
-  GetElementPtrInst *NewGEP =
-      GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
-                                ArrayRef(FixedOperands).slice(1), NW);
+  GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+      ElemTy, Base, ArrayRef(FixedOperands).slice(1), NW);
   PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
 }
