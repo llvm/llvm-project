@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 #include <atomic>
@@ -57,6 +62,138 @@ TEST(Threading, NumPhysicalCoresUnsupported) {
   int Num = get_physical_cores();
   ASSERT_EQ(Num, -1);
 }
+
+#ifdef __linux__
+
+class CgroupCpuCountTest : public testing::Test {
+protected:
+  CgroupCpuCountTest()
+      : ProcSelfCgroup(Root.path("proc-self-cgroup")),
+        ProcSelfMountInfo(Root.path("proc-self-mountinfo")),
+        CgroupMount(Root.path("cgroup")) {
+    EXPECT_FALSE(sys::fs::create_directories(CgroupMount));
+  }
+
+  void write(StringRef Path, StringRef Contents) {
+    std::error_code EC;
+    raw_fd_ostream OS(Path, EC);
+    ASSERT_FALSE(EC) << EC.message();
+    OS << Contents;
+  }
+
+  void configureV2(StringRef Membership, StringRef MountRoot = "/") {
+    write(ProcSelfCgroup, (Twine("0::") + Membership + "\n").str());
+    write(ProcSelfMountInfo,
+          (Twine("29 23 0:26 ") + MountRoot + " " + CgroupMount +
+           " rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw\n")
+              .str());
+  }
+
+  void configureV1(StringRef Membership) {
+    write(ProcSelfCgroup, (Twine("2:cpu,cpuacct:") + Membership + "\n").str());
+    write(ProcSelfMountInfo,
+          (Twine("30 23 0:27 / ") + CgroupMount +
+           " rw,nosuid,nodev,noexec,relatime - cgroup cgroup "
+           "rw,cpu,cpuacct\n")
+              .str());
+  }
+
+  SmallString<128> path(StringRef Relative) {
+    SmallString<128> Result(CgroupMount);
+    sys::path::append(Result, Relative);
+    return Result;
+  }
+
+  detail::CgroupFilePaths paths() const {
+    detail::CgroupFilePaths Paths;
+    Paths.ProcSelfCgroup = ProcSelfCgroup;
+    Paths.ProcSelfMountInfo = ProcSelfMountInfo;
+    Paths.V2CpuMax = "";
+    Paths.V1CpuQuota = "";
+    Paths.V1CpuPeriod = "";
+    Paths.V1CpuAcctQuota = "";
+    Paths.V1CpuAcctPeriod = "";
+    return Paths;
+  }
+
+  unittest::TempDir Root{"llvm-cgroup-test", /*Unique=*/true};
+  SmallString<128> ProcSelfCgroup;
+  SmallString<128> ProcSelfMountInfo;
+  SmallString<128> CgroupMount;
+};
+
+TEST_F(CgroupCpuCountTest, V2LeafQuota) {
+  configureV2("/parent/child");
+  ASSERT_FALSE(sys::fs::create_directories(path("parent/child")));
+  write(path("parent/child/cpu.max"), "800000 100000\n");
+
+  std::optional<unsigned> Count = detail::get_cgroup_cpu_count(paths());
+  ASSERT_TRUE(Count);
+  EXPECT_EQ(*Count, 8u);
+}
+
+TEST_F(CgroupCpuCountTest, V2TightestAncestorQuota) {
+  configureV2("/parent/child");
+  ASSERT_FALSE(sys::fs::create_directories(path("parent/child")));
+  write(path("parent/child/cpu.max"), "max 100000\n");
+  write(path("parent/cpu.max"), "750000 100000\n");
+  write(path("cpu.max"), "1200000 100000\n");
+
+  std::optional<unsigned> Count = detail::get_cgroup_cpu_count(paths());
+  ASSERT_TRUE(Count);
+  EXPECT_EQ(*Count, 8u);
+}
+
+TEST_F(CgroupCpuCountTest, V2MountRootMapsMembership) {
+  configureV2("/tenant/action", "/tenant");
+  ASSERT_FALSE(sys::fs::create_directories(path("action")));
+  write(path("action/cpu.max"), "max 100000\n");
+  write(path("cpu.max"), "600000 100000\n");
+
+  std::optional<unsigned> Count = detail::get_cgroup_cpu_count(paths());
+  ASSERT_TRUE(Count);
+  EXPECT_EQ(*Count, 6u);
+}
+
+TEST_F(CgroupCpuCountTest, V2SkipsUnrelatedMount) {
+  configureV2("/tenant/action", "/tenant");
+  SmallString<128> UnrelatedMount(Root.path("unrelated-cgroup"));
+  ASSERT_FALSE(sys::fs::create_directories(UnrelatedMount));
+  write(ProcSelfMountInfo,
+        (Twine("28 23 0:25 /other ") + UnrelatedMount +
+         " rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw\n" +
+         "29 23 0:26 /tenant " + CgroupMount +
+         " rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw\n")
+            .str());
+  ASSERT_FALSE(sys::fs::create_directories(path("action")));
+  write(path("action/cpu.max"), "400000 100000\n");
+
+  std::optional<unsigned> Count = detail::get_cgroup_cpu_count(paths());
+  ASSERT_TRUE(Count);
+  EXPECT_EQ(*Count, 4u);
+}
+
+TEST_F(CgroupCpuCountTest, V1ParentQuota) {
+  configureV1("/parent/child");
+  ASSERT_FALSE(sys::fs::create_directories(path("parent/child")));
+  write(path("parent/child/cpu.cfs_quota_us"), "-1\n");
+  write(path("parent/child/cpu.cfs_period_us"), "100000\n");
+  write(path("parent/cpu.cfs_quota_us"), "250000\n");
+  write(path("parent/cpu.cfs_period_us"), "100000\n");
+
+  std::optional<unsigned> Count = detail::get_cgroup_cpu_count(paths());
+  ASSERT_TRUE(Count);
+  EXPECT_EQ(*Count, 3u);
+}
+
+TEST_F(CgroupCpuCountTest, UnlimitedHierarchy) {
+  configureV2("/");
+  write(path("cpu.max"), "max 100000\n");
+
+  EXPECT_FALSE(detail::get_cgroup_cpu_count(paths()));
+}
+
+#endif
 
 #if LLVM_ENABLE_THREADS
 
