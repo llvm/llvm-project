@@ -21,13 +21,10 @@ define float @bfloat_to_float() strictfp {
 ;
 ; X64-LABEL: bfloat_to_float:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-NEXT:    movzwl (%rax), %edi
-; X64-NEXT:    callq __extendbfsf2@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    movzwl (%rax), %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    retq
   %1 = load bfloat, ptr @a, align 2
   %2 = tail call float @llvm.experimental.constrained.fpext.f32.bfloat(bfloat %1, metadata !"fpexcept.strict") #0
@@ -48,14 +45,11 @@ define double @bfloat_to_double() strictfp {
 ;
 ; X64-LABEL: bfloat_to_double:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-NEXT:    movzwl (%rax), %edi
-; X64-NEXT:    callq __extendbfsf2@PLT
+; X64-NEXT:    movzwl (%rax), %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %1 = load bfloat, ptr @a, align 2
   %2 = tail call double @llvm.experimental.constrained.fpext.f64.bfloat(bfloat %1, metadata !"fpexcept.strict") #0
@@ -81,8 +75,8 @@ define void @float_to_bfloat(float %0) strictfp {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movq a@GOTPCREL(%rip), %rcx
-; X64-NEXT:    movw %ax, (%rcx)
+; X64-NEXT:    movq a@GOTPCREL(%rip), %rax
+; X64-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -110,8 +104,8 @@ define void @double_to_bfloat(double %0) strictfp {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    callq __truncdfbf2@PLT
-; X64-NEXT:    movq a@GOTPCREL(%rip), %rcx
-; X64-NEXT:    movw %ax, (%rcx)
+; X64-NEXT:    movq a@GOTPCREL(%rip), %rax
+; X64-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -148,16 +142,17 @@ define void @add() strictfp {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-NEXT:    movzwl (%rax), %edi
-; X64-NEXT:    callq __extendbfsf2@PLT
-; X64-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-NEXT:    movzwl (%rax), %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    movq b@GOTPCREL(%rip), %rax
-; X64-NEXT:    movzwl (%rax), %edi
-; X64-NEXT:    callq __extendbfsf2@PLT
-; X64-NEXT:    vaddss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; X64-NEXT:    movzwl (%rax), %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movq c@GOTPCREL(%rip), %rcx
-; X64-NEXT:    movw %ax, (%rcx)
+; X64-NEXT:    movq c@GOTPCREL(%rip), %rax
+; X64-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -171,8 +166,57 @@ define void @add() strictfp {
   ret void
 }
 
+define fp128 @bfloat_to_fp128(bfloat %a) strictfp {
+; X86-LABEL: bfloat_to_fp128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 48
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendbfsf2
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendsftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: bfloat_to_fp128:
+; X64:       # %bb.0:
+; X64-NEXT:    vpextrw $0, %xmm0, %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    jmp __extendsftf2@PLT # TAILCALL
+  %r = call fp128 @llvm.experimental.constrained.fpext.f128.bf16(bfloat %a, metadata !"fpexcept.strict") #0
+  ret fp128 %r
+}
+
 declare float @llvm.experimental.constrained.fpext.f32.bf16(bfloat, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.bf16(bfloat, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.bf16(bfloat, metadata)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f32(float, metadata, metadata)
 declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f64(double, metadata, metadata)

@@ -718,3 +718,49 @@ define <16 x i8> @test_signed_v16i8_v16bf16(<16 x bfloat> %f) nounwind {
   %x = call  <16 x i8> @llvm.fptosi.sat.v16i8.v16bf16(<16 x bfloat> %f)
   ret <16 x i8> %x
 }
+
+define i32 @test_signed_i32_bf16(bfloat %f) nounwind {
+; X86-LABEL: test_signed_i32_bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vpslld $16, %xmm0, %xmm0
+; X86-NEXT:    vcvttss2sis %xmm0, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_signed_i32_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    vpslld $16, %xmm0, %xmm0
+; X64-NEXT:    vcvttss2sis %xmm0, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.fptosi.sat.i32.bf16(bfloat %f)
+  ret i32 %x
+}
+
+define i64 @test_unsigned_i64_bf16(bfloat %f) nounwind {
+; X86-LABEL: test_unsigned_i64_bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,xmm0[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vcvttps2uqq %xmm1, %xmm1
+; X86-NEXT:    vpextrd $1, %xmm1, %edx
+; X86-NEXT:    vpslld $16, %xmm0, %xmm0
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vucomiss %xmm2, %xmm0
+; X86-NEXT:    cmovbl %ecx, %edx
+; X86-NEXT:    vmovd %xmm1, %eax
+; X86-NEXT:    cmovbl %ecx, %eax
+; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    cmoval %ecx, %eax
+; X86-NEXT:    cmoval %ecx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i64_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    vpslld $16, %xmm0, %xmm0
+; X64-NEXT:    vcvttss2usis %xmm0, %rax
+; X64-NEXT:    retq
+  %x = call i64 @llvm.fptoui.sat.i64.bf16(bfloat %f)
+  ret i64 %x
+}

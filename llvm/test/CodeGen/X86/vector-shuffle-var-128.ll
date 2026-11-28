@@ -501,49 +501,376 @@ define <8 x half> @shuffle_v8f16(<8 x half> %v, <8 x i16> %mask) nounwind {
 }
 
 define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
-; SSE-LABEL: shuffle_v8bf16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $7, %xmm1, %eax
-; SSE-NEXT:    pextrw $6, %xmm1, %ecx
-; SSE-NEXT:    pextrw $5, %xmm1, %edx
-; SSE-NEXT:    pextrw $4, %xmm1, %edi
-; SSE-NEXT:    pextrw $3, %xmm1, %esi
-; SSE-NEXT:    pextrw $2, %xmm1, %r8d
-; SSE-NEXT:    pextrw $1, %xmm1, %r9d
-; SSE-NEXT:    pextrw $0, %xmm1, %r10d
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $7, %r10d
-; SSE-NEXT:    movzwl -24(%rsp,%r10,2), %r10d
-; SSE-NEXT:    andl $7, %r9d
-; SSE-NEXT:    movzwl -24(%rsp,%r9,2), %r9d
-; SSE-NEXT:    shll $16, %r9d
-; SSE-NEXT:    orl %r10d, %r9d
-; SSE-NEXT:    andl $7, %r8d
-; SSE-NEXT:    movzwl -24(%rsp,%r8,2), %r8d
-; SSE-NEXT:    andl $7, %esi
-; SSE-NEXT:    movzwl -24(%rsp,%rsi,2), %esi
-; SSE-NEXT:    shll $16, %esi
-; SSE-NEXT:    orl %r8d, %esi
-; SSE-NEXT:    shlq $32, %rsi
-; SSE-NEXT:    orq %r9, %rsi
-; SSE-NEXT:    andl $7, %edi
-; SSE-NEXT:    movzwl -24(%rsp,%rdi,2), %edi
-; SSE-NEXT:    andl $7, %edx
-; SSE-NEXT:    movzwl -24(%rsp,%rdx,2), %edx
-; SSE-NEXT:    shll $16, %edx
-; SSE-NEXT:    orl %edi, %edx
-; SSE-NEXT:    andl $7, %ecx
-; SSE-NEXT:    movzwl -24(%rsp,%rcx,2), %ecx
-; SSE-NEXT:    andl $7, %eax
-; SSE-NEXT:    movzwl -24(%rsp,%rax,2), %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    orl %ecx, %eax
-; SSE-NEXT:    shlq $32, %rax
-; SSE-NEXT:    orq %rdx, %rax
-; SSE-NEXT:    movq %rax, %xmm1
-; SSE-NEXT:    movq %rsi, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    retq
+; SSE2-LABEL: shuffle_v8bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movl %ecx, %esi
+; SSE2-NEXT:    shrl $16, %esi
+; SSE2-NEXT:    movq %rdx, %rdi
+; SSE2-NEXT:    shrq $32, %rdi
+; SSE2-NEXT:    movq %rdx, %r8
+; SSE2-NEXT:    shrq $48, %r8
+; SSE2-NEXT:    movq %rcx, %r9
+; SSE2-NEXT:    shrq $32, %r9
+; SSE2-NEXT:    movq %rcx, %r10
+; SSE2-NEXT:    shrq $48, %r10
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    pextrw $7, %xmm1, %ecx
+; SSE2-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    pextrw $3, %xmm1, %edx
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    pextrw $1, %xmm1, %esi
+; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    andl $7, %eax
+; SSE2-NEXT:    movzwl -128(%rsp,%rax,2), %eax
+; SSE2-NEXT:    andl $7, %esi
+; SSE2-NEXT:    movzwl -112(%rsp,%rsi,2), %esi
+; SSE2-NEXT:    shll $16, %esi
+; SSE2-NEXT:    orl %eax, %esi
+; SSE2-NEXT:    pextrw $2, %xmm1, %eax
+; SSE2-NEXT:    andl $7, %eax
+; SSE2-NEXT:    movzwl -96(%rsp,%rax,2), %edi
+; SSE2-NEXT:    andl $7, %edx
+; SSE2-NEXT:    movzwl -80(%rsp,%rdx,2), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    orl %edi, %eax
+; SSE2-NEXT:    pextrw $5, %xmm1, %edx
+; SSE2-NEXT:    shlq $32, %rax
+; SSE2-NEXT:    orq %rsi, %rax
+; SSE2-NEXT:    pextrw $4, %xmm1, %esi
+; SSE2-NEXT:    andl $7, %esi
+; SSE2-NEXT:    movzwl -64(%rsp,%rsi,2), %esi
+; SSE2-NEXT:    andl $7, %edx
+; SSE2-NEXT:    movzwl -48(%rsp,%rdx,2), %edx
+; SSE2-NEXT:    shll $16, %edx
+; SSE2-NEXT:    orl %esi, %edx
+; SSE2-NEXT:    pextrw $6, %xmm1, %esi
+; SSE2-NEXT:    andl $7, %esi
+; SSE2-NEXT:    movzwl -32(%rsp,%rsi,2), %esi
+; SSE2-NEXT:    andl $7, %ecx
+; SSE2-NEXT:    movzwl -16(%rsp,%rcx,2), %ecx
+; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    orl %esi, %ecx
+; SSE2-NEXT:    shlq $32, %rcx
+; SSE2-NEXT:    orq %rdx, %rcx
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    movq %rax, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    popq %rax
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: shuffle_v8bf16:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pushq %rax
+; SSSE3-NEXT:    movq %xmm0, %rcx
+; SSSE3-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
+; SSSE3-NEXT:    movq %xmm0, %rdx
+; SSSE3-NEXT:    movl %edx, %eax
+; SSSE3-NEXT:    shrl $16, %eax
+; SSSE3-NEXT:    movl %ecx, %esi
+; SSSE3-NEXT:    shrl $16, %esi
+; SSSE3-NEXT:    movq %rdx, %rdi
+; SSSE3-NEXT:    shrq $32, %rdi
+; SSSE3-NEXT:    movq %rdx, %r8
+; SSSE3-NEXT:    shrq $48, %r8
+; SSSE3-NEXT:    movq %rcx, %r9
+; SSSE3-NEXT:    shrq $32, %r9
+; SSSE3-NEXT:    movq %rcx, %r10
+; SSSE3-NEXT:    shrq $48, %r10
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    pextrw $7, %xmm1, %ecx
+; SSSE3-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    pextrw $3, %xmm1, %edx
+; SSSE3-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    pextrw $1, %xmm1, %esi
+; SSSE3-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    andl $7, %eax
+; SSSE3-NEXT:    movzwl -128(%rsp,%rax,2), %eax
+; SSSE3-NEXT:    andl $7, %esi
+; SSSE3-NEXT:    movzwl -112(%rsp,%rsi,2), %esi
+; SSSE3-NEXT:    shll $16, %esi
+; SSSE3-NEXT:    orl %eax, %esi
+; SSSE3-NEXT:    pextrw $2, %xmm1, %eax
+; SSSE3-NEXT:    andl $7, %eax
+; SSSE3-NEXT:    movzwl -96(%rsp,%rax,2), %edi
+; SSSE3-NEXT:    andl $7, %edx
+; SSSE3-NEXT:    movzwl -80(%rsp,%rdx,2), %eax
+; SSSE3-NEXT:    shll $16, %eax
+; SSSE3-NEXT:    orl %edi, %eax
+; SSSE3-NEXT:    pextrw $5, %xmm1, %edx
+; SSSE3-NEXT:    shlq $32, %rax
+; SSSE3-NEXT:    orq %rsi, %rax
+; SSSE3-NEXT:    pextrw $4, %xmm1, %esi
+; SSSE3-NEXT:    andl $7, %esi
+; SSSE3-NEXT:    movzwl -64(%rsp,%rsi,2), %esi
+; SSSE3-NEXT:    andl $7, %edx
+; SSSE3-NEXT:    movzwl -48(%rsp,%rdx,2), %edx
+; SSSE3-NEXT:    shll $16, %edx
+; SSSE3-NEXT:    orl %esi, %edx
+; SSSE3-NEXT:    pextrw $6, %xmm1, %esi
+; SSSE3-NEXT:    andl $7, %esi
+; SSSE3-NEXT:    movzwl -32(%rsp,%rsi,2), %esi
+; SSSE3-NEXT:    andl $7, %ecx
+; SSSE3-NEXT:    movzwl -16(%rsp,%rcx,2), %ecx
+; SSSE3-NEXT:    shll $16, %ecx
+; SSSE3-NEXT:    orl %esi, %ecx
+; SSSE3-NEXT:    shlq $32, %rcx
+; SSSE3-NEXT:    orq %rdx, %rcx
+; SSSE3-NEXT:    movq %rcx, %xmm1
+; SSSE3-NEXT:    movq %rax, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    popq %rax
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: shuffle_v8bf16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pushq %rax
+; SSE41-NEXT:    movq %xmm0, %rcx
+; SSE41-NEXT:    movl %ecx, %eax
+; SSE41-NEXT:    shrl $16, %eax
+; SSE41-NEXT:    pextrq $1, %xmm0, %rdi
+; SSE41-NEXT:    movl %edi, %edx
+; SSE41-NEXT:    shrl $16, %edx
+; SSE41-NEXT:    movq %rcx, %rsi
+; SSE41-NEXT:    shrq $32, %rsi
+; SSE41-NEXT:    movq %rcx, %r8
+; SSE41-NEXT:    shrq $48, %r8
+; SSE41-NEXT:    movq %rdi, %r9
+; SSE41-NEXT:    shrq $32, %r9
+; SSE41-NEXT:    movq %rdi, %r10
+; SSE41-NEXT:    shrq $48, %r10
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r10w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r9w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    pextrw $7, %xmm1, %ecx
+; SSE41-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    pextrw $3, %xmm1, %esi
+; SSE41-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    pextrw $1, %xmm1, %edx
+; SSE41-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movd %xmm1, %eax
+; SSE41-NEXT:    andl $7, %eax
+; SSE41-NEXT:    movzwl -128(%rsp,%rax,2), %eax
+; SSE41-NEXT:    andl $7, %edx
+; SSE41-NEXT:    movzwl -112(%rsp,%rdx,2), %edx
+; SSE41-NEXT:    shll $16, %edx
+; SSE41-NEXT:    orl %eax, %edx
+; SSE41-NEXT:    pextrw $2, %xmm1, %eax
+; SSE41-NEXT:    andl $7, %eax
+; SSE41-NEXT:    movzwl -96(%rsp,%rax,2), %edi
+; SSE41-NEXT:    andl $7, %esi
+; SSE41-NEXT:    movzwl -80(%rsp,%rsi,2), %eax
+; SSE41-NEXT:    shll $16, %eax
+; SSE41-NEXT:    orl %edi, %eax
+; SSE41-NEXT:    pextrw $5, %xmm1, %esi
+; SSE41-NEXT:    shlq $32, %rax
+; SSE41-NEXT:    orq %rdx, %rax
+; SSE41-NEXT:    pextrw $4, %xmm1, %edx
+; SSE41-NEXT:    andl $7, %edx
+; SSE41-NEXT:    movzwl -64(%rsp,%rdx,2), %edx
+; SSE41-NEXT:    andl $7, %esi
+; SSE41-NEXT:    movzwl -48(%rsp,%rsi,2), %esi
+; SSE41-NEXT:    shll $16, %esi
+; SSE41-NEXT:    orl %edx, %esi
+; SSE41-NEXT:    pextrw $6, %xmm1, %edx
+; SSE41-NEXT:    andl $7, %edx
+; SSE41-NEXT:    movzwl -32(%rsp,%rdx,2), %edx
+; SSE41-NEXT:    andl $7, %ecx
+; SSE41-NEXT:    movzwl -16(%rsp,%rcx,2), %ecx
+; SSE41-NEXT:    shll $16, %ecx
+; SSE41-NEXT:    orl %edx, %ecx
+; SSE41-NEXT:    shlq $32, %rcx
+; SSE41-NEXT:    orq %rsi, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    movq %rax, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    popq %rax
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v8bf16:
 ; AVX:       # %bb.0:
@@ -574,4 +901,5 @@ define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AVX1: {{.*}}
 ; AVX2: {{.*}}
+; SSE: {{.*}}
 ; XOP: {{.*}}

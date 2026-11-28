@@ -141,6 +141,7 @@ let Predicates = [NoAVX512] in {
 def : Pat<(v16i8 immAllZerosV), (V_SET0)>;
 def : Pat<(v8i16 immAllZerosV), (V_SET0)>;
 def : Pat<(v8f16 immAllZerosV), (V_SET0)>;
+def : Pat<(v8bf16 immAllZerosV), (V_SET0)>;
 def : Pat<(v4i32 immAllZerosV), (V_SET0)>;
 def : Pat<(v2i64 immAllZerosV), (V_SET0)>;
 def : Pat<(v2f64 immAllZerosV), (V_SET0)>;
@@ -150,6 +151,7 @@ let Predicates = [NoAVX512] in {
 def : Pat<(v32i8 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 def : Pat<(v16i16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 def : Pat<(v16f16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v16bf16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 def : Pat<(v8i32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 def : Pat<(v8f32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 def : Pat<(v4i64 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
@@ -4360,12 +4362,28 @@ let Predicates = [UseSSE2], AddedComplexity = -10 in {
   def : Pat<(store f16:$src, addr:$dst), (MOV16mr addr:$dst, (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit))>;
   def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
   def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (MOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
+  def : Pat<(bf16 (load addr:$src)), (COPY_TO_REGCLASS (PINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
+  def : Pat<(store bf16:$src, addr:$dst), (MOV16mr addr:$dst, (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit))>;
+  def : Pat<(i16 (bitconvert bf16:$src)), (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
+  def : Pat<(bf16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (MOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
+}
+
+let Predicates = [HasSSE2, NoAVX512] in {
+  def : Pat<(bf16 (bitconvert f16:$src)), (COPY_TO_REGCLASS FR16:$src, FR16)>;
+  def : Pat<(f16 (bitconvert bf16:$src)), (COPY_TO_REGCLASS FR16:$src, FR16)>;
+}
+let Predicates = [HasAVX512] in {
+  def : Pat<(bf16 (bitconvert f16:$src)), (COPY_TO_REGCLASS FR16X:$src, FR16X)>;
+  def : Pat<(f16 (bitconvert bf16:$src)), (COPY_TO_REGCLASS FR16X:$src, FR16X)>;
 }
 
 let Predicates = [HasAVX, NoBWI] in {
   def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
   def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (VPEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
   def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VMOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
+  def : Pat<(bf16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
+  def : Pat<(i16 (bitconvert bf16:$src)), (EXTRACT_SUBREG (VPEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
+  def : Pat<(bf16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VMOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
 }
 
 //===---------------------------------------------------------------------===//
@@ -5339,10 +5357,16 @@ let Predicates = [HasAVX, NoBWI] in
 defm PEXTRW      : SS41I_extract16<0x15, "pextrw">;
 
 let Predicates = [UseSSE41] in
+{
   def : Pat<(store f16:$src, addr:$dst), (PEXTRWmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
+  def : Pat<(store bf16:$src, addr:$dst), (PEXTRWmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
+}
 
 let Predicates = [HasAVX, NoBWI] in
+{
   def : Pat<(store f16:$src, addr:$dst), (VPEXTRWmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
+  def : Pat<(store bf16:$src, addr:$dst), (VPEXTRWmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
+}
 
 
 /// SS41I_extract32 - SSE 4.1 extract 32 bits to int reg or memory destination
@@ -7850,6 +7874,19 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   def : Pat<(v8f16 (X86VBroadcast (f16 FR16:$src))),
             (VPBROADCASTWrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
   def : Pat<(v16f16 (X86VBroadcast (f16 FR16:$src))),
+            (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
+
+  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWrm addr:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWYrm addr:$src)>;
+  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128:$src))),
+            (VPBROADCASTWrr VR128:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128:$src))),
+            (VPBROADCASTWYrr VR128:$src)>;
+  def : Pat<(v8bf16 (X86VBroadcast (bf16 FR16:$src))),
+            (VPBROADCASTWrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
+  def : Pat<(v16bf16 (X86VBroadcast (bf16 FR16:$src))),
             (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
 }
 let Predicates = [HasAVX2, NoVLX] in {

@@ -14,9 +14,7 @@ define void @splat_v8bf16_cross_block(<8 x bfloat> %v, i1 %c, ptr %p) nounwind {
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    je .LBB0_2
 ; SSE-NEXT:  # %bb.1: # %splat
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE-NEXT:    movw %ax, 14(%rsi)
 ; SSE-NEXT:    movw %ax, 12(%rsi)
 ; SSE-NEXT:    movw %ax, 10(%rsi)
@@ -53,9 +51,7 @@ define void @splat_v16bf16_from_v8bf16_cross_block(<8 x bfloat> %v, i1 %c, ptr %
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    je .LBB1_2
 ; SSE-NEXT:  # %bb.1: # %splat
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE-NEXT:    movw %ax, 30(%rsi)
 ; SSE-NEXT:    movw %ax, 28(%rsi)
 ; SSE-NEXT:    movw %ax, 26(%rsi)
@@ -101,9 +97,7 @@ define void @splat_v16bf16_cross_block(<16 x bfloat> %v, i1 %c, ptr %p) nounwind
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    je .LBB2_2
 ; SSE-NEXT:  # %bb.1: # %splat
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE-NEXT:    movw %ax, 30(%rsi)
 ; SSE-NEXT:    movw %ax, 28(%rsi)
 ; SSE-NEXT:    movw %ax, 26(%rsi)
@@ -148,14 +142,15 @@ exit:
 define void @splat_v8bf16_volatile_load(ptr %src, ptr %dst) nounwind {
 ; SSE-LABEL: splat_v8bf16_volatile_load:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movzwl 14(%rdi), %eax
-; SSE-NEXT:    movzwl 12(%rdi), %eax
-; SSE-NEXT:    movzwl 10(%rdi), %eax
-; SSE-NEXT:    movzwl 8(%rdi), %eax
-; SSE-NEXT:    movzwl 6(%rdi), %eax
-; SSE-NEXT:    movzwl 4(%rdi), %eax
-; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    movzwl 2(%rdi), %ecx
+; SSE-NEXT:    pinsrw $0, 14(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 12(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 10(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 8(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 6(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 4(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 2(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE-NEXT:    movw %ax, 14(%rsi)
 ; SSE-NEXT:    movw %ax, 12(%rsi)
 ; SSE-NEXT:    movw %ax, 10(%rsi)
@@ -183,30 +178,30 @@ define void @splat_v8bf16_volatile_load(ptr %src, ptr %dst) nounwind {
 define void @splat_v8bf16_broadcast_load(ptr %p, <8 x bfloat> %other, ptr %dst1, ptr %dst2) nounwind {
 ; SSE-LABEL: splat_v8bf16_broadcast_load:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq %xmm0, %rax
-; SSE-NEXT:    movq %rax, %rcx
-; SSE-NEXT:    movq %rax, %r8
-; SSE-NEXT:    movzwl (%rdi), %edi
-; SSE-NEXT:    movw %di, 8(%rsi)
+; SSE-NEXT:    movq %xmm0, %rcx
+; SSE-NEXT:    movq %rcx, %rax
+; SSE-NEXT:    movl %ecx, %r8d
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    pextrw $0, %xmm0, %edi
 ; SSE-NEXT:    movw %di, (%rsi)
-; SSE-NEXT:    movw %di, 14(%rsi)
-; SSE-NEXT:    movw %di, 12(%rsi)
-; SSE-NEXT:    movw %di, 6(%rsi)
-; SSE-NEXT:    movw %di, 4(%rsi)
-; SSE-NEXT:    movw %di, 10(%rsi)
 ; SSE-NEXT:    movw %di, 2(%rsi)
-; SSE-NEXT:    movw %ax, 8(%rdx)
-; SSE-NEXT:    movw %ax, (%rdx)
-; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
-; SSE-NEXT:    shrl $16, %eax
-; SSE-NEXT:    shrq $32, %rcx
-; SSE-NEXT:    shrq $48, %r8
-; SSE-NEXT:    movw %r8w, 14(%rdx)
-; SSE-NEXT:    movw %cx, 12(%rdx)
-; SSE-NEXT:    movw %r8w, 6(%rdx)
-; SSE-NEXT:    movw %cx, 4(%rdx)
-; SSE-NEXT:    movw %ax, 10(%rdx)
-; SSE-NEXT:    movw %ax, 2(%rdx)
+; SSE-NEXT:    movw %di, 4(%rsi)
+; SSE-NEXT:    movw %di, 6(%rsi)
+; SSE-NEXT:    movw %di, 8(%rsi)
+; SSE-NEXT:    movw %di, 10(%rsi)
+; SSE-NEXT:    movw %di, 12(%rsi)
+; SSE-NEXT:    movw %di, 14(%rsi)
+; SSE-NEXT:    movw %cx, (%rdx)
+; SSE-NEXT:    movw %cx, 8(%rdx)
+; SSE-NEXT:    shrq $48, %rcx
+; SSE-NEXT:    shrq $32, %rax
+; SSE-NEXT:    shrl $16, %r8d
+; SSE-NEXT:    movw %r8w, 2(%rdx)
+; SSE-NEXT:    movw %ax, 4(%rdx)
+; SSE-NEXT:    movw %cx, 6(%rdx)
+; SSE-NEXT:    movw %r8w, 10(%rdx)
+; SSE-NEXT:    movw %ax, 12(%rdx)
+; SSE-NEXT:    movw %cx, 14(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splat_v8bf16_broadcast_load:
@@ -229,9 +224,14 @@ define void @splat_v16bf16_broadcast_load(ptr %p, <8 x bfloat> %other, ptr %dst1
 ; SSE-LABEL: splat_v16bf16_broadcast_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %xmm0, %rax
-; SSE-NEXT:    movq %rax, %rcx
-; SSE-NEXT:    movq %rax, %r8
-; SSE-NEXT:    movzwl (%rdi), %edi
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    movl %eax, %r8d
+; SSE-NEXT:    shrl $16, %r8d
+; SSE-NEXT:    movq %rax, %r9
+; SSE-NEXT:    shrq $32, %r9
+; SSE-NEXT:    shrq $48, %rax
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    pextrw $0, %xmm0, %edi
 ; SSE-NEXT:    movw %di, 28(%rsi)
 ; SSE-NEXT:    movw %di, 26(%rsi)
 ; SSE-NEXT:    movw %di, 24(%rsi)
@@ -240,18 +240,14 @@ define void @splat_v16bf16_broadcast_load(ptr %p, <8 x bfloat> %other, ptr %dst1
 ; SSE-NEXT:    movw %di, 18(%rsi)
 ; SSE-NEXT:    movw %di, 16(%rsi)
 ; SSE-NEXT:    movw %di, 30(%rsi)
-; SSE-NEXT:    movw %ax, 8(%rdx)
-; SSE-NEXT:    movw %ax, (%rdx)
-; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
-; SSE-NEXT:    shrl $16, %eax
-; SSE-NEXT:    shrq $32, %rcx
-; SSE-NEXT:    shrq $48, %r8
-; SSE-NEXT:    movw %r8w, 14(%rdx)
-; SSE-NEXT:    movw %cx, 12(%rdx)
-; SSE-NEXT:    movw %r8w, 6(%rdx)
-; SSE-NEXT:    movw %cx, 4(%rdx)
-; SSE-NEXT:    movw %ax, 10(%rdx)
-; SSE-NEXT:    movw %ax, 2(%rdx)
+; SSE-NEXT:    movw %ax, 14(%rdx)
+; SSE-NEXT:    movw %r9w, 12(%rdx)
+; SSE-NEXT:    movw %r8w, 10(%rdx)
+; SSE-NEXT:    movw %cx, 8(%rdx)
+; SSE-NEXT:    movw %ax, 6(%rdx)
+; SSE-NEXT:    movw %r9w, 4(%rdx)
+; SSE-NEXT:    movw %r8w, 2(%rdx)
+; SSE-NEXT:    movw %cx, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splat_v16bf16_broadcast_load:
@@ -281,8 +277,9 @@ define void @splat_v16i16_from_bitcast_v8bf16(<8 x bfloat> %v, i1 %c, ptr %dst) 
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    je .LBB6_2
 ; SSE-NEXT:  # %bb.1: # %splat
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, (%rsi)
@@ -313,14 +310,16 @@ exit:
 define void @rebroadcast_v8i32_from_v8bf16(ptr %src, ptr %dst1, ptr %dst2) nounwind {
 ; SSE-LABEL: rebroadcast_v8i32_from_v8bf16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movzwl 14(%rdi), %eax
-; SSE-NEXT:    movzwl 12(%rdi), %eax
-; SSE-NEXT:    movzwl 10(%rdi), %eax
-; SSE-NEXT:    movzwl 8(%rdi), %eax
-; SSE-NEXT:    movzwl 6(%rdi), %eax
-; SSE-NEXT:    movzwl 2(%rdi), %eax
-; SSE-NEXT:    movzwl 4(%rdi), %eax
-; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    pinsrw $0, 14(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 12(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 10(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 8(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 6(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 4(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, 2(%rdi), %xmm0
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
+; SSE-NEXT:    movzwl %ax, %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shll $16, %ecx
 ; SSE-NEXT:    orl %eax, %ecx
