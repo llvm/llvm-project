@@ -152,6 +152,10 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
   MaterializationUnit::Interface I;
   std::vector<std::optional<object::coff_aux_section_definition>> ComdatDefs(
       Obj.getNumberOfSections() + 1);
+  auto Comdats = object::COFFComdatSections::create(Obj);
+  if (!Comdats)
+    return Comdats.takeError();
+
   for (auto &Sym : Obj.symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
     if (!SymFlagsOrErr)
@@ -160,24 +164,27 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
 
     // Handle comdat symbols
     auto COFFSym = Obj.getCOFFSymbol(Sym);
+    auto SecIndex = COFFSym.getSectionNumber();
     bool IsWeak = false;
     if (auto *Def = COFFSym.getSectionDefinition()) {
-      auto Sec = Obj.getSection(COFFSym.getSectionNumber());
+      auto Sec = Obj.getSection(SecIndex);
       if (!Sec)
         return Sec.takeError();
       if (((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT) &&
           Def->Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
-        ComdatDefs[COFFSym.getSectionNumber()] = *Def;
+        ComdatDefs[SecIndex] = *Def;
         continue;
       }
     }
-    if (!COFF::isReservedSectionNumber(COFFSym.getSectionNumber()) &&
-        ComdatDefs[COFFSym.getSectionNumber()]) {
-      auto Def = ComdatDefs[COFFSym.getSectionNumber()];
-      if (Def->Selection != COFF::IMAGE_COMDAT_SELECT_NODUPLICATES) {
+    if (!COFF::isReservedSectionNumber(SecIndex) && ComdatDefs[SecIndex]) {
+      if (ComdatDefs[SecIndex]->Selection !=
+          COFF::IMAGE_COMDAT_SELECT_NODUPLICATES)
         IsWeak = true;
-      }
-      ComdatDefs[COFFSym.getSectionNumber()] = std::nullopt;
+      ComdatDefs[SecIndex] = std::nullopt;
+    } else if (auto Root = Comdats->getAssociativeRoot(SecIndex)) {
+      // Part of the root COMDAT's group. A non-COMDAT root is strong.
+      if (auto Selection = Comdats->getSelection(*Root))
+        IsWeak = *Selection != COFF::IMAGE_COMDAT_SELECT_NODUPLICATES;
     } else {
       // Skip symbols not defined in this object file.
       if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)

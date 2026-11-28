@@ -1,0 +1,61 @@
+# Check that a section associative to a missing section, or to itself, is an
+# error, whether an external symbol (y) or the section's definition symbol
+# comes first.
+#
+# RUN: yaml2obj -DLEADER=7 %s -o %t.7
+# RUN: not llvm-jitlink -noexec %t.7 2>&1 | FileCheck %s
+# RUN: yaml2obj -DLEADER=2 %s -o %t.self
+# RUN: not llvm-jitlink -noexec %t.self 2>&1 | FileCheck %s
+# RUN: yaml2obj -DLEADER=7 -DYSEC=1 %s -o %t.static
+# RUN: not llvm-jitlink -noexec %t.static 2>&1 | FileCheck %s
+# RUN: yaml2obj -DLEADER=2 -DYSEC=1 %s -o %t.static-self
+# RUN: not llvm-jitlink -noexec %t.static-self 2>&1 | FileCheck %s
+#
+# CHECK: Associative COMDAT section 2 has no leader
+#
+# A leader that is not added to the graph (.voltbl) is an error too.
+#
+# RUN: yaml2obj -DLEADER=1 -DYSEC=1 -DTEXT=.voltbl %s -o %t.voltbl
+# RUN: not llvm-jitlink -noexec %t.voltbl 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOBLOCK
+#
+# NOBLOCK: Associative COMDAT section 2 has no block for its leader section 1
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            [[TEXT=.text]]
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    SectionData:     C3
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    SectionData:     '00'
+symbols:
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            y
+    Value:           0
+    SectionNumber:   [[YSEC=2]]
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          [[LEADER]]
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+...
