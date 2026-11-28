@@ -506,6 +506,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 * `builder` now takes an `llmodule` argument, instead of `llcontext`.
 
+* Added `byte_type`, `byte_bitwidth`, `build_ptrtoaddr`, `build_bitinsert` and
+  `build_bitextract`. `TypeKind.t` gained `TargetExt` and `Byte`, and
+  `Opcode.t` gained `BitInsert` and `BitExtract`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API

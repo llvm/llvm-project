@@ -477,6 +477,18 @@ value llvm_integer_bitwidth(value IntegerTy) {
   return Val_int(LLVMGetIntTypeWidth(Type_val(IntegerTy)));
 }
 
+/*--... Operations on byte types ...........................................--*/
+
+/* llcontext -> int -> lltype */
+value llvm_byte_type(value Context, value Width) {
+  return to_val(LLVMByteTypeInContext(Context_val(Context), Int_val(Width)));
+}
+
+/* lltype -> int */
+value llvm_byte_bitwidth(value ByteTy) {
+  return Val_int(LLVMGetByteTypeWidth(Type_val(ByteTy)));
+}
+
 /*--... Operations on real types ...........................................--*/
 
 /* llcontext -> lltype */
@@ -1816,12 +1828,9 @@ DEFINE_ITERATORS(instr, Instruction, BasicBlock_val, LLVMValueRef, Value_val,
 
 /* llvalue -> Opcode.t */
 value llvm_instr_get_opcode(value Inst) {
-  LLVMOpcode o;
   if (!LLVMIsAInstruction(Value_val(Inst)))
     caml_failwith("Not an instruction");
-  o = LLVMGetInstructionOpcode(Value_val(Inst));
-  assert(o <= LLVMFreeze);
-  return Val_int(o);
+  return Val_int(LLVMGetInstructionOpcode(Value_val(Inst)));
 }
 
 /* llvalue -> ICmp.t option */
@@ -2550,6 +2559,12 @@ value llvm_build_prttoint(value X, value Ty, value Name, value B) {
 }
 
 /* llvalue -> lltype -> string -> llbuilder -> llvalue */
+value llvm_build_ptrtoaddr(value X, value Ty, value Name, value B) {
+  return to_val(LLVMBuildCast(Builder_val(B), LLVMPtrToAddr, Value_val(X),
+                              Type_val(Ty), String_val(Name)));
+}
+
+/* llvalue -> lltype -> string -> llbuilder -> llvalue */
 value llvm_build_inttoptr(value X, value Ty, value Name, value B) {
   return to_val(LLVMBuildIntToPtr(Builder_val(B), Value_val(X), Type_val(Ty),
                                   String_val(Name)));
@@ -2724,6 +2739,22 @@ value llvm_build_ptrdiff(value ElemTy, value LHS, value RHS, value Name,
 value llvm_build_freeze(value X, value Name, value B) {
   return to_val(
       LLVMBuildFreeze(Builder_val(B), Value_val(X), String_val(Name)));
+}
+
+/* llvalue -> llvalue -> llvalue -> string -> llbuilder -> llvalue */
+value llvm_build_bitinsert(value Base, value Val, value Offset, value Name,
+                           value B) {
+  return to_val(LLVMBuildBitInsert(Builder_val(B), Value_val(Base),
+                                   Value_val(Val), Value_val(Offset),
+                                   String_val(Name)));
+}
+
+/* lltype -> llvalue -> llvalue -> string -> llbuilder -> llvalue */
+value llvm_build_bitextract(value Ty, value Src, value Offset, value Name,
+                            value B) {
+  return to_val(LLVMBuildBitExtract(Builder_val(B), Type_val(Ty),
+                                    Value_val(Src), Value_val(Offset),
+                                    String_val(Name)));
 }
 
 /*===-- Memory buffers ----------------------------------------------------===*/
