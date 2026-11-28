@@ -4682,7 +4682,19 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (isa<ConstantPointerNull>(CV)) {
     if (isa<VectorType>(CV->getType()))
       return emitGlobalConstantVector(DL, CV, AP, AliasList);
-    AP.OutStreamer->emitIntValue(0, Size);
+
+    // The data layout only allows a null pointer with all bits zero or all
+    // bits one. Some pointers can be wider than 64 bits.
+    bool AllOnes =
+        !DL.getNullPtrValue(CV->getType()->getPointerAddressSpace()).isZero();
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (StoreSize <= 8)
+      AP.OutStreamer->emitIntValue(AllOnes ? -1 : 0, StoreSize);
+    else
+      AP.OutStreamer->emitFill(StoreSize, AllOnes ? 0xFF : 0);
+    // Emit tail padding if needed.
+    if (Size != StoreSize)
+      AP.OutStreamer->emitZeros(Size - StoreSize);
     return;
   }
 
