@@ -111,24 +111,14 @@ public:
 
   static void doNothing(MachineFunction &MF, LiveIntervals &LIS) {};
 
-  void rematerializerTest(StringRef MIRBody, RematerializerTestFn Test,
-                          ProcessMIRFn PreRemat = doNothing) {
-    SmallString<512> S;
-    StringRef MIRString = (Twine(R"MIR(
----
-name: func
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
-)MIR") + Twine(MIRBody) + Twine("...\n"))
-                              .toNullTerminatedStringRef(S);
-    ASSERT_TRUE(parseMIR(MIRString));
-    MachineFunction &MF = getMF("func");
-    LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  using BuildRegionsFn = std::function<void(
+      MachineFunction &, SmallVectorImpl<Rematerializer::RegionBoundaries> &)>;
 
-    PreRemat(MF, LIS);
-
-    SmallVector<Rematerializer::RegionBoundaries> Regions;
+  /// Default region builder: splits each block into regions separated by
+  /// terminators. A terminator is not part of any region.
+  static void buildRegionsByTerminator(
+      MachineFunction &MF,
+      SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
     MachineInstr *FirstMI = nullptr;
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
@@ -145,6 +135,31 @@ body:             |
         FirstMI = nullptr;
       }
     }
+  }
+
+  /// Builds the region vector via \p BuildRegions, which is called after \p
+  /// PreRemat.
+  void
+  rematerializerTest(StringRef MIRBody, RematerializerTestFn Test,
+                     ProcessMIRFn PreRemat = doNothing,
+                     BuildRegionsFn BuildRegions = buildRegionsByTerminator) {
+    SmallString<512> S;
+    StringRef MIRString = (Twine(R"MIR(
+---
+name: func
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+)MIR") + Twine(MIRBody) + Twine("...\n"))
+                              .toNullTerminatedStringRef(S);
+    ASSERT_TRUE(parseMIR(MIRString));
+    MachineFunction &MF = getMF("func");
+    LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+
+    PreRemat(MF, LIS);
+
+    SmallVector<Rematerializer::RegionBoundaries> Regions;
+    BuildRegions(MF, Regions);
 
     RematerializerWrapper RW(MF, Regions, LIS);
     Test(RW);
@@ -1161,4 +1176,59 @@ TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
     // re-created before the S_NOP in its region.
     ExpectSeq(RW->getReg(Cst3).getFirstDef(), Nop2);
   });
+}
+
+/// Region upper bounds are exclusive and may be non-terminator MIs. The
+/// rematerializer used to consider them part of the region they bound, making
+/// registers they define rematerializable. Rematerializing such a register
+/// would delete the region's upper bound, which was never updated.
+TEST_F(RematerializerTest, RegionEndNotRematerializable) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %split:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+
+  bb.1:
+    S_NOP 0, implicit %0, implicit %1, implicit %split
+    S_ENDPGM 0
+)MIR";
+
+  // %split's defining MI splits bb.0 into two regions.
+  BuildRegionsFn BuildRegions =
+      [&](MachineFunction &MF,
+          SmallVectorImpl<Rematerializer::RegionBoundaries> &Regions) {
+        MachineBasicBlock::iterator MBB0Start = MF.getBlockNumbered(0)->begin();
+        MachineBasicBlock::iterator MBB1Start = MF.getBlockNumbered(1)->begin();
+        MachineBasicBlock::iterator SplitDef = std::next(MBB0Start);
+        Regions.push_back({MBB0Start, SplitDef});
+        Regions.push_back({std::next(SplitDef), MF.getBlockNumbered(0)->end()});
+        Regions.push_back({MBB1Start, std::next(MBB1Start)});
+      };
+
+  rematerializerTest(
+      MIRBody,
+      [&](RematerializerWrapper &RW) {
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0Top = 0, MBB0Bot = 1, MBB1 = 2;
+        const RegisterIdx Cst0 = 0, Cst1 = 1;
+
+        MachineBasicBlock::iterator SplitDef =
+            std::next(RW.MF.getBlockNumbered(0)->begin());
+
+        // %split is defined at the upper bound of the first region, so it is
+        // not part of any region and must not be rematerializable.
+        ASSERT_EQ(RW->getNumRegs(), 2U);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, SplitDef);
+        ASSERT_REGION_SIZES();
+
+        // Rematerializing the other registers empties both regions in bb.0.
+        // The first region must still be bounded by %split's defining MI.
+        RW->rematerializeToRegion(Cst0, MBB1, DRI);
+        RW->rematerializeToRegion(Cst1, MBB1, DRI.clear());
+        RW.moveMIs(MBB0Top, MBB1, 1).moveMIs(MBB0Bot, MBB1, 1);
+        ASSERT_EQ(RW->getRegion(MBB0Top).second, SplitDef);
+        ASSERT_REGION_SIZES();
+      },
+      /*PreRemat=*/doNothing, BuildRegions);
 }
