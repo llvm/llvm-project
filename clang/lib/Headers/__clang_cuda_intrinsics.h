@@ -545,6 +545,7 @@ inline __device__ unsigned __funnelshift_rc(unsigned low32, unsigned high32,
     }                                                                          \
   }
 
+#pragma push_macro("__INTRINSIC_LOAD_FAMILY")
 #define __INTRINSIC_LOAD_FAMILY(__Mode, __Volatile, __Clobber)                 \
   __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s8", char,             \
                    unsigned int, "=r", __Volatile, __Clobber)                  \
