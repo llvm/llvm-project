@@ -1515,30 +1515,24 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.getMemoryAccess()) {
-      return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
-                                    *this->getTypeConverter(), /*alignment=*/0,
-                                    /*isVolatile=*/false,
-                                    /*isNonTemporal=*/false);
-    }
-    auto memoryAccess = *op.getMemoryAccess();
-    switch (memoryAccess) {
-    case spirv::MemoryAccess::Aligned:
-    case spirv::MemoryAccess::None:
-    case spirv::MemoryAccess::Nontemporal:
-    case spirv::MemoryAccess::Volatile: {
-      unsigned alignment =
-          memoryAccess == spirv::MemoryAccess::Aligned ? *op.getAlignment() : 0;
-      bool isNonTemporal = memoryAccess == spirv::MemoryAccess::Nontemporal;
-      bool isVolatile = memoryAccess == spirv::MemoryAccess::Volatile;
-      return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
-                                    *this->getTypeConverter(), alignment,
-                                    isVolatile, isNonTemporal);
-    }
-    default:
-      // There is no support of other memory access attributes.
-      return failure();
-    }
+    using spirv::MemoryAccess;
+    constexpr MemoryAccess supportedMask = MemoryAccess::Aligned |
+                                           MemoryAccess::Volatile |
+                                           MemoryAccess::Nontemporal;
+    MemoryAccess memoryAccess =
+        op.getMemoryAccess().value_or(MemoryAccess::None);
+    if ((memoryAccess & ~supportedMask) != MemoryAccess::None)
+      return rewriter.notifyMatchFailure(
+          op, "unsupported memory access attributes");
+
+    unsigned alignment = op.getAlignment().value_or(0);
+    bool isVolatile =
+        spirv::bitEnumContainsAny(memoryAccess, MemoryAccess::Volatile);
+    bool isNonTemporal =
+        spirv::bitEnumContainsAny(memoryAccess, MemoryAccess::Nontemporal);
+    return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
+                                  *this->getTypeConverter(), alignment,
+                                  isVolatile, isNonTemporal);
   }
 };
 
