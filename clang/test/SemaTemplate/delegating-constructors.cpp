@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify 
+// RUN: %clang_cc1 -fsyntax-only -std=c++03 %s -verify=expected,cxx03
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 
 namespace PR10457 {
 
@@ -34,11 +35,11 @@ namespace PR12890 {
   class Document
   {
   public:
-      Document() = default;
+      Document() = default; // cxx03-warning {{defaulted function definitions are a C++11 extension}}
 
       template <class T>
       explicit
-      Document(T&& t) : Document()
+      Document(T&& t) : Document() // cxx03-warning {{rvalue references are a C++11 extension}}
       {
       }
   };

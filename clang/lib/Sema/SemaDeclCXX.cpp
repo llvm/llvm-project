@@ -4766,10 +4766,7 @@ MemInitResult
 Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
                                  CXXRecordDecl *ClassDecl) {
   SourceLocation NameLoc = TInfo->getTypeLoc().getSourceRange().getBegin();
-  if (!LangOpts.CPlusPlus11)
-    return Diag(NameLoc, diag::err_delegating_ctor)
-           << TInfo->getTypeLoc().getSourceRange();
-  Diag(NameLoc, diag::warn_cxx98_compat_delegating_ctor);
+  DiagCompat(NameLoc, diag_compat::delegating_ctor);
 
   bool InitList = true;
   MultiExprArg Args = Init;
