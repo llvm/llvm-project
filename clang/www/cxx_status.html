@@ -452,7 +452,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
    <td>Preprocessing is never undefined</td>
    <td><a href="https://wg21.link/P2843">P2843R3</a></td>
-   <td class="none" align="center">No</td>
+   <td class="partial" align="center">
+    <details>
+      <summary>Clang 24 (Partial)</summary>
+      Error-by-default warning for #define keyword;
+      Pedantic warning for #undef keyword;
+    </details>
+  </td>
  </tr>
  <!-- Kona, Fall 2025-->
  <tr>
