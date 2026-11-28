@@ -1036,6 +1036,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   integer constant expression. (#GH231108)
 - Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
   applied to a field of a record marked `preserve_static_offset`.
+- Fixed a crash or invalid IR when a call to a `constexpr` function is passed
+  as a builtin argument that must be an integer constant expression.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
