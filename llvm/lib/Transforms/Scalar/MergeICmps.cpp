@@ -930,6 +930,21 @@ static bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI,
   const auto Blocks =
       getOrderedBlocks(Phi, LastBlock, Phi.getNumIncomingValues());
   if (Blocks.empty()) return false;
+  auto BlocksSize = Blocks.size();
+
+  auto *ExitBB = Phi.getParent();
+  for (auto &OtherPhi : ExitBB->phis()) {
+    if (&OtherPhi == &Phi)
+      continue;
+    auto *FirstVal = OtherPhi.getIncomingValueForBlock(Blocks[0]);
+    for (size_t I = 1; I < BlocksSize; ++I) {
+      if (OtherPhi.getIncomingValueForBlock(Blocks[I]) != FirstVal) {
+        LLVM_DEBUG(dbgs() << "skip: other phi has differing incoming values\n");
+        return false;
+      }
+    }
+  }
+
   BCECmpChain CmpChain(Blocks, Phi, AA);
 
   if (!CmpChain.atLeastOneMerged()) {
