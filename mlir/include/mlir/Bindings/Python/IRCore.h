@@ -705,6 +705,14 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(PyOperationBase &other);
 
+  /// Return whether the current operation is an ancestor of 'other', i.e.,
+  /// whether it contains 'other' or is the same operation.
+  bool isAncestor(PyOperationBase &other);
+
+  /// Return whether the current operation is a proper ancestor of 'other',
+  /// i.e., whether it contains 'other' and is not the same operation.
+  bool isProperAncestor(PyOperationBase &other);
+
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
   bool verify();

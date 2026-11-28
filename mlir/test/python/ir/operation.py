@@ -1143,6 +1143,30 @@ def testOperationLoc():
         print(op.location)
 
 
+# CHECK-LABEL: TEST: testIsAncestor
+@run
+def testIsAncestor():
+    with Context():
+        module = Module.parse(
+            """
+      func.func @foo() {
+        return
+      }
+      func.func private @bar()
+    """
+        )
+        foo = module.body.operations[0]
+        bar = module.body.operations[1]
+        ret = foo.regions[0].blocks[0].operations[0]
+        assert module.operation.is_ancestor(ret)
+        assert module.operation.is_proper_ancestor(ret)
+        assert foo.is_ancestor(ret)
+        assert foo.is_ancestor(foo)
+        assert not foo.is_proper_ancestor(foo)
+        assert not ret.is_ancestor(foo)
+        assert not bar.is_ancestor(ret)
+
+
 # CHECK-LABEL: TEST: testModuleMerge
 @run
 def testModuleMerge():

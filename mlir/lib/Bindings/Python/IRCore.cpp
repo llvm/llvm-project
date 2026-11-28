@@ -1175,6 +1175,22 @@ bool PyOperationBase::isBeforeInBlock(PyOperationBase &other) {
   return mlirOperationIsBeforeInBlock(operation, otherOp);
 }
 
+bool PyOperationBase::isAncestor(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  return mlirOperationIsAncestor(operation, otherOp);
+}
+
+bool PyOperationBase::isProperAncestor(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  return mlirOperationIsProperAncestor(operation, otherOp);
+}
+
 bool PyOperationBase::verify() {
   PyOperation &op = getOperation();
   PyMlirContext::ErrorCapture errors(op.getContext());
@@ -4334,6 +4350,24 @@ void populateIRCore(nb::module_ &m) {
 
              Returns:
                True if this operation is before `other` in the operation list of the parent block.)")
+      .def("is_ancestor", &PyOperationBase::isAncestor, "other"_a,
+           R"(
+             Checks if this operation is an ancestor of another operation.
+
+             Args:
+               other: Another operation.
+
+             Returns:
+               True if this operation contains `other` or is the same operation.)")
+      .def("is_proper_ancestor", &PyOperationBase::isProperAncestor, "other"_a,
+           R"(
+             Checks if this operation is a proper ancestor of another operation.
+
+             Args:
+               other: Another operation.
+
+             Returns:
+               True if this operation contains `other` and is not the same operation.)")
       .def(
           "clone",
           [](PyOperationBase &self,
