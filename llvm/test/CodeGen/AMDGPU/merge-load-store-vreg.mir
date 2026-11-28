@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
-# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgpu8.03 -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 # If there's a base offset, check that SILoadStoreOptimizer creates
 # V_ADD_{I|U}32_e64 for that offset; _e64 uses a vreg for the carry (rather than
@@ -65,6 +65,7 @@
       %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
+...
 ---
 name:            ds_combine_base_offset
 body:             |

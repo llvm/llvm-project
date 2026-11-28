@@ -160,5 +160,19 @@ TEST(CopyProfShadowTest, PartialOverwrite) {
   EXPECT_TRUE(IsMarkedAsCopy(&buf[2], 2 * sizeof(u64)));
 }
 
+TEST(CopyProfShadowTest, ZeroSizedRange) {
+  __copyprof_init_once();
+  alignas(8) unsigned char buf[16] = {0};
+  MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
+
+  // Zero-byte mark (aligned and unaligned) must be a no-op.
+  MarkApplicationMemory(buf, 0, /*is_copy=*/true);
+  MarkApplicationMemory(buf + 3, 0, /*is_copy=*/true);
+  EXPECT_FALSE(IsMarkedAsCopy(buf, sizeof(buf)));
+
+  EXPECT_TRUE(IsMarkedAsCopy(buf, 0));
+  EXPECT_TRUE(IsMarkedAsCopy(buf + 3, 0));
+}
+
 }  // namespace
 }  // namespace __copyprof

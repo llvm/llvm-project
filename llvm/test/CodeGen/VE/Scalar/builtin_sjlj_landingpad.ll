@@ -59,7 +59,7 @@ define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality ptr @__gxx_pe
 ; CHECK-NEXT:    lea %s0, -104(, %s9)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:    st %s0, -96(, %s9)
+; CHECK-NEXT:    stl %s0, -96(, %s9)
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    lea %s0, errorbar@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -182,7 +182,7 @@ define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality ptr @__gxx_pe
 ; PIC-NEXT:    lea %s0, -104(, %s9)
 ; PIC-NEXT:    bsic %s10, (, %s12)
 ; PIC-NEXT:    or %s0, 1, (0)1
-; PIC-NEXT:    st %s0, -96(, %s9)
+; PIC-NEXT:    stl %s0, -96(, %s9)
 ; PIC-NEXT:  .Ltmp0:
 ; PIC-NEXT:    lea %s12, errorbar@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0

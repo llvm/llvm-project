@@ -6,7 +6,6 @@
 # GCN-LABEL: {{^}}lo_to_lo_sgpr_to_vgpr:
 # GCN: v_mov_b32_sdwa v1, s0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 name: lo_to_lo_sgpr_to_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     $sgpr0 = IMPLICIT_DEF
@@ -17,7 +16,6 @@ body:             |
 # GCN-LABEL: {{^}}lo_to_hi_sgpr_to_vgpr:
 # GCN: v_mov_b32_sdwa v1, s0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 name: lo_to_hi_sgpr_to_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     $sgpr0 = IMPLICIT_DEF

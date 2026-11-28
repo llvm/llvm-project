@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple hexagon-unknown-elf -target-feature +hvx -target-feature +hvx-length128b -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple hexagon-unknown-elf -target-feature +hvx -target-feature +hvx-length128b -emit-llvm -o - %s | FileCheck %s %}
 
 void test_r0(void) {
   // CHECK: define {{.*}}void @test_r0

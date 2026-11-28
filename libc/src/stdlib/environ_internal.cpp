@@ -15,7 +15,7 @@
 #include "config/app.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_strcmp.h"
@@ -108,85 +108,44 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
   return cpp::nullopt;
 }
 
-// Helper: allocate new storage and ownership arrays of the given capacity,
-// copy the first `copy_count` entries from old_storage/old_ownership, and
-// initialize the remaining ownership slots to default (not-owned).
-// Returns nullopt on allocation failure; the old arrays are untouched.
-cpp::optional<EnvironmentManager::AllocResult>
-EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
-                                   EnvStringOwnership *old_ownership,
-                                   size_t copy_count) {
-  AllocChecker ac;
-  char **new_storage = new (ac) char *[new_capacity + 1];
-  if (!ac)
-    return cpp::nullopt;
-
-  EnvStringOwnership *new_ownership =
-      new (ac) EnvStringOwnership[new_capacity + 1];
-  if (!ac) {
-    delete[] new_storage;
-    return cpp::nullopt;
-  }
-
-  for (size_t i = 0; i < copy_count; i++) {
-    new_storage[i] = old_storage ? old_storage[i] : nullptr;
-    new_ownership[i] = old_ownership ? old_ownership[i] : EnvStringOwnership();
-  }
-  new_storage[copy_count] = nullptr;
-
-  return AllocResult{new_storage, new_ownership};
-}
-
 bool EnvironmentManager::ensure_capacity(size_t needed) {
-  // If we're still using the startup environ (pointed to by app.env_ptr),
-  // we must transition to our own managed storage. This allows us to
-  // track ownership of strings and safely expand the array.
-  if (!is_ours) {
-    char **old_env = reinterpret_cast<char **>(app.env_ptr);
-
-    // Allocate new array with room to grow.
-    size_t new_capacity = needed < MIN_ENVIRON_CAPACITY
-                              ? MIN_ENVIRON_CAPACITY
-                              : needed * ENVIRON_GROWTH_FACTOR;
-
-    auto result = alloc_and_copy(new_capacity, old_env, nullptr, count);
-    if (!result)
-      return false;
-
-    auto [new_storage, new_ownership] = *result;
-    storage = new_storage;
-    ownership = new_ownership;
-    capacity = new_capacity;
-    is_ours = true;
-
-    // Update the global environ pointer.
-    app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
-#ifdef LIBC_COPT_SUPPORT_ENVIRON
-    environ = storage;
-#endif
-
-    return true;
-  }
-
-  // We already own the environment array. Check if it's large enough.
-  if (needed <= capacity)
+  // Nothing to do if we already own an array that is large enough.
+  if (is_ours && needed <= capacity)
     return true;
 
-  // Grow capacity. We avoid realloc to ensure that failures don't leave the
-  // manager in an inconsistent state.
-  size_t new_capacity = needed * ENVIRON_GROWTH_FACTOR;
+  // Either transition from the startup environ (pointed to by app.env_ptr) to
+  // our own managed storage, which allows us to track ownership of strings and
+  // safely expand the array, or grow the array we already own. We avoid
+  // realloc to ensure that failures don't leave the manager in an inconsistent
+  // state.
+  size_t new_capacity = (!is_ours && needed < MIN_ENVIRON_CAPACITY)
+                            ? MIN_ENVIRON_CAPACITY
+                            : needed * ENVIRON_GROWTH_FACTOR;
 
-  auto result = alloc_and_copy(new_capacity, storage, ownership, count);
-  if (!result)
+  auto new_storage = make_unique_for_overwrite<char *[]>(new_capacity + 1);
+  if (!new_storage)
+    return false;
+  // All ownership entries start out as not-owned.
+  auto new_ownership = make_unique<EnvStringOwnership[]>(new_capacity + 1);
+  if (!new_ownership)
     return false;
 
-  delete[] storage;
-  delete[] ownership;
+  char **old_storage = get_array();
+  for (size_t i = 0; i < count; i++) {
+    new_storage[i] = old_storage[i];
+    if (is_ours)
+      new_ownership[i] = ownership[i];
+  }
+  new_storage[count] = nullptr;
 
-  auto [new_storage, new_ownership] = *result;
-  storage = new_storage;
-  ownership = new_ownership;
+  if (is_ours) {
+    delete[] storage;
+    delete[] ownership;
+  }
+  storage = new_storage.release();
+  ownership = new_ownership.release();
   capacity = new_capacity;
+  is_ours = true;
 
   // Update the global environ pointer.
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
@@ -216,14 +175,13 @@ int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
   size_t value_len = value.size();
   size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
 
-  AllocChecker ac;
-  char *new_string = new (ac) char[total_len];
-  if (!ac)
+  auto new_string = make_unique_for_overwrite<char[]>(total_len);
+  if (!new_string)
     return -1;
 
-  inline_memcpy(new_string, name.data(), name_len);
+  inline_memcpy(new_string.get(), name.data(), name_len);
   new_string[name_len] = '=';
-  inline_memcpy(new_string + name_len + 1, value.data(), value_len);
+  inline_memcpy(new_string.get() + name_len + 1, value.data(), value_len);
   new_string[name_len + 1 + value_len] = '\0';
 
   char **env_array = get_array();
@@ -233,11 +191,11 @@ int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
     if (ownership[*idx].can_free())
       delete[] env_array[*idx];
 
-    env_array[*idx] = new_string;
+    env_array[*idx] = new_string.release();
     ownership[*idx].allocated_by_us = true;
   } else {
     // Add new variable at the end.
-    env_array[count] = new_string;
+    env_array[count] = new_string.release();
     ownership[count].allocated_by_us = true;
     count++;
     env_array[count] = nullptr; // Maintain null terminator.

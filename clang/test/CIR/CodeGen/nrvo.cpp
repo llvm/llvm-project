@@ -24,14 +24,14 @@ struct S f1() {
 
 
 // CIR:      cir.func{{.*}} @_Z2f1v() -> !u64i
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_S>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} init return_slot : !cir.ptr<!rec_S>
 // CIR-NEXT:   cir.call @_ZN1SC1Ev(%[[RETVAL]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NEXT:   %[[SLOT:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR-NEXT:   %[[COERCED:.*]] = cir.load align(4) %[[SLOT]] : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   cir.return %[[COERCED]]
 
 // CIR-NOELIDE:      cir.func{{.*}} @_Z2f1v() -> !u64i
-// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_S>
+// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   cir.call @_ZN1SC1Ev(%[[S]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NOELIDE-NEXT:   cir.copy %[[S]] align(4) to %[[RETVAL]] align(4) : !cir.ptr<!rec_S>

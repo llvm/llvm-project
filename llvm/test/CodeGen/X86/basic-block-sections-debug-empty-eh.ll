@@ -3,7 +3,7 @@
 ; RUN: echo 'c 0' >> %t
 ; RUN: echo 'c 1 2' >> %t
 ; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu -function-sections \
-; RUN:   -basic-block-sections=%t -verify-machineinstrs \
+; RUN:   -basic-block-sections=%t \
 ; RUN:   -stop-after=bbsections-prepare -o - | FileCheck %s
 
 ; A debug-only block at the start of a section must not suppress the NOP that

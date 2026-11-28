@@ -3,7 +3,6 @@
 
 ---
 name:            coalesce
-tracksRegLiveness: true
 noPhis:          true
 body:             |
   ; CHECK-LABEL: name: coalesce

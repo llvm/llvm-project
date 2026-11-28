@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -1329,6 +1332,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  12     50    50.00   *             U     divl	(%rax)
 # CHECK-NEXT:  38     130   130.00                U     divq	%rcx
 # CHECK-NEXT:  38     130   130.00  *             U     divq	(%rax)
+# CHECK-NEXT:  1      1     0.50                  U     endbr32
+# CHECK-NEXT:  1      1     0.50                  U     endbr64
 # CHECK-NEXT:  1      32    16.00                 U     enter	$7, $4095
 # CHECK-NEXT:  26     62    62.00                 U     idivb	%dil
 # CHECK-NEXT:  26     62    62.00   *             U     idivb	(%rax)
@@ -1954,7 +1959,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 3734.00 3281.00
+# CHECK-NEXT: 3735.00 3282.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -2253,6 +2258,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 50.00  50.00  divl	(%rax)
 # CHECK-NEXT: 130.00 130.00 divq	%rcx
 # CHECK-NEXT: 130.00 130.00 divq	(%rax)
+# CHECK-NEXT: 0.50   0.50   endbr32
+# CHECK-NEXT: 0.50   0.50   endbr64
 # CHECK-NEXT: 16.00  16.00  enter	$7, $4095
 # CHECK-NEXT: 62.00  62.00  idivb	%dil
 # CHECK-NEXT: 62.00  62.00  idivb	(%rax)

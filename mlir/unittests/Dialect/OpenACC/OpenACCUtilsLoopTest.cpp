@@ -419,6 +419,53 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
   EXPECT_TRUE(module->verify().succeeded());
 }
 
+TEST_F(OpenACCUtilsLoopTest, ConvertMultiBlockLoopToSCFFor) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  // Two-block body that uses the induction variable.
+  {
+    OpBuilder::InsertionGuard guard(b);
+    Region &region = loopOp.getRegion();
+    Block *entry = &region.front();
+    Block *tail = b.createBlock(&region, region.end());
+    entry->getTerminator()->erase();
+    b.setInsertionPointToEnd(entry);
+    cf::BranchOp::create(b, loc, tail);
+    b.setInsertionPointToEnd(tail);
+    Value iv = entry->getArgument(0);
+    arith::AddIOp::create(b, loc, iv, iv);
+    acc::YieldOp::create(b, loc);
+  }
+
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+  EXPECT_EQ(forOp.getRegion().getBlocks().size(), 1u);
+
+  SmallVector<scf::ExecuteRegionOp> exeRegions;
+  for (scf::ExecuteRegionOp exe :
+       forOp.getBody()->getOps<scf::ExecuteRegionOp>())
+    exeRegions.push_back(exe);
+  ASSERT_EQ(exeRegions.size(), 1u);
+  EXPECT_EQ(exeRegions.front().getRegion().getBlocks().size(), 2u);
+
+  // The IV use is denormalized, so the body add does not use the scf.for IV.
+  arith::AddIOp bodyAdd;
+  exeRegions.front().getRegion().walk([&](arith::AddIOp op) { bodyAdd = op; });
+  ASSERT_TRUE(bodyAdd);
+  EXPECT_NE(bodyAdd.getLhs(), forOp.getInductionVar());
+  EXPECT_NE(bodyAdd.getRhs(), forOp.getInductionVar());
+
+  EXPECT_TRUE(module->verify().succeeded());
+}
+
 //===----------------------------------------------------------------------===//
 // convertACCLoopToSCFParallel Tests
 //===----------------------------------------------------------------------===//

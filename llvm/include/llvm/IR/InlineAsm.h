@@ -21,6 +21,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -273,7 +274,10 @@ public:
     ZS,
     ZT,
 
-    Max = ZT,
+    // AMDGPU-specific constraints
+    RF,
+
+    Max = RF,
   };
 
   // This class is intentionally packed into a 32b value as it is used as a
@@ -291,7 +295,7 @@ public:
   //   If bit 31 is set:
   //     Bits 30-16 - The operand number that this operand must match.
   //                  (MatchedOperandNo)
-  //   Else if bits 2-0 are Kind::Mem:
+  //   Else if bits 2-0 are Kind::Mem or Kind::Func:
   //     Bits 30-16 - A ConstraintCode:: value indicating the original
   //                  constraint code. (MemConstraintCode)
   //   Else:
@@ -324,7 +328,7 @@ public:
     explicit Flag(uint32_t F) : Storage(F) {}
     Flag(enum Kind K, unsigned NumOps) : Storage(0) {
       Bitfield::set<KindField>(Storage, K);
-      Bitfield::set<NumOperands>(Storage, NumOps);
+      setNumOperandRegisters(NumOps);
     }
     operator uint32_t() { return Storage; }
     Kind getKind() const { return Bitfield::get<KindField>(Storage); }
@@ -350,8 +354,9 @@ public:
       case Kind::Imm:
         return "imm";
       case Kind::Mem:
-      case Kind::Func:
         return "mem";
+      case Kind::Func:
+        return "func";
       }
       llvm_unreachable("impossible kind");
     }
@@ -360,6 +365,19 @@ public:
     /// inline asm operand flag.
     unsigned getNumOperandRegisters() const {
       return Bitfield::get<NumOperands>(Storage);
+    }
+
+    /// The largest number of operands that a flag can describe.
+    static constexpr unsigned getMaxNumOperandRegisters() {
+      return maskTrailingOnes<unsigned>(NumOperands::Bits);
+    }
+
+    /// Set the number of operands that follow the flag. (The MIR parser reads
+    /// the count last, so it can't pass it to the constructor.)
+    void setNumOperandRegisters(unsigned NumOps) {
+      assert(NumOps <= getMaxNumOperandRegisters() &&
+             "Too many operands for a flag");
+      Bitfield::set<NumOperands>(Storage, NumOps);
     }
 
     /// isUseOperandTiedToDef - Return true if the flag of the inline asm
@@ -404,6 +422,7 @@ public:
     void setRegClass(unsigned RC) {
       assert(!isImmKind() && "Immediates cannot have a register class");
       assert(!isMemKind() && "Memory operand cannot have a register class");
+      assert(!isFuncKind() && "Function operand cannot have a register class");
       assert(getRegClass() == 0 && "Register class already set");
       // Store RC + 1, reserve the value 0 to mean 'no register class'.
       Bitfield::set<RegClass>(Storage, RC + 1);
@@ -537,6 +556,8 @@ public:
       return "ZS";
     case ConstraintCode::ZT:
       return "ZT";
+    case ConstraintCode::RF:
+      return "RF";
     default:
       llvm_unreachable("Unknown memory constraint");
     }

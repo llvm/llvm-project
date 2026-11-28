@@ -16,8 +16,9 @@ struct olCreateContextTest : OffloadTest,
                              ::testing::WithParamInterface<OffloadParam<int>> {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
-    auto &DeviceParam = std::get<0>(GetParam());
-    Device = DeviceParam.Handle;
+    auto &DevicesParam = std::get<0>(GetParam());
+    if (!DevicesParam.empty())
+      Device = DevicesParam.front().Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
   }

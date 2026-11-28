@@ -346,6 +346,96 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_PtrEqualOp : SPIRV_Op<"PtrEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have the same value. Result is
+    false if Operand 1 and Operand 2 have different values.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
+def SPIRV_PtrNotEqualOp : SPIRV_Op<"PtrNotEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have different values. Result
+    is false if Operand 1 and Operand 2 have the same value.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
 def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Store through a pointer.";
 

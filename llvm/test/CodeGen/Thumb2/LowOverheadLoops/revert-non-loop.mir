@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s --verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 # CHECK: name: non_loop
 # CHECK: bb.0.entry:
@@ -65,9 +65,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

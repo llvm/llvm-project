@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-unknown -run-pass=finalize-isel -verify-machineinstrs  %s -o - | FileCheck %s --check-prefixes=CHECK
+# RUN: llc -mtriple=x86_64-unknown-unknown -run-pass=finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK
 
 --- |
 

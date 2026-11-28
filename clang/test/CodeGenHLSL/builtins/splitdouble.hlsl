@@ -29,7 +29,7 @@ uint test_scalar(double D) {
 // SPIRV: define hidden spir_func {{.*}} <1 x i32> {{.*}}test_double1{{.*}}(<1 x double> {{.*}} [[VALD:%.*]])
 // SPIRV-NOT:  @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load <1 x double>, ptr [[VALD]].addr, align 8
-// SPIRV-NEXT: [[TRUNC:%.*]] = extractelement <1 x double> [[LOAD]], i64 0
+// SPIRV-NEXT: [[TRUNC:%.*]] = extractelement <1 x double> [[LOAD]], i32 0
 // SPIRV-NEXT: [[CAST:%.*]] = bitcast double [[TRUNC]] to <2 x i32>
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 0
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 1

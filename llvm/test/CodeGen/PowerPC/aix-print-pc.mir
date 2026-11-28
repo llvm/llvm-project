@@ -24,7 +24,7 @@ body:             |
     renamable $r3 = LI 1
     INLINEASM &".space 32760", sideeffect attdialect
     BLR implicit $lr, implicit $rm, implicit killed $r3
-
+...
 # CHECK-LABEL: .print_program_counter:
 # CHECK:         cmplwi
 # CHECK-NEXT:    bne    {{[0-9]}}, $+8

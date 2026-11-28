@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
+#include "IPOOptions.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
 #include "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
@@ -45,7 +46,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -68,28 +68,6 @@ using namespace llvm::instrumentor;
 #define DEBUG_TYPE "instrumentor"
 
 namespace {
-
-/// The user option to specify an output JSON file to write the configuration.
-static cl::opt<std::string> OutputConfigFile(
-    "instrumentor-write-config-file",
-    cl::desc(
-        "Write the instrumentor configuration into the specified JSON file"),
-    cl::init(""));
-
-/// The user option to specify input JSON files to read the configuration from.
-static cl::list<std::string>
-    ConfigFiles("instrumentor-read-config-files",
-                cl::desc("Read the instrumentor configuration from the "
-                         "specified JSON files (comma separated)"),
-                cl::CommaSeparated);
-
-/// The user option to specify an input file to read the configuration file
-/// paths from.
-static cl::opt<std::string> ConfigPathsFile(
-    "instrumentor-read-config-paths-file",
-    cl::desc("Read the instrumentor configuration file "
-             "paths from the specified file (newline separated)"),
-    cl::init(""));
 
 /// Set the debug location, if not set, after changing the insertion point of
 /// the IR builder \p IRB.
@@ -559,14 +537,18 @@ InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
   InstrumentorImpl Impl(IConf, IIRB, M);
 
   // If this is a configuration driven run, iterate over all configurations
   // provided by the user, if not, use the config as is and run the instrumentor
   // once.
+  auto ConfigFiles =
+      to_vector_of<std::string>(Opts.instrumentor_read_config_files);
   if (ReadConfig)
-    readConfigPathsFile(ConfigPathsFile, ConfigFiles, IIRB.Ctx, *FS);
+    readConfigPathsFile(Opts.instrumentor_read_config_paths_file, ConfigFiles,
+                        IIRB.Ctx, *FS);
 
   bool MultipleConfigs = ConfigFiles.size() > 1;
   unsigned Idx = 0;
@@ -581,11 +563,13 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
     if (!readConfigFromJSON(IConf, ConfigFile, IIRB.Ctx, *FS))
       continue;
 
-    writeConfigToJSON(IConf,
-                      MultipleConfigs
-                          ? OutputConfigFile + "." + std::to_string(Idx)
-                          : OutputConfigFile,
-                      IIRB.Ctx);
+    writeConfigToJSON(
+        IConf,
+        MultipleConfigs
+            ? (Opts.instrumentor_write_config_file + "." + std::to_string(Idx))
+                  .str()
+            : Opts.instrumentor_write_config_file.str(),
+        IIRB.Ctx);
 
     printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
 

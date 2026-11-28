@@ -10,6 +10,7 @@
 # 4. I ran delta to reduce this file.
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

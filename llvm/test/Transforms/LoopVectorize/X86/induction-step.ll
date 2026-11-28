@@ -27,7 +27,7 @@ define i16 @wide_add_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT:%.*]] = add <4 x i16> [[STEP_ADD]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP13]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 8
 ; CHECK-NEXT:    store <4 x i16> [[VEC_IND_NEXT]], ptr [[TMP6]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP5]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 8
@@ -99,7 +99,7 @@ define i16 @wide_sub_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i64 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 8
 ; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr [[TMP6]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP7]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT16]] = add nuw i64 [[INDEX]], 8

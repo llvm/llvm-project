@@ -27,7 +27,7 @@ struct space_info {
   uintmax_t available;
 
 #  if _LIBCPP_STD_VER >= 20
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const space_info&, const space_info&) = default;
+  friend bool operator==(const space_info&, const space_info&) = default;
 #  endif
 };
 

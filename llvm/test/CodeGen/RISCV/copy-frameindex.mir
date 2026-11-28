@@ -62,3 +62,4 @@ body: |
     SW $x0, %1:gpr, 0 :: (volatile store (s32) into %stack.0, align 4)
   bb.2:
     PseudoRET
+...

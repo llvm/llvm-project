@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVR.h"
+#include "AVRAsmPrinter.h"
 #include "AVRTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -31,6 +32,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
@@ -39,6 +41,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void AVRCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Expand instructions like
@@ -54,12 +58,12 @@ Error AVRCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   // Install an instruction selector.
   addMachineFunctionPass(AVRISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
   // Create the frame analyzer pass used by the PEI pass.
-  // TODO(boomanaiden154): Add AVRFrameAnalyzer
+  addMachineFunctionPass(AVRFrameAnalyzerPass(), PMW);
   return Error::success();
 }
 
 void AVRCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRExpandPseudos
+  addMachineFunctionPass(AVRExpandPseudoPass(), PMW);
 }
 
 void AVRCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
@@ -68,18 +72,16 @@ void AVRCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinterBegin
+  addModulePass(AVRAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinter
+  addMachineFunctionPass(AVRAsmPrinterPass(), PMW);
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinterEnd
+  addModulePass(AVRAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void AVRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AVRPassRegistry.def"

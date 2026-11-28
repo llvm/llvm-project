@@ -182,3 +182,41 @@ void stripe_of_reverse_intervening() {
       ;
   }
 }
+
+// Clang would previously crash on sizes of type bool or _BitInt.
+namespace GH229039 {
+enum E : bool { Off, On };
+
+void nonconstant_bool(bool b) {
+#pragma omp stripe sizes(b)
+  for (int i = 0; i < 2; i++)
+    ;
+}
+
+void constant_bool() {
+#pragma omp stripe sizes(true)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void bitint(_BitInt(5) n) {
+#pragma omp stripe sizes(n)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void enum_bool(E e) {
+#pragma omp stripe sizes(e)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+template <bool B>
+void nttp_bool() {
+#pragma omp stripe sizes(B)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void instantiate() { nttp_bool<true>(); }
+} // namespace GH229039

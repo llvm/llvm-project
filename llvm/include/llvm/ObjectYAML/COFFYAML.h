@@ -85,7 +85,7 @@ struct SectionDataEntry {
 struct Section {
   COFF::section Header;
   unsigned Alignment = 0;
-  yaml::BinaryRef SectionData;
+  std::optional<yaml::BinaryRef> SectionData;
   std::vector<CodeViewYAML::YAMLDebugSubsection> DebugS;
   std::vector<CodeViewYAML::LeafRecord> DebugT;
   std::vector<CodeViewYAML::LeafRecord> DebugP;

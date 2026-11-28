@@ -473,6 +473,21 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   if (Opts.function_splitting)
     TM.Options.FunctionSplitting = *Opts.function_splitting;
 
+  // These passes require NoVRegs, which a target keeping virtual registers
+  // never reaches.
+  if (!TM.usesPhysRegsForValues()) {
+    disablePass(&FuncletLayoutID);
+    disablePass(&ImplicitNullChecksID);
+    disablePass(&MachineCopyPropagationID);
+    disablePass(&MachineLateInstrsCleanupID);
+    disablePass(&PatchableFunctionID);
+    disablePass(&PostRAMachineSinkingID);
+    disablePass(&PostRASchedulerID);
+    disablePass(&RemoveLoadsIntoFakeUsesID);
+    disablePass(&ShrinkWrapID);
+    disablePass(&StackMapLivenessID);
+  }
+
   setStartStopPasses();
 }
 
@@ -705,7 +720,7 @@ void TargetPassConfig::addIRPasses() {
     addPass(createBasicAAWrapperPass());
 
     // Run loop strength reduction before anything else.
-    if (!Opts.disable_lsr) {
+    if (EnableLoopStrengthReduce && !Opts.disable_lsr) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
@@ -778,7 +793,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM->supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addPass(createSjLjEHPreparePass(TM));
+    addPass(createSjLjEHPreparePass());
     HasEHPrep = true;
   }
 
@@ -1286,18 +1301,16 @@ bool TargetPassConfig::isCustomizedRegAlloc() {
          (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator;
 }
 
-bool TargetPassConfig::addRegAssignAndRewriteFast() {
+void TargetPassConfig::addRegAssignAndRewriteFast() {
   if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
       RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
     reportFatalUsageError(
         "Must use fast (default) register allocator for unoptimized regalloc.");
 
   addPass(createRegAllocPass(false));
-
-  return true;
 }
 
-bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
+void TargetPassConfig::addRegAssignAndRewriteOptimized() {
   // Add the selected register allocation pass.
   addPass(createRegAllocPass(true));
 
@@ -1310,7 +1323,6 @@ bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
   // Regalloc scoring for ML-driven eviction - noop except when learning a new
   // eviction policy.
   addPass(createRegAllocScoringPass());
-  return true;
 }
 
 /// Return true if the default global register allocator is in use and
@@ -1323,10 +1335,13 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
-  if (!TM->enableTiedFastRegAlloc())
+  // RegAllocFast rewrites tied operands itself, but only when it runs.
+  bool RunRegAlloc = TM->usesPhysRegsForValues();
+  if (!RunRegAlloc || !TM->enableTiedFastRegAlloc())
     addPass(&TwoAddressInstructionPassID);
 
-  addRegAssignAndRewriteFast();
+  if (RunRegAlloc)
+    addRegAssignAndRewriteFast();
 }
 
 /// Add standard target-independent passes that are tightly coupled with
@@ -1367,23 +1382,25 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // PreRA instruction scheduling.
   addPass(&MachineSchedulerID);
 
-  if (addRegAssignAndRewriteOptimized()) {
-    // Perform stack slot coloring and post-ra machine LICM.
-    addPass(&StackSlotColoringID);
+  if (!TM->usesPhysRegsForValues())
+    return;
+  addRegAssignAndRewriteOptimized();
 
-    // Allow targets to expand pseudo instructions depending on the choice of
-    // registers before MachineCopyPropagation.
-    addPostRewrite();
+  // Perform stack slot coloring and post-ra machine LICM.
+  addPass(&StackSlotColoringID);
 
-    // Copy propagate to forward register uses and try to eliminate COPYs that
-    // were not coalesced.
-    addPass(&MachineCopyPropagationID);
+  // Allow targets to expand pseudo instructions depending on the choice of
+  // registers before MachineCopyPropagation.
+  addPostRewrite();
 
-    // Run post-ra machine LICM to hoist reloads / remats.
-    //
-    // FIXME: can this move into MachineLateOptimization?
-    addPass(&MachineLICMID);
-  }
+  // Copy propagate to forward register uses and try to eliminate COPYs that
+  // were not coalesced.
+  addPass(&MachineCopyPropagationID);
+
+  // Run post-ra machine LICM to hoist reloads / remats.
+  //
+  // FIXME: can this move into MachineLateOptimization?
+  addPass(&MachineLICMID);
 }
 
 //===---------------------------------------------------------------------===//

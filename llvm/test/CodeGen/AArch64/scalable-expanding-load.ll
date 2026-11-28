@@ -87,3 +87,70 @@ define <vscale x 16 x i8> @test_expandload_poison_passthru(ptr %base, <vscale x 
   %res = call <vscale x 16 x i8> @llvm.masked.expandload(ptr align 1 %base, <vscale x 16 x i1> %pred, <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %res
 }
+
+;; Unpacked SVE vector types
+
+define <vscale x 2 x float> @test_expandload_nxv2f32(ptr %base, <vscale x 2 x float> %passthru, <vscale x 2 x i1> %pred) {
+; CHECK-LABEL: test_expandload_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.d
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    ld1w { z1.d }, p1/z, [x0]
+; CHECK-NEXT:    expand z1.d, p0, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.masked.expandload(ptr align 1 %base, <vscale x 2 x i1> %pred, <vscale x 2 x float> %passthru)
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x half> @test_expandload_nxv2f16(ptr %base, <vscale x 2 x half> %passthru, <vscale x 2 x i1> %pred) {
+; CHECK-LABEL: test_expandload_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.d
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    ld1h { z1.d }, p1/z, [x0]
+; CHECK-NEXT:    expand z1.d, p0, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.masked.expandload(ptr align 1 %base, <vscale x 2 x i1> %pred, <vscale x 2 x half> %passthru)
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x bfloat> @test_expandload_nxv2bf16(ptr %base, <vscale x 2 x bfloat> %passthru, <vscale x 2 x i1> %pred) {
+; CHECK-LABEL: test_expandload_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.d
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    ld1h { z1.d }, p1/z, [x0]
+; CHECK-NEXT:    expand z1.d, p0, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x bfloat> @llvm.masked.expandload(ptr align 1 %base, <vscale x 2 x i1> %pred, <vscale x 2 x bfloat> %passthru)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 4 x half> @test_expandload_nxv4f16(ptr %base, <vscale x 4 x half> %passthru, <vscale x 4 x i1> %pred) {
+; CHECK-LABEL: test_expandload_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x0]
+; CHECK-NEXT:    expand z1.s, p0, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.masked.expandload(ptr align 1 %base, <vscale x 4 x i1> %pred, <vscale x 4 x half> %passthru)
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 4 x bfloat> @test_expandload_nxv4bf16(ptr %base, <vscale x 4 x bfloat> %passthru, <vscale x 4 x i1> %pred) {
+; CHECK-LABEL: test_expandload_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x0]
+; CHECK-NEXT:    expand z1.s, p0, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x bfloat> @llvm.masked.expandload(ptr align 1 %base, <vscale x 4 x i1> %pred, <vscale x 4 x bfloat> %passthru)
+  ret <vscale x 4 x bfloat> %res
+}

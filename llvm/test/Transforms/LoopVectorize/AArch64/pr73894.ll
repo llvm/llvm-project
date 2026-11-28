@@ -3,7 +3,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define i32 @pr70988(ptr %src, i32 %n) {
+define i32 @pr70988(ptr %src, i32 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @pr70988(
 ; CHECK-SAME: ptr [[SRC:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:

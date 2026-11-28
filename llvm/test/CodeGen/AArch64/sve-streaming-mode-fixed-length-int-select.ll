@@ -207,10 +207,10 @@ define void @select_v32i8(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #47]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w9, ne
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #46]
@@ -496,10 +496,10 @@ define void @select_v16i16(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #46]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w9, ne
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #44]
@@ -662,10 +662,10 @@ define void @select_v8i32(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    csel w11, w8, w10, ne
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
@@ -778,10 +778,10 @@ define void @select_v4i64(ptr %a, ptr %b, i1 %mask) {
 ; NONEON-NOSVE-NEXT:    tst w2, #0x1
 ; NONEON-NOSVE-NEXT:    ldr q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q3, [x1, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp x9, x10, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr x8, [sp, #24]
+; NONEON-NOSVE-NEXT:    str q0, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    csel x11, x8, x10, ne
 ; NONEON-NOSVE-NEXT:    ldr x8, [sp, #16]

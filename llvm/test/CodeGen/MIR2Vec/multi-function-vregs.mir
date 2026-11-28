@@ -1,0 +1,46 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llvm-ir2vec embeddings --mode=mir --level=func --mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s
+# RUN: llvm-ir2vec entities --mode=mir %s -o %t.entities
+# RUN: llvm-ir2vec triplets --mode=mir %s -o %t.triplets
+# RUN: cat %t.entities %t.triplets | FileCheck %s --check-prefix=TRIP
+
+# @many vregs must not be looked up in @few, which has fewer vregs and GR32 %0.
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define void @few() { ret void }
+  define void @many() { ret void }
+...
+---
+name:            few
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:gr32 = MOV32ri 1
+    RET 0
+...
+---
+name:            many
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:gr64 = MOV64ri 1
+    %1:gr64 = COPY %0
+    RET 0
+...
+
+# CHECK: MIR2Vec embeddings for machine function few:
+# CHECK-NEXT: Function vector:  [ 2.40  2.60  2.80 ]
+
+# CHECK: MIR2Vec embeddings for machine function many:
+# CHECK-NEXT: Function vector:  [ 9.50  9.80  10.10 ]
+
+# The @many MOV def must map to GR64, not to the @few GR32 entity.
+# TRIP:      {{^}}VirtReg_GR32 [[GR32:[0-9]+]]{{$}}
+# TRIP:      {{^}}VirtReg_GR64 [[GR64:[0-9]+]]{{$}}
+# TRIP:      MAX_RELATION=
+# TRIP-NEXT: [[MOV:[0-9]+]] [[GR32]] 1
+# TRIP:      [[RET:[0-9]+]] [[IMM:[0-9]+]] 1
+# TRIP-NEXT: [[MOV]] [[GR64]] 1

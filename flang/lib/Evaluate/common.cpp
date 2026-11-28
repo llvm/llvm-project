@@ -8,10 +8,16 @@
 
 #include "flang/Evaluate/common.h"
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/character-value.h"
 
 using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
+
+Ordering Compare(
+    const value::CharacterValue &x, const value::CharacterValue &y) {
+  return x.Compare(y);
+}
 
 void FoldingContext::RealFlagWarnings(
     const RealFlags &flags, const char *operation) {

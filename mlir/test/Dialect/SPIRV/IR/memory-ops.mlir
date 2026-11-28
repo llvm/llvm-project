@@ -841,3 +841,61 @@ func.func @inbounds_ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %a
   %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @ptr_equal
+func.func @ptr_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i1 {
+  // CHECK: spirv.PtrEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+  %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_type_mismatch(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, Workgroup>) -> i1 {
+  // expected-error @+1 {{failed to verify that all of {operand1, operand2} have same type}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<f32, Workgroup>) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_non_ptr(%arg0: i32, %arg1: i32) -> i1 {
+  // expected-error @+1 {{operand #0 must be any SPIR-V pointer type}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (i32, i32) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_non_bool(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i32 {
+  // expected-error @+1 {{result #0 must be bool}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<f32, CrossWorkgroup>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrNotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @ptr_not_equal
+func.func @ptr_not_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i1 {
+  // CHECK: spirv.PtrNotEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+  %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_not_equal_type_mismatch(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<i32, CrossWorkgroup>) -> i1 {
+  // expected-error @+1 {{failed to verify that all of {operand1, operand2} have same type}}
+  %0 = "spirv.PtrNotEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<i32, CrossWorkgroup>) -> i1
+  return %0 : i1
+}

@@ -29,4 +29,20 @@ entry:
   ret ptr %x2
 }
 
+; The load and the store use the same constant expression as @f2. They must not
+; change when the pass runs on @f2.
+define i32 @f4() #0 {
+; CHECK-LABEL: define i32 @f4(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @g to ptr), align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr addrspacecast (ptr addrspace(1) @g to ptr), align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %val = load i32, ptr addrspacecast (ptr addrspace(1) @g to ptr), align 4
+  store i32 %val, ptr addrspacecast (ptr addrspace(1) @g to ptr), align 4
+  ret i32 %val
+}
+
 attributes #0 = { noinline optnone }

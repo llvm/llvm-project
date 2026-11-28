@@ -8,7 +8,7 @@
 
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o a.64.so
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.so | FileCheck %s --check-prefix=GD64
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -h -d a.64.so | FileCheck %s --check-prefix=GD64
 
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o rel.64.so -z rel
 # RUN: llvm-readobj -r -x .got rel.64.so | FileCheck --check-prefix=GD64-REL %s

@@ -235,7 +235,7 @@ define align 4 ptr @test7() #0 {
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@test7
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[C:%.*]] = tail call nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR15:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = tail call ptr @f1(ptr align 8 dereferenceable(1) @a1)
@@ -1213,6 +1213,29 @@ define ptr @infer_align_cmpxchg_ptr(ptr align 4 %p, ptr %cmp0, ptr %cmp1) {
 }
 
 declare void @implicit_cast_callee(i64)
+
+; The definition of a linkonce_odr function might be replaced by another one,
+; e.g. one without the load, so the alignment of its argument must not be
+; derived from its body.
+define linkonce_odr void @align_from_load_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@align_from_load_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, ptr %a, align 8
+  ret void
+}
+
+define void @call_align_from_load_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@call_align_from_load_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_load_non_exact(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  call void @align_from_load_non_exact(ptr %a)
+  ret void
+}
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }

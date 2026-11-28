@@ -30,6 +30,8 @@ using namespace llvm;
 
 namespace {
 class WebAssemblyLateEHPrepareImpl {
+  const WebAssemblyOptions &CLOpts;
+
   bool removeUnreachableEHPads(MachineFunction &MF);
   void recordCatchRetBBs(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
@@ -43,6 +45,8 @@ class WebAssemblyLateEHPrepareImpl {
   SmallPtrSet<MachineBasicBlock *, 8> CatchRetBBs;
 
 public:
+  explicit WebAssemblyLateEHPrepareImpl(const WebAssemblyOptions &CLOpts)
+      : CLOpts(CLOpts) {}
   bool runOnMachineFunction(MachineFunction &MF);
 };
 
@@ -136,7 +140,7 @@ bool WebAssemblyLateEHPrepareImpl::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
-    if (!WebAssembly::WasmUseLegacyEH)
+    if (!CLOpts.use_legacy_eh)
       Changed |= addCatchRefsAndThrowRefs(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
@@ -226,7 +230,7 @@ bool WebAssemblyLateEHPrepareImpl::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
-      unsigned CatchAllOpcode = WebAssembly::WasmUseLegacyEH
+      unsigned CatchAllOpcode = CLOpts.use_legacy_eh
                                     ? WebAssembly::CATCH_ALL_LEGACY
                                     : WebAssembly::CATCH_ALL;
       BuildMI(MBB, InsertPos,
@@ -424,14 +428,16 @@ bool WebAssemblyLateEHPrepareImpl::restoreStackPointer(MachineFunction &MF) {
 }
 
 bool WebAssemblyLateEHPrepareLegacy::runOnMachineFunction(MachineFunction &MF) {
-  WebAssemblyLateEHPrepareImpl Impl;
+  WebAssemblyLateEHPrepareImpl Impl(
+      MF.getSubtarget<WebAssemblySubtarget>().getCLOpts());
   return Impl.runOnMachineFunction(MF);
 }
 
 PreservedAnalyses
 WebAssemblyLateEHPreparePass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
-  WebAssemblyLateEHPrepareImpl Impl;
+  WebAssemblyLateEHPrepareImpl Impl(
+      MF.getSubtarget<WebAssemblySubtarget>().getCLOpts());
   return Impl.runOnMachineFunction(MF)
              ? getMachineFunctionPassPreservedAnalyses()
              : PreservedAnalyses::all();

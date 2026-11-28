@@ -205,70 +205,70 @@ define <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, <12 x float> %c)
 ; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    add x10, sp, #48
 ; CHECK-NEXT:    ldr s16, [sp, #40]
-; CHECK-NEXT:    // kill: def $s5 killed $s5 def $q5
-; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    mov v1.s[1], v3.s[0]
 ; CHECK-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-NEXT:    ldr s2, [sp, #32]
-; CHECK-NEXT:    ldr s3, [sp]
+; CHECK-NEXT:    ldr s2, [sp]
+; CHECK-NEXT:    ldr s3, [sp, #32]
+; CHECK-NEXT:    // kill: def $s5 killed $s5 def $q5
 ; CHECK-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; CHECK-NEXT:    ldr s17, [sp, #8]
 ; CHECK-NEXT:    // kill: def $s7 killed $s7 def $q7
 ; CHECK-NEXT:    // kill: def $s6 killed $s6 def $q6
 ; CHECK-NEXT:    movi v18.4s, #128, lsl #24
-; CHECK-NEXT:    ld1 { v2.s }[1], [x10]
-; CHECK-NEXT:    add x10, sp, #56
+; CHECK-NEXT:    ld1 { v2.s }[1], [x9]
+; CHECK-NEXT:    add x9, sp, #56
 ; CHECK-NEXT:    ldr s21, [sp, #136]
-; CHECK-NEXT:    ld1 { v16.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v3.s }[1], [x9]
-; CHECK-NEXT:    add x9, sp, #64
+; CHECK-NEXT:    ld1 { v3.s }[1], [x10]
+; CHECK-NEXT:    ld1 { v16.s }[1], [x9]
+; CHECK-NEXT:    add x10, sp, #64
 ; CHECK-NEXT:    mov v1.s[2], v5.s[0]
 ; CHECK-NEXT:    mov v0.s[2], v4.s[0]
-; CHECK-NEXT:    add x10, sp, #24
-; CHECK-NEXT:    ld1 { v2.s }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #72
+; CHECK-NEXT:    add x9, sp, #24
 ; CHECK-NEXT:    ldr s4, [sp, #96]
-; CHECK-NEXT:    ld1 { v16.s }[2], [x9]
-; CHECK-NEXT:    ld1 { v17.s }[1], [x10]
-; CHECK-NEXT:    add x10, sp, #112
-; CHECK-NEXT:    add x9, sp, #80
-; CHECK-NEXT:    ld1 { v4.s }[1], [x10]
+; CHECK-NEXT:    ld1 { v17.s }[1], [x9]
+; CHECK-NEXT:    add x9, sp, #112
+; CHECK-NEXT:    ld1 { v3.s }[2], [x10]
+; CHECK-NEXT:    add x10, sp, #72
 ; CHECK-NEXT:    ldr s5, [sp, #128]
+; CHECK-NEXT:    ld1 { v16.s }[2], [x10]
+; CHECK-NEXT:    add x10, sp, #80
+; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
 ; CHECK-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-NEXT:    ld1 { v2.s }[3], [x9]
 ; CHECK-NEXT:    add x9, sp, #88
-; CHECK-NEXT:    ld1 { v16.s }[3], [x9]
-; CHECK-NEXT:    add x9, sp, #144
 ; CHECK-NEXT:    mov v0.s[3], v6.s[0]
+; CHECK-NEXT:    ld1 { v3.s }[3], [x10]
 ; CHECK-NEXT:    movi v6.4s, #128, lsl #24
 ; CHECK-NEXT:    ldr s7, [sp, #104]
-; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
+; CHECK-NEXT:    ld1 { v16.s }[3], [x9]
+; CHECK-NEXT:    add x9, sp, #144
 ; CHECK-NEXT:    add x10, sp, #120
+; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
 ; CHECK-NEXT:    fmul v19.4s, v4.4s, v17.4s
-; CHECK-NEXT:    add x9, sp, #160
-; CHECK-NEXT:    fmul v20.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x10]
+; CHECK-NEXT:    fmul v20.4s, v3.4s, v1.4s
+; CHECK-NEXT:    add x9, sp, #160
 ; CHECK-NEXT:    add x10, sp, #208
-; CHECK-NEXT:    ld1 { v5.s }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #152
 ; CHECK-NEXT:    fmls v6.4s, v16.4s, v1.4s
 ; CHECK-NEXT:    ldr s1, [sp, #192]
-; CHECK-NEXT:    ld1 { v21.s }[1], [x9]
+; CHECK-NEXT:    ld1 { v5.s }[2], [x9]
+; CHECK-NEXT:    add x9, sp, #152
 ; CHECK-NEXT:    fmls v18.4s, v7.4s, v17.4s
+; CHECK-NEXT:    ld1 { v21.s }[1], [x9]
 ; CHECK-NEXT:    add x9, sp, #176
-; CHECK-NEXT:    fmla v19.4s, v3.4s, v7.4s
+; CHECK-NEXT:    fmla v19.4s, v2.4s, v7.4s
 ; CHECK-NEXT:    fmla v20.4s, v0.4s, v16.4s
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x10]
+; CHECK-NEXT:    ldr s7, [sp, #200]
 ; CHECK-NEXT:    ld1 { v5.s }[3], [x9]
 ; CHECK-NEXT:    add x9, sp, #168
-; CHECK-NEXT:    ldr s7, [sp, #200]
 ; CHECK-NEXT:    add x10, sp, #184
 ; CHECK-NEXT:    ld1 { v21.s }[2], [x9]
 ; CHECK-NEXT:    add x9, sp, #216
-; CHECK-NEXT:    fmla v6.4s, v0.4s, v2.4s
-; CHECK-NEXT:    fmla v18.4s, v3.4s, v4.4s
+; CHECK-NEXT:    fmla v6.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmla v18.4s, v2.4s, v4.4s
 ; CHECK-NEXT:    fsub v1.4s, v1.4s, v19.4s
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x9]
 ; CHECK-NEXT:    fsub v0.4s, v5.4s, v20.4s
@@ -286,8 +286,8 @@ define <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, <12 x float> %c)
 ; CHECK-NEXT:    zip1 v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    ext v1.16b, v2.16b, v1.16b, #8
 ; CHECK-NEXT:    mov v4.d[1], v2.d[0]
-; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    stp q4, q1, [x8, #16]
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %ar = shufflevector <12 x float> %a, <12 x float> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10>

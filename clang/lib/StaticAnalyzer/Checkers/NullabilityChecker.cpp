@@ -405,6 +405,11 @@ static bool checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
     if (ParamDecl->isParameterPack())
       break;
 
+    // Only nonnull parameters can violate the precondition; check this before
+    // looking up the region of the parameter.
+    if (getNullabilityAnnotation(ParamDecl->getType()) != Nullability::Nonnull)
+      continue;
+
     SVal LV = State->getLValue(ParamDecl, SF);
     if (checkValueAtLValForInvariantViolation(State, LV,
                                               ParamDecl->getType())) {
@@ -477,6 +482,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
     StringRef Msg, ErrorKind Error, const BugType &BT, ExplodedNode *N,
     const MemRegion *Region, CheckerContext &C, const Stmt *ValueExpr,
     bool SuppressPath) const {
+  if (!N)
+    return;
   ProgramStateRef OriginalState = N->getState();
 
   if (checkInvariantViolation(OriginalState, N, C))
@@ -484,6 +491,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
   if (SuppressPath) {
     OriginalState = OriginalState->set<InvariantViolated>(true);
     N = C.addTransition(OriginalState, N);
+    if (!N)
+      return;
   }
 
   reportBug(Msg, Error, BT, N, Region, C.getBugReporter(), ValueExpr);
@@ -617,21 +626,19 @@ void NullabilityChecker::checkLocation(SVal Location, bool IsLoad,
   if (!Region)
     return;
 
+  if (getNullabilityAnnotation(Region->getValueType()) != Nullability::Nonnull)
+    return;
+
   ProgramStateRef State = Context.getState();
 
   auto StoredVal = State->getSVal(Region).getAs<loc::MemRegionVal>();
   if (!StoredVal)
     return;
 
-  Nullability NullabilityOfTheLoadedValue =
-      getNullabilityAnnotation(Region->getValueType());
-
-  if (NullabilityOfTheLoadedValue == Nullability::Nonnull) {
-    // It doesn't matter what we think about this particular pointer, it should
-    // be considered non-null as annotated by the developer.
-    if (ProgramStateRef NewState = State->assume(*StoredVal, true)) {
-      Context.addTransition(NewState);
-    }
+  // It doesn't matter what we think about this particular pointer, it should
+  // be considered non-null as annotated by the developer.
+  if (ProgramStateRef NewState = State->assume(*StoredVal, true)) {
+    Context.addTransition(NewState);
   }
 }
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -109,6 +110,11 @@ public:
   LLVM_ABI bool isStatusKnown() const;
   LLVM_ABI bool exists() const;
   /// @}
+
+  /// Returns true if any of the owner, group, or others execute permissions is
+  /// set. Unlike llvm::sys::fs::can_execute, this does not check whether the
+  /// current process is allowed to execute the file.
+  LLVM_ABI bool isExecutable() const;
 };
 
 /// Represents an open file.
@@ -391,6 +397,16 @@ LLVM_ABI IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
 /// that of the process.
 /// This may only be called outside the IO sandbox.
 LLVM_ABI std::unique_ptr<FileSystem> createPhysicalFileSystem();
+
+/// Searches \p Dir and then each of its parent directories for a regular file
+/// named one of \p FileNames, trying the names in order in each directory. A
+/// relative \p Dir is only searched up to its first component.
+///
+/// \returns the path of the first file found, or std::nullopt if there is
+/// none.
+LLVM_ABI std::optional<std::string>
+findFileInParentDirectories(FileSystem &FS, StringRef Dir,
+                            ArrayRef<StringRef> FileNames);
 
 /// A file system that allows overlaying one \p AbstractFileSystem on top
 /// of another.

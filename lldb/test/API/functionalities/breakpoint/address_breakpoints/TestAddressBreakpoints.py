@@ -53,7 +53,7 @@ class AddressBreakpointTestCase(TestBase):
         error = lldb.SBError()
 
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         # Did we hit our breakpoint?
         from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
@@ -73,7 +73,7 @@ class AddressBreakpointTestCase(TestBase):
         launch_info.SetLaunchFlags(flags)
 
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         thread = get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(

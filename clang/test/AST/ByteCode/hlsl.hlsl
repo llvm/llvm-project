@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
+using namespace hlsl;
+
 
 /// This test converts V to a 1-element vector and then .xx to a 2-element vector.
 // CHECK-LABEL: ToTwoInts

@@ -371,6 +371,27 @@ without pre-commit review if you have commit access.
 - Use a minimal number of non-default (`CHECK-<prefix>`) check prefixes.
   Avoid setting a check prefix if all `FileCheck` invocations in the test
   expect the same output.
+- Don't produce output the test doesn't check. If a `RUN` line only
+  checks diagnostics on stderr (e.g., errors, warnings, remarks), or
+  only checks that the tool doesn't crash, suppress the normal output
+  instead of writing it to the default location (a file or stdout) or
+  redirecting it to `/dev/null`:
+
+  - `opt`, `llvm-as`: `-disable-output`
+  - `llc`, `llvm-mc`: `-filetype=null`
+
+  ```
+  ; RUN: not llc -filetype=null %s 2>&1 | FileCheck %s
+  ```
+
+  Writing the output to stdout clutters the lit log on failure, and
+  with `2>&1 | FileCheck` the output is mixed in with the diagnostics,
+  where it can accidentally match `CHECK` or `CHECK-NOT` lines.
+
+  Redirecting with `-o /dev/null` still does all the work of printing or
+  encoding the output. `-filetype=null` skips the MC assembler and
+  object writer entirely, so tests for errors from the emitter (e.g.,
+  relocation errors) still need `-filetype=obj`.
 
 ### Extra files
 

@@ -34,7 +34,6 @@
 ---
 name:            fun0
 alignment:       2
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         false

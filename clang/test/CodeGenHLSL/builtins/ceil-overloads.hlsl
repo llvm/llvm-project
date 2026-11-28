@@ -2,6 +2,8 @@
 // RUN:  -emit-llvm -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden noundef nofpclass(nan inf)"
 
+using namespace hlsl;
+
 using hlsl::ceil;
 
 // CHECK: define [[FNATTRS]] float @_Z16test_ceil_doubled(

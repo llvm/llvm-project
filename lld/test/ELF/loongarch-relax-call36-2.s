@@ -5,14 +5,14 @@
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax a.s -o a.o
 
 # RUN: ld.lld -T lds a.o -o a
-# RUN: llvm-objdump -d --no-show-raw-insn a | FileCheck %s --check-prefixes=RELAX,RELAX-MID
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a | FileCheck %s --check-prefixes=RELAX,RELAX-MID
 
 ## Unsure whether this needs a diagnostic. GNU ld allows this.
 # RUN: ld.lld -T lds -pie a.o -o a.pie
-# RUN: llvm-objdump -d --no-show-raw-insn a.pie | FileCheck %s --check-prefixes=RELAX,RELAX-MID
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a.pie | FileCheck %s --check-prefixes=RELAX,RELAX-MID
 
 # RUN: ld.lld -T lds -pie -z notext -z ifunc-noplt a.o -o a.ifunc-noplt
-# RUN: llvm-objdump -d --no-show-raw-insn a.ifunc-noplt | FileCheck %s --check-prefixes=RELAX,NORELAX-MID
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a.ifunc-noplt | FileCheck %s --check-prefixes=RELAX,NORELAX-MID
 
 # RELAX-LABEL:  <_start>:
 ## offset = 0x10000000 - 0x8000000 = 0x8000000(134217728), hi=512, lo18=0

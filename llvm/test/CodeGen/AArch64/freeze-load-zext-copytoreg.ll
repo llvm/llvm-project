@@ -10,35 +10,37 @@ define i32 @freeze_i8_load_multi_bb(ptr %p, i64 %len) {
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    cmp x8, x1
 ; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    b.eq LBB0_7
+; CHECK-NEXT:    b.eq LBB0_8
 ; CHECK-NEXT:  LBB0_2: ; %for.cond
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-NEXT:    ; Child Loop BB0_3 Depth 2
+; CHECK-NEXT:    ; Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    cmp x8, x1
-; CHECK-NEXT:    b.hs LBB0_8
-; CHECK-NEXT:  LBB0_3: ; %for.body
+; CHECK-NEXT:    b.hs LBB0_9
+; CHECK-NEXT:  ; %bb.3: ; %for.body.preheader
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    ldrb w9, [x0, x8]
+; CHECK-NEXT:  LBB0_4: ; %for.body
 ; CHECK-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrb w9, [x0, x8]
 ; CHECK-NEXT:    cmp w9, #32
 ; CHECK-NEXT:    b.lo LBB0_1
-; CHECK-NEXT:  ; %bb.4: ; %switch.test
-; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=2
+; CHECK-NEXT:  ; %bb.5: ; %switch.test
+; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; CHECK-NEXT:    cmp w9, #34
 ; CHECK-NEXT:    b.eq LBB0_1
-; CHECK-NEXT:  ; %bb.5: ; %switch.test
-; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=2
+; CHECK-NEXT:  ; %bb.6: ; %switch.test
+; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; CHECK-NEXT:    cmp w9, #92
 ; CHECK-NEXT:    b.eq LBB0_1
-; CHECK-NEXT:  ; %bb.6: ; %for.inc
-; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=2
-; CHECK-NEXT:    add x9, x8, #1
-; CHECK-NEXT:    cmp x9, x1
-; CHECK-NEXT:    b.ne LBB0_3
-; CHECK-NEXT:  LBB0_7:
+; CHECK-NEXT:  ; %bb.7: ; %for.inc
+; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=2
+; CHECK-NEXT:    add x10, x8, #1
+; CHECK-NEXT:    cmp x10, x1
+; CHECK-NEXT:    b.ne LBB0_4
+; CHECK-NEXT:  LBB0_8:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_8:
+; CHECK-NEXT:  LBB0_9:
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   br label %for.cond

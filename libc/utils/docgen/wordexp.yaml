@@ -1,0 +1,34 @@
+posix: posix-2024
+macros:
+  WRDE_APPEND:
+    in-latest-posix: ''
+  WRDE_BADCHAR:
+    in-latest-posix: ''
+  WRDE_BADVAL:
+    in-latest-posix: ''
+  WRDE_CMDSUB:
+    in-latest-posix: ''
+  WRDE_DOOFFS:
+    in-latest-posix: ''
+  WRDE_NOCMD:
+    in-latest-posix: ''
+  WRDE_NOSPACE:
+    in-latest-posix: ''
+  WRDE_REUSE:
+    in-latest-posix: ''
+  WRDE_SHOWERR:
+    in-latest-posix: ''
+  WRDE_SYNTAX:
+    in-latest-posix: ''
+  WRDE_UNDEF:
+    in-latest-posix: ''
+functions:
+  wordexp:
+    in-latest-posix: ''
+  wordfree:
+    in-latest-posix: ''
+types:
+  size_t:
+    in-latest-posix: ''
+  wordexp_t:
+    in-latest-posix: ''

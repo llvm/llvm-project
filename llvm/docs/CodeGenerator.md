@@ -459,6 +459,38 @@ definition.
 After register allocation, machine code is no longer in SSA-form because there
 are no virtual registers left in the code.
 
+(undef-and-poison-in-mir)=
+
+#### Undefined values, poison, and freeze
+
+After instruction selection, machine code has no exact equivalent of LLVM IR's
+`undef` or `poison`.
+
+`IMPLICIT_DEF` defines a register without assigning a value. Currently, both
+`undef` and `poison` select to it in SelectionDAG and GlobalISel. Before
+register allocation, `ProcessImplicitDefs` deletes most `IMPLICIT_DEF`s of
+virtual registers and sets the `undef` flag on their uses. The `undef` flag
+marks a register use as having a value that doesn't matter. Different
+instructions with `undef` uses of the same register may observe different
+values.
+
+`FREEZE` gives undefined bits an arbitrary, but fixed value, so every use of its
+result observes the same value. It isn't generally treated as copy-like, so
+`ProcessImplicitDefs` and the register coalescer don't look through it. After
+register allocation, a `FREEZE` of a defined value becomes a `COPY`, and a
+`FREEZE` of an undefined value stays until code emission, where it emits no
+code.
+
+Selectors still lower `freeze` to a `COPY`. If the copied value is undefined,
+different uses can observe different values, which violates the IR semantics of
+`freeze`.
+
+Machine instructions may also have any of the following poison-generating flags:
+`nuw`, `nsw`, `exact`, `disjoint`, `nneg`, `nusw`, `inbounds`, `samesign`,
+`nnan`, and `ninf`. These have the same definitions as the IR versions. A
+transformation must drop a flag if the new instruction could violate the flag's
+condition for inputs where the original instruction did not.
+
 (MachineBasicBlock)=
 
 ### The `MachineBasicBlock` class

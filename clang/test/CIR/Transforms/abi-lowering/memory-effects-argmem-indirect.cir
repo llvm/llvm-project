@@ -17,7 +17,7 @@ module attributes {
   // The callee is opaque, so the slot comes from classifying the function
   // pointer's pointee: the struct argument spills to a byval slot, which the
   // callee reaches whatever the call promised.
-  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, %b: !rec_Big) -> !s64i {
+  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, %b: !rec_Big) -> !s64i requires_call_conv_lowering {
     %0 = cir.call %fp(%b) { memory_effects = #none }
         : (!cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, !rec_Big) -> !s64i
     cir.return %0 : !s64i
@@ -30,7 +30,7 @@ module attributes {
 
   // Nothing is passed through a slot here, so the call keeps what it
   // promised.
-  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %x: !s32i) -> !s32i {
+  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %x: !s32i) -> !s32i requires_call_conv_lowering {
     %0 = cir.call %fp(%x) { memory_effects = #none }
         : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
     cir.return %0 : !s32i

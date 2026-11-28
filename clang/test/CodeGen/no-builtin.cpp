@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @foo_no_mempcy() #0
 extern "C" void foo_no_mempcy() __attribute__((no_builtin("memcpy"))) {}
@@ -61,4 +61,4 @@ B::~B() {} // Anchoring B so B::foo() gets generated
 // CHECK:     attributes #6 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #5 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #5 = {{{.*}}"no-builtin-memset"{{.*}}}
-// CHECK:     attributes #8 = { builtin nounwind }
+// CHECK:     attributes #8 = { builtin nounwind allockind("free") "alloc-family"="_Znwm" }

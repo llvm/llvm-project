@@ -4,12 +4,12 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
-  def UseDIL : Property<"use-DIL", "Boolean">,
-    Global, DefaultTrue,
-    Desc<"If true, use the DIL implementation for frame variable evaluation.">;
   def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation in API SBValue::CreateValueFromExpression.">;
+  def ReloadModuleScripts: Property<"reload-module-scripts", "Boolean">,
+    Global, DefaultFalse,
+    Desc<"If true, load a module's scripts again every time the target sees the module, instead of once per target. This is only meant for scripts that relied on running several times, and will be removed.">;
 }
 
 let Definition = "target", Path = "target" in {

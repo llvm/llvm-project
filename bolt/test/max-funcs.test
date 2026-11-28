@@ -5,9 +5,11 @@ REQUIRES: system-linux
 
 RUN: %clangxx %cxxflags %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
 RUN: llvm-bolt %t.exe --relocs -o %t --max-funcs=2
-RUN: llvm-objdump -d -j .text %t | FileCheck %s
+RUN: llvm-objdump -d -j .text %t | \
+RUN:   grep -vE '<__AArch64_(forward|backward)_(ADRP)?Thunk_.*>:$' | FileCheck %s
 
 ## Check that there are only two functions in the dump of .text
+## Ignore thunks synthesized during branch relaxation.
 CHECK: <{{.*}}>:
 CHECK: <{{.*}}>:
 CHECK-NOT: <{{.*}}>:

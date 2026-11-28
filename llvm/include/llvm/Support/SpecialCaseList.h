@@ -31,9 +31,10 @@ class StringRef;
 ///
 /// Empty lines and lines starting with "#" are ignored. Sections are defined
 /// using a '[section_name]' header and can be used to specify sanitizers the
-/// entries below it apply to. Section names are globs, and
+/// entries below it apply to. Section names are globs. Before version 6,
 /// entries without a section header match all sections (e.g. an '[*]' header
-/// is assumed.)
+/// is assumed). Starting with version 6, entries without a section header are
+/// an error.
 /// The remaining lines should have the form:
 ///   prefix:glob_pattern[=category]
 /// If category is not specified, it is assumed to be empty string.

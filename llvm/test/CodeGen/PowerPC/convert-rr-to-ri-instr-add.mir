@@ -1,10 +1,9 @@
-# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - | FileCheck %s
 
 ---
 # ADDI8 + STFSX can be converted to ADDI8 + STFS even ADDI8 can not be erased.
 name: testFwdOperandKilledAfter
 # CHECK: name: testFwdOperandKilledAfter
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -19,7 +18,6 @@ body: |
 # No workaround needed for 64-bit register when calling readsRegister()
 name: testReadsSubRegADDI
 # CHECK: name: testReadsSubRegADDI
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5

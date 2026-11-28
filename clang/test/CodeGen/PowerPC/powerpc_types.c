@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-freebsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc-unknown-freebsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s %}
 // RUN: %clang_cc1 -triple powerpc-unknown-netbsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc-unknown-netbsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s %}
 // RUN: %clang_cc1 -triple powerpc-unknown-openbsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc-unknown-openbsd -emit-llvm -o - %s| FileCheck -check-prefix=SVR4-CHECK %s %}
 
 #include <stdarg.h>
 

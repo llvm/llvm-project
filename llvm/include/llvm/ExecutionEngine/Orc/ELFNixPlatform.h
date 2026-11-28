@@ -193,7 +193,6 @@ private:
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
-    std::mutex PluginMutex;
     ELFNixPlatform &MP;
   };
 
@@ -260,7 +259,6 @@ private:
   // InitSeqs gets its own mutex to avoid locking the whole session when
   // aggregating data from the jitlink.
   std::mutex PlatformMutex;
-  std::vector<ELFPerObjectSectionsToRegister> BootstrapPOSRs;
 
   DenseMap<ExecutorAddr, JITDylib *> HandleAddrToJITDylib;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHandleAddr;

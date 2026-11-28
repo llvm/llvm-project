@@ -37,9 +37,14 @@ class I<dag OOps, dag IOps, list<dag> Pat>
   let Pattern = Pat;
 }
 
+def undef_tied : OperandWithDefaultOps<ModeVT, (ops (ModeVT undef_tied_input))> {
+  let MIOperandInfo = (ops GPR:$inactive);
+}
+
 //===- Test the function boilerplate. -------------------------------------===//
 
-// CHECK: const unsigned MAX_SUBTARGET_PREDICATES = 2;
+// Only the pattern that is only valid in Mode64 needs a HwMode predicate.
+// CHECK: const unsigned MAX_SUBTARGET_PREDICATES = 1;
 // CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
@@ -54,6 +59,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
+// CHECK-NEXT:    LLT getLLTForHwMode(unsigned Index) const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
@@ -68,32 +74,22 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_INIT
 
+// Types that depend on the HwMode are not in the type objects.
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_s32,
-// CHECK-NEXT:    GILLT_s64,
-// CHECK-NEXT:    GILLT_p0s32,
-// CHECK-NEXT:    GILLT_p0s64,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  const static size_t NumTypeObjects = 4;
+// CHECK-NEXT:  const static size_t NumTypeObjects = 0;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::scalar(32),
-// CHECK-NEXT:    LLT::scalar(64),
-// CHECK-NEXT:    LLT::pointer(0, 32),
-// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
-// CHECK-NEXT:    Feature_HwMode1Bit = 1,
 // CHECK-NEXT:    Feature_HwMode0Bit = 0,
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableModuleFeatures(const MyTargetSubtarget *Subtarget) const {
 // CHECK-NEXT:    PredicateBitset Features{};
-// CHECK-NEXT:    if (!((Subtarget->has64())))
-// CHECK-NEXT:      Features.set(Feature_HwMode1Bit);
-// CHECK-NEXT:    if ((Subtarget->has64()))
+// CHECK-NEXT:    if (((Subtarget->has64())))
 // CHECK-NEXT:      Features.set(Feature_HwMode0Bit);
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
@@ -108,12 +104,10 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GIFBS_Invalid,
 // CHECK-NEXT:    GIFBS_HwMode0,
-// CHECK-NEXT:    GIFBS_HwMode1,
 // CHECK-NEXT:  }
 // CHECK-NEXT:  constexpr static PredicateBitset FeatureBitsets[] {
 // CHECK-NEXT:    {}, // GIFBS_Invalid
 // CHECK-NEXT:    {Feature_HwMode0Bit, },
-// CHECK-NEXT:    {Feature_HwMode1Bit, },
 // CHECK-NEXT:  };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
@@ -132,80 +126,157 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 //===- Test a simple pattern with inferred pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 0 //
+// The pointer type depends on the HwMode, so the pointer operand is checked
+// with GIM_CheckPointerToAnyByHwMode.
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4([[L0:[0-9]+]]), // Rule ID 0 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/0, /*TypeByHwMode*/0,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src1
-// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
+// CHECK-NEXT:    GIM_CheckPointerToAnyByHwMode, /*MI*/0, /*Op*/1, /*TypeByHwMode*/0,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
-// CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src1)
+// CHECK-NEXT:    // (ld:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src1)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 1 //
-// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
-// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-// CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
-// CHECK-NEXT:    // MIs[0] src1
-// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
-// CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src1)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
-// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// CHECK-NEXT:    // GIR_Coverage, 1,
-// CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+// CHECK-NEXT:  // Label 0: @[[L0]]
 
 def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
             [(set GPR:$dst, (load GPR:$src1))]>;
 
 //===- Test a simple pattern with explicit pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 2 //
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4([[L1:[0-9]+]]), // Rule ID 1 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_p0s64,
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/0, /*TypeByHwMode*/1,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src
-// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
+// CHECK-NEXT:    GIM_CheckPointerToAnyByHwMode, /*MI*/0, /*Op*/1, /*TypeByHwMode*/0,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
-// CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src)
+// CHECK-NEXT:    // (ld:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// CHECK-NEXT:    // GIR_Coverage, 2,
+// CHECK-NEXT:    // GIR_Coverage, 1,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 3 //
+// CHECK-NEXT:  // Label 1: @[[L1]]
+
+def : Pat<(load GPR:$src),
+          (p0 (LOAD GPR:$src))>;
+
+//===- Test a dead def with a HwMode dependent type. ----------------------===//
+
+// The dead def needs a temporary register created with GIR_MakeTempRegByHwMode.
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4([[L2:[0-9]+]]), // Rule ID 2 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
-// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ABS),
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_p0s32,
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/0, /*TypeByHwMode*/0,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src
-// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/1, /*TypeByHwMode*/0,
 // CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
-// CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src)
+// CHECK-NEXT:    // (abs:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)  =>  (TWO_DEFS:{ *:[i32] m1:[i64] }:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)
+// CHECK-NEXT:    GIR_MakeTempRegByHwMode, /*TempRegID*/0, /*TypeByHwMode*/0,
+// CHECK-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::TWO_DEFS),
+// CHECK-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:    GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define|RegState::Dead)),
+// CHECK-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// CHECK-NEXT:    // GIR_Coverage, 2,
+// CHECK-NEXT:    GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:  // Label 2: @[[L2]]
+
+def TWO_DEFS : I<(outs GPR:$dst, GPR:$dead), (ins GPR:$src), []>;
+
+def : Pat<(ModeVT (abs GPR:$src)), (TWO_DEFS GPR:$src)>;
+
+//===- Test a pattern only valid in one HwMode. ---------------------------===//
+
+// GPR only has an i64 type in Mode64 so this pattern is only valid in Mode64.
+// It needs a HwMode predicate.
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label 3*/ GIMT_Encode4([[L3:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 3 //
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CTLZ),
+// CHECK-NEXT:    // MIs[0] DstI[dst]
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/0, /*TypeByHwMode*/2,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    // MIs[0] src
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/1, /*TypeByHwMode*/2,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    // (ctlz:{ *:[] m1:[i64] } GPR:{ *:[] m1:[i64] }:$src)  =>  (LOAD:{ *:[] m1:[i64] } GPR:{ *:[] m1:[i64] }:$src)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 3,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+// CHECK-NEXT:  // Label 3: @[[L3]]
 
-def : Pat<(load GPR:$src),
-          (p0 (LOAD GPR:$src))>;
+def : Pat<(i64 (ctlz GPR:$src)), (LOAD GPR:$src)>;
+
+//===- Test undef_tied_input with a HwMode dependent type. ----------------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4([[L4:[0-9]+]]), // Rule ID 4 //
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CTPOP),
+// CHECK-NEXT:    // MIs[0] DstI[dst]
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/0, /*TypeByHwMode*/0,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    // MIs[0] src
+// CHECK-NEXT:    GIM_RootCheckTypeByHwMode, /*Op*/1, /*TypeByHwMode*/0,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    // (ctpop:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)  =>  (TIED:{ *:[i32] m1:[i64] } GPR:{ *:[i32] m1:[i64] }:$src)
+// CHECK-NEXT:    GIR_MakeTempRegByHwMode, /*TempRegID*/0, /*TypeByHwMode*/0,
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
+// CHECK-NEXT:    GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
+// CHECK-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::TIED),
+// CHECK-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src
+// CHECK-NEXT:    GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// CHECK-NEXT:    // GIR_Coverage, 4,
+// CHECK-NEXT:    GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:  // Label 4: @[[L4]]
+// CHECK-NEXT:  GIM_Reject,
+// CHECK-NEXT:  }; // Size: 211 bytes
+
+def TIED : I<(outs GPR:$dst), (ins GPR:$src, undef_tied:$opt), []>;
+
+def : Pat<(ModeVT (ctpop GPR:$src)), (TIED GPR:$src)>;
+
+//===- Test the getLLTForHwMode function. ---------------------------------===//
+
+// CHECK-LABEL: LLT MyTargetInstructionSelector::getLLTForHwMode(unsigned Index) const {
+// CHECK-NEXT:   switch (Index) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     llvm_unreachable("Unexpected index");
+// CHECK-NEXT:   case 0:
+// CHECK-NEXT:     switch (HwMode) {
+// CHECK-NEXT:     default:
+// CHECK-NEXT:       return LLT::scalar(32);
+// CHECK-NEXT:     case 1:
+// CHECK-NEXT:       return LLT::scalar(64);
+// CHECK-NEXT:     }
+// CHECK-NEXT:   case 1:
+// CHECK-NEXT:     switch (HwMode) {
+// CHECK-NEXT:     default:
+// CHECK-NEXT:       return LLT::pointer(0, 32);
+// CHECK-NEXT:     case 1:
+// CHECK-NEXT:       return LLT::pointer(0, 64);
+// CHECK-NEXT:     }
+// CHECK-NEXT:   case 2:
+// CHECK-NEXT:     switch (HwMode) {
+// CHECK-NEXT:     default:
+// CHECK-NEXT:       return LLT();
+// CHECK-NEXT:     case 1:
+// CHECK-NEXT:       return LLT::scalar(64);
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT: }

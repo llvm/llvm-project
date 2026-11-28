@@ -13,6 +13,8 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Compiler.h"
+#include <array>
+#include <mutex>
 
 namespace lld::elf {
 struct Ctx;
@@ -44,13 +46,26 @@ public:
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
   Symbol *insert(StringRef name);
+  // Add a symbol returned by intern to the symbol table.
+  Symbol *insert(Symbol *sym) {
+    if (!sym->inserted) {
+      sym->inserted = true;
+      symVector.push_back(sym);
+    }
+    return sym;
+  }
+  // Return the symbol named `name`, creating one that is not yet in the symbol
+  // table if needed. This is thread-safe while `concurrent` is true.
+  Symbol *intern(llvm::CachedHashStringRef name);
+  // True while worker threads run. The shards are locked only then.
+  bool concurrent = false;
 
   template <typename T> Symbol *addSymbol(const T &newSym) {
     Symbol *sym = insert(newSym.getName());
     sym->resolve(ctx, newSym);
     return sym;
   }
-  Symbol *addAndCheckDuplicate(Ctx &, const Defined &newSym);
+  Symbol *addAndCheckDuplicate(const Defined &newSym);
 
   void scanVersionScript();
 
@@ -87,10 +102,23 @@ private:
 
   Ctx &ctx;
 
-  // Global symbols and a map from symbol name to the index. The order is not
-  // defined. We can use an arbitrary order, but it has to be deterministic even
-  // when cross linking.
-  llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
+  // Shard by the high bits of the hash so that lookups can run in parallel.
+  struct Shard {
+    // A map from symbol name to the symbol.
+    llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> map;
+    std::mutex mu;
+    std::unique_lock<std::mutex> getLock(bool concurrent) {
+      return concurrent ? std::unique_lock<std::mutex>(mu)
+                        : std::unique_lock<std::mutex>();
+    }
+  };
+  std::array<Shard, 256> shards;
+  Shard &getShard(llvm::CachedHashStringRef key) {
+    return shards[key.hash() >> 24];
+  }
+
+  // Global symbols in insertion order, which must be deterministic even when
+  // cross linking.
   SmallVector<Symbol *, 0> symVector;
 
   // A map from demangled symbol names to their symbol objects.

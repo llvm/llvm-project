@@ -29,10 +29,15 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* Added `--pass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass plugin named `<plugin>`.
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
 
 ### Breaking changes
+
+* On x86-64, large sections are now placed after `.bss` in the order `.ltext`, `.lrodata`, `.ldata`, `.lbss`, so that they do not sit between small sections or between small sections and the ELF header.
+  `-z lrodata-after-bss` is the default and selects this order: compared with its previous behavior, `.ltext` moves after `.bss` and `.lbss` moves after `.ldata`.
+  `-z nolrodata-after-bss` restores the previous default layout.
 
 ### COFF Improvements
 
@@ -40,9 +45,14 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* Added `--pass-plugin-arg=<plugin>,<arg>`, as in ELF.
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.
+* Added support for Objective-C class-message stubs
+  (`_objc_msgSendClass$<selector>$_OBJC_CLASS_$_<class>`), which load the
+  class object, selector, and `objc_msgSend` target. Supported on arm64; other
+  architectures report an error.
 
 * Added `--warn-missing-subsections-via-symbols` and
   `--no-warn-missing-subsections-via-symbols` to lld to warn when input object

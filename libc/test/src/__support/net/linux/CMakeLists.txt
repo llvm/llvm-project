@@ -1,0 +1,20 @@
+add_header_library(
+  netlink_test_support
+  HDRS
+    netlink_test_support.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.tuple
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.fixedvector
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)

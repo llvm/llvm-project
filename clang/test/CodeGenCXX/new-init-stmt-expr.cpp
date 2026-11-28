@@ -123,7 +123,7 @@ void ClassType() {
   // EH:            invoke void @_ZN8GH1754271SC1Ei(ptr {{.*}}[[CALL]], i32 {{.*}})
   // EH-NEXT:       to label %invoke.cont unwind label %lpad
   // EH:          lpad:
-  // EH:            call void @_ZdlPvm(ptr noundef [[CALL]], i64 noundef 1)
+  // EH:            call void @_ZdlPvm(ptr allocptr noundef [[CALL]], i64 noundef 1)
   new S(({
     while (true)
       ;
@@ -185,7 +185,7 @@ void NoreturnFirst() {
   // EH:          invoke.cont:
   // EH-NEXT:       unreachable
   // EH:          lpad:
-  // EH:            call void @_ZdlPvm(ptr noundef [[CALL]], i64 noundef 4)
+  // EH:            call void @_ZdlPvm(ptr allocptr noundef [[CALL]], i64 noundef 4)
   // NOEH-NEXT:     call void @_ZN8GH1754272nrEv()
   // NOEH-NEXT:     unreachable
   new int(({

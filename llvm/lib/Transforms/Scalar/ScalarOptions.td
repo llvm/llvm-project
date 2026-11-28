@@ -278,6 +278,8 @@ defm : BoolField<"use-lir-code-size-heurs", "true",
   "Use loop idiom recognition code size heuristics when compiling with -Os/-Oz">;
 
 // LoopInterchange.cpp
+defm : ValueField<"loop-interchange-max-address-insts-to-hoist", "unsigned", "8",
+  "Maximum number of address instructions to hoist for an inner-loop reduction">;
 // Maximum loop depth supported.
 defm : ValueField<"loop-interchange-max-loop-nest-depth", "unsigned", "10",
   "Maximum depth of loop nest considered for the transform">;
@@ -403,6 +405,8 @@ defm : OptionalValueField<"unroll-max-count", "unsigned",
   "Set the max unroll count for partial and runtime unrolling, fortesting purposes">;
 defm : OptionalValueField<"unroll-max-iteration-count-to-analyze", "unsigned",
   "Don't allow loop unrolling to simulate more than this number of iterations when checking full unroll profitability">;
+defm : ValueField<"unroll-max-nest-loops", "unsigned", "128",
+  "Do not runtime-unroll, partially unroll, or peel a loop whose outermost nest contains more than this many loops (0 = no limit)">;
 defm : OptionalValueField<"unroll-max-percent-threshold-boost", "unsigned",
   "The maximum 'boost' (represented as a percentage >= 100) applied to the threshold when aggressively unrolling a loop due to the dynamic cost savings. If completely unrolling a loop will reduce the total runtime from X to Y, we boost the loop unroll threshold to DefaultThreshold*std::min(MaxPercentThresholdBoost, X/Y). This limit avoids excessive code bloat">;
 defm : OptionalValueField<"unroll-max-upperbound", "unsigned",

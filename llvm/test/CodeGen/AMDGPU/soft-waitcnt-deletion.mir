@@ -3,7 +3,6 @@
 
 ---
 name:            soft_wait_before_s_barrier
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -59,7 +58,6 @@ body:             |
 
 ---
 name:            soft_wait_multipath_first_pred_needs_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -130,7 +128,6 @@ body:             |
 
 ---
 name:            soft_wait_second_pred_needs_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -207,7 +204,6 @@ body:             |
 # we'd lose the required VM_VSRC wait.
 ---
 name:            soft_wait_does_not_simplify_vm_vsrc
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -276,7 +272,6 @@ body:             |
 
 ---
 name:            soft_wait_no_vmsrc_simplify
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -302,6 +297,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   S_WAIT_XCNT 0
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
@@ -332,7 +328,6 @@ body:             |
 
 ---
 name:            soft_wait_no_vmsrc_simplify2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -388,7 +383,6 @@ body:             |
 
 ---
 name:            soft_wait_promote_simplify
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

@@ -3,7 +3,6 @@
 # the block to prevent MachineVerifier errors.
 
 name:            lr_not_live_in
-tracksRegLiveness: true
 fixedStack:
 machineFunctionInfo:
   hasRedZone:      false

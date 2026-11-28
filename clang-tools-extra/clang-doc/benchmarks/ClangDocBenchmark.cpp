@@ -24,6 +24,8 @@
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include <memory>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -227,6 +229,61 @@ static void BM_Index_Insertion(benchmark::State &State) {
   }
 }
 BENCHMARK(BM_Index_Insertion)->Range(10, 10000);
+
+// --- String Pool Benchmarks ---
+
+static std::unique_ptr<ConcurrentStringPool> &getBenchmarkStringPool() {
+  static std::unique_ptr<ConcurrentStringPool> Pool;
+  return Pool;
+}
+
+static const std::vector<llvm::StringRef> &getBenchmarkTrace() {
+  static const std::vector<std::string> Corpus = [] {
+    constexpr size_t NumUniqueStrings = 1 << 18;
+    std::vector<std::string> V(NumUniqueStrings);
+    for (size_t I = 0; I < V.size(); ++I)
+      V[I] = "/usr/local/include/clang/AST/Decl_" + std::to_string(I) + ".h";
+    return V;
+  }();
+
+  static const std::vector<llvm::StringRef> Trace = [] {
+    constexpr size_t NumHotStrings = 64;
+    constexpr size_t TraceSize = 1 << 20;
+    std::minstd_rand Rng;
+    std::bernoulli_distribution IsHot(0.8);
+    std::uniform_int_distribution<size_t> HotDist(0, NumHotStrings - 1);
+    std::uniform_int_distribution<size_t> ColdDist(0, Corpus.size() - 1);
+
+    std::vector<llvm::StringRef> T(TraceSize);
+    for (llvm::StringRef &S : T)
+      S = Corpus[IsHot(Rng) ? HotDist(Rng) : ColdDist(Rng)];
+    return T;
+  }();
+  return Trace;
+}
+
+static void BM_StringPool_ConcurrentStringPool(benchmark::State &State) {
+  auto &SharedPool = *getBenchmarkStringPool();
+  const auto &Trace = getBenchmarkTrace();
+  const size_t Mask = Trace.size() - 1;
+  size_t Idx = State.thread_index() * (Trace.size() / State.threads());
+
+  for (auto _ : State) {
+    llvm::StringRef Res = SharedPool.save(Trace[Idx & Mask]);
+    benchmark::DoNotOptimize(Res);
+    ++Idx;
+  }
+}
+
+BENCHMARK(BM_StringPool_ConcurrentStringPool)
+    ->ThreadRange(1, 128)
+    ->UseRealTime()
+    ->Setup([](const benchmark::State &) {
+      getBenchmarkStringPool() = std::make_unique<ConcurrentStringPool>();
+    })
+    ->Teardown([](const benchmark::State &) {
+      getBenchmarkStringPool().reset();
+    });
 
 } // namespace doc
 } // namespace clang

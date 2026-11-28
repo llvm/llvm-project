@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,BE
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,LE
 
 define void @ceq_v16i8(ptr %c, ptr %a, ptr %b) nounwind {
   ; CHECK: ceq_v16i8:
@@ -972,7 +972,8 @@ define void @bseli_s_v2i64(ptr %d, ptr %a, ptr %b,
   %3 = icmp sgt <2 x i64> %1, %2
   ; CHECK-DAG: clt_s.d [[R4:\$w[0-9]+]], [[R2]], [[R1]]
   %4 = select <2 x i1> %3, <2 x i64> <i64 1, i64 1>, <2 x i64> %1
-  ; CHECK-DAG: ldi.d [[R3:\$w[0-9]+]], 1
+  ; LE-DAG: ldi.d [[R3:\$w[0-9]+]], 1
+  ; BE-DAG: shf.w [[R3:\$w[0-9]+]], {{\$w[0-9]+}}, 177
   ; CHECK-DAG: bsel.v [[R4]], [[R1]], [[R3]]
   store <2 x i64> %4, ptr %d
   ; CHECK-DAG: st.d [[R4]], 0($4)
@@ -1051,7 +1052,8 @@ define void @bseli_u_v2i64(ptr %d, ptr %a, ptr %b,
   %3 = icmp ugt <2 x i64> %1, %2
   ; CHECK-DAG: clt_u.d [[R4:\$w[0-9]+]], [[R2]], [[R1]]
   %4 = select <2 x i1> %3, <2 x i64> <i64 1, i64 1>, <2 x i64> %1
-  ; CHECK-DAG: ldi.d [[R3:\$w[0-9]+]], 1
+  ; LE-DAG: ldi.d [[R3:\$w[0-9]+]], 1
+  ; BE-DAG: shf.w [[R3:\$w[0-9]+]], {{\$w[0-9]+}}, 177
   ; CHECK-DAG: bsel.v [[R4]], [[R1]], [[R3]]
   store <2 x i64> %4, ptr %d
   ; CHECK-DAG: st.d [[R4]], 0($4)

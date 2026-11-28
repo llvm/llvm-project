@@ -143,6 +143,14 @@ foo2:
 @ CHECK-ERRORS: note: instruction requires: arm-mode
 @ CHECK-ERRORS: note: invalid operand for instruction
 
+        @ PC is not valid as the source of a store
+        str.w pc, [sp, #60]
+        str pc, [r0, #-4]
+        str.w pc, [r0, r1]
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
+
         @ SWP(B) is an ARM-only instruction
         swp  r0, r1, [r2]
         swpb r3, r4, [r5]

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -cl-std=CL1.2 -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -cl-std=CL1.2 -emit-llvm -o - -O0 | FileCheck %s %}
 
 // Pragmas are only accepted for backward compatibility.
 // The builtins are made available with the following defines.

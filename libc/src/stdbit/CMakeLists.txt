@@ -15,7 +15,6 @@ function(declare_dependencies prefixes dependencies)
   endforeach()
 endfunction()
 
-
 set(prefixes
   leading_zeros
   leading_ones

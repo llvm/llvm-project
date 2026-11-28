@@ -64,6 +64,7 @@
 # TYPE-ONLY-NEXT:   Type: SymDebugTable (0x66)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

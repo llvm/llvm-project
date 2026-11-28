@@ -9,9 +9,9 @@ define i32 @test1() personality ptr @__CxxFrameHandler3 {
 entry:
 ; CHECK-LABEL: define i32 @test1(
 ; CHECK: %[[eh_reg:.*]] = alloca
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 2
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 12
 ; CHECK: store i32 -1, ptr %[[gep]]
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 2
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 12
 ; CHECK: store i32 0, ptr %[[gep]]
 ; CHECK: %[[lsda:.*]] = call ptr @llvm.x86.seh.lsda(ptr @test1)
 ; CHECK: invoke i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 3, ptr @__CxxLongjmpUnwind, i32 0, ptr %[[lsda]])
@@ -19,7 +19,7 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 2
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 12
 ; CHECK: store i32 -1, ptr %[[gep]]
 ; CHECK: %[[lsda:.*]] = call ptr @llvm.x86.seh.lsda(ptr @test1)
 ; CHECK: call i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 3, ptr @__CxxLongjmpUnwind, i32 -1, ptr %[[lsda]])
@@ -29,7 +29,7 @@ invoke.cont:
 
 ehcleanup:
   %cp = cleanuppad within none []
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 2
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 12
 ; CHECK: %[[load:.*]] = load i32, ptr %[[gep]]
 ; CHECK: %[[lsda:.*]] = call ptr @llvm.x86.seh.lsda(ptr @test1)
 ; CHECK: call i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 3, ptr @__CxxLongjmpUnwind, i32 %[[load]], ptr %[[lsda]]) [ "funclet"(token %cp) ]
@@ -42,16 +42,16 @@ define i32 @test2() personality ptr @_except_handler3 {
 entry:
 ; CHECK-LABEL: define i32 @test2(
 ; CHECK: %[[eh_reg:.*]] = alloca
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 4
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 20
 ; CHECK: store i32 -1, ptr %[[gep]]
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 4
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 20
 ; CHECK: store i32 0, ptr %[[gep]]
 ; CHECK: invoke i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 2, ptr @_seh_longjmp_unwind, i32 0)
   %inv = invoke i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 0) #2
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:
-; CHECK: %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}} %[[eh_reg]], i32 0, i32 4
+; CHECK: %[[gep:.*]] = getelementptr inbounds nuw i8, ptr %[[eh_reg]], i32 20
 ; CHECK: store i32 -1, ptr %[[gep]]
 ; CHECK: call i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 2, ptr @_seh_longjmp_unwind, i32 -1)
   call i32 (ptr, i32, ...) @_setjmp3(ptr @jb, i32 0)

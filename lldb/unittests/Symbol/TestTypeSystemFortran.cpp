@@ -289,3 +289,56 @@ TEST_F(TestTypeSystemFortran, TestGetBasicTypeFromAST) {
   EXPECT_TRUE(complex_type.IsValid());
   EXPECT_STREQ(complex_type.GetTypeName().GetCString(), "COMPLEX(KIND=8)");
 }
+
+TEST_F(TestTypeSystemFortran, TestFortranFunctions) {
+  llvm::SmallVector<CompilerType, 2> parameters;
+  llvm::SmallVector<llvm::StringRef, 2> parameter_names;
+  CompilerType logical_type = m_ast->CreateBaseType(llvm::dwarf::DW_ATE_boolean,
+                                                    32, ConstString("LOGICAL"));
+  CompilerType int32_type = m_ast->CreateBaseType(llvm::dwarf::DW_ATE_signed,
+                                                  32, ConstString("INTEGER"));
+  parameters.push_back(logical_type);
+  parameters.push_back(int32_type);
+  parameter_names.push_back("arg_1");
+  parameter_names.push_back("arg_2");
+
+  CompilerType function_type = m_ast->CreateFortranFunction(
+      ConstString("test_func"), parameters, parameter_names, int32_type);
+
+  CompilerType first_arg = function_type.GetFunctionArgumentAtIndex(0);
+  CompilerType second_arg = function_type.GetFunctionArgumentAtIndex(1);
+  CompilerType invalid_arg = function_type.GetFunctionArgumentAtIndex(2);
+  CompilerType return_type = function_type.GetFunctionReturnType();
+
+  EXPECT_TRUE(function_type.IsFunctionType());
+  EXPECT_STREQ(function_type.GetTypeName().GetCString(),
+               "INTEGER test_func(LOGICAL arg_1, INTEGER arg_2)");
+  EXPECT_EQ(function_type.GetNumberOfFunctionArguments(), 2U);
+  EXPECT_EQ(function_type.GetFunctionArgumentCount(), 2);
+
+  EXPECT_EQ(first_arg.GetBasicTypeEnumeration(), eBasicTypeBool);
+  EXPECT_TRUE(second_arg.IsInteger());
+  EXPECT_FALSE(invalid_arg.IsValid());
+  EXPECT_TRUE(return_type.IsInteger());
+
+  // For non-function types this should return -1
+  EXPECT_EQ(return_type.GetFunctionArgumentCount(), -1);
+  EXPECT_FALSE(return_type.IsFunctionType());
+
+  CompilerType invalid_return_type;
+  CompilerType subroutine_type = m_ast->CreateFortranFunction(
+      ConstString("my_sub"), parameters, parameter_names, invalid_return_type);
+
+  EXPECT_STREQ(subroutine_type.GetTypeName().GetCString(),
+               "my_sub(LOGICAL arg_1, INTEGER arg_2)");
+  EXPECT_FALSE(subroutine_type.GetFunctionReturnType().IsValid());
+
+  llvm::SmallVector<CompilerType, 0> no_args;
+  llvm::SmallVector<llvm::StringRef, 0> no_args_names;
+  CompilerType void_func_type = m_ast->CreateFortranFunction(
+      ConstString("do_nothing"), no_args, no_args_names, invalid_return_type);
+
+  EXPECT_STREQ(void_func_type.GetTypeName().GetCString(), "do_nothing()");
+  EXPECT_EQ(void_func_type.GetFunctionArgumentCount(), 0);
+  EXPECT_EQ(void_func_type.GetNumberOfFunctionArguments(), 0U);
+}

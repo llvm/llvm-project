@@ -65,8 +65,6 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM:   br label %[[NORMAL_CLEANUP:.*]]
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
 // LLVM:   br label %[[DONE:.*]]
 // LLVM: [[UNWIND]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }

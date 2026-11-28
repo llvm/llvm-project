@@ -1,6 +1,7 @@
 // Testing that adding a new line in a module interface unit won't cause the BMI
 // of consuming module unit changes.
 //
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 //

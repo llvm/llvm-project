@@ -20,7 +20,6 @@ class TestFrameVarDILLocalVars(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("a", value="1")
         self.expect_var_path("b", value="2")
         self.expect_var_path("c", value="'\\xfd'")

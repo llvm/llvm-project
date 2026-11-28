@@ -202,6 +202,69 @@ void linear_modifiers(int argc) {
   for (int k = 0; k < argc; ++k) ++k;
 }
 
+extern int &ext_ref;
+
+template <class T> void linear_dependent_reference(T &x, int &y) {
+#ifdef OMP52
+  #pragma omp simd linear(x: uval, step(y + 1))
+#else
+  #pragma omp simd linear(uval(x): y + 1)
+#endif
+  for (int k = 0; k < 10; ++k) x += y + 1;
+}
+
+template <class T> void linear_dependent_step(int &x, T y) {
+#ifdef OMP52
+  #pragma omp simd linear(x: uval, step(y + 1))
+#else
+  #pragma omp simd linear(uval(x): y + 1)
+#endif
+  for (int k = 0; k < 10; ++k) x += y + 1;
+}
+
+void linear_reference_params(int &x, int &y, int s) {
+  int ls = s + 1;
+  #pragma omp simd linear(uval(x)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+  for (int k = 0; k < 10; ++k) ++x;
+  #pragma omp simd linear(ref(x)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+  for (int k = 0; k < 10; ++k) ++x;
+  #pragma omp simd linear(uval(ext_ref)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+  for (int k = 0; k < 10; ++k) ++ext_ref;
+  #pragma omp simd linear(uval(x): 2) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) x += 2;
+  #pragma omp simd linear(uval(x): y + 1) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) x += y + 1;
+  #pragma omp simd linear(uval(x): ls) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) x += ls;
+  #pragma omp simd linear(ref(x): y + 1) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) x += y + 1;
+  #pragma omp simd linear(val(x): y + 1) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) x += y + 1;
+  #pragma omp simd linear(x: y + 1)
+  for (int k = 0; k < 10; ++k) x += y + 1;
+#ifdef OMP52
+  #pragma omp simd linear(x: uval, step(y + 1))
+  for (int k = 0; k < 10; ++k) x += y + 1;
+  #pragma omp simd linear(x: ref, step(y + 1))
+  for (int k = 0; k < 10; ++k) x += y + 1;
+  #pragma omp simd linear(ext_ref: uval, step(ls))
+  for (int k = 0; k < 10; ++k) ext_ref += ls;
+#endif
+  #pragma omp simd linear(uval(s): y + 1) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) s += y + 1;
+  #pragma omp simd linear(uval(x): 1.5) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (int k = 0; k < 10; ++k) ++x;
+  #pragma omp simd linear(uval(x): zzz) // expected-error {{use of undeclared identifier 'zzz'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+  for (int k = 0; k < 10; ++k) ++x;
+  // expected-error@+3 3 {{use of undeclared identifier 'i'}}
+  // expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+  #pragma omp simd linear(uval(x): y + 1) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
+  for (i = 0; i < 10; i++)
+    x += y + 1;
+  linear_dependent_reference(x, y);
+  linear_dependent_step(x, s);
+}
+
 int f;
 int main(int argc, char **argv) {
   double darr[100];

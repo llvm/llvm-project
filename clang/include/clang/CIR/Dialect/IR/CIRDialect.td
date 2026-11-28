@@ -24,8 +24,11 @@ def CIR_Dialect : Dialect {
                 "supported languages";
 
   let cppNamespace = "::cir";
+  let useDefaultOperationRegistration = 1;
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
+  let useDefaultTypePrinterParser = 0;
 
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
@@ -48,6 +51,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
+    static llvm::StringRef getPrintfConstStringsAttrName() {
+      return "cir.printf.const_strings";
+    }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getCallingConvAttrName() { return "calling_conv"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
@@ -99,8 +105,14 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
+    // Marks a runtime library function (classic codegen's
+    // CreateRuntimeFunction). Unlike every other function, it does not get the
+    // TU-wide default function attributes recorded in
+    // #cir.lowering_options.
+    static llvm::StringRef getRuntimeFuncAttrName() { return "runtime_func"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
+    static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
@@ -109,9 +121,17 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
     static llvm::StringRef getAMDGPUFlatWorkGroupSizeAttrName() { return "cir.amdgpu-flat-work-group-size"; }
     static llvm::StringRef getAMDGPUWavesPerEUAttrName() { return "cir.amdgpu-waves-per-eu"; }
+    static llvm::StringRef getAMDGPUNumSGPRAttrName() { return "cir.amdgpu-num-sgpr"; }
+    static llvm::StringRef getAMDGPUNumVGPRAttrName() { return "cir.amdgpu-num-vgpr"; }
+    static llvm::StringRef getAMDGPUMaxNumWorkGroupsAttrName() { return "cir.amdgpu-max-num-workgroups"; }
+    static llvm::StringRef getAMDGPUClusterDimsAttrName() { return "cir.amdgpu-cluster-dims"; }
+    static llvm::StringRef getAMDGPUIEEEAttrName() { return "cir.amdgpu-ieee"; }
+    static llvm::StringRef getAMDGPUExpandWaitcntProfilingAttrName() { return "cir.amdgpu-expand-waitcnt-profiling"; }
     // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
     // can build the runtime-registration globals without doing file I/O.
     static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
+    // #cir.cu.offload_entry attributes, emitted after the globals they refer to.
+    static llvm::StringRef getCUDAOffloadEntriesAttrName() { return "cir.cu.offload_entries"; }
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
@@ -119,10 +139,11 @@ def CIR_Dialect : Dialect {
     // unit imports, as #cir.cxx_module_init attributes in the order the global
     // init function calls them, precomputed by CIRGen for the same reason.
     static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
-    // LangOptions facts that post-CIRGen lowering consumes, serialized by
-    // CIRGen so a reloaded .cir module is self-describing without a live
-    // clang::LangOptions. See #cir.lowering_lang_options.
-    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // LangOptions and CodeGenOptions facts that post-CIRGen lowering
+    // consumes, serialized by CIRGen so a reloaded .cir module is
+    // self-describing without a live clang::LangOptions or
+    // clang::CodeGenOptions. See #cir.lowering_options.
+    static llvm::StringRef getLoweringOptionsAttrName() { return "cir.lowering_options"; }
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
@@ -141,14 +162,10 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPURawAtomicAttrName() { return "cir.amdgpu_raw_atomic"; }
     static llvm::StringRef getAMDGPUNoPrivateAddrSpaceAttrName() { return "cir.amdgpu_no_private_addrspace"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
-    static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
     static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getOpenCLSPIRVersionAttrName() { return "cir.cl.spir.version"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
-
-    void registerAttributes();
-    void registerTypes();
 
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,

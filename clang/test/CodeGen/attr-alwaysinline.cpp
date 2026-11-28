@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s %}
 
 bool bar();
 void f(bool, bool);

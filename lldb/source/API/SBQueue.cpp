@@ -8,8 +8,10 @@
 
 #include <cinttypes>
 
+#include "Utils.h"
 #include "lldb/API/SBQueue.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBQueueItem.h"
@@ -80,7 +82,11 @@ public:
     lldb::QueueSP queue_sp = m_queue_wp.lock();
     if (!queue_sp)
       return nullptr;
-    return ConstString(queue_sp->GetName()).GetCString();
+    lldb::ProcessSP process_sp = queue_sp->GetProcess();
+    StringPoolRef pool = process_sp
+                             ? GetDebuggerStringPool(process_sp->GetTarget())
+                             : StringPool::GetSystemPool();
+    return pool.Intern(queue_sp->GetName());
   }
 
   void FetchThreads() {

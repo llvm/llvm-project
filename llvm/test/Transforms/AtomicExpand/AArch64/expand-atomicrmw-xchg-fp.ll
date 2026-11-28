@@ -14,13 +14,11 @@ define void @atomic_swap_f16(ptr %ptr, half %val) !prof !0 {
 ; CHECK-NEXT:    [[TRYAGAIN:%.*]] = icmp ne i32 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TRYAGAIN]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       atomicrmw.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16 [[TMP3]] to half
 ; CHECK-NEXT:    ret void
 ;
 ; OUTLINE-ATOMICS-LABEL: @atomic_swap_f16(
 ; OUTLINE-ATOMICS-NEXT:    [[TMP1:%.*]] = bitcast half [[VAL:%.*]] to i16
 ; OUTLINE-ATOMICS-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i16 [[TMP1]] acquire, align 2
-; OUTLINE-ATOMICS-NEXT:    [[TMP3:%.*]] = bitcast i16 [[TMP2]] to half
 ; OUTLINE-ATOMICS-NEXT:    ret void
 ;
   %t1 = atomicrmw xchg ptr %ptr, half %val acquire
@@ -39,13 +37,11 @@ define void @atomic_swap_f32(ptr %ptr, float %val) nounwind !prof !0 {
 ; CHECK-NEXT:    [[TRYAGAIN:%.*]] = icmp ne i32 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TRYAGAIN]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]], !prof [[PROF1]]
 ; CHECK:       atomicrmw.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to float
 ; CHECK-NEXT:    ret void
 ;
 ; OUTLINE-ATOMICS-LABEL: @atomic_swap_f32(
 ; OUTLINE-ATOMICS-NEXT:    [[TMP1:%.*]] = bitcast float [[VAL:%.*]] to i32
 ; OUTLINE-ATOMICS-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i32 [[TMP1]] acquire, align 4
-; OUTLINE-ATOMICS-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
 ; OUTLINE-ATOMICS-NEXT:    ret void
 ;
   %t1 = atomicrmw xchg ptr %ptr, float %val acquire
@@ -62,13 +58,11 @@ define void @atomic_swap_f64(ptr %ptr, double %val) nounwind !prof !0 {
 ; CHECK-NEXT:    [[TRYAGAIN:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TRYAGAIN]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]], !prof [[PROF1]]
 ; CHECK:       atomicrmw.end:
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64 [[TMP2]] to double
 ; CHECK-NEXT:    ret void
 ;
 ; OUTLINE-ATOMICS-LABEL: @atomic_swap_f64(
 ; OUTLINE-ATOMICS-NEXT:    [[TMP1:%.*]] = bitcast double [[VAL:%.*]] to i64
 ; OUTLINE-ATOMICS-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i64 [[TMP1]] acquire, align 8
-; OUTLINE-ATOMICS-NEXT:    [[TMP3:%.*]] = bitcast i64 [[TMP2]] to double
 ; OUTLINE-ATOMICS-NEXT:    ret void
 ;
   %t1 = atomicrmw xchg ptr %ptr, double %val acquire

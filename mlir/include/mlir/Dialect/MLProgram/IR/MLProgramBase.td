@@ -27,8 +27,8 @@ def MLProgram_Dialect : Dialect {
     it is recommended to inquire further prior to using this dialect.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 #endif // MLPROGRAM_BASE

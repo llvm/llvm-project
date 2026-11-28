@@ -393,20 +393,23 @@ struct MaxUIOpInterface
     auto maxOp = cast<arith::MaxUIOp>(op);
     assert(value == maxOp.getResult() && "invalid value");
 
-    // See MinUIOpInterface comment
+    // ValueBoundsConstraintSet models values as signed integers. If either
+    // operand is negative in signed interpretation, the unsigned maximum is
+    // also negative, so a non-negative operand is not a signed lower bound.
+    // Both operands must be provably non-negative for signed and unsigned
+    // comparisons to agree.
     bool lhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr);
     bool rhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr);
 
-    if (lhsNonNegative) {
-      AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
-      cstr.bound(value) >= lhs;
-    }
-    if (rhsNonNegative) {
-      AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
-      cstr.bound(value) >= rhs;
-    }
+    if (!lhsNonNegative || !rhsNonNegative)
+      return;
+
+    AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
+    cstr.bound(value) >= lhs;
+    cstr.bound(value) >= rhs;
   }
 };
 } // namespace

@@ -1,4 +1,4 @@
-// RUN: fir-opt -split-input-file --openacc-legalize-data-values %s | FileCheck %s
+// RUN: fir-opt -split-input-file --pass-pipeline='builtin.module(func.func(openacc-legalize-data-values))' %s | FileCheck %s
 
 func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
   %0:2 = hlfir.declare %arg0 uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

@@ -42,13 +42,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX803-GISEL-NEXT:    s_mov_b32 s3, 40
 ; GFX803-GISEL-NEXT:    s_mov_b32 s2, 30
 ; GFX803-GISEL-NEXT:    s_mov_b32 s1, 20
-; GFX803-GISEL-NEXT:    s_mov_b32 s0, 10
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    ; def v[2:3], use v[0:1]
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
+; GFX803-GISEL-NEXT:    s_mov_b32 s0, 10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v2, s4
@@ -268,13 +268,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX803-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX803-GISEL-NEXT:    s_mov_b32 s0, 1.0
 ; GFX803-GISEL-NEXT:    s_mov_b32 s2, s1
-; GFX803-GISEL-NEXT:    s_mov_b32 s3, s1
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    ; def v[2:3], use v[0:1]
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
+; GFX803-GISEL-NEXT:    s_mov_b32 s3, s1
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v2, s4
@@ -303,7 +303,7 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v4, s4
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, 1.0 :: v_dual_mov_b32 v9, v8
 ; GFX13-SDAG-NEXT:    ;;#ASMSTART
 ; GFX13-SDAG-NEXT:    ; def v[2:3], use v[0:1]
@@ -313,6 +313,7 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v4, v4
 ; GFX13-SDAG-NEXT:    ;;#ASMEND
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_mov_b32 v6, v4
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
 ; GFX13-SDAG-NEXT:    ;;#ASMSTART
 ; GFX13-SDAG-NEXT:    ;; force constraint

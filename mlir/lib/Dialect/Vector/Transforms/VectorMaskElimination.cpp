@@ -37,6 +37,14 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   auto maskTypeDimScalableFlags = maskType.getScalableDims();
   auto maskTypeDimSizes = maskType.getShape();
 
+  // Special case: Rank zero shape.
+  constexpr std::array<int64_t, 1> rankZeroShape{1};
+  constexpr std::array<bool, 1> rankZeroScalableDims{false};
+  if (maskType.getRank() == 0) {
+    maskTypeDimSizes = rankZeroShape;
+    maskTypeDimScalableFlags = rankZeroScalableDims;
+  }
+
   struct UnknownMaskDim {
     size_t position;
     Value dimSize;

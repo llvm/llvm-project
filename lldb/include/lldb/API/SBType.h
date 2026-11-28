@@ -152,6 +152,10 @@ public:
 
   uint64_t GetByteAlign();
 
+  /// Return the distance in bytes between consecutive elements of this type
+  /// when stored in contiguous storage, such as an array. Returns 0 on error.
+  uint64_t GetByteStride();
+
   bool IsPointerType();
 
   bool IsReferenceType();

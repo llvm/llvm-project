@@ -64,6 +64,11 @@ public:
     eDumpOptionCommand = (1u << 5),
     eDumpOptionDefaultValue = (1u << 6),
     eDumpOptionOnlyChanged = (1u << 7),
+    /// Also dump deprecated settings that still have their default value.
+    eDumpOptionIncludeDeprecated = (1u << 8),
+    /// The options that choose which settings are dumped, rather than what is
+    /// dumped for each one.
+    eDumpGroupFilter = (eDumpOptionOnlyChanged | eDumpOptionIncludeDeprecated),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),

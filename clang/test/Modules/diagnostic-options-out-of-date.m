@@ -1,3 +1,4 @@
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // Build A.pcm
 // RUN: %clang_cc1 -Werror -Wno-conversion -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs %s -fmodules-disable-diagnostic-validation

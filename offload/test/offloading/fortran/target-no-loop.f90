@@ -3,6 +3,7 @@
 
 ! RUN: %libomptarget-compile-fortran-generic -O3  -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription
 ! RUN: env LIBOMPTARGET_INFO=16 OMP_NUM_TEAMS=16 OMP_TEAMS_THREAD_LIMIT=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+! RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=LOWTRIP
 function check_errors(array) result (errors)
    integer, intent(in) :: array(1024)
    integer :: errors
@@ -94,4 +95,10 @@ end program main
 ! CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 ! CHECK:  info: #Args: 4 Teams x Thrds:   16x  16 {{.*}}
 ! CHECK:  number of errors: 0
+
+! Without a thread limit, the no-loop kernel is too short for the default
+! number of blocks, so it gets 32 threads per block and more blocks.
+! LOWTRIP:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+! LOWTRIP:  info: #Args: 3 Teams x Thrds:   32x  32
+! LOWTRIP:  number of errors: 0
 

@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=aarch64 -enable-subreg-liveness \
+# RUN:   -passes='require<live-intervals>,register-coalescer,print<live-intervals>' \
+# RUN:   %s -filetype=null 2>&1 | FileCheck %s
+
+# Removing the dead copy makes the register coalescer call shrinkToUses for %1.
+# STXRW reads the odd lane (L0000000000000200) and early-clobber defines the even
+# lane (L0000000000000100) of the same virtual register.
+# The main range changes value at 48e, so its incoming value must end there.
+# The odd subrange has no definition at STXRW and must retain its normal-slot use at 48r.
+
+# CHECK-LABEL: Live intervals for machine function: stxrw_pair_shrink:
+# CHECK: %1 [32r,48e:0)[48e,80r:1) 0@32r 1@48e
+# CHECK-SAME: L0000000000000200 [32r,48r:0) 0@32r
+# CHECK-SAME: L0000000000000100 [32r,32d:1)[48e,80r:0) 0@48e 1@32r
+
+# CHECK-LABEL: Machine code for function stxrw_pair_shrink:
+# CHECK: 32B       %1:wseqpairsclass = COPY $w2_w3
+# CHECK: 48B       early-clobber %1.sube32:wseqpairsclass = STXRW %1.subo32:wseqpairsclass, %0:gpr64sp
+# CHECK: 80B       $w0 = COPY %1.sube32:wseqpairsclass
+---
+name: stxrw_pair_shrink
+isSSA: false
+body: |
+  bb.0:
+    liveins: $x0, $w2_w3
+
+    %0:gpr64sp = COPY $x0
+    %1:wseqpairsclass = COPY $w2_w3
+    early-clobber %1.sube32:wseqpairsclass = STXRW %1.subo32, %0
+    dead %2:wseqpairsclass = COPY %1
+    $w0 = COPY %1.sube32
+    RET_ReallyLR implicit $w0
+...

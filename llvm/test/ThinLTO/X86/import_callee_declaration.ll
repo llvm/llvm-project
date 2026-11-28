@@ -125,7 +125,9 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 
 ; IMPORT-DAG: define available_externally void @small_func
 ; IMPORT-DAG: define available_externally hidden void @small_indirect_callee
-; IMPORT-DAG: declare void @large_func
+;; large_func was already declared in main (it is called directly), so the
+;; declaration import only records its GUID on the existing declaration.
+; IMPORT-DAG: declare !guid ![[GUID0:[0-9]+]] void @large_func
 ; Tests that dso_local attribute is applied on a global var from its summary.
 ; IMPORT-DAG: @read_write_global_vars = external dso_local global [1 x ptr]
 ;; Functions and aliases imported as declarations are declared in the importing
@@ -135,6 +137,7 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORT-DAG: declare !guid ![[GUID3:[0-9]+]] void @large_indirect_bar_alias() #[[ATTR]]
 ; IMPORT-NOT: @large_indirect_bar(
 ; IMPORT: attributes #[[ATTR]] = { norecurse }
+; IMPORT-DAG: ![[GUID0]] = !{i64 2418497564662708935}
 ; IMPORT-DAG: ![[GUID1]] = !{i64 -4103303287044860482}
 ; IMPORT-DAG: ![[GUID2]] = !{i64 -1716570130084201147}
 ; IMPORT-DAG: ![[GUID3]] = !{i64 -4855792300234638301}

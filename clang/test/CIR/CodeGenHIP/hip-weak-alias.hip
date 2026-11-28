@@ -24,7 +24,7 @@
 extern "C" {
 // Host-only aliasee: emitted on the host only.
 // CIR-HOST-DAG: cir.func weak @HostFunc() -> !s32i alias(@__HostFunc)
-// CIR-HOST-DAG: cir.func dso_local @HostFunc_() -> !s32i alias(@__HostFunc)
+// CIR-HOST-DAG: cir.func @HostFunc_() -> !s32i alias(@__HostFunc)
 // CIR-HOST-DAG: cir.global weak @HostVar alias(@__HostVar) : !s32i
 // CIR-HOST-DAG: cir.global external @HostVar_ alias(@__HostVar) : !s32i
 // LLVM-HOST-DAG: @HostFunc = weak alias i32 (), ptr @__HostFunc
@@ -40,7 +40,7 @@ extern int __attribute__((alias("__HostVar"))) HostVar_;
 
 // Device-only aliasee: emitted on the device only.
 // CIR-DEV-DAG: cir.func weak @One() -> !s32i alias(@__One)
-// CIR-DEV-DAG: cir.func dso_local @One_() -> !s32i alias(@__One)
+// CIR-DEV-DAG: cir.func @One_() -> !s32i alias(@__One)
 // LLVM-DEV-DAG: @One = weak alias i32 (), ptr @__One
 // LLVM-DEV-DAG: @One_ = alias i32 (), ptr @__One
 __device__ int __One(void) { return 1; }
@@ -49,11 +49,11 @@ __device__ int One_(void) __attribute__((alias("__One")));
 
 // Host and device aliasee: emitted on both sides.
 // CIR-HOST-DAG: cir.func weak @Two() -> !s32i alias(@__Two)
-// CIR-HOST-DAG: cir.func dso_local @Two_() -> !s32i alias(@__Two)
+// CIR-HOST-DAG: cir.func @Two_() -> !s32i alias(@__Two)
 // LLVM-HOST-DAG: @Two = weak alias i32 (), ptr @__Two
 // LLVM-HOST-DAG: @Two_ = alias i32 (), ptr @__Two
 // CIR-DEV-DAG: cir.func weak @Two() -> !s32i alias(@__Two)
-// CIR-DEV-DAG: cir.func dso_local @Two_() -> !s32i alias(@__Two)
+// CIR-DEV-DAG: cir.func @Two_() -> !s32i alias(@__Two)
 // LLVM-DEV-DAG: @Two = weak alias i32 (), ptr @__Two
 // LLVM-DEV-DAG: @Two_ = alias i32 (), ptr @__Two
 __host__ __device__ int __Two(void) { return 2; }

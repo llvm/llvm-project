@@ -28,42 +28,25 @@ class DynamicValueTestCase(TestBase):
         )
 
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Set up our breakpoints:
+
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("pass-to-base.cpp", False), self.main_first_call_line
+        )
 
         do_something_bpt = target.BreakpointCreateByLocation(
             "pass-to-base.cpp", self.do_something_line
         )
         self.assertTrue(do_something_bpt, VALID_BREAKPOINT)
 
-        first_call_bpt = target.BreakpointCreateByLocation(
-            "pass-to-base.cpp", self.main_first_call_line
-        )
-        self.assertTrue(first_call_bpt, VALID_BREAKPOINT)
-
         second_call_bpt = target.BreakpointCreateByLocation(
             "pass-to-base.cpp", self.main_second_call_line
         )
         self.assertTrue(second_call_bpt, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, first_call_bpt)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
 
@@ -192,10 +175,14 @@ class DynamicValueTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         anotherA_value = frame.FindVariable("anotherA", use_dynamic)
         self.assertTrue(anotherA_value)
-        self.assertIn("B", anotherA_value.GetTypeName())
-        anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
-        self.assertTrue(anon_b_value)
-        self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
+        if self.getDebugInfo() == "pdb":
+            # With PDB, we don't have the vtable symbols for classes in anonymous namespaces.
+            self.assertNotIn("B", anotherA_value.GetTypeName())
+        else:
+            self.assertIn("B", anotherA_value.GetTypeName())
+            anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
+            self.assertTrue(anon_b_value)
+            self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
 
     def examine_value_object_of_this_ptr(
         self, this_static, this_dynamic, dynamic_location
@@ -251,6 +238,10 @@ class DynamicValueTestCase(TestBase):
             contained_b = contained_auto_ptr.GetChildMemberWithName(
                 "__ptr_", use_dynamic
             )
+        if not contained_b:
+            contained_b = contained_auto_ptr.GetChildMemberWithName(
+                "_Myptr", use_dynamic
+            )
         self.assertTrue(contained_b)
 
         contained_b_static = contained_auto_ptr.GetChildMemberWithName(
@@ -260,6 +251,10 @@ class DynamicValueTestCase(TestBase):
             contained_b_static = contained_auto_ptr.GetChildMemberWithName(
                 "__ptr_", no_dynamic
             )
+        if not contained_b_static:
+            contained_b_static = contained_auto_ptr.GetChildMemberWithName(
+                "_Myptr", no_dynamic
+            )
         self.assertTrue(contained_b_static)
 
         contained_b_addr = int(contained_b.GetValue(), 16)
@@ -267,8 +262,6 @@ class DynamicValueTestCase(TestBase):
 
         self.assertLess(contained_b_addr, contained_b_static_addr)
 
-    @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_from_forward_decl(self):
         """Test fetching C++ dynamic values forward-declared types. It's
         imperative that this is a separate test so that we don't end up parsing
@@ -280,8 +273,7 @@ class DynamicValueTestCase(TestBase):
             substrs=["(B *) a", "m_b_value = 10"],
         )
 
-    @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
+    @expectedFailureWindows  # Can't read the RTTI locator and A is a virtual base of B, so AST strategy fails.
     @expectedFailureAll(archs=["arm$"])  # Minidump saving not implemented
     @skipIf(archs=["arm64e"])  # arm64e incompatible with minidump
     @skipIfWasm  # No core file format for Wasm

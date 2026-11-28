@@ -5,7 +5,6 @@
 # into build_vector.
 ---
 name: concat_to_build_vector
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -31,7 +30,6 @@ body:             |
 # Same test as concat_to_build_vector but with pointer types.
 ---
 name: concat_to_build_vector_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -57,7 +55,6 @@ body:             |
 # Check that we canonicalize concat_vectors(undef, undef) into undef.
 ---
 name: concat_to_undef
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: concat_to_undef
@@ -73,7 +70,6 @@ body:             |
 # of undef scalar.
 ---
 name: concat_to_build_vector_with_undef
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -96,7 +92,6 @@ body:             |
 # Same as concat_to_build_vector_with_undef but with pointer types.
 ---
 name: concat_to_build_vector_with_undef_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -120,7 +115,6 @@ body:             |
 # not undef or build_vector. I.e., we cannot flatten the concat_vectors.
 ---
 name: concat_to_build_vector_negative_test
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0

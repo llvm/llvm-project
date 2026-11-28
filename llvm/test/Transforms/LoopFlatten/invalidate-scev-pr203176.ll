@@ -30,7 +30,7 @@ define i64 @f(i64 %n) {
 ; CHECK-NEXT:    --> {0,+,{0,+,1}<%outer.loop>}<nuw><nsw><%mid.loop> U: [0,1) S: [0,1) Exits: {0,+,{0,+,1}<%outer.loop>}<nuw><nsw><%mid.loop> LoopDispositions: { %inner.loop: Invariant, %mid.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %gep = getelementptr i32, ptr @g, i32 %3
 ; CHECK-NEXT:    --> {@g,+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nw><%mid.loop> U: [4,-7) S: [-9223372036854775808,9223372036854775805) Exits: {@g,+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nuw><nsw><%mid.loop> LoopDispositions: { %inner.loop: Invariant, %mid.loop: Computable, %outer.loop: Variant }
-; CHECK-NEXT:    %4 = trunc nuw i64 %indvar to i32
+; CHECK-NEXT:    %4 = trunc nuw nsw i64 %indvar to i32
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%inner.loop> U: [0,-1) S: [0,-1) Exits: {-1,+,1}<%outer.loop> LoopDispositions: { %inner.loop: Computable, %mid.loop: Uniform, %outer.loop: Uniform }
 ; CHECK-NEXT:    %arrayidx = getelementptr i32, ptr %gep, i32 %4
 ; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%inner.loop> to i64))<nsw> + {@g,+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nuw><nsw><%mid.loop>) U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: {((4 * (sext i32 {-1,+,1}<%outer.loop> to i64))<nsw> + @g),+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nw><%mid.loop> LoopDispositions: { %inner.loop: Computable, %mid.loop: Variant, %outer.loop: Variant }

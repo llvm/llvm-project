@@ -610,21 +610,21 @@ let Predicates = [FeatureVector] in {
   let isCommutable = 1 in {
     // Average.
     def VAVG  : BinaryVRRcGeneric<"vavg", 0xE7F2>;
-    def VAVGB : BinaryVRRc<"vavgb", 0xE7F2, int_s390_vavgb, v128b, v128b, 0>;
-    def VAVGH : BinaryVRRc<"vavgh", 0xE7F2, int_s390_vavgh, v128h, v128h, 1>;
-    def VAVGF : BinaryVRRc<"vavgf", 0xE7F2, int_s390_vavgf, v128f, v128f, 2>;
-    def VAVGG : BinaryVRRc<"vavgg", 0xE7F2, int_s390_vavgg, v128g, v128g, 3>;
+    def VAVGB : BinaryVRRc<"vavgb", 0xE7F2, avgceils, v128b, v128b, 0>;
+    def VAVGH : BinaryVRRc<"vavgh", 0xE7F2, avgceils, v128h, v128h, 1>;
+    def VAVGF : BinaryVRRc<"vavgf", 0xE7F2, avgceils, v128f, v128f, 2>;
+    def VAVGG : BinaryVRRc<"vavgg", 0xE7F2, avgceils, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VAVGQ : BinaryVRRc<"vavgq", 0xE7F2, int_s390_vavgq, v128q, v128q, 4>;
+      def VAVGQ : BinaryVRRc<"vavgq", 0xE7F2, avgceils, v128q, v128q, 4>;
 
     // Average logical.
     def VAVGL  : BinaryVRRcGeneric<"vavgl", 0xE7F0>;
-    def VAVGLB : BinaryVRRc<"vavglb", 0xE7F0, int_s390_vavglb, v128b, v128b, 0>;
-    def VAVGLH : BinaryVRRc<"vavglh", 0xE7F0, int_s390_vavglh, v128h, v128h, 1>;
-    def VAVGLF : BinaryVRRc<"vavglf", 0xE7F0, int_s390_vavglf, v128f, v128f, 2>;
-    def VAVGLG : BinaryVRRc<"vavglg", 0xE7F0, int_s390_vavglg, v128g, v128g, 3>;
+    def VAVGLB : BinaryVRRc<"vavglb", 0xE7F0, avgceilu, v128b, v128b, 0>;
+    def VAVGLH : BinaryVRRc<"vavglh", 0xE7F0, avgceilu, v128h, v128h, 1>;
+    def VAVGLF : BinaryVRRc<"vavglf", 0xE7F0, avgceilu, v128f, v128f, 2>;
+    def VAVGLG : BinaryVRRc<"vavglg", 0xE7F0, avgceilu, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VAVGLQ : BinaryVRRc<"vavglq", 0xE7F0, int_s390_vavglq, v128q, v128q, 4>;
+      def VAVGLQ : BinaryVRRc<"vavglq", 0xE7F0, avgceilu, v128q, v128q, 4>;
   }
 
   // Checksum.
@@ -1485,10 +1485,16 @@ let Predicates = [FeatureVector] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
         def VCFPS  : TernaryVRRaFloatGeneric<"vcfps", 0xE7C3>;
-      def VCEFB : TernaryVRRa<"vcefb", 0xE7C3, null_frag, v128sb, v128g, 2, 0>;
+      def VCEFB : TernaryVRRa<"vcefb", 0xE7C3, null_frag, v128sb, v128f, 2, 0>;
       def WCEFB : TernaryVRRa<"wcefb", 0xE7C3, null_frag, v32sb, v32f, 2, 8>;
     }
     def : FPConversion<VCEFB, any_sint_to_fp, v128sb, v128f, 0, 0>;
+    def : Pat<(f32 (any_sint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec), 0)))),
+              (WCEFB (EXTRACT_SUBREG VR128:$vec, subreg_h32), 0, 0)>;
+    def : Pat<(f32 (any_sint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec),
+                                                          imm32zx2:$index)))),
+              (WCEFB (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index),
+                                     subreg_h32), 0, 0)>;
   }
 
   // Convert from logical.
@@ -1502,10 +1508,16 @@ let Predicates = [FeatureVector] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
         def VCFPL  : TernaryVRRaFloatGeneric<"vcfpl", 0xE7C1>;
-      def VCELFB : TernaryVRRa<"vcelfb", 0xE7C1, null_frag, v128sb, v128g, 2, 0>;
+      def VCELFB : TernaryVRRa<"vcelfb", 0xE7C1, null_frag, v128sb, v128f, 2, 0>;
       def WCELFB : TernaryVRRa<"wcelfb", 0xE7C1, null_frag, v32sb, v32f, 2, 8>;
     }
     def : FPConversion<VCELFB, any_uint_to_fp, v128sb, v128f, 0, 0>;
+    def : Pat<(f32 (any_uint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec), 0)))),
+              (WCELFB (EXTRACT_SUBREG VR128:$vec, subreg_h32), 0, 0)>;
+    def : Pat<(f32 (any_uint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec),
+                                                           imm32zx2:$index)))),
+              (WCELFB (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index),
+                                      subreg_h32), 0, 0)>;
   }
 
   // Convert to fixed.
@@ -1520,11 +1532,21 @@ let Predicates = [FeatureVector] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
         def VCSFP  : TernaryVRRaFloatGeneric<"vcsfp", 0xE7C2>;
-      def VCFEB : TernaryVRRa<"vcfeb", 0xE7C2, null_frag, v128sb, v128g, 2, 0>;
-      def WCFEB : TernaryVRRa<"wcfeb", 0xE7C2, null_frag, v32sb, v32f, 2, 8>;
+      def VCFEB : TernaryVRRa<"vcfeb", 0xE7C2, null_frag, v128f, v128sb, 2, 0>;
+      def WCFEB : TernaryVRRa<"wcfeb", 0xE7C2, null_frag, v32f, v32sb, 2, 8>;
     }
     // Rounding mode should agree with SystemZInstrFP.td.
     def : FPConversion<VCFEB, any_fp_to_sint, v128f, v128sb, 0, 5>;
+    def : Pat<(v4i32 (scalar_to_vector (i32 (any_fp_to_sint FP32:$src)))),
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                             (WCFEB FP32:$src, 0, 5), subreg_h32)>;
+    def : Pat<(v4i32 (z_vector_insert (undef),
+                                      (i32 (any_fp_to_sint FP32:$src)), 0)),
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                             (WCFEB FP32:$src, 0, 5), subreg_h32)>;
+    def : Pat<(v4i32 (z_replicate (i32 (any_fp_to_sint FP32:$src)))),
+              (VREPF (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                                    (WCFEB FP32:$src, 0, 5), subreg_h32), 0)>;
   }
 
   // Convert to logical.
@@ -1539,11 +1561,21 @@ let Predicates = [FeatureVector] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
         def VCLFP  : TernaryVRRaFloatGeneric<"vclfp", 0xE7C0>;
-      def VCLFEB : TernaryVRRa<"vclfeb", 0xE7C0, null_frag, v128sb, v128g, 2, 0>;
-      def WCLFEB : TernaryVRRa<"wclfeb", 0xE7C0, null_frag, v32sb, v32f, 2, 8>;
+      def VCLFEB : TernaryVRRa<"vclfeb", 0xE7C0, null_frag, v128f, v128sb, 2, 0>;
+      def WCLFEB : TernaryVRRa<"wclfeb", 0xE7C0, null_frag, v32f, v32sb, 2, 8>;
     }
     // Rounding mode should agree with SystemZInstrFP.td.
     def : FPConversion<VCLFEB, any_fp_to_uint, v128f, v128sb, 0, 5>;
+    def : Pat<(v4i32 (scalar_to_vector (i32 (any_fp_to_uint FP32:$src)))),
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                             (WCLFEB FP32:$src, 0, 5), subreg_h32)>;
+    def : Pat<(v4i32 (z_vector_insert (undef),
+                                      (i32 (any_fp_to_uint FP32:$src)), 0)),
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                             (WCLFEB FP32:$src, 0, 5), subreg_h32)>;
+    def : Pat<(v4i32 (z_replicate (i32 (any_fp_to_uint FP32:$src)))),
+              (VREPF (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                                    (WCLFEB FP32:$src, 0, 5), subreg_h32), 0)>;
   }
 
   // Divide.

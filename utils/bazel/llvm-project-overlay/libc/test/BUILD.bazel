@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("//libc:libc_build_rules.bzl", "libc_release_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//libc:libc_build_rules.bzl", "libc_generated_headers", "libc_release_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,7 +25,7 @@ libc_release_library(
     name = "libc_release_test",
     libc_functions = [
         "//libc:acosf",
-        "//libc:read",
+        "//libc/src/unistd:read",
     ],
     weak_symbols = [
         "read",
@@ -33,4 +35,47 @@ libc_release_library(
 build_test(
     name = "libc_release_build_test",
     targets = [":libc_release_test"],
+)
+
+# Smoke test verifying headers can be generated with an entrypoint list.
+libc_generated_headers(
+    name = "libc_generated_headers_smoke",
+    entrypoints = [
+        "cos",
+        "mmap",
+    ],
+    output_dir = "libc_generated_headers_smoke",
+    specs = [
+        "//libc/include:math_hdrgen_spec",
+        "//libc/include:sys_mman_hdrgen_spec",
+    ],
+)
+
+write_file(
+    name = "libc_generated_headers_smoke_test_sh",
+    out = "libc_generated_headers_smoke_test.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -e",
+        'DIR="${1%libc_generated_headers_smoke*}libc_generated_headers_smoke"',
+        "function check_exists() {",
+        '  [ -f "$1" ] || { echo "$1 not found" >&2; exit 1; }',
+        "}",
+
+        # Both headers should have been generated.
+        'check_exists "$DIR/math.h"',
+        'check_exists "$DIR/sys/mman.h"',
+
+        # math.h should contain cos, while sin should've been filtered out.
+        'grep -q "cos" "$DIR/math.h" || { echo "cos not found"; exit 1; }',
+        '! grep -q "sin" "$DIR/math.h" || { echo "sin found"; exit 1; }',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "libc_generated_headers_smoke_test",
+    srcs = [":libc_generated_headers_smoke_test_sh"],
+    args = ["$(rootpaths :libc_generated_headers_smoke)"],
+    data = [":libc_generated_headers_smoke"],
 )

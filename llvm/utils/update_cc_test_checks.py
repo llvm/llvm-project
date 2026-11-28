@@ -318,7 +318,7 @@ def update_test(ti: common.TestInfo):
     }
 
     for l in ti.run_lines:
-        commands = [cmd.strip() for cmd in l.split("|")]
+        commands = [cmd.strip() for cmd in common.unwrap_lit_if(l).split("|")]
 
         triple_in_cmd = None
         m = common.TRIPLE_ARG_RE.search(commands[0])

@@ -108,6 +108,10 @@ public:
   void updateRegAllocHint(Register Reg, Register NewReg,
                           MachineFunction &MF) const override;
 
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
+
   bool hasBasePointer(const MachineFunction &MF) const;
 
   bool canRealignStack(const MachineFunction &MF) const override;
@@ -160,6 +164,11 @@ public:
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 
   bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &ARM::DPRRegClass;
+  }
 };
 
 } // end namespace llvm

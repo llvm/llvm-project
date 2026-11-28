@@ -17,7 +17,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Regex.h"
 
-#include <cmath>
 #include <numeric>
 
 using namespace llvm;

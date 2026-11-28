@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitshr.h"
+#include "src/stdfix/bitshr.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // short fract
 #include "include/llvm-libc-types/int_hr_t.h"
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

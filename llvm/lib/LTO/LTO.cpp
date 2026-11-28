@@ -38,6 +38,7 @@
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -68,6 +69,10 @@
 using namespace llvm;
 using namespace lto;
 using namespace object;
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
 
 #define DEBUG_TYPE "lto"
 
@@ -174,12 +179,11 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
-  // DataSections and DebuggerTuning via command line flags.
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections and
+  // DataSections via command line flags.
   AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
-  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
   if (Conf.RelocModel)
@@ -191,6 +195,8 @@ std::string llvm::computeLTOCacheKey(
   else
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
+    AddString(S);
+  for (const std::string &S : Conf.PassPluginArgs)
     AddString(S);
   AddUnsigned(static_cast<int>(Conf.CGOptLevel));
   AddUnsigned(static_cast<int>(Conf.CGFileType));
@@ -735,6 +741,27 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
+
+    // In rare occasion, the symbol used to initialize GlobalRes has a different
+    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
+    // symbol is referenced through its mangled name, say @"\01_symbol" while
+    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
+    // In that case, we have the same actual Symbol that can get two different
+    // GUID, leading to some invalid internalization. Workaround this by marking
+    // the GlobalRes external.
+    // Do this check before the IRName is rewritten below, otherwise it'll miss
+    // the case where a prevailing symbol comes first.
+
+    // FIXME: instead of this check, it would be desirable to compute GUIDs
+    // based on mangled name, but this requires an access to the Target Triple
+    // and would be relatively invasive on the codebase.
+    // FIXME: use the GUID member of GlobalRes.
+    if ((GlobalRes.Prevailing || !GlobalRes.IRName.empty()) &&
+        GlobalRes.IRName != Sym.getIRName()) {
+      GlobalRes.Partition = GlobalResolution::External;
+      GlobalRes.VisibleOutsideSummary = true;
+    }
+
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
              "Multiple prevailing defs are not allowed");
@@ -748,23 +775,6 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       // Otherwise, if we haven't seen a prevailing symbol, set the name so that
       // we can later use it to check if there is any prevailing copy in IR.
       GlobalRes.IRName = std::string(Sym.getIRName());
-    }
-
-    // In rare occasion, the symbol used to initialize GlobalRes has a different
-    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
-    // symbol is referenced through its mangled name, say @"\01_symbol" while
-    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
-    // In that case, we have the same actual Symbol that can get two different
-    // GUID, leading to some invalid internalization. Workaround this by marking
-    // the GlobalRes external.
-
-    // FIXME: instead of this check, it would be desirable to compute GUIDs
-    // based on mangled name, but this requires an access to the Target Triple
-    // and would be relatively invasive on the codebase.
-    // FIXME: use the GUID member of GlobalRes.
-    if (GlobalRes.IRName != Sym.getIRName()) {
-      GlobalRes.Partition = GlobalResolution::External;
-      GlobalRes.VisibleOutsideSummary = true;
     }
 
     bool IsLibcall = Sym.isLibcall(TLI, Libcalls);
@@ -925,7 +935,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 }
 
 // Checks whether the given global value is in a non-prevailing comdat
-// (comdat containing values the linker indicated were not prevailing,
+// (comdat whose key symbol the linker indicated was not prevailing,
 // which we then dropped to available_externally), and if so, removes
 // it from the comdat. This is called for all global values to ensure the
 // comdat is empty rather than leaving an incomplete comdat. It is needed for
@@ -1073,7 +1083,10 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
         // module (in linkRegularLTO), based on whether it is undefined.
         Mod.Keep.push_back(GV);
         GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
-        if (GV->hasComdat())
+        // Only a non-prevailing key makes the whole COMDAT non-prevailing.
+        // A non-key member, such as D0 in a D5 COMDAT, can be non-prevailing
+        // while other members of the COMDAT remain prevailing.
+        if (GV->hasComdat() && GV->getComdat()->getName() == GV->getName())
           NonPrevailingComdats.insert(GV->getComdat());
         cast<GlobalObject>(GV)->setComdat(nullptr);
       }
@@ -1110,7 +1123,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     }
   }
 
-  if (!M.getComdatSymbolTable().empty())
+  if (!NonPrevailingComdats.empty())
     for (GlobalValue &GV : M.global_values())
       handleNonPrevailingComdat(GV, NonPrevailingComdats);
 
@@ -1313,10 +1326,44 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
+Error LTO::setupPassPlugins() {
+  // Load plugins from file. Failures leave them all unregistered.
+  SmallVector<std::unique_ptr<PassPlugin>, 0> Loaded;
+  for (const std::string &PluginFN : Conf.PassPluginFilenames) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
+    if (!Plugin)
+      return Plugin.takeError();
+    Loaded.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
+  }
+
+  // Register them ahead of the client loaded ones.
+  SmallVector<PassPlugin *> FromFiles;
+  for (std::unique_ptr<PassPlugin> &Plugin : Loaded) {
+    FromFiles.push_back(Plugin.get());
+    PassPlugins.push_back(std::move(Plugin));
+  }
+  Conf.LoadedPassPlugins.insert(Conf.LoadedPassPlugins.begin(),
+                                FromFiles.begin(), FromFiles.end());
+
+  Conf.PassPluginFilenames.clear();
+
+  if (Conf.PassPluginArgs.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> Infos;
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
+    Infos.push_back(Plugin->getInfo());
+#define HANDLE_EXTENSION(Ext) Infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return llvm::passPluginArguments(Infos, Conf.PassPluginArgs);
+}
+
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
+
+  if (Error Err = setupPassPlugins())
+    return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
@@ -1383,11 +1430,18 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
-  {
-    llvm::TimeTraceScope timeScope("Link regular LTO");
-    for (auto &M : RegularLTO.ModsWithSummaries)
-      if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
-        return Err;
+  if (!RegularLTO.ModsWithSummaries.empty()) {
+    {
+      llvm::TimeTraceScope timeScope("Link regular LTO");
+      for (auto &M : RegularLTO.ModsWithSummaries)
+        if (Error Err =
+                linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
+          return Err;
+      RegularLTO.ModsWithSummaries.clear();
+      RegularLTO.ModsWithSummaries.shrink_to_fit();
+    }
+    if (Conf.PostRegularLTOLinkHook)
+      Conf.PostRegularLTOLinkHook();
   }
 
   // Ensure we don't have inconsistently split LTO units with type tests.
@@ -2147,9 +2201,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
           ? &ExternallyVisibleSymbolNames
           : nullptr;
-  runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
-                               LocalWPDTargetsMap,
-                               ExternallyVisibleSymbolNamesPtr);
+  runWholeProgramDevirtOnIndex(
+      ThinLTO.CombinedIndex, ExportedGUIDs, LocalWPDTargetsMap,
+      ExternallyVisibleSymbolNamesPtr, &RegularLTO.Ctx);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());

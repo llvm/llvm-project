@@ -62,11 +62,11 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    mov x24, x5
 ; CHECK-NEXT:    mov x25, x6
 ; CHECK-NEXT:    mov x26, x7
-; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
-; CHECK-NEXT:    mov x27, x8
-; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
-; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
 ; CHECK-NEXT:    stp q1, q0, [sp, #96] ; 32-byte Folded Spill
+; CHECK-NEXT:    mov x27, x8
+; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
+; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
+; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
 ; CHECK-NEXT:    bl _puts
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    mov x1, x20
@@ -133,10 +133,10 @@ define void @f_thunk(ptr %this, ...) {
 ; CHECK-NEXT:    mov x24, x5
 ; CHECK-NEXT:    mov x25, x6
 ; CHECK-NEXT:    mov x26, x7
-; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
-; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
-; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
 ; CHECK-NEXT:    stp q1, q0, [sp, #96] ; 32-byte Folded Spill
+; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
+; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
+; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
 ; CHECK-NEXT:    str x9, [x8]
 ; CHECK-NEXT:    bl _get_f
 ; CHECK-NEXT:    mov x9, x0

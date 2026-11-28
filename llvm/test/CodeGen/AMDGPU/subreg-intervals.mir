@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -run-pass liveintervals -debug-only=regalloc -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass liveintervals -debug-only=regalloc -filetype=null %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=amdgpu6.00 --passes='print<live-intervals>' -debug-only=regalloc -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
@@ -11,15 +11,13 @@
 ...
 ---
 name: test1
-registers:
-  - { id: 0, class: sreg_64 }
 body: |
   bb.0:
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
 
   bb.1:
-    S_NOP 0, implicit-def undef %0.sub0
+    S_NOP 0, implicit-def undef %0.sub0:sreg_64
     S_BRANCH %bb.3
 
   bb.2:

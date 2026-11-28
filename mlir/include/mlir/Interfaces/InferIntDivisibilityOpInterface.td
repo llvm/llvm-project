@@ -21,6 +21,7 @@ def InferIntDivisibilityOpInterface :
     Allows operations to participate in integer divisibility analysis.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferIntDivisibilityOpInterface.h"];
 
   let methods = [
     InterfaceMethod<

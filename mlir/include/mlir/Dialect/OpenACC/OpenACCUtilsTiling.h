@@ -19,7 +19,6 @@
 
 namespace mlir {
 namespace acc {
-
 /// Tile a single fused acc.loop that carries all associated induction
 /// variables (one IV per tile dimension).
 ///
@@ -45,14 +44,16 @@ namespace acc {
 ///  }
 /// \endcode
 ///
-/// After Tiling (each group is one multi-IV loop over all tiled IVs):
+/// After Tiling (each group is one multi-IV loop over all tiled IVs). As the
+/// OpenACC specification defines, the first tile size applies to the innermost
+/// loop:
 /// \code
 ///  // tile group
-///  for (i = lb1; i < ub1; i += (step1 * tile_size1),
-///       j = lb2; j < ub2; j += (step2 * tile_size2)) {
+///  for (i = lb1; i < ub1; i += (step1 * tile_size2),
+///       j = lb2; j < ub2; j += (step2 * tile_size1)) {
 ///    // element group
-///    for (ii = i; ii < min(ub1, (step1 * tile_size1) + i); ii += step1,
-///         jj = j; jj < min(ub2, (step2 * tile_size2) + j); jj += step2) {
+///    for (ii = i; ii < min(ub1, (step1 * tile_size2) + i); ii += step1,
+///         jj = j; jj < min(ub2, (step2 * tile_size1) + j); jj += step2) {
 ///      a[ii,jj] = i + j;
 ///    }
 ///  }
@@ -66,8 +67,10 @@ namespace acc {
 /// resolved to the provided default tile size.
 ///
 /// \param tileLoop The fused loop to tile.
-/// \param tileSizes The tile sizes for each tiled dimension. Values of -1 are
-///        treated as unknown and resolved to defaultTileSize.
+/// \param tileSizes The tile sizes in the order of the tile clause: with `n`
+///        sizes, the first `n` induction variables are tiled and the size at
+///        position `k` applies to induction variable `n - 1 - k`. Values of -1
+///        are treated as unknown and resolved to defaultTileSize.
 /// \param defaultTileSize The default tile size to use for unknown (*) tiles.
 /// \param rewriter The rewriter to use for modifications.
 /// \return The tile group loop that is modified in place.

@@ -6,6 +6,13 @@
 // RUN: llvm-readobj -S -r --expand-relocs %t3 | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t3 | FileCheck --check-prefix=CODE %s
 
+/// In a PIE, the address of a copy relocation is not a link-time constant.
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux --defsym PIE=1 %s -o %t-pie.o
+// RUN: not ld.lld -pie %t-pie.o %t.so -o /dev/null 2>&1 | FileCheck --check-prefix=PIE --implicit-check-not=error: %s
+// PIE-COUNT-3: error: relocation R_X86_64_32S cannot be used against symbol '{{[xyz]}}'; recompile with -fPIC
+// PIE-COUNT-3: error: relocation R_X86_64_32 cannot be used against symbol '{{[xyz]}}'; recompile with -fPIC
+// PIE:         error: relocation R_X86_64_64 cannot be used against symbol 'x'; recompile with -fPIC
+
 .text
 .global _start
 _start:
@@ -15,6 +22,13 @@ movl $9, z
 movl $x, %edx
 movl $y, %edx
 movl $z, %edx
+
+.ifdef PIE
+.section .rodata,"a"
+.quad x
+/// st_size is a link-time constant.
+.quad x@SIZE
+.endif
 
 // CHECK:      Name: .bss
 // CHECK-NEXT:  Type: SHT_NOBITS (0x8)

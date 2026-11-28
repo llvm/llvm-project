@@ -21,8 +21,17 @@
 # STRADDLE:      error: {{.*}}straddle.o:(symbol _p+0x0): fixup straddles page boundary; stop packing structs containing pointers or link with -no_fixup_chains
 # STRADDLE-NEXT: error: {{.*}}straddle.o:(symbol _p+0x0): fixup is not 4-byte aligned; stop packing structs containing pointers or link with -no_fixup_chains
 
-## 4-byte alignment is enough.
-# RUN: %lld -arch arm64 -dylib -fixup_chains %t/aligned.o -o /dev/null
+## 4-byte alignment is enough, for rebases, binds, and the "next" fields that
+## chain them.
+# RUN: %lld -arch arm64 -dylib -fixup_chains -U _ext %t/aligned.o -o %t/aligned
+# RUN: llvm-objdump --macho --dyld-info --chained-fixups --syms %t/aligned \
+# RUN:     | FileCheck %s --check-prefix=ALIGNED
+# ALIGNED:      __DATA __data 0x[[#%X,P:]]  {{.*}} rebase 0x[[#%X,TARGET:]]
+# ALIGNED-NEXT: __DATA __data 0x[[#%X,P+8]] {{.*}} bind 0x0 flat-namespace _ext
+# ALIGNED:      page_start[0] = 4
+# ALIGNED:      SYMBOL TABLE:
+# ALIGNED-DAG:  [[#%.16x,P]] l O __DATA,__data _p
+# ALIGNED-DAG:  [[#%.16x,TARGET]] l F __TEXT,__text _target
 
 #--- unaligned.s
 .data
@@ -51,6 +60,8 @@ _target:
 .long 0
 _p:
   .quad _target
+_q:
+  .quad _ext
 
 .text
 _target:

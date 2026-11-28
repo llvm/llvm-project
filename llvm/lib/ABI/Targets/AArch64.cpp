@@ -683,15 +683,26 @@ bool AArch64TargetInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
+// MSVC on Windows on Arm64 excludes some C++ records from being HFAs that
+// AAPCS64 would otherwise permit. These are the rules observed from MSVC.
+static bool isMSVCPermittedHomogeneousAggregate(const RecordType *RT) {
+  if (RT->isCXXEmpty() || RT->isPolymorphic() ||
+      RT->hasNonTrivialCopyAssignment() || RT->hasNonTrivialDestructor() ||
+      RT->hasNonTrivialDefaultConstructor())
+    return false;
+
+  auto IsPermittedBase = [](const FieldInfo &Base) {
+    const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
+    return !BaseRT || isMSVCPermittedHomogeneousAggregate(BaseRT);
+  };
+  return all_of(RT->getBaseClasses(), IsPermittedBase) &&
+         all_of(RT->getVirtualBaseClasses(), IsPermittedBase);
+}
+
 bool AArch64TargetInfo::isPermittedToBeHomogeneousAggregate(
     const RecordType *RT) const {
-  if (Opts.IsMicrosoftCXXABI && RT->isCXXRecord()) {
-    // This won't always return false, but we don't have enough information to
-    // perform the full check correctly yet.
-    reportNYI("MicrosoftCXXABI homogeneous record classification");
-    return false;
-  }
-
+  if (Opts.IsMicrosoftCXXABI && RT->isCXXRecord())
+    return isMSVCPermittedHomogeneousAggregate(RT);
   return true;
 }
 

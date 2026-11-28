@@ -12,6 +12,11 @@
 
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
@@ -352,13 +357,14 @@ mlir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
 // the program and allocation address space will be the default of 0 and no
 // cast will be emitted.
 mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
-    mlir::Location loc, mlir::Type llvmObjectTy, unsigned alignment,
+    mlir::Type llvmObjectTy, unsigned alignment,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto thisPt = rewriter.saveInsertionPoint();
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
   mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
   rewriter.setInsertionPointToStart(insertBlock);
+  mlir::Location loc = insertBlock->getParentOp()->getLoc();
   auto size = genI32Constant(loc, rewriter, 1);
   unsigned allocaAs = getAllocaAddressSpace(rewriter);
   unsigned programAs = getProgramAddressSpace(rewriter);

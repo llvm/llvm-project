@@ -202,6 +202,17 @@ void f2() {
   alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; 
   ::new (buffer2) S[N]; // no-warning: See comments above
 }
+
+void f3() {
+  struct S {
+    int x;
+  };
+
+  // Same as f1() above, but the storage is an offset into an existing array.
+  // Reported as GH56264 and fixed by #150161.
+  S arr[4];
+  ::new (arr + 1) S[1]; // no-warning: See comments above
+}
 } // namespace testArrayTypesAllocation
 
 namespace testStructAlign {

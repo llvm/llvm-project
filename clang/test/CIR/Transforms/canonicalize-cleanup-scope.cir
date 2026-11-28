@@ -138,6 +138,30 @@ cir.func @trivial_cleanup_multi_ops(%arg0: !cir.ptr<!rec_S>) {
 // CHECK-NEXT:   cir.call @dtor
 // CHECK-NEXT:   cir.return
 
+// Trivial cleanup, but the body starts with a label, which must start a
+// block. The body stays in its scope.
+cir.func @trivial_cleanup_label_body_kept() {
+  cir.call @side_effect() : () -> ()
+  cir.cleanup.scope {
+    cir.label "L"
+    cir.call @side_effect() : () -> ()
+    cir.yield
+  } cleanup normal {
+    cir.yield
+  }
+  cir.return
+}
+// CHECK-LABEL: @trivial_cleanup_label_body_kept
+// CHECK-NEXT:   cir.call @side_effect()
+// CHECK-NEXT:   cir.cleanup.scope {
+// CHECK-NEXT:     cir.label "L"
+// CHECK-NEXT:     cir.call @side_effect()
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   } cleanup normal {
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+
 // Nested: inner EH with empty body erased, outer kept.
 cir.func @nested_inner_eh_erased(%arg0: !cir.ptr<!rec_S>) {
   cir.cleanup.scope {

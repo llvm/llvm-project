@@ -356,6 +356,17 @@ func.func @transpose10_4x1xf32_scalable(%arg0: vector<4x[1]xf32>) -> vector<[1]x
   return %0 : vector<[1]x4xf32>
 }
 
+// CHECK-LABEL: func.func @extract_transpose_0d
+// CHECK-SAME: (%[[ARG:.*]]: vector<f32>) -> f32
+func.func @extract_transpose_0d(%arg: vector<f32>) -> f32 {
+  %t = vector.transpose %arg, [] : vector<f32> to vector<f32>
+  %x = vector.extract %t[] : f32 from vector<f32>
+  // CHECK: %[[RES:.*]] = vector.extract %[[ARG]][] : f32 from vector<f32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[RES]] : f32
+  return %x : f32
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">

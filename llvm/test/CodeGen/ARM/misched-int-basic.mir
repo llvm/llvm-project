@@ -60,7 +60,7 @@
 # CHECK_SWIFT: Latency    : 5
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(11):   %13:gpr, %14:gprnopc = UMLAL %6:gprnopc, %6:gprnopc, %13:gpr(tied-def 0), %14:gprnopc(tied-def 1), 14, $noreg, $noreg
+# CHECK:       SU(11):   %9:gpr, %12:gprnopc = UMLAL %6:gprnopc, %6:gprnopc, %9:gpr(tied-def 0), %12:gprnopc(tied-def 1), 14, $noreg, $noreg
 # CHECK_SWIFT: Latency    : 7
 # CHECK_A9:    Latency    : 3
 # CHECK_R52:   Latency    : 4
@@ -73,23 +73,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnopc }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gprnopc }
-  - { id: 4, class: gprnopc }
-  - { id: 5, class: gprnopc }
-  - { id: 6, class: gprnopc }
-  - { id: 7, class: gprnopc }
-  - { id: 8, class: gprnopc }
-  - { id: 9, class: gpr }
-  - { id: 10, class: gprnopc }
-  - { id: 11, class: gprnopc }
-  - { id: 12, class: gprnopc }
-  - { id: 13, class: gpr }
-  - { id: 14, class: gprnopc }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -111,17 +94,17 @@ body:             |
   bb.0.entry:
     liveins: $r0, $r1
 
-    %1 = COPY $r1
-    %0 = COPY $r0
-    %2 = SMULBB %1, %1, 14, $noreg
-    %3 = SMLABB %0, %0, %2, 14, $noreg
-    %4 = UXTH %3, 0, 14, $noreg
-    %5 = MUL %4, %4, 14, $noreg, $noreg
-    %6 = MLA %5, %5, %5, 14, $noreg, $noreg
-    %7, %8 = UMULL %6, %6, 14, $noreg, $noreg
-    %13, %10 = UMULL %7, %7, 14, $noreg, $noreg
-    %11 = MLA %7, %8, %10, 14, $noreg, $noreg
-    %14 = MLA %7, %8, %11, 14, $noreg, $noreg
+    %1:gpr = COPY $r1
+    %0:gprnopc = COPY $r0
+    %2:gpr = SMULBB %1, %1, 14, $noreg
+    %3:gprnopc = SMLABB %0, %0, %2, 14, $noreg
+    %4:gprnopc = UXTH %3, 0, 14, $noreg
+    %5:gprnopc = MUL %4, %4, 14, $noreg, $noreg
+    %6:gprnopc = MLA %5, %5, %5, 14, $noreg, $noreg
+    %7:gprnopc, %8:gprnopc = UMULL %6, %6, 14, $noreg, $noreg
+    %13:gpr, %10:gprnopc = UMULL %7, %7, 14, $noreg, $noreg
+    %11:gprnopc = MLA %7, %8, %10, 14, $noreg, $noreg
+    %14:gprnopc = MLA %7, %8, %11, 14, $noreg, $noreg
     %13, %14 = UMLAL %6, %6, %13, %14, 14, $noreg, $noreg
     $r0 = COPY %13
     $r1 = COPY %14

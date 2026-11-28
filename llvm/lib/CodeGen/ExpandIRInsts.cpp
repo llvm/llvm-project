@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandIRInsts.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -65,18 +66,6 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
-
-static cl::opt<unsigned>
-    ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
-                        cl::init(IntegerType::MAX_INT_BITS),
-                        cl::desc("fp convert instructions on integers with "
-                                 "more than <N> bits are expanded."));
-
-static cl::opt<unsigned>
-    ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
-                     cl::init(IntegerType::MAX_INT_BITS),
-                     cl::desc("div and rem instructions on integers with "
-                              "more than <N> bits are expanded."));
 
 static bool isConstantPowerOfTwo(Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
@@ -1278,14 +1267,11 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
                     const LibcallLoweringInfo &Libcalls, AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
 
-  unsigned MaxLegalFpConvertBitWidth =
-      TLI.getMaxLargeFPConvertBitWidthSupported();
-  if (ExpandFpConvertBits != IntegerType::MAX_INT_BITS)
-    MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
-
-  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
-  if (ExpandDivRemBits != IntegerType::MAX_INT_BITS)
-    MaxLegalDivRemBitWidth = ExpandDivRemBits;
+  const CodeGenOptions &Opts = getCodeGenOptions(F);
+  unsigned MaxLegalFpConvertBitWidth = Opts.expand_fp_convert_bits.value_or(
+      TLI.getMaxLargeFPConvertBitWidthSupported());
+  unsigned MaxLegalDivRemBitWidth =
+      Opts.expand_div_rem_bits.value_or(TLI.getMaxDivRemBitWidthSupported());
 
   bool DisableExpandLargeFp =
       MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;

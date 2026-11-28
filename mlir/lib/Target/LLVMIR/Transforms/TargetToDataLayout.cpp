@@ -10,7 +10,7 @@
 #include "mlir/Target/LLVMIR/Transforms/TargetUtils.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 namespace mlir {

@@ -3,7 +3,6 @@
 
 ---
 name:            test_va_start
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, size: 4, alignment: 16, isImmutable: true }
 stack:

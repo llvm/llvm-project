@@ -1,4 +1,10 @@
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+tablegen("IPOOptions") {
+  visibility = [ ":IPO" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 write_cmake_config("write_instrumentor_variables") {
   input = "//llvm/include/llvm/Transforms/IPO/InstrumentorVariables.inc.in"
@@ -13,6 +19,7 @@ write_cmake_config("write_instrumentor_variables") {
 static_library("IPO") {
   output_name = "LLVMipo"
   deps = [
+    ":IPOOptions",
     ":write_instrumentor_variables",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
@@ -22,6 +29,7 @@ static_library("IPO") {
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
@@ -58,6 +66,7 @@ static_library("IPO") {
     "GlobalSplit.cpp",
     "HotColdSplitting.cpp",
     "IPO.cpp",
+    "IPOOptions.cpp",
     "InferFunctionAttrs.cpp",
     "Inliner.cpp",
     "Instrumentor.cpp",

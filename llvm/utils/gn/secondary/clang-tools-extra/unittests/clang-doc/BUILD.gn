@@ -38,6 +38,7 @@ unittest("ClangDocTests") {
   sources = [
     "BitcodeTest.cpp",
     "ClangDocTest.cpp",
+    "ConcurrentStringPoolTest.cpp",
     "GeneratorTest.cpp",
     "HTMLGeneratorTest.cpp",
     "JSONGeneratorTest.cpp",

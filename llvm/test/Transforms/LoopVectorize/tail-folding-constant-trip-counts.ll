@@ -315,3 +315,49 @@ loop:
 exit:
   ret void
 }
+
+; The i8 IV wraps to 0 on exit; the trip count is 253.
+define i32 @tc_253_i8_iv_live_out(ptr %src) {
+; CHECK-LABEL: define i32 @tc_253_i8_iv_live_out(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 3, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP4]], <4 x i1> [[TMP0]], <4 x i32> poison)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 3, %entry ], [ %iv.next, %loop ]
+  %idx = zext i8 %iv to i64
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %idx
+  %l = load i32, ptr %gep.src, align 4
+  %iv.next = add i8 %iv, 1
+  %ec = icmp eq i8 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %l
+}

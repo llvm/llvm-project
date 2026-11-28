@@ -362,7 +362,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512CDBW-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CDBW-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CDBW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512CDBW-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512CDBW-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; AVX512CDBW-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv32i16:
@@ -446,7 +446,7 @@ define <32 x i16> @testv32i16u(<32 x i16> %in) nounwind {
 ; AVX512CDBW-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CDBW-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CDBW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512CDBW-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512CDBW-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; AVX512CDBW-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv32i16u:
@@ -550,7 +550,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512CDBW-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512CDBW-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
 ; AVX512CDBW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512CDBW-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512CDBW-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
 ; AVX512CDBW-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv64i8:
@@ -638,7 +638,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; AVX512CDBW-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512CDBW-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
 ; AVX512CDBW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512CDBW-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512CDBW-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
 ; AVX512CDBW-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv64i8u:

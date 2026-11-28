@@ -235,7 +235,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       break;
     case SyncScope::System: {
       unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
-      if (MF.getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics()) {
+      if (MF.getSubtarget<WebAssemblySubtarget>().hasAcquireReleaseAtomics()) {
         auto Ordering =
             static_cast<AtomicOrdering>(Node->getConstantOperandVal(1));
         Order = getWebAssemblyMemoryOrder(Ordering);
@@ -368,7 +368,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::wasm_catch: {
       int Tag = Node->getConstantOperandVal(2);
       SDValue SymNode = getTagSymNode(Tag, CurDAG);
-      unsigned CatchOpcode = WebAssembly::WasmUseLegacyEH
+      unsigned CatchOpcode = Subtarget->getCLOpts().use_legacy_eh
                                  ? WebAssembly::CATCH_LEGACY
                                  : WebAssembly::CATCH;
       MachineSDNode *Catch =
@@ -639,7 +639,7 @@ bool WebAssemblyDAGToDAGISel::SelectAtomicAddrOperands(SDNode *Op, SDValue N,
 
   auto Ordering = MemNode->getMergedOrdering();
   unsigned OrderVal = wasm::WASM_MEM_ORDER_SEQ_CST;
-  if (Subtarget->hasRelaxedAtomics())
+  if (Subtarget->hasAcquireReleaseAtomics())
     OrderVal = getWebAssemblyMemoryOrder(Ordering);
   Order = CurDAG->getTargetConstant(OrderVal, SDLoc(Op), MVT::i32);
   return true;

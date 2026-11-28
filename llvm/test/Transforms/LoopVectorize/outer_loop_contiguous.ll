@@ -32,7 +32,7 @@ define void @scale_rows(ptr noalias %A, ptr noalias %scale, i64 %N, i64 %M) {
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[J2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP2]], [[J2]]
-; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP3]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[TMP4]], <4 x ptr> align 4 [[WIDE_GEP3]], <4 x i1> splat (i1 true))
@@ -103,14 +103,14 @@ define void @stride2_float_load(ptr noalias %A, ptr noalias %scale, i64 %N, i64 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH5:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH5]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[SCALE]], <4 x i64> [[TMP1]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[SCALE]], <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[INNER_BODY1:.*]]
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[J2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP2]], [[J2]]
-; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER4:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP3]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER4]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[TMP4]], <4 x ptr> align 4 [[WIDE_GEP3]], <4 x i1> splat (i1 true))
@@ -187,7 +187,7 @@ define void @stride1_double_load(ptr noalias %A, ptr noalias %scale, i64 %N, i64
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[J2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP2]], [[J2]]
-; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds double, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[WIDE_GEP3]], <4 x i1> splat (i1 true), <4 x double> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP4]], <4 x ptr> align 8 [[WIDE_GEP3]], <4 x i1> splat (i1 true))
@@ -261,7 +261,7 @@ define void @stride1_i1_load_store(ptr noalias %A, ptr noalias %flags, i64 %N, i
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH4]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i1, ptr [[FLAGS]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i8, ptr [[FLAGS]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i1> @llvm.masked.gather.v4i1.v4p0(<4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i1> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[WIDE_LOAD]] to <4 x i8>
@@ -336,7 +336,7 @@ define void @stride1_i4_load_store(ptr noalias %A, ptr noalias %vals, i64 %N, i6
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH4]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i4, ptr [[VALS]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i8, ptr [[VALS]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i4> @llvm.masked.gather.v4i4.v4p0(<4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i4> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i4> [[WIDE_LOAD]] to <4 x i8>
@@ -490,7 +490,7 @@ define void @col_major(ptr noalias %A, i64 %N, i64 %M) {
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i64> [[INNER_IV4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[VEC_IND]], [[TMP1]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x float> poison), !llvm.access.group [[ACC_GRP14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[TMP3]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !llvm.access.group [[ACC_GRP14]]
@@ -557,7 +557,7 @@ define void @row_major(ptr noalias %A, i64 %N, i64 %M) {
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[TMP1]], [[INNER_IV2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x float> poison), !llvm.access.group [[ACC_GRP14]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[TMP3]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !llvm.access.group [[ACC_GRP14]]
@@ -626,7 +626,7 @@ define void @inner_step_varies_with_outer(ptr noalias %A, ptr noalias %B, i64 %N
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[INNER_IV2]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[VEC_IND]], [[TMP2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[TMP1]], align 4
@@ -696,7 +696,7 @@ define void @inner_step_is_phi(ptr noalias %A, i64 %N, i64 %M) {
 ; CHECK-NEXT:    [[INNER_VALUE3:%.*]] = phi <4 x i64> [ splat (i64 1), %[[VECTOR_BODY]] ], [ [[TMP1:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP1]] = add <4 x i64> [[INNER_VALUE3]], [[INNER_VALUE3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[INNER_VALUE3]], [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_MASKED_GATHER]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[TMP3]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
@@ -762,7 +762,7 @@ define void @col_major_sibling_inner_loops(ptr %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <4 x i8> [[ROW3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[TMP0]], splat (i64 6)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison), !llvm.access.group [[ACC_GRP14]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[ROW3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[WIDE_MASKED_GATHER]], [[TMP3]]
@@ -780,7 +780,7 @@ define void @col_major_sibling_inner_loops(ptr %A) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i8> [[ROW27]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl <4 x i64> [[TMP9]], splat (i64 6)
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i64> [[TMP10]], [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_GEP8:%.*]] = getelementptr inbounds i32, ptr [[A]], <4 x i64> [[TMP11]]
+; CHECK-NEXT:    [[WIDE_GEP8:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP11]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP8]], <4 x i1> splat (i1 true), <4 x i32> poison), !llvm.access.group [[ACC_GRP14]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i8> [[ROW27]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[WIDE_MASKED_GATHER9]], [[TMP12]]
@@ -872,7 +872,7 @@ define void @col_major_nested_inner_loops(ptr %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <4 x i8> [[ROW5]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[TMP0]], splat (i64 6)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison), !llvm.access.group [[ACC_GRP14]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[ROW5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[WIDE_MASKED_GATHER]], [[TMP3]]

@@ -15,7 +15,9 @@ include "mlir/IR/AttrTypeBase.td"
 
 class DLTIAttr<string name, list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
-    : AttrDef<DLTI_Dialect, name, traits, baseCppClass> { }
+    : AttrDef<DLTI_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/DLTI/DLTI.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // DataLayoutEntryAttr

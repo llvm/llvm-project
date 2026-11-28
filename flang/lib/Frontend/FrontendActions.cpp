@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
@@ -217,7 +218,7 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::omp::registerOpenMPExtensions(registry);
   mlirCtx->appendDialectRegistry(registry);
 
-  const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
 
   // If the input is an MLIR file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
@@ -236,8 +237,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
-        ci.getInvocation().getTargetOpts().abi));
+    const llvm::DataLayout dl(
+        llvm::Triple(targetOpts.triple).computeDataLayout(targetOpts.abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -255,6 +256,11 @@ bool CodeGenAction::beginSourceFileAction() {
   if (!res)
     return res;
 
+  enableImplicitDefaultMapperAllocatableMembers.setValue(
+      ci.getInvocation()
+          .getCodeGenOpts()
+          .ImplicitDefaultMapperAllocatableMembers);
+
   timingScopeParse.stop();
   mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
       mlir::TimingIdentifier::get(timingIdMLIRGen, timingMgr));
@@ -271,7 +277,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getTargetOpts().triple, kindMap,
       ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, targetMachine,
+      ci.getInvocation().getFrontendOpts().features, ci.getTargetFeatures(),
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
@@ -872,6 +878,15 @@ void CodeGenAction::generateLLVMIR() {
                                 opts.CodeObjectVersion);
     }
   }
+
+  // Add NonLazyBind attribute to function declarations when -fno-plt is used.
+  // Also set the RtLibUseGOT module flag so compiler-rt calls use the GOT.
+  if (opts.NoPLT) {
+    llvmModule->setRtLibUseGOT();
+    for (llvm::Function &func : *llvmModule)
+      if (func.isDeclaration() && !func.isIntrinsic())
+        func.addFnAttr(llvm::Attribute::NonLazyBind);
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -919,12 +934,6 @@ static void generateMachineCodeOrAssemblyImpl(
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
-    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
-      return;
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -936,6 +945,20 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins()) {
+    if (plugin->invokePreCodeGenCallback(
+            tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft,
+            /*DisableVerify=*/true, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, llvm::vfs::getRealFileSystem())) {
+      if (dwoOS)
+        dwoOS->keep();
+      return;
+    }
+  }
+
   llvm::Error codeGenError = runCodeGenPipeline(
       tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {
@@ -955,7 +978,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
-  llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
+  llvm::TargetMachine *targetMachine = ci.getTargetMachineOrNull();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -966,7 +989,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   const llvm::cl::LibraryOptionsContext &libraryOptions =
       llvmModule->getContext().getLibraryOptions();
-  llvm::PipelineTuningOptions pto(&libraryOptions);
+  llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {
@@ -1040,8 +1063,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.MCOptions.ABIName,
-        targetMachine->Options.VecLib);
+        targetMachine ? targetMachine->Options.MCOptions.ABIName
+                      : ci.getInvocation().getTargetOpts().abi,
+        convertDriverVectorLibraryToVectorLibrary(opts.getVecLib()));
   });
 
   // Register all the basic analyses with the managers.
@@ -1415,17 +1439,17 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     return;
 
-  // Set the triple based on the targetmachine (this comes compiler invocation
-  // and the command-line target option if specified, or the default if not
-  // given on the command-line).
-  llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+  // Use the target triple from the compiler invocation.
+  llvm::TargetMachine *targetMachine = ci.getTargetMachineOrNull();
+  if (targetMachine) {
+    targetMachine->Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+    targetMachine->Options.MCOptions.SplitDwarfFile =
+        codeGenOpts.SplitDwarfFile;
+    targetMachine->Options.MCOptions.CompressDebugSections =
+        codeGenOpts.getCompressDebugSections();
+  }
 
-  targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
-  targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
-  targetMachine.Options.MCOptions.CompressDebugSections =
-      codeGenOpts.getCompressDebugSections();
-
-  const llvm::Triple &theTriple = targetMachine.getTargetTriple();
+  const llvm::Triple theTriple(targetOpts.triple);
 
   if (llvmModule->getTargetTriple() != theTriple) {
     diags.Report(clang::diag::warn_fe_override_module) << theTriple.str();
@@ -1489,7 +1513,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        ci, diags, targetMachine, action, *llvmModule, codeGenOpts,
+        ci, diags, *targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     if (timingMgr.isEnabled())
       llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());

@@ -46,6 +46,8 @@ defm : BoolField<"print-bfi", "false",
   "Print the block frequency info">;
 defm : ValueField<"view-bfi-func-name", "StringRef", "",
   "The option to specify the name of the function whose CFG will be displayed">;
+defm : EnumField<"view-block-freq-propagation-dags", "GVDAGType", "", "none,fraction,integer,count", ["GVDAGType::None", "GVDAGType::Fraction", "GVDAGType::Integer", "GVDAGType::Count"],
+  "Pop up a window to show a dag displaying how block frequencies propagation through the CFG">;
 defm : ValueField<"view-hot-freq-percent", "unsigned", "10",
   "An integer in percent used to specify the hot blocks/edges to be displayed in red: a block or edge whose frequency is no less than the max frequency of the function multiplied by this percent">;
 defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "",
@@ -113,6 +115,8 @@ defm : EnumField<"intrinsic-cost-strategy", "IntrinsicCostStrategy", "IntrinsicC
 // CtxProfAnalysis.cpp
 defm : OptionalBoolField<"ctx-profile-force-is-specialized",
   "Treat the given module as-if it were containing the post-thinlink module containing the root">;
+defm : EnumField<"ctx-profile-printer-level", "CtxProfPrintMode", "CtxProfPrintMode::YAML", "everything,yaml", ["CtxProfPrintMode::Everything", "CtxProfPrintMode::YAML"],
+  "Verbosity level of the contextual profile printer pass">;
 
 // DDG.cpp
 defm : BoolField<"ddg-pi-blocks", "true",
@@ -125,6 +129,10 @@ defm : ValueField<"dot-ddg-filename-prefix", "StringRef", "\"ddg\"",
   "The prefix used for the DDG dot file names">;
 defm : BoolField<"dot-ddg-only", "false",
   "simple ddg dot graph">;
+
+// DXILMetadataAnalysis.cpp
+defm : OptionalEnumField<"compress-srci", "dxbc::SourceInfo::Contents::CompressionType", "none,zlib", ["dxbc::SourceInfo::Contents::CompressionType::None", "dxbc::SourceInfo::Contents::CompressionType::Zlib"],
+  "Choose SCRI part compression">;
 
 // Delinearization.cpp
 defm : BoolField<"delinearize-use-fixed-size-array-heuristic", "true",
@@ -145,6 +153,8 @@ defm : ValueField<"big-basic-block-instruction-threshold", "unsigned", "500",
   "The minimum number of instructions a basic block should contain before being considered big">;
 defm : ValueField<"call-with-many-arguments-threshold", "unsigned", "4",
   "The minimum number of arguments a function call must have before it is considered having many arguments">;
+defm : BoolField<"enable-detailed-function-properties", "false",
+  "Whether or not to compute detailed function properties">;
 defm : ValueField<"medium-basic-block-instruction-threshold", "unsigned", "15",
   "The minimum number of instructions a basic block should contain before being considered medium-sized">;
 
@@ -173,6 +183,10 @@ defm : ValueField<"ir2vec-arg-weight", "float", "0.2f",
   "Weight for argument embeddings">;
 defm : EnumField<"ir2vec-kind", "IR2VecKind", "", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
   "IR2Vec embedding kind">;
+
+// ImportedFunctionsInliningStatistics.cpp
+defm : EnumField<"inliner-function-import-stats", "InlinerFunctionImportStatsOpts", "", "basic,verbose", ["InlinerFunctionImportStatsOpts::Basic", "InlinerFunctionImportStatsOpts::Verbose"],
+  "Enable inliner stats for imported functions">;
 
 // IndirectCallPromotionAnalysis.cpp
 // Set the maximum number of targets to promote for a single indirect-call
@@ -218,6 +232,8 @@ defm : BoolField<"gep-const-evaluation", "true",
   "Evaluate GetElementPtr with constant operands">;
 defm : ValueField<"hot-callsite-rel-freq", "uint64_t", "60",
   "Minimum block frequency, expressed as a multiple of caller's entry frequency, for a callsite to be hot in the absence of profile information">;
+defm : ValueField<"hot-callsite-threshold", "int", "3000",
+  "Threshold for hot callsites">;
 // We introduce this option since there is a minor compile-time win by avoiding
 // addition of TTI attributes (target-features in particular) to inline
 // candidates when they are guaranteed to be the same as top level methods in
@@ -233,10 +249,14 @@ defm : ValueField<"inline-call-penalty", "int", "25",
   "Call penalty that is applied per callsite when inlining">;
 defm : BoolField<"inline-caller-superset-nobuiltin", "true",
   "Allow inlining when caller has a superset of callee's nobuiltin attributes">;
+defm : ValueField<"inline-cold-callsite-threshold", "int", "45",
+  "Threshold for inlining cold callsites">;
 defm : BoolField<"inline-cost-full", "false",
   "Compute the full inline cost of a call site even when the cost exceeds the threshold">;
 defm : OptionalBoolField<"inline-enable-cost-benefit-analysis",
   "Enable the cost-benefit analysis for the inliner">;
+defm : ValueField<"inline-instr-cost", "int", "5",
+  "Cost of a single instruction when inlining">;
 defm : OptionalValueField<"inline-max-stacksize", "size_t",
   "Do not inline functions with a stack size that exceeds the specified limit">;
 defm : ValueField<"inline-memaccess-cost", "int", "0",
@@ -253,6 +273,19 @@ defm : OptionalValueField<"inline-savings-profitable-multiplier", "int",
   "A multiplier on top of cycle savings to decide whether the savings won't justify the cost">;
 defm : ValueField<"inline-size-allowance", "int", "100",
   "The maximum size of a callee that get's inlined without sufficient cycle savings">;
+defm : OptionalValueField<"inline-threshold", "int",
+  "Control the amount of inlining to perform">;
+// We introduce this threshold to help performance of instrumentation based
+// PGO before we actually hook up inliner with analysis passes such as BPI and
+// BFI.
+defm : OptionalValueField<"inlinecold-threshold", "int",
+  "Threshold for inlining functions with cold attribute">;
+defm : ValueField<"inlinedefault-threshold", "int", "225",
+  "Default amount of inlining to perform">;
+defm : ValueField<"inlinehint-threshold", "int", "325",
+  "Threshold for inlining functions with inline hint">;
+defm : OptionalValueField<"locally-hot-callsite-threshold", "int",
+  "Threshold for locally hot callsites">;
 defm : BoolField<"print-instruction-comments", "false",
   "Prints comments for instruction based on inline cost analysis">;
 defm : ValueField<"recursive-inline-max-stacksize", "size_t", "1024",
@@ -272,6 +305,10 @@ defm : BoolField<"ipt-expensive-asserts", "false",
 // InteractiveModelRunner.cpp
 defm : BoolField<"interactive-model-runner-echo-reply", "false",
   "The InteractiveModelRunner will echo back to stderr the data received from the host (for debugging purposes)">;
+
+// LastRunTrackingAnalysis.cpp
+defm : BoolField<"enable-last-run-tracking", "true",
+  "Enable last run tracking">;
 
 // LazyValueInfo.cpp
 defm : BoolField<"lvi-per-pred-ranges", "false",
@@ -422,6 +459,12 @@ defm : BoolField<"scev-verify-ir", "false",
 defm : BoolField<"verify-scev-strict", "false",
   "Enable stricter verification with -verify-scev is passed">;
 
+// ScopedNoAliasAA.cpp
+// A handy option for disabling scoped no-alias functionality. The same effect
+// can also be achieved by stripping the associated metadata tags from IR, but
+// this option is sometimes more convenient.
+defm : BoolField<"enable-scoped-noalias", "true", "">;
+
 // StackSafetyAnalysis.cpp
 defm : ValueField<"stack-safety-max-iterations", "int", "20", "">;
 defm : BoolField<"stack-safety-print", "false", "">;
@@ -437,6 +480,12 @@ defm : BoolField<"memprof-annotate-string-literal-section-prefix", "true",
 defm : BoolField<"preserve-hot-data-section-prefix", "true",
   "If true, hot data section prefixes are preserved">;
 
+// TypeBasedAliasAnalysis.cpp
+// A handy option for disabling TBAA functionality. The same effect can also be
+// achieved by stripping the !tbaa tags from IR, but this option is sometimes
+// more convenient.
+defm : BoolField<"enable-tbaa", "true", "">;
+
 // VectorUtils.cpp
 // Maximum factor for an interleaved memory access.
 defm : ValueField<"max-interleave-group-factor", "unsigned", "8",
@@ -445,3 +494,6 @@ defm : ValueField<"max-interleave-group-factor", "unsigned", "8",
 // TODO: Remove the old spellings after 2027-04.
 def : AliasOf<"da-disable-delinearization-checks", "da-delinearization-checks=false">;
 def : AliasOf<"disable-gep-const-evaluation", "gep-const-evaluation=false">;
+
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-last-run-tracking", "enable-last-run-tracking=false">;

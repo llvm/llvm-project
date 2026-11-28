@@ -13,6 +13,7 @@ package(default_visibility = ["//visibility:public"])
             "//llvm:include/llvm/CodeGen/ValueTypes.td",
             "//llvm:include/llvm/Frontend/Directive/DirectiveBase.td",
             "//llvm:include/llvm/Frontend/OpenMP/OMP.td",
+            "//llvm:include/llvm/IR/Attributes.td",
             "//llvm:include/llvm/IR/Intrinsics.td",
             "//mlir:BuiltinDialectBytecodeTdFiles",
             "//mlir:SideEffectInterfacesTdFiles",

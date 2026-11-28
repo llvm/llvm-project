@@ -1,5 +1,6 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-apple-ios -S -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple arm64-apple-ios -S -o - %s | FileCheck %s %}
 
 // CHECK:       _restartable_function:
 // CHECK-NEXT:  	ldr	x11, [x0]

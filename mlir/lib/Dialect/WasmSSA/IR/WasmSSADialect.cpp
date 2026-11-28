@@ -8,10 +8,6 @@
 
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 
-#include "llvm/ADT/TypeSwitch.h"
-
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Support/LLVM.h"
 
 using namespace mlir;
@@ -30,9 +26,5 @@ void wasmssa::WasmSSADialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.cpp.inc"
       >();
 }

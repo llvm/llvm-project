@@ -159,6 +159,7 @@ private:
   llvm::PointerUnion<const Expr *, const Decl *> Origin;
   CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0};
   mutable std::optional<bool> Foreign; // Set by CTU analysis.
+  const Kind K;
 
 protected:
   // This is user data for subclasses.
@@ -180,18 +181,18 @@ private:
 protected:
   friend class CallEventManager;
 
-  CallEvent(const Expr *E, ProgramStateRef state, const StackFrame *SF,
+  CallEvent(Kind K, const Expr *E, ProgramStateRef state, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : State(std::move(state)), SF(SF), Origin(E), ElemRef(ElemRef) {}
+      : State(std::move(state)), SF(SF), Origin(E), ElemRef(ElemRef), K(K) {}
 
-  CallEvent(const Decl *D, ProgramStateRef state, const StackFrame *SF,
+  CallEvent(Kind K, const Decl *D, ProgramStateRef state, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : State(std::move(state)), SF(SF), Origin(D), ElemRef(ElemRef) {}
+      : State(std::move(state)), SF(SF), Origin(D), ElemRef(ElemRef), K(K) {}
 
   // DO NOT MAKE PUBLIC
   CallEvent(const CallEvent &Original)
       : State(Original.State), SF(Original.SF), Origin(Original.Origin),
-        ElemRef(Original.ElemRef), Data(Original.Data),
+        ElemRef(Original.ElemRef), K(Original.K), Data(Original.Data),
         Location(Original.Location) {}
 
   /// Copies this CallEvent, with vtable intact, into a new block of memory.
@@ -225,7 +226,7 @@ public:
   virtual ~CallEvent() = default;
 
   /// Returns the kind of call this is.
-  virtual Kind getKind() const = 0;
+  Kind getKind() const { return K; }
   virtual StringRef getKindAsString() const = 0;
 
   /// Returns the declaration of the function or method that will be
@@ -506,12 +507,12 @@ public:
 /// FunctionDecl.
 class AnyFunctionCall : public CallEvent {
 protected:
-  AnyFunctionCall(const Expr *E, ProgramStateRef St, const StackFrame *SF,
-                  CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(E, St, SF, ElemRef) {}
-  AnyFunctionCall(const Decl *D, ProgramStateRef St, const StackFrame *SF,
-                  CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(D, St, SF, ElemRef) {}
+  AnyFunctionCall(Kind K, const Expr *E, ProgramStateRef St,
+                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : CallEvent(K, E, St, SF, ElemRef) {}
+  AnyFunctionCall(Kind K, const Decl *D, ProgramStateRef St,
+                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : CallEvent(K, D, St, SF, ElemRef) {}
   AnyFunctionCall(const AnyFunctionCall &Other) = default;
 
 public:
@@ -545,7 +546,10 @@ class SimpleFunctionCall : public AnyFunctionCall {
 protected:
   SimpleFunctionCall(const CallExpr *CE, ProgramStateRef St,
                      const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(CE, St, SF, ElemRef) {}
+      : SimpleFunctionCall(CE_Function, CE, St, SF, ElemRef) {}
+  SimpleFunctionCall(Kind K, const CallExpr *CE, ProgramStateRef St,
+                     const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(K, CE, St, SF, ElemRef) {}
   SimpleFunctionCall(const SimpleFunctionCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -567,7 +571,6 @@ public:
     return getOriginExpr()->getArg(Index);
   }
 
-  Kind getKind() const override { return CE_Function; }
   StringRef getKindAsString() const override { return "SimpleFunctionCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -578,13 +581,13 @@ public:
 /// Represents a call to a block.
 ///
 /// Example: <tt>^{ statement-body }()</tt>
-class BlockCall : public CallEvent {
+class BlockCall final : public CallEvent {
   friend class CallEventManager;
 
 protected:
   BlockCall(const CallExpr *CE, ProgramStateRef St, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(CE, St, SF, ElemRef) {}
+      : CallEvent(CE_Block, CE, St, SF, ElemRef) {}
   BlockCall(const BlockCall &Other) = default;
 
   void cloneTo(void *Dest) const override { new (Dest) BlockCall(*this); }
@@ -673,7 +676,6 @@ public:
 
   ArrayRef<ParmVarDecl *> parameters() const override;
 
-  Kind getKind() const override { return CE_Block; }
   StringRef getKindAsString() const override { return "BlockCall"; }
 
   static bool classof(const CallEvent *CA) { return CA->getKind() == CE_Block; }
@@ -683,12 +685,12 @@ public:
 /// it is written.
 class CXXInstanceCall : public AnyFunctionCall {
 protected:
-  CXXInstanceCall(const CallExpr *CE, ProgramStateRef St, const StackFrame *SF,
-                  CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(CE, St, SF, ElemRef) {}
-  CXXInstanceCall(const FunctionDecl *D, ProgramStateRef St,
+  CXXInstanceCall(Kind K, const CallExpr *CE, ProgramStateRef St,
                   const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(D, St, SF, ElemRef) {}
+      : AnyFunctionCall(K, CE, St, SF, ElemRef) {}
+  CXXInstanceCall(Kind K, const FunctionDecl *D, ProgramStateRef St,
+                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(K, D, St, SF, ElemRef) {}
   CXXInstanceCall(const CXXInstanceCall &Other) = default;
 
   void getExtraInvalidatedValues(
@@ -736,14 +738,14 @@ public:
 ///   S::operator()(1, 2);  // B
 ///   fptr(1, 2); // C
 /// \endcode
-class CXXStaticOperatorCall : public SimpleFunctionCall {
+class CXXStaticOperatorCall final : public SimpleFunctionCall {
   friend class CallEventManager;
 
 protected:
   CXXStaticOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
                         const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef)
-      : SimpleFunctionCall(CE, St, SF, ElemRef) {}
+      : SimpleFunctionCall(CE_CXXStaticOperator, CE, St, SF, ElemRef) {}
   CXXStaticOperatorCall(const CXXStaticOperatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -783,7 +785,6 @@ public:
     return getOriginExpr()->getOperator();
   }
 
-  Kind getKind() const override { return CE_CXXStaticOperator; }
   StringRef getKindAsString() const override { return "CXXStaticOperatorCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -794,13 +795,13 @@ public:
 /// Represents a non-static C++ member function call.
 ///
 /// Example: \c obj.fun()
-class CXXMemberCall : public CXXInstanceCall {
+class CXXMemberCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
   CXXMemberCall(const CXXMemberCallExpr *CE, ProgramStateRef St,
                 const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(CE, St, SF, ElemRef) {}
+      : CXXInstanceCall(CE_CXXMember, CE, St, SF, ElemRef) {}
   CXXMemberCall(const CXXMemberCall &Other) = default;
 
   void cloneTo(void *Dest) const override { new (Dest) CXXMemberCall(*this); }
@@ -824,7 +825,6 @@ public:
 
   RuntimeDefinition getRuntimeDefinition() const override;
 
-  Kind getKind() const override { return CE_CXXMember; }
   StringRef getKindAsString() const override { return "CXXMemberCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -836,14 +836,14 @@ public:
 /// implemented as a non-static member function.
 ///
 /// Example: <tt>iter + 1</tt>
-class CXXMemberOperatorCall : public CXXInstanceCall {
+class CXXMemberOperatorCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
   CXXMemberOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
                         const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(CE, St, SF, ElemRef) {}
+      : CXXInstanceCall(CE_CXXMemberOperator, CE, St, SF, ElemRef) {}
   CXXMemberOperatorCall(const CXXMemberOperatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -865,7 +865,6 @@ public:
 
   const Expr *getCXXThisExpr() const override;
 
-  Kind getKind() const override { return CE_CXXMemberOperator; }
   StringRef getKindAsString() const override { return "CXXMemberOperatorCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -896,7 +895,7 @@ public:
 ///
 /// This can occur at the end of a scope (for automatic objects), at the end
 /// of a full-expression (for temporaries), or as part of a delete.
-class CXXDestructorCall : public CXXInstanceCall {
+class CXXDestructorCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
@@ -919,7 +918,7 @@ protected:
                     const MemRegion *Target, bool IsBaseDestructor,
                     ProgramStateRef St, const StackFrame *SF,
                     CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(DD, St, SF, ElemRef) {
+      : CXXInstanceCall(CE_CXXDestructor, DD, St, SF, ElemRef) {
     Data = DtorDataTy(Target, IsBaseDestructor).getOpaqueValue();
     Location = Trigger->getEndLoc();
   }
@@ -944,7 +943,6 @@ public:
     return DtorDataTy::getFromOpaqueValue(Data).getInt();
   }
 
-  Kind getKind() const override { return CE_CXXDestructor; }
   StringRef getKindAsString() const override { return "CXXDestructorCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -956,10 +954,10 @@ public:
 /// and inherited constructors.
 class AnyCXXConstructorCall : public AnyFunctionCall {
 protected:
-  AnyCXXConstructorCall(const Expr *E, const MemRegion *Target,
+  AnyCXXConstructorCall(Kind K, const Expr *E, const MemRegion *Target,
                         ProgramStateRef St, const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, SF, ElemRef) {
+      : AnyFunctionCall(K, E, St, SF, ElemRef) {
     assert(E && (isa<CXXConstructExpr>(E) || isa<CXXInheritedCtorInitExpr>(E)));
     // Target may be null when the region is unknown.
     Data = Target;
@@ -985,7 +983,7 @@ public:
 /// Represents a call to a C++ constructor.
 ///
 /// Example: \c T(1)
-class CXXConstructorCall : public AnyCXXConstructorCall {
+class CXXConstructorCall final : public AnyCXXConstructorCall {
   friend class CallEventManager;
 
 protected:
@@ -1003,7 +1001,7 @@ protected:
   CXXConstructorCall(const CXXConstructExpr *CE, const MemRegion *Target,
                      ProgramStateRef St, const StackFrame *SF,
                      CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyCXXConstructorCall(CE, Target, St, SF, ElemRef) {}
+      : AnyCXXConstructorCall(CE_CXXConstructor, CE, Target, St, SF, ElemRef) {}
 
   CXXConstructorCall(const CXXConstructorCall &Other) = default;
 
@@ -1026,7 +1024,6 @@ public:
     return getOriginExpr()->getArg(Index);
   }
 
-  Kind getKind() const override { return CE_CXXConstructor; }
   StringRef getKindAsString() const override { return "CXXConstructorCall"; }
 
   static bool classof(const CallEvent *CA) {
@@ -1054,7 +1051,7 @@ public:
 /// B b = X{};
 ///
 /// ... b.b is initialized to true.
-class CXXInheritedConstructorCall : public AnyCXXConstructorCall {
+class CXXInheritedConstructorCall final : public AnyCXXConstructorCall {
   friend class CallEventManager;
 
 protected:
@@ -1062,7 +1059,8 @@ protected:
                               const MemRegion *Target, ProgramStateRef St,
                               const StackFrame *SF,
                               CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyCXXConstructorCall(CE, Target, St, SF, ElemRef) {}
+      : AnyCXXConstructorCall(CE_CXXInheritedConstructor, CE, Target, St, SF,
+                              ElemRef) {}
 
   CXXInheritedConstructorCall(const CXXInheritedConstructorCall &Other) =
       default;
@@ -1104,7 +1102,6 @@ public:
                                getInheritingStackFrame()->getParent());
   }
 
-  Kind getKind() const override { return CE_CXXInheritedConstructor; }
   StringRef getKindAsString() const override {
     return "CXXInheritedConstructorCall";
   }
@@ -1117,13 +1114,13 @@ public:
 /// Represents the memory allocation call in a C++ new-expression.
 ///
 /// This is a call to "operator new".
-class CXXAllocatorCall : public AnyFunctionCall {
+class CXXAllocatorCall final : public AnyFunctionCall {
   friend class CallEventManager;
 
 protected:
   CXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef St,
                    const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, SF, ElemRef) {}
+      : AnyFunctionCall(CE_CXXAllocator, E, St, SF, ElemRef) {}
   CXXAllocatorCall(const CXXAllocatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -1182,7 +1179,6 @@ public:
     return getOriginExpr()->getPlacementArg(Index);
   }
 
-  Kind getKind() const override { return CE_CXXAllocator; }
   StringRef getKindAsString() const override { return "CXXAllocatorCall"; }
 
   static bool classof(const CallEvent *CE) {
@@ -1200,13 +1196,13 @@ public:
 // http://lists.llvm.org/pipermail/cfe-dev/2020-April/065080.html
 // clang/test/Analysis/cxx-dynamic-memory-analysis-order.cpp
 // clang/unittests/StaticAnalyzer/CallEventTest.cpp
-class CXXDeallocatorCall : public AnyFunctionCall {
+class CXXDeallocatorCall final : public AnyFunctionCall {
   friend class CallEventManager;
 
 protected:
   CXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef St,
                      const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, SF, ElemRef) {}
+      : AnyFunctionCall(CE_CXXDeallocator, E, St, SF, ElemRef) {}
   CXXDeallocatorCall(const CXXDeallocatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -1229,7 +1225,6 @@ public:
     return getOriginExpr()->getArgument();
   }
 
-  Kind getKind() const override { return CE_CXXDeallocator; }
   StringRef getKindAsString() const override { return "CXXDeallocatorCall"; }
 
   static bool classof(const CallEvent *CE) {
@@ -1246,7 +1241,7 @@ enum ObjCMessageKind { OCM_PropertyAccess, OCM_Subscript, OCM_Message };
 /// Represents any expression that calls an Objective-C method.
 ///
 /// This includes all of the kinds listed in ObjCMessageKind.
-class ObjCMethodCall : public CallEvent {
+class ObjCMethodCall final : public CallEvent {
   friend class CallEventManager;
 
   const PseudoObjectExpr *getContainingPseudoObjectExpr() const;
@@ -1254,7 +1249,7 @@ class ObjCMethodCall : public CallEvent {
 protected:
   ObjCMethodCall(const ObjCMessageExpr *Msg, ProgramStateRef St,
                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(Msg, St, SF, ElemRef) {
+      : CallEvent(CE_ObjCMessage, Msg, St, SF, ElemRef) {
     Data = nullptr;
   }
 
@@ -1267,8 +1262,7 @@ protected:
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
   /// Check if the selector may have multiple definitions (may have overrides).
-  virtual bool canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl,
-                                        Selector Sel) const;
+  bool canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl, Selector Sel) const;
 
 public:
   const ObjCMessageExpr *getOriginExpr() const override {
@@ -1343,7 +1337,6 @@ public:
 
   ArrayRef<ParmVarDecl *> parameters() const override;
 
-  Kind getKind() const override { return CE_ObjCMessage; }
   StringRef getKindAsString() const override { return "ObjCMethodCall"; }
 
   static bool classof(const CallEvent *CA) {

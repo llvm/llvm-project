@@ -31,8 +31,8 @@ def Shard_Dialect : Dialect {
     "arith::ArithDialect" // For materializeConstant()
   ];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let hasConstantMaterializer = 1;
 }
 
@@ -66,6 +66,7 @@ def Shard_ReductionKindAttr : EnumAttr<Shard_Dialect, Shard_ReductionKind, "part
 class Shard_Type<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<Shard_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/Shard/IR/ShardOps.h"];
   let mnemonic = typeMnemonic;
 }
 

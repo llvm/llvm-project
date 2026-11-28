@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 -enable-new-pm %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute -enable-new-pm %s -o - -filetype=obj | spirv-val %}
 
 ;
 ; int foo() { return true; }

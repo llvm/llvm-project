@@ -17,6 +17,7 @@ add_clang_library(clangCIR
   CIRGenBuiltinNVPTX.cpp
   CIRGenAMDGPU.cpp
   CIRGenBuiltinRISCV.cpp
+  CIRGenBuiltinSPIRV.cpp
   CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
@@ -60,6 +61,7 @@ add_clang_library(clangCIR
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp
+  Targets/SystemZ.cpp
 
   DISABLE_PCH_REUSE # PCH contains private headers
   PRECOMPILE_HEADERS

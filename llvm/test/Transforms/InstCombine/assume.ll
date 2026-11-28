@@ -1441,6 +1441,95 @@ bb:
   ret ptr null
 }
 
+define void @assume_empty_range(i2 %i) {
+; CHECK-LABEL: @assume_empty_range(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i2 [[I:%.*]], i2 0, i2 0) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i2 %i, i2 0, i2 0) ]
+  ret void
+}
+
+define void @redundant_assume_range0(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range0(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 0, i64 44) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  ret void
+}
+
+define void @redundant_assume_range1(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 22) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  ret void
+}
+
+define void @redundant_assume_range2(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range2(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 22) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  ret void
+}
+
+define void @redundant_assume_range3(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range3(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 20) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 20) ]
+  ret void
+}
+
+define void @redundant_assume_range_disjoint(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range_disjoint(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 0, i64 0) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 10) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 11, i64 20) ]
+  ret void
+}
+
+define void @assume_range_excluding_different_values(i64 %i) {
+; CHECK-LABEL: @assume_range_excluding_different_values(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 10, i64 9), "range"(i64 [[I]], i64 5, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 10, i64 9) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 5, i64 4) ]
+  ret void
+}
+
+define void @assume_range_add(i64 %i) {
+; CHECK-LABEL: @assume_range_add(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 -3, i64 17) ]
+; CHECK-NEXT:    ret void
+;
+  %add = add i64 %i, 3
+  call void @llvm.assume(i1 true) [ "range"(i64 %add, i64 0, i64 20) ]
+  ret void
+}
+
+define void @assume_range_sub(i64 %i) {
+; CHECK-LABEL: @assume_range_sub(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 23) ]
+; CHECK-NEXT:    ret void
+;
+  %add = sub i64 %i, 3
+  call void @llvm.assume(i1 true) [ "range"(i64 %add, i64 0, i64 20) ]
+  ret void
+}
+
 declare void @use(i1)
 declare void @block()
 declare void @llvm.dbg.value(metadata, metadata, metadata)

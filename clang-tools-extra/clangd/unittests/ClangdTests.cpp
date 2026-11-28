@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "CompileCommands.h"
@@ -1228,7 +1229,9 @@ TEST(ClangdServer, TidyOverrideTest) {
   TidyProvider Provider = combine(std::move(Stack));
   CDB.ExtraClangFlags = {"-xc++"};
   auto Opts = ClangdServer::optsForTest();
-  Opts.ClangTidyProvider = Provider;
+  FeatureModuleSet Modules;
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(std::move(Provider)));
+  Opts.FeatureModules = &Modules;
   ClangdServer Server(CDB, FS, Opts, &DiagConsumer);
   const char *SourceContents = R"cpp(
     struct Foo { Foo(); Foo(Foo&); Foo(Foo&&); };

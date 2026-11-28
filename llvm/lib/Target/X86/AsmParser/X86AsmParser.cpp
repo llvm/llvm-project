@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -48,7 +49,7 @@
 
 using namespace llvm;
 
-static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
+static bool checkScale(int64_t Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
     ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
     return true;
@@ -264,7 +265,7 @@ private:
       InfixOperatorStack.push_back(Op);
     }
 
-    int64_t execute() {
+    int64_t execute(StringRef &ErrMsg) {
       // Push any remaining operators onto the postfix stack.
       while (!InfixOperatorStack.empty()) {
         InfixCalculatorTok StackOp = InfixOperatorStack.pop_back_val();
@@ -289,7 +290,8 @@ private:
             report_fatal_error("Unexpected operator!");
             break;
           case IC_NEG:
-            OperandStack.push_back(std::make_pair(IC_IMM, -Operand.second));
+            OperandStack.push_back(
+                std::make_pair(IC_IMM, -uint64_t(Operand.second)));
             break;
           case IC_NOT:
             OperandStack.push_back(std::make_pair(IC_IMM, ~Operand.second));
@@ -305,30 +307,35 @@ private:
             report_fatal_error("Unexpected operator!");
             break;
           case IC_PLUS:
-            Val = Op1.second + Op2.second;
+            Val = uint64_t(Op1.second) + Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_MINUS:
-            Val = Op1.second - Op2.second;
+            Val = uint64_t(Op1.second) - Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_MULTIPLY:
             assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
                     "Multiply operation with an immediate and a register!");
-            Val = Op1.second * Op2.second;
+            Val = uint64_t(Op1.second) * Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_DIVIDE:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Divide operation with an immediate and a register!");
-            assert (Op2.second != 0 && "Division by zero!");
-            Val = Op1.second / Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
-            break;
           case IC_MOD:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Modulo operation with an immediate and a register!");
-            Val = Op1.second % Op2.second;
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Divide operation with an immediate and a register!");
+            if (Op2.second == 0) {
+              ErrMsg = Op.first == IC_DIVIDE
+                           ? "division by zero in assembly expression"
+                           : "modulo by zero in assembly expression";
+              return 0;
+            }
+            if (divideSignedWouldOverflow(Op1.second, Op2.second)) {
+              ErrMsg = "division result out of range";
+              return 0;
+            }
+            Val = Op.first == IC_DIVIDE ? Op1.second / Op2.second
+                                        : Op1.second % Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_OR:
@@ -350,15 +357,15 @@ private:
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_LSHIFT:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Left shift operation with an immediate and a register!");
-            Val = Op1.second << Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
-            break;
           case IC_RSHIFT:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Right shift operation with an immediate and a register!");
-            Val = Op1.second >> Op2.second;
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Shift operation with an immediate and a register!");
+            if (!isUInt<6>(Op2.second)) {
+              ErrMsg = "invalid shift count in assembly expression";
+              return 0;
+            }
+            Val = Op.first == IC_LSHIFT ? uint64_t(Op1.second) << Op2.second
+                                        : Op1.second >> Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_EQ:
@@ -475,6 +482,10 @@ private:
     void addImm(int64_t imm) { Imm += imm; }
     short getBracCount() const { return BracCount; }
     bool isMemExpr() const { return MemExpr; }
+    bool isRegisterScale() const { return TmpReg && State == IES_MULTIPLY; }
+    bool isAbsolute() const {
+      return !BaseReg && !IndexReg && !TmpReg && !Sym && !MemExpr;
+    }
     bool isBracketUsed() const { return BracketUsed; }
     bool isOffsetOperator() const { return OffsetOperator; }
     MCRegister getBaseReg() const { return BaseReg; }
@@ -486,7 +497,11 @@ private:
     unsigned getSize() const { return CurType.Size; }
     unsigned getElementSize() const { return CurType.ElementSize; }
     unsigned getLength() const { return CurType.Length; }
-    int64_t getImm() { return Imm + IC.execute(); }
+    int64_t getImm() const { return Imm; }
+    bool onEnd(StringRef &ErrMsg) {
+      Imm = uint64_t(Imm) + IC.execute(ErrMsg);
+      return !ErrMsg.empty();
+    }
     bool isValidEndState() const {
       return State == IES_RBRAC || State == IES_RPAREN ||
              State == IES_INTEGER || State == IES_REGISTER ||
@@ -828,7 +843,15 @@ private:
       }
       PrevState = CurrState;
     }
-    bool onRegister(MCRegister Reg, StringRef &ErrMsg) {
+    bool onRegister(MCRegister Reg, bool IsScale, StringRef &ErrMsg) {
+      // Reject a second register in a product, including inside a
+      // parenthesized scale.
+      if (IsScale ||
+          (TmpReg && (State == IES_LPAREN || State == IES_MULTIPLY))) {
+        ErrMsg = "Register can't be multiplied with register!";
+        return true;
+      }
+
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -847,11 +870,6 @@ private:
         break;
       case IES_LPAREN:
       case IES_MULTIPLY:
-        // A register already held in TmpReg means we are multiplying two reg
-        if (TmpReg) {
-          ErrMsg = "Register can't be multiplied with register!";
-          return true;
-        }
         State = IES_REGISTER;
         TmpReg = Reg;
         // Recognize this register as a scaled index register. This covers
@@ -1257,7 +1275,8 @@ private:
                               bool &ParseError, SMLoc &End);
   void RewriteIntelExpression(IntelExprStateMachine &SM, SMLoc Start,
                               SMLoc End);
-  bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
+  bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End,
+                            bool IsScale = false);
   bool ParseIntelInlineAsmIdentifier(const MCExpr *&Val, StringRef &Identifier,
                                      InlineAsmIdentifierInfo &Info,
                                      bool IsUnevaluatedOperand, SMLoc &End,
@@ -2019,7 +2038,8 @@ void X86AsmParser::tryParseOperandIdx(AsmToken::TokenKind PrevTK,
   SM.setAppendAfterOperand();
 }
 
-bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
+bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End,
+                                        bool IsScale) {
   MCAsmParser &Parser = getParser();
   StringRef ErrMsg;
 
@@ -2128,7 +2148,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       MCRegister Reg;
       if (Tok.is(AsmToken::Identifier)) {
         if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
-          if (SM.onRegister(Reg, ErrMsg))
+          if (SM.onRegister(Reg, IsScale, ErrMsg))
             return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
@@ -2139,7 +2159,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           SMLoc IDEndLoc = SMLoc::getFromPointer(ID.data() + ID.size());
           if (!Field.empty() &&
               !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
-            if (SM.onRegister(Reg, ErrMsg))
+            if (SM.onRegister(Reg, IsScale, ErrMsg))
               return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
 
             AsmFieldInfo Info;
@@ -2305,16 +2325,40 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       tryParseOperandIdx(PrevTK, SM);
       break;
     case AsmToken::RBrac:
+      if (IsScale) {
+        Done = true;
+        break;
+      }
       if (SM.onRBrac(ErrMsg)) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
     case AsmToken::LParen:
-      SM.onLParen(Tok.getLoc());
+      if (SM.isRegisterScale()) {
+        // Fold the scale before its operators can finish the register term.
+        SMLoc ValueLoc = Tok.getLoc();
+        IntelExprStateMachine ScaleSM;
+        ScaleSM.onLParen(ValueLoc);
+        End = consumeToken();
+        if (ParseIntelExpression(ScaleSM, End, /*IsScale=*/true))
+          return true;
+        UpdateLocLex = false;
+        int64_t Scale = ScaleSM.getImm();
+        if (Scale < 0)
+          return Error(ValueLoc, "Scale can't be negative");
+        if (checkScale(Scale, ErrMsg) || SM.onInteger(Scale, ErrMsg))
+          return Error(SM.getErrorLoc(ValueLoc), ErrMsg);
+      } else {
+        SM.onLParen(Tok.getLoc());
+      }
       break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
+      }
+      if (IsScale && !SM.hasUnmatchedParen()) {
+        End = consumeToken();
+        Done = true;
       }
       break;
     }
@@ -2328,6 +2372,10 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   }
   if (SM.hasUnmatchedParen())
     return Error(SM.getLParenLoc(), "unmatched parenthesis");
+  if (IsScale && !SM.isAbsolute())
+    return Error(SM.getLParenLoc(), "expected absolute value");
+  if (SM.onEnd(ErrMsg))
+    return Error(getTok().getLoc(), ErrMsg);
   return false;
 }
 

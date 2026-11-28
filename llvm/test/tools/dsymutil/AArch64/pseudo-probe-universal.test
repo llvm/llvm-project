@@ -52,6 +52,7 @@ FatArchs:
     align:           14
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x100000C
@@ -99,6 +100,7 @@ Slices:
         - ''
         - a.o
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x100000C
@@ -149,6 +151,7 @@ Slices:
 
 #--- a.o.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -284,6 +287,7 @@ LinkEditData:
 
 #--- e.o.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

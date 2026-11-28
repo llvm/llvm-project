@@ -11,7 +11,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/MCSubtargetInfo.h"

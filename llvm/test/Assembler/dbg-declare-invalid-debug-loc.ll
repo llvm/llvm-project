@@ -1,4 +1,4 @@
-; RUN: not opt %s -o /dev/null -S 2>&1 | FileCheck %s
+; RUN: not opt %s -disable-output -S 2>&1 | FileCheck %s
 ;
 ; The last dbg.declare intrinsic in this file has an illegal DILocation -- this
 ; needs to pass through the autoupgrade to #dbg_declare process and then get

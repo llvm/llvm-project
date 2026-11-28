@@ -9,7 +9,7 @@ func.func @base_test(%arg0 : i32) -> f32 {
 
 // -----
 
-// CHECK-LABEL: error: unknown attribute code: 99
+// CHECK-LABEL: error: unknown type code: 99
 // CHECK: failed to read bytecode
 func.func @base_test(%arg0 : !test.i32) -> f32 {
   %0 = "test.addi"(%arg0, %arg0) : (!test.i32, !test.i32) -> !test.i32

@@ -8,6 +8,7 @@
 
 #include "flang/Lower/CallInterface.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Mangler.h"
@@ -69,9 +70,9 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 /// nullptr when \p proc is not such a base call, or when no variant matches the
 /// context, so the base procedure is used as usual.
 static const Fortran::semantics::Symbol *
-getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
+getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureRef &procRef,
                            Fortran::lower::AbstractConverter &converter) {
-  const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
   if (!symbol)
     return nullptr;
   const Fortran::semantics::Symbol &ultimate{symbol->GetUltimate()};
@@ -81,7 +82,9 @@ getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
       ultimate.detailsIf<Fortran::semantics::SubprogramDetails>();
   if (!details || details->ompDeclareVariants().empty())
     return nullptr;
-  return Fortran::lower::omp::resolveDeclareVariantCallee(ultimate, converter);
+  return Fortran::lower::omp::resolveDeclareVariantCallee(
+      ultimate, converter,
+      !Fortran::lower::omp::isDispatchTargetCall(procRef, converter));
 }
 
 /// Return the binding label (from BIND(C...)) or the mangled name of the
@@ -103,7 +106,7 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
   // actual argument or to associate it with a procedure pointer) go through
   // getProcMangledName and are intentionally not redirected to the variant.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return converter.mangleName(*variant);
   return getProcMangledName(procRef.proc(), converter);
 }
@@ -112,7 +115,7 @@ const Fortran::semantics::Symbol *
 Fortran::lower::CallerInterface::getProcedureSymbol() const {
   // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return variant;
   return procRef.proc().GetSymbol();
 }
@@ -464,12 +467,12 @@ static Fortran::evaluate::ExtentExpr
 getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
   if (shapeSpec.ubound().isStar())
     // F'2023 18.5.3 point 5.
-    return Fortran::evaluate::ExtentExpr{-1};
+    return Fortran::evaluate::MakeExtentExpr(-1);
   const auto &ubound = shapeSpec.ubound().GetExplicit();
   const auto &lbound = shapeSpec.lbound().GetExplicit();
   assert(lbound && ubound && "shape must be explicit");
   return Fortran::common::Clone(*ubound) - Fortran::common::Clone(*lbound) +
-         Fortran::evaluate::ExtentExpr{1};
+         Fortran::evaluate::MakeExtentExpr(1);
 }
 
 static void

@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
-#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -55,36 +54,12 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> DisableLoadStoreVectorizer;
-extern cl::opt<bool> DisableNVPTXIRPeephole;
-
-// byval arguments in NVPTX are special. We're only allowed to read from them
-// using a special instruction, and if we ever need to write to them or take an
-// address, we must make a local copy and use it, instead.
-//
-// The problem is that local copies are very expensive, and we create them very
-// late in the compilation pipeline, so LLVM does not have much of a chance to
-// eliminate them, if they turn out to be unnecessary.
-//
-// One way around that is to create such copies early on, and let them percolate
-// through the optimizations. The copying itself will never trigger creation of
-// another copy later on, as the reads are allowed. If LLVM can eliminate it,
-// it's a win. It the full optimization pipeline can't remove the copy, that's
-// as good as it gets in terms of the effort we could've done, and it's
-// certainly a much better effort than what we do now.
-//
-// This early injection of the copies has potential to create undesireable
-// side-effects, so it's disabled by default, for now, until it sees more
-// testing.
-static cl::opt<bool> EarlyByValArgsCopy(
-    "nvptx-early-byval-copy",
-    cl::desc("Create a copy of byval function arguments early."),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 class NVPTXCodeGenPassBuilder : public CodeGenPassBuilder {
   using Base = CodeGenPassBuilder;
+
+  const NVPTXOptions &CLOpts;
 
   NVPTXTargetMachine &getTM() const {
     return static_cast<NVPTXTargetMachine &>(TM);
@@ -94,28 +69,20 @@ public:
   explicit NVPTXCodeGenPassBuilder(NVPTXTargetMachine &TM,
                                    const CGPassBuilderOption &Opts,
                                    PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {
-    // The following passes are known to not play well with virtual regs
-    // hanging around after register allocation (which in our case, is *all*
-    // registers). We explicitly disable them here. We do, however, need some
-    // functionality of the PrologEpilogCodeInserter pass, so we emulate that
-    // behavior in the NVPTXPrologEpilog pass (see NVPTXPrologEpilogPass.cpp).
-    disablePass<PrologEpilogInserterPass, MachineLateInstrsCleanupPass,
-                MachineCopyPropagationPass, TailDuplicatePass,
-                StackMapLivenessPass, PostRAMachineSinkingPass,
-                PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+      : CodeGenPassBuilder(TM, Opts, PIC), CLOpts(TM.getCLOpts()) {
+    // We need some functionality of the PrologEpilogCodeInserter pass, so we
+    // emulate that behavior in the NVPTXPrologEpilog pass (see
+    // NVPTXPrologEpilogPass.cpp).
+    disablePass<PrologEpilogInserterPass, TailDuplicatePass,
                 MachineBlockPlacementPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
 
-  // NVPTX has no register allocation; virtual registers are emitted directly.
-  void addTargetRegisterAllocator(PassManagerWrapper &PMW, bool) override {}
-  Error addFastRegAlloc(PassManagerWrapper &PMW) override;
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
 
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -132,6 +99,8 @@ private:
   // Add passes that perform straight-line scalar optimizations.
   void addStraightLineScalarOptimizationPasses(PassManagerWrapper &PMW);
 };
+
+} // namespace
 
 void NVPTXCodeGenPassBuilder::addEarlyCSEOrGVNPass(PassManagerWrapper &PMW) {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
@@ -182,6 +151,7 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // our pass pipeline didn't add it.
   flushFPMsToMPM(PMW);
   addModulePass(NVVMReflectPass(ST.getSmVersion()), PMW);
+  addModulePass(NVPTXCanonicalizeDynamicSharedPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(NVPTXImageOptimizerPass(), PMW);
@@ -228,13 +198,13 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // but EarlyCSE can do neither of them.
   if (getOptLevel() != CodeGenOptLevel::None) {
     addEarlyCSEOrGVNPass(PMW);
-    if (!DisableLoadStoreVectorizer)
+    if (!CLOpts.disable_nvptx_load_store_vectorizer)
       addFunctionPass(LoadStoreVectorizerPass(), PMW);
     addFunctionPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
                                          /*AggregateToVector=*/true)),
                     PMW);
     addFunctionPass(NVPTXTagInvariantLoadsPass(), PMW);
-    if (!DisableNVPTXIRPeephole)
+    if (!CLOpts.disable_nvptx_ir_peephole)
       addFunctionPass(NVPTXIRPeepholePass(), PMW);
   }
 
@@ -273,12 +243,6 @@ void NVPTXCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   }
 }
 
-Error NVPTXCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
-  return Error::success();
-}
-
 Error NVPTXCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(ProcessImplicitDefsPass(), PMW);
   addMachineFunctionPass(
@@ -311,14 +275,15 @@ void NVPTXCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(NVPTXAsmPrinterEndPass(), PMW);
 }
 
-} // namespace
-
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // Before anything relies on alias analysis.
+        PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+
         // We do not want to fold out calls to nvvm.reflect early if the user
         // has not provided a target architecture just yet.
         if (Subtarget.hasTargetName())
@@ -328,10 +293,17 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // Note: NVVMIntrRangePass was causing numerical discrepancies at one
         // point, if issues crop up, consider disabling.
         FPM.addPass(NVVMIntrRangePass());
-        if (EarlyByValArgsCopy)
+        if (CLOpts.early_byval_copy)
           FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
+
+  // Linking can bring in further declarations of the dynamic shared memory.
+  auto CanonicalizeAfterLink = [](ModulePassManager &PM, OptimizationLevel) {
+    PM.addPass(NVPTXCanonicalizeDynamicSharedPass());
+  };
+  PB.registerFullLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
+  PB.registerThinLinkTimeOptimizationEarlyEPCallback(CanonicalizeAfterLink);
 
   if (!NoKernelInfoEndLTO) {
     PB.registerFullLinkTimeOptimizationLastEPCallback(

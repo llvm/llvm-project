@@ -3,7 +3,6 @@
 
 ---
 name: Cst
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
@@ -16,7 +15,6 @@ body: |
 ...
 ---
 name: CstZero
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstZero
@@ -29,9 +27,9 @@ body: |
 ...
 ---
 name: ScalarZero
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarZero
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
@@ -42,7 +40,6 @@ body: |
 ...
 ---
 name: PartialKnown
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -60,9 +57,9 @@ body: |
 ...
 ---
 name: NoSignBitsPath
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $w0, $w1
   ; CHECK-LABEL: name: @NoSignBitsPath
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
@@ -77,7 +74,6 @@ body: |
 ...
 ---
 name: VecCst
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @VecCst

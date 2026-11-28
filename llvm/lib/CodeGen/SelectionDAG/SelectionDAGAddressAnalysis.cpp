@@ -24,10 +24,20 @@ using namespace llvm;
 bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
                                      const SelectionDAG &DAG,
                                      int64_t &Off) const {
+  StackOffset Diff;
+  if (!equalBaseIndex(Other, DAG, Diff) || Diff.getScalable() != 0)
+    return false;
+  Off = Diff.getFixed();
+  return true;
+}
+
+bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
+                                     const SelectionDAG &DAG,
+                                     StackOffset &Off) const {
   // Conservatively fail if we a match failed..
   if (!Base.getNode() || !Other.Base.getNode())
     return false;
-  if (!hasValidOffset() || !Other.hasValidOffset())
+  if (!hasValidStackOffset() || !Other.hasValidStackOffset())
     return false;
   // Initial Offset difference.
   Off = *Other.Offset - *Offset;
@@ -41,7 +51,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
     if (auto *A = dyn_cast<GlobalAddressSDNode>(Base)) {
       if (auto *B = dyn_cast<GlobalAddressSDNode>(Other.Base))
         if (A->getGlobal() == B->getGlobal()) {
-          Off += B->getOffset() - A->getOffset();
+          Off += StackOffset::getFixed(B->getOffset() - A->getOffset());
           return true;
         }
 
@@ -60,7 +70,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
             IsMatch = A->getConstVal() == B->getConstVal();
         }
         if (IsMatch) {
-          Off += B->getOffset() - A->getOffset();
+          Off += StackOffset::getFixed(B->getOffset() - A->getOffset());
           return true;
         }
       }
@@ -80,8 +90,8 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
         if (MFI.isFixedObjectIndex(A->getIndex()) &&
             MFI.isFixedObjectIndex(B->getIndex())) {
-          Off += MFI.getObjectOffset(B->getIndex()) -
-                 MFI.getObjectOffset(A->getIndex());
+          Off += StackOffset::getFixed(MFI.getObjectOffset(B->getIndex()) -
+                                       MFI.getObjectOffset(A->getIndex()));
           return true;
         }
       }
@@ -202,42 +212,45 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
   // (((B + I*M) + c)) + c ...
   SDValue Base = DAG.getTargetLoweringInfo().unwrapAddress(Ptr);
   SDValue Index = SDValue();
-  int64_t Offset = 0;
+  StackOffset Offset;
   bool IsIndexSignExt = false;
 
   // pre-inc/pre-dec ops are components of EA.
   if (N->getAddressingMode() == ISD::PRE_INC) {
     if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
-      Offset += C->getSExtValue();
+      Offset += StackOffset::getFixed(C->getSExtValue());
     else // If unknown, give up now.
       return BaseIndexOffset(SDValue(), SDValue(), 0, false);
   } else if (N->getAddressingMode() == ISD::PRE_DEC) {
     if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
-      Offset -= C->getSExtValue();
+      Offset -= StackOffset::getFixed(C->getSExtValue());
     else // If unknown, give up now.
       return BaseIndexOffset(SDValue(), SDValue(), 0, false);
   }
 
-  // Consume constant adds & ors with appropriate masking.
+  // Consume fixed and scalable offsets, including ORs that act as adds.
   while (true) {
     switch (Base->getOpcode()) {
     case ISD::OR:
       // Only consider ORs which act as adds.
       if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1)))
         if (DAG.MaskedValueIsZero(Base->getOperand(0), C->getAPIntValue())) {
-          Offset += C->getSExtValue();
+          Offset += StackOffset::getFixed(C->getSExtValue());
           Base = DAG.getTargetLoweringInfo().unwrapAddress(Base->getOperand(0));
           continue;
         }
       break;
     case ISD::ADD:
     case ISD::PTRADD:
-      if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1))) {
-        Offset += C->getSExtValue();
-        Base = DAG.getTargetLoweringInfo().unwrapAddress(Base->getOperand(0));
-        continue;
-      }
-      break;
+      if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1)))
+        Offset += StackOffset::getFixed(C->getSExtValue());
+      else if (Base->getOperand(1).getOpcode() == ISD::VSCALE)
+        Offset += StackOffset::getScalable(
+            Base->getOperand(1).getConstantOperandAPInt(0).getSExtValue());
+      else
+        break;
+      Base = DAG.getTargetLoweringInfo().unwrapAddress(Base->getOperand(0));
+      continue;
     case ISD::LOAD:
     case ISD::STORE: {
       auto *LSBase = cast<LSBaseSDNode>(Base.getNode());
@@ -247,9 +260,9 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
           auto Off = C->getSExtValue();
           if (LSBase->getAddressingMode() == ISD::PRE_DEC ||
               LSBase->getAddressingMode() == ISD::POST_DEC)
-            Offset -= Off;
+            Offset -= StackOffset::getFixed(Off);
           else
-            Offset += Off;
+            Offset += StackOffset::getFixed(Off);
           Base = DAG.getTargetLoweringInfo().unwrapAddress(LSBase->getBasePtr());
           continue;
         }
@@ -286,7 +299,8 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
     if (!Index->isAnyAdd() || !isa<ConstantSDNode>(Index->getOperand(1)))
       return BaseIndexOffset(PotentialBase, Index, Offset, IsIndexSignExt);
 
-    Offset += cast<ConstantSDNode>(Index->getOperand(1))->getSExtValue();
+    Offset += StackOffset::getFixed(
+        cast<ConstantSDNode>(Index->getOperand(1))->getSExtValue());
     Index = Index->getOperand(0);
     if (Index->getOpcode() == ISD::SIGN_EXTEND) {
       Index = Index->getOperand(0);
@@ -320,7 +334,9 @@ void BaseIndexOffset::print(raw_ostream& OS) const {
   OS << "] index=[";
   if (Index)
     Index->print(OS);
-  OS << "] offset=" << Offset;
+  OS << "] offset=" << Offset->getFixed();
+  if (Offset->getScalable() != 0)
+    OS << " + " << Offset->getScalable() << " * vscale";
 }
 
 #endif

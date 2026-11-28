@@ -21,6 +21,7 @@
 
 namespace llvm {
 class DWARFDie;
+class DWARFFormValue;
 
 namespace dwarf_linker {
 
@@ -41,6 +42,16 @@ LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
 
 /// Test if \p Die is a child that identifies its unnamed parent type.
 LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
+
+/// Hash the fully qualified name of type \p Die for the Apple accelerator
+/// tables. \p ResolveRef returns the DIE that a DW_AT_specification or
+/// DW_AT_abstract_origin of its first argument refers to, or an invalid DIE.
+/// A DW_TAG_module ends the name like the unit does, because LLDB leaves
+/// modules out of the qualified names it looks up.
+LLVM_ABI uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table
@@ -132,6 +143,26 @@ inline bool isInToolchainDir(StringRef Path) {
     }
   }
   return false;
+}
+
+/// \returns true if the attribute \p Attr of a DIE with tag \p Tag holds a
+/// file system path.
+inline bool isPathAttribute(dwarf::Tag Tag, dwarf::Attribute Attr) {
+  switch (Attr) {
+  case dwarf::DW_AT_comp_dir:
+  case dwarf::DW_AT_dwo_name:
+  case dwarf::DW_AT_GNU_dwo_name:
+  case dwarf::DW_AT_LLVM_include_path:
+  case dwarf::DW_AT_LLVM_sysroot:
+  case dwarf::DW_AT_LLVM_apinotes:
+    return true;
+  case dwarf::DW_AT_name:
+    return Tag == dwarf::DW_TAG_compile_unit ||
+           Tag == dwarf::DW_TAG_partial_unit ||
+           Tag == dwarf::DW_TAG_skeleton_unit;
+  default:
+    return false;
+  }
 }
 
 inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {

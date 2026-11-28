@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -acc-compute-lowering -acc-emit-remarks-loop --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -split-input-file --pass-pipeline='builtin.module(func.func(acc-compute-lowering,acc-emit-remarks-loop))' --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s
 
 // CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=parallel_gang_loop | Remark="!$acc loop gang(10) ! blockidx.x"
 func.func @parallel_gang_loop(%buf: memref<1xi32>) {

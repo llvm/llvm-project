@@ -20,7 +20,7 @@ define bfloat @test_prdx_fmla(<1 x bfloat> %acc, <1 x bfloat> %in) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %prdx = call <1 x bfloat> @llvm.vector.partial.reduce.fadd(<1 x bfloat> %acc, <1 x bfloat> %in)
   %res = extractelement <1 x bfloat> %prdx, i32 0
@@ -151,7 +151,7 @@ define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %prdx = call <1 x bfloat> @llvm.vector.partial.reduce.fadd(<1 x bfloat> %acc, <8 x bfloat> %in)
   %res = extractelement <1 x bfloat> %prdx, i32 0

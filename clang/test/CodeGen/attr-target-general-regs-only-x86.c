@@ -1,7 +1,9 @@
 // Test general-regs-only target attribute on x86
 
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 
 // CHECK: define{{.*}} void @f() [[GPR_ATTRS:#[0-9]+]]
 void __attribute__((target("general-regs-only"))) f(void) { }

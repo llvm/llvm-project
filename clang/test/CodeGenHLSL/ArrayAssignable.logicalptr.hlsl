@@ -45,10 +45,10 @@ cbuffer CBArrays : register(b0) {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign1v.Arr, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign1v.Arr, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ARR2]], i8 0, i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[ARR2]], i8 0, i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 8, i1 false)
 // CHECK-SPIR-NEXT:    ret void
 //
 void arr_assign1() {
@@ -76,13 +76,13 @@ void arr_assign1() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign2v.Arr, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign2v.Arr, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ARR2]], i8 0, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[ARR2]], i8 0, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR3:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign2v.Arr3, i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign2v.Arr3, i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 8, i1 false)
 // CHECK-SPIR-NEXT:    ret void
 //
 void arr_assign2() {
@@ -108,10 +108,10 @@ void arr_assign2() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign3v.Arr2, i64 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign3v.Arr2, i32 16, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR3:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign3v.Arr3, i64 16, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i64 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign3v.Arr3, i32 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i32 16, i1 false)
 // CHECK-SPIR-NEXT:    ret void
 //
 void arr_assign3() {
@@ -138,11 +138,11 @@ void arr_assign3() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign4v.Arr, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign4v.Arr, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ARR2]], i8 0, i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 8, i1 false)
-// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[ARR]], i64 0)
+// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[ARR2]], i8 0, i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 8, i1 false)
+// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[ARR]], i32 0)
 // CHECK-SPIR-NEXT:    store i32 6, ptr [[TMP1]], align 4
 // CHECK-SPIR-NEXT:    ret void
 //
@@ -173,14 +173,14 @@ void arr_assign4() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign5v.Arr, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign5v.Arr, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ARR2]], i8 0, i64 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[ARR2]], i8 0, i32 8, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR3:%.*]] = call elementtype([2 x i32]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign5v.Arr3, i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i64 8, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 8, i1 false)
-// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[ARR]], i64 0)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR3]], ptr align 4 @__const._Z11arr_assign5v.Arr3, i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 [[ARR3]], i32 8, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 8, i1 false)
+// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[ARR]], i32 0)
 // CHECK-SPIR-NEXT:    store i32 6, ptr [[TMP1]], align 4
 // CHECK-SPIR-NEXT:    ret void
 //
@@ -210,12 +210,12 @@ void arr_assign5() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign6v.Arr, i64 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign6v.Arr, i32 16, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign6v.Arr2, i64 16, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 16, i1 false)
-// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [2 x i32]]) [[ARR]], i64 0)
-// CHECK-SPIR-NEXT:    [[TMP2:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[TMP1]], i64 0)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign6v.Arr2, i32 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 16, i1 false)
+// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [2 x i32]]) [[ARR]], i32 0)
+// CHECK-SPIR-NEXT:    [[TMP2:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[TMP1]], i32 0)
 // CHECK-SPIR-NEXT:    store i32 6, ptr [[TMP2]], align 4
 // CHECK-SPIR-NEXT:    ret void
 //
@@ -245,13 +245,13 @@ void arr_assign6() {
 // CHECK-SPIR-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIR-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIR-NEXT:    [[ARR:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign7v.Arr, i64 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z11arr_assign7v.Arr, i32 16, i1 false)
 // CHECK-SPIR-NEXT:    [[ARR2:%.*]] = call elementtype([2 x [2 x i32]]) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign7v.Arr2, i64 16, i1 false)
-// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i64 16, i1 false)
-// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [2 x i32]]) [[ARR]], i64 0)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR2]], ptr align 4 @__const._Z11arr_assign7v.Arr2, i32 16, i1 false)
+// CHECK-SPIR-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 [[ARR2]], i32 16, i1 false)
+// CHECK-SPIR-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x [2 x i32]]) [[ARR]], i32 0)
 // CHECK-SPIR-NEXT:    store i32 6, ptr [[TMP1]], align 4
-// CHECK-SPIR-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[TMP1]], i64 1)
+// CHECK-SPIR-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x i32]) [[TMP1]], i32 1)
 // CHECK-SPIR-NEXT:    store i32 6, ptr [[ARRAYINIT_ELEMENT]], align 4
 // CHECK-SPIR-NEXT:    ret void
 //

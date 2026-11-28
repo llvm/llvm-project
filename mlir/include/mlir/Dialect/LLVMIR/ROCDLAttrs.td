@@ -20,6 +20,7 @@ include "mlir/IR/EnumAttr.td"
 
 class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/ROCDLDialect.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -84,6 +85,9 @@ def ROCDL_WMMACModifierAttr
 def ROCDL_SchedGroupMaskAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_SchedGroupMask,
                                      "sched_group_mask">;
+
+def ROCDL_AsyncStagesAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_AsyncStages, "async_stages">;
 
 def ROCDL_PreGfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_PreGfx12CachePolicy,

@@ -28,27 +28,17 @@
 
 #if defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
+typedef unsigned _Unwind_SjLj_Word __attribute__((__mode__(__unwind_word__)));
+
 struct _Unwind_FunctionContext {
   // next function in stack of handlers
   struct _Unwind_FunctionContext *prev;
 
-#if defined(__ve__)
-  // VE requires to store 64 bit pointers in the buffer for SjLj exception.
-  // We expand the size of values defined here.  This size must be matched
-  // to the size returned by TargetMachine::getSjLjDataSize().
-
   // set by calling function before registering to be the landing pad
-  uint64_t                        resumeLocation;
+  int resumeLocation;
 
   // set by personality handler to be parameters passed to landing pad function
-  uint64_t                        resumeParameters[4];
-#else
-  // set by calling function before registering to be the landing pad
-  uint32_t                        resumeLocation;
-
-  // set by personality handler to be parameters passed to landing pad function
-  uint32_t                        resumeParameters[4];
-#endif
+  _Unwind_SjLj_Word resumeParameters[4];
 
   // set by calling function before registering
   _Unwind_Personality_Fn personality;          // arm offset=24
@@ -420,7 +410,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetGR(struct _Unwind_Context *context,
   _LIBUNWIND_TRACE_API("_Unwind_GetGR(context=%p, reg=%d)", (void *)context,
                        index);
   _Unwind_FunctionContext_t ufc = (_Unwind_FunctionContext_t) context;
-  return ufc->resumeParameters[index];
+  return (uintptr_t)ufc->resumeParameters[index];
 }
 
 
@@ -439,8 +429,8 @@ _LIBUNWIND_EXPORT void _Unwind_SetGR(struct _Unwind_Context *context, int index,
 _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   _Unwind_FunctionContext_t ufc = (_Unwind_FunctionContext_t) context;
   _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIxPTR,
-                       (void *)context, ufc->resumeLocation + 1);
-  return ufc->resumeLocation + 1;
+                       (void *)context, (uintptr_t)(ufc->resumeLocation + 1));
+  return (uintptr_t)(ufc->resumeLocation + 1);
 }
 
 
@@ -453,8 +443,8 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIPInfo(struct _Unwind_Context *context,
   *ipBefore = 0;
   _LIBUNWIND_TRACE_API("_Unwind_GetIPInfo(context=%p, %p) => 0x%" PRIxPTR,
                        (void *)context, (void *)ipBefore,
-                       ufc->resumeLocation + 1);
-  return ufc->resumeLocation + 1;
+                       (uintptr_t)(ufc->resumeLocation + 1));
+  return (uintptr_t)(ufc->resumeLocation + 1);
 }
 
 
@@ -464,7 +454,7 @@ _LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
   _LIBUNWIND_TRACE_API("_Unwind_SetIP(context=%p, value=0x%" PRIxPTR ")",
                        (void *)context, new_value);
   _Unwind_FunctionContext_t ufc = (_Unwind_FunctionContext_t) context;
-  ufc->resumeLocation = new_value - 1;
+  ufc->resumeLocation = (int)(new_value - 1);
 }
 
 

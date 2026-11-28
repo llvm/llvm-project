@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -552,34 +553,11 @@ static APInt defaultComponentBroadcast(Value *V) {
   return DemandedElts;
 }
 
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
-                                                    IntrinsicInst &II,
-                                                    APInt DemandedElts,
-                                                    int DMaskIdx = -1,
-                                                    bool IsLoad = true);
-
 /// Return true if it's legal to contract llvm.amdgcn.rcp(llvm.sqrt)
 static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
   return (SqrtOp->getType()->isFloatTy() &&
           (SqrtOp->hasApproxFunc() || SqrtOp->getFPAccuracy() >= 1.0f)) ||
          SqrtOp->getType()->isHalfTy();
-}
-
-/// Return true if we can easily prove that use U is uniform.
-static bool isTriviallyUniform(const Use &U) {
-  Value *V = U.get();
-  if (isa<Constant>(V))
-    return true;
-  if (const auto *A = dyn_cast<Argument>(V))
-    return AMDGPU::isArgPassedInSGPR(A);
-  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
-      return false;
-    // If II and U are in different blocks then there is a possibility of
-    // temporal divergence.
-    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
-  }
-  return false;
 }
 
 /// Simplify a lane index operand (e.g. llvm.amdgcn.readlane src1).
@@ -611,6 +589,26 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   }
 
   return false;
+}
+
+/// Simplify the f32 scale operand of a V_CVT_SCALEF32_* conversion, of which
+/// only the exponent field is read.
+static bool simplifyExponentOnlyScaleArg(InstCombiner &IC, IntrinsicInst &II,
+                                         unsigned ScaleArgIdx) {
+  Value *Scale = II.getArgOperand(ScaleArgIdx);
+  Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Scale);
+  if (StrippedSign != Scale) {
+    IC.replaceOperand(II, ScaleArgIdx, StrippedSign);
+    return true;
+  }
+
+  auto *BC = dyn_cast<BitCastInst>(Scale);
+  if (!BC || !BC->hasOneUse() || !BC->getSrcTy()->isIntegerTy(32))
+    return false;
+
+  KnownBits Known(32);
+  return IC.SimplifyDemandedBits(
+      BC, 0, AMDGPU::getExponentOnlyScaleDemandedBits(), Known);
 }
 
 static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
@@ -731,9 +729,9 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   if (isa<BinaryOperator>(OpInst)) {
     // FIXME: If we had access to UniformityInfo here we could just check
     // if the operand is uniform.
-    if (isTriviallyUniform(OpInst->getOperandUse(0)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(0)))
       return DoIt(1, II.getCalledFunction());
-    if (isTriviallyUniform(OpInst->getOperandUse(1)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(1)))
       return DoIt(0, II.getCalledFunction());
   }
 
@@ -938,7 +936,7 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
   unsigned AndMask = 0, OrMask = 0, XorMask = 0;
   for (unsigned B = 0; B < 5; ++B) {
     unsigned Bit0 = (Ids[0] >> B) & 1;
-    unsigned Bit1 = (Ids[1u << B] >> B) & 1;
+    unsigned Bit1 = (Ids[1ull << B] >> B) & 1;
     if (Bit0 != Bit1) {
       AndMask |= 1u << B;
       XorMask |= Bit0 << B;
@@ -1572,8 +1570,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     bool IsCompr = IID == Intrinsic::amdgcn_exp_compr;
     bool Changed = false;
     for (int I = 0; I < (IsCompr ? 2 : 4); ++I) {
-      if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
-          (IsCompr && ((EnBits & (0x3 << (2 * I))) == 0))) {
+      if ((!IsCompr && (EnBits & (1ULL << I)) == 0) ||
+          (IsCompr && ((EnBits & (0x3ULL << (2 * I))) == 0))) {
         Value *Src = II.getArgOperand(I + 2);
         if (!isa<PoisonValue>(Src)) {
           IC.replaceOperand(II, I + 2, PoisonValue::get(Src->getType()));
@@ -1821,6 +1819,40 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id: {
+    const Function &F = *II.getFunction();
+
+    AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+    if (!ClusterDims.isFixedDims())
+      break;
+
+    const auto &Dims = ClusterDims.getDims();
+    if (Dims[0] == 0 || Dims[1] == 0 || Dims[2] == 0)
+      break;
+
+    unsigned MaxID;
+    switch (IID) {
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+      MaxID = Dims[0] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+      MaxID = Dims[1] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+      MaxID = Dims[2] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
+      MaxID = Dims[0] * Dims[1] * Dims[2] - 1;
+      break;
+    default:
+      llvm_unreachable("Unexpected cluster size intrinsic");
+    }
+
+    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), MaxID));
+  }
   case Intrinsic::amdgcn_wavefrontsize: {
     if (ST->isWaveSizeKnown())
       return IC.replaceInstUsesWith(
@@ -1915,7 +1947,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // If the data argument is uniform these intrinsics return it unchanged.
     unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
     const Use &Src = II.getArgOperandUse(SrcIdx);
-    if (isTriviallyUniform(Src))
+    if (AMDGPU::isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
     if (IID == Intrinsic::amdgcn_readlane &&
@@ -1927,7 +1959,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // readlane is AlwaysUniform.
     if (IID == Intrinsic::amdgcn_ds_bpermute) {
       const Use &Lane = II.getArgOperandUse(0);
-      if (isTriviallyUniform(Lane)) {
+      if (AMDGPU::isTriviallyUniform(Lane)) {
         Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
         Function *NewDecl = Intrinsic::getOrInsertDeclaration(
             II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
@@ -1949,7 +1981,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wave_match_b32: {
     const Use &Src0 = II.getArgOperandUse(0);
     const Use &Src1 = II.getArgOperandUse(1);
-    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
+    if (Src0.get() == Src1.get() && AMDGPU::isTriviallyUniform(Src0)) {
       Function *NewF = Intrinsic::getOrInsertDeclaration(
           II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
       CallInst *NewCall =
@@ -2220,11 +2252,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     else
       break;
 
-    int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
-    if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
-                                              false)) {
+    if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts))
       return IC.eraseInstFromFunction(II);
-    }
 
     break;
   }
@@ -2339,6 +2368,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
     return simplifyAMDGCNImageIntrinsic(ST, ImageDimIntr, II, IC);
   }
+  if (std::optional<unsigned> ScaleArgIdx =
+          AMDGPU::getExponentOnlyScaleArgIdx(IID)) {
+    if (simplifyExponentOnlyScaleArg(IC, II, *ScaleArgIdx))
+      return &II;
+  }
   return std::nullopt;
 }
 
@@ -2349,10 +2383,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 /// image and buffer loads.
 /// Note: This only supports non-TFE/LWE image intrinsic calls; those have
 ///       struct returns.
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
-                                                    IntrinsicInst &II,
-                                                    APInt DemandedElts,
-                                                    int DMaskIdx, bool IsLoad) {
+Value *GCNTTIImpl::simplifyAMDGCNMemoryIntrinsicDemanded(
+    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts) const {
+  // Only stores return void here; image stores take the dmask after the
+  // stored value.
+  const bool IsLoad = !II.getType()->isVoidTy();
+  int DMaskIdx = -1;
+  if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()))
+    DMaskIdx = IsLoad ? 0 : 1;
 
   auto *IIVTy = cast<FixedVectorType>(IsLoad ? II.getType()
                                              : II.getOperand(0)->getType());
@@ -2366,6 +2404,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   // Assume the arguments are unchanged and later override them, if needed.
   SmallVector<Value *, 16> Args(II.args());
+  uint64_t OffsetAdd = 0;
 
   if (DMaskIdx < 0) {
     // Buffer case.
@@ -2379,42 +2418,57 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     DemandedElts = (1 << ActiveBits) - 1;
 
     if (UnusedComponentsAtFront > 0) {
-      static const unsigned InvalidOffsetIdx = 0xf;
+      const AMDGPU::BufferIntrinsicInfo *BufInfo =
+          AMDGPU::lookupBufferIntrinsic(II.getIntrinsicID());
+      // buffer_load_format takes its format from the resource, which is
+      // unknown here.
+      bool CanAdjustOffset = BufInfo &&
+                             (BufInfo->Kind == AMDGPU::BufferKindLoad ||
+                              BufInfo->Kind == AMDGPU::BufferKindSLoad) &&
+                             !BufInfo->isFormatFromRsrc();
+      // If resulting type is vec3, there is no point in trimming the scalar
+      // load with updated offset, as the vec3 would most likely be widened to
+      // vec4 anyway during lowering.
+      if (CanAdjustOffset && BufInfo->Kind == AMDGPU::BufferKindSLoad &&
+          ActiveBits == 4 && UnusedComponentsAtFront == 1)
+        CanAdjustOffset = false;
 
-      unsigned OffsetIdx;
-      switch (II.getIntrinsicID()) {
-      case Intrinsic::amdgcn_raw_buffer_load:
-      case Intrinsic::amdgcn_raw_ptr_buffer_load:
-        OffsetIdx = 1;
-        break;
-      case Intrinsic::amdgcn_s_buffer_load:
-      case Intrinsic::amdgcn_ptr_s_buffer_load:
-        // If resulting type is vec3, there is no point in trimming the
-        // load with updated offset, as the vec3 would most likely be widened to
-        // vec4 anyway during lowering.
-        if (ActiveBits == 4 && UnusedComponentsAtFront == 1)
-          OffsetIdx = InvalidOffsetIdx;
-        else
-          OffsetIdx = 1;
-        break;
-      case Intrinsic::amdgcn_struct_buffer_load:
-      case Intrinsic::amdgcn_struct_ptr_buffer_load:
-        OffsetIdx = 2;
-        break;
-      default:
-        // TODO: handle tbuffer* intrinsics.
-        OffsetIdx = InvalidOffsetIdx;
-        break;
+      // Set for tbuffer loads, whose component size comes from the format.
+      unsigned FormatBitsPerComp = 0;
+      if (CanAdjustOffset && BufInfo->isTyped()) {
+        const unsigned FormatIdx = *BufInfo->getFormatArg();
+        // The format describes the whole element, so also drop the leading
+        // components from it to keep the element ending at the same byte.
+        // Lanes past the end of the format are filled in by the hardware
+        // rather than loaded; leave such loads alone.
+        const AMDGPU::GcnBufferFormatInfo *OldFormat =
+            AMDGPU::getGcnBufferFormatInfo(
+                cast<ConstantInt>(Args[FormatIdx])->getZExtValue(), *ST);
+        const AMDGPU::GcnBufferFormatInfo *NewFormat = nullptr;
+        if (OldFormat && ActiveBits <= OldFormat->NumComponents)
+          NewFormat = AMDGPU::getGcnBufferFormatInfo(
+              OldFormat->BitsPerComp,
+              OldFormat->NumComponents - UnusedComponentsAtFront,
+              OldFormat->NumFormat, *ST);
+        if (NewFormat) {
+          Args[FormatIdx] =
+              ConstantInt::get(Args[FormatIdx]->getType(), NewFormat->Format);
+          FormatBitsPerComp = OldFormat->BitsPerComp;
+        } else {
+          CanAdjustOffset = false;
+        }
       }
 
-      if (OffsetIdx != InvalidOffsetIdx) {
+      if (CanAdjustOffset) {
+        unsigned OffsetIdx = BufInfo->getOffsetArg();
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];
         uint64_t SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
-        uint64_t OffsetAdd =
-            UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
+            FormatBitsPerComp
+                ? FormatBitsPerComp
+                : IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
+        OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
       }
@@ -2488,6 +2542,18 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   NewCall->copyMetadata(II);
   AttributeList OldAttrList = II.getAttributes();
   NewCall->setAttributes(OldAttrList);
+
+  if (OffsetAdd != 0) {
+    unsigned RsrcArg =
+        AMDGPU::lookupRsrcIntrinsic(II.getIntrinsicID())->RsrcArg;
+    if (MaybeAlign RsrcAlign = NewCall->getParamAlign(RsrcArg)) {
+      NewCall->removeParamAttr(RsrcArg, Attribute::Alignment);
+      NewCall->addParamAttr(
+          RsrcArg,
+          Attribute::getWithAlignment(NewCall->getContext(),
+                                      commonAlignment(*RsrcAlign, OffsetAdd)));
+    }
+  }
 
   if (IsLoad) {
     if (NewNumElts == 1) {
@@ -2587,27 +2653,15 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_readfirstlane:
     SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
     return simplifyAMDGCNLaneIntrinsicDemanded(IC, II, DemandedElts, UndefElts);
-  case Intrinsic::amdgcn_raw_buffer_load:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load:
-  case Intrinsic::amdgcn_raw_buffer_load_format:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
-  case Intrinsic::amdgcn_raw_tbuffer_load:
-  case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
-  case Intrinsic::amdgcn_s_buffer_load:
-  case Intrinsic::amdgcn_ptr_s_buffer_load:
-  case Intrinsic::amdgcn_struct_buffer_load:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load:
-  case Intrinsic::amdgcn_struct_buffer_load_format:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
-  case Intrinsic::amdgcn_struct_tbuffer_load:
-  case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
-  default: {
-    if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
-      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, 0);
-    }
+  default:
+    if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+            AMDGPU::lookupBufferIntrinsic(II.getIntrinsicID());
+        BufInfo && (BufInfo->Kind == AMDGPU::BufferKindLoad ||
+                    BufInfo->Kind == AMDGPU::BufferKindSLoad))
+      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+    if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()))
+      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
     break;
-  }
   }
   return std::nullopt;
 }

@@ -31,6 +31,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
@@ -974,6 +976,31 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   return newResults;
 }
 
+bool mlir::scf::isShapePreserving(ForOp forOp, int64_t arg) {
+  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
+         "arg is out of bounds");
+  Value value = forOp.getYieldedValues()[arg];
+  while (value) {
+    if (value == forOp.getRegionIterArgs()[arg])
+      return true;
+    OpResult opResult = dyn_cast<OpResult>(value);
+    if (!opResult)
+      return false;
+
+    value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
+                .Case([&](DestinationStyleOpInterface op) {
+                  return op.getTiedOpOperand(opResult)->get();
+                })
+                .Case([&](ForOp forOp) {
+                  return isShapePreserving(forOp, opResult.getResultNumber())
+                             ? forOp.getInitArgs()[opResult.getResultNumber()]
+                             : Value();
+                })
+                .Default(nullptr);
+  }
+  return false;
+}
+
 namespace {
 /// Fold scf.for iter_arg/result pairs that go through incoming/ougoing
 /// a tensor.cast op pair so as to pull the tensor.cast inside the scf.for:
@@ -982,8 +1009,9 @@ namespace {
 ///   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0)
 ///      -> (tensor<?x?xf32>) {
-///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     scf.yield %2 : tensor<?x?xf32>
+///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     %3 = tensor.cast %2 : tensor<32x1024xf32> to tensor<?x?xf32>
+///     scf.yield %3 : tensor<?x?xf32>
 ///   }
 ///   use_of(%1)
 /// ```
@@ -994,9 +1022,8 @@ namespace {
 ///   %0 = scf.for %arg2 = %c0 to %c1024 step %c32 iter_args(%arg3 = %arg0)
 ///       -> (tensor<32x1024xf32>) {
 ///     %2 = tensor.cast %arg3 : tensor<32x1024xf32> to tensor<?x?xf32>
-///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     %4 = tensor.cast %3 : tensor<?x?xf32> to tensor<32x1024xf32>
-///     scf.yield %4 : tensor<32x1024xf32>
+///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     scf.yield %3 : tensor<32x1024xf32>
 ///   }
 ///   %1 = tensor.cast %0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   use_of(%1)
@@ -1019,6 +1046,18 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
               incomingCast.getSource().getType()))
         continue;
       if (!std::get<1>(it).hasOneUse())
+        continue;
+      // The fold casts the yielded value to the cast's source type, which is
+      // only valid if every iteration yields a value of that type. A dynamic
+      // dimension of that type stays dynamic, so its size may still change
+      // between iterations; only the static sizes are asserted.
+      int64_t resultNumber = std::get<1>(it).getResultNumber();
+      auto yieldedCast =
+          op.getYieldedValues()[resultNumber].getDefiningOp<tensor::CastOp>();
+      bool yieldsStaticType =
+          yieldedCast && yieldedCast.getSource().getType() ==
+                             incomingCast.getSource().getType();
+      if (!yieldsStaticType && !isShapePreserving(op, resultNumber))
         continue;
 
       // Create a new ForOp with that iter operand replaced.
@@ -1695,7 +1734,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     newOp = ForallOp::create(rewriter, loc, newMixedLowerBounds,
                              newMixedUpperBounds, newMixedSteps,
                              op.getOutputs(), std::nullopt, nullptr);
-    newOp.getBodyRegion().getBlocks().clear();
+    rewriter.eraseBlock(newOp.getBody());
     newOp.setMappingAttr(op.getMappingAttr());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
@@ -1726,6 +1765,82 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
       rewriter.replaceAllUsesWith(
           iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
       changed = true;
+    }
+    return success(changed);
+  }
+};
+
+/// Replace a read of the init value of a shared_outs in the body with a read of
+/// the tied block argument, when the read is a tensor.extract_slice of a tile
+/// that the iteration also writes with a tensor.parallel_insert_slice. This
+/// lets bufferization read and write the tile in place, without copying the
+/// whole tensor.
+///
+/// Reads of other tiles are left alone, because other iterations may update
+/// them in the block argument but not in the init value.
+///
+/// Example:
+///  INPUT:
+///   scf.forall (%i) ... shared_outs(%arg1 = %a) {
+///     tensor.extract_slice %a[%i] [1]
+///     ...
+///     scf.forall.in_parallel {
+///       tensor.parallel_insert_slice ... into %arg1[%i] [1]
+///     }
+///   }
+///
+///  OUTPUT:
+///   scf.forall (%i) ... shared_outs(%arg1 = %a) {
+///     tensor.extract_slice %arg1[%i] [1]
+///     ...
+///     scf.forall.in_parallel {
+///       tensor.parallel_insert_slice ... into %arg1[%i] [1]
+///     }
+///   }
+struct ForallOpReplaceInitUsesWithBlockArg : public OpRewritePattern<ForallOp> {
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  /// Whether `slice` is provably equivalent to one of `candidates`.
+  static bool isEquivalentToAny(MLIRContext *ctx,
+                                const HyperrectangularSlice &slice,
+                                ArrayRef<HyperrectangularSlice> candidates) {
+    return llvm::any_of(candidates, [&](const HyperrectangularSlice &other) {
+      FailureOr<bool> equivalent =
+          ValueBoundsConstraintSet::areEquivalentSlices(ctx, slice, other);
+      return succeeded(equivalent) && *equivalent;
+    });
+  }
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (OpResult result : op.getResults()) {
+      OpOperand *init = op.getTiedOpOperand(result);
+      BlockArgument blockArg = op.getTiedBlockArgument(init);
+      // The tiles of the shared_outs that the iteration writes.
+      SmallVector<HyperrectangularSlice> written = llvm::map_to_vector(
+          llvm::make_filter_range(op.getCombiningOps(blockArg),
+                                  llvm::IsaPred<tensor::ParallelInsertSliceOp>),
+          [](Operation *combiningOp) {
+            return HyperrectangularSlice(
+                cast<tensor::ParallelInsertSliceOp>(combiningOp));
+          });
+
+      // Whether `use` of the init reads, inside the body, one of those tiles.
+      auto isReadOfWrittenTile = [&](OpOperand &use) {
+        auto extractOp = dyn_cast<tensor::ExtractSliceOp>(use.getOwner());
+        return extractOp && op->isProperAncestor(extractOp) &&
+               isEquivalentToAny(op.getContext(),
+                                 HyperrectangularSlice(extractOp), written);
+      };
+      for (OpOperand &use : llvm::make_early_inc_range(llvm::make_filter_range(
+               init->get().getUses(), isReadOfWrittenTile))) {
+        // Read the block argument instead. Both are the same tensor here, and
+        // for the block argument bufferization can tell that the tile is read
+        // and written in place, with no copy.
+        rewriter.modifyOpInPlace(use.getOwner(), [&] { use.set(blockArg); });
+        changed = true;
+      }
     }
     return success(changed);
   }
@@ -1831,7 +1946,8 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<DimOfForallOp, FoldTensorCastOfOutputIntoForallOp,
               ForallOpControlOperandsFolder, ForallOpIterArgsFolder,
               ForallOpSingleOrZeroIterationDimsFolder,
-              ForallOpReplaceConstantInductionVar>(context);
+              ForallOpReplaceConstantInductionVar,
+              ForallOpReplaceInitUsesWithBlockArg>(context);
 }
 
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,
@@ -3628,6 +3744,78 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
   }
 };
 
+/// Simplify values that the condition forwards as a select on the condition:
+/// the do block only runs if the condition is true, and the loop only exits if
+/// it is false.
+///
+/// %res = scf.while (..) : (...) -> (i32, ...) {
+///   %condition = call @evaluate_condition() : () -> i1
+///   %v = arith.select %condition, %a, %b : i32
+///   scf.condition(%condition) %v, ... : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///   use(%arg0)
+///   ...
+/// }
+/// use(%res#0)
+///
+/// becomes, if %a and %b are defined outside of the loop,
+///
+/// %res = scf.while (..) : (...) -> (i32, ...) {
+///   %condition = call @evaluate_condition() : () -> i1
+///   %v = arith.select %condition, %a, %b : i32
+///   scf.condition(%condition) %a, ... : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///   use(%a)
+///   ...
+/// }
+/// use(%b)
+///
+/// More generally, once either the loop result or the do block argument has no
+/// uses, the condition forwards the value seen by the remaining uses (%a or %b)
+/// instead of the select, which may then fold away.
+struct WhileConditionSelect : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    ConditionOp term = op.getConditionOp();
+    Value condition = term.getCondition();
+    bool changed = false;
+    for (auto [idx, arg, afterArg, result] : llvm::enumerate(
+             term.getArgs(), op.getAfterArguments(), op.getResults())) {
+      auto select = arg.getDefiningOp<arith::SelectOp>();
+      if (!select || select.getCondition() != condition)
+        continue;
+      Value trueValue = select.getTrueValue();
+      Value falseValue = select.getFalseValue();
+      if (!afterArg.use_empty() && op.isDefinedOutsideOfLoop(trueValue)) {
+        rewriter.replaceAllUsesWith(afterArg, trueValue);
+        changed = true;
+      }
+      if (!result.use_empty() && falseValue != result &&
+          op.isDefinedOutsideOfLoop(falseValue)) {
+        rewriter.replaceAllUsesWith(result, falseValue);
+        changed = true;
+      }
+      // Forward the value that the remaining uses see.
+      Value forwarded;
+      if (result.use_empty())
+        forwarded = trueValue;
+      else if (afterArg.use_empty())
+        forwarded = falseValue;
+      if (forwarded && forwarded != arg) {
+        size_t condIdx = idx;
+        rewriter.modifyOpInPlace(
+            term, [&] { term.getArgsMutable()[condIdx].set(forwarded); });
+        changed = true;
+      }
+    }
+    return success(changed);
+  }
+};
+
 /// Replace operations equivalent to the condition in the do block with true,
 /// since otherwise the block would not be evaluated.
 ///
@@ -3782,8 +3970,8 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
 
 void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<WhileConditionTruth, WhileCmpCond, WhileOpAlignBeforeArgs,
-              WhileMoveIfDown>(context);
+  results.add<WhileConditionTruth, WhileConditionSelect, WhileCmpCond,
+              WhileOpAlignBeforeArgs, WhileMoveIfDown>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, WhileOp::getOperationName());
   populateRegionBranchOpInterfaceInliningPattern(results,

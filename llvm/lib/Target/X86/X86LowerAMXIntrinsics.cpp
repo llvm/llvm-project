@@ -46,10 +46,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
 #define DEBUG_TYPE "x86-lower-amx-intrinsics"
 
 #ifndef NDEBUG
@@ -127,17 +123,15 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
   auto *BR = CondBrInst::Create(Cond, Header, Exit, Latch);
-  if (!ProfcheckDisableMetadataFixes) {
-    if (auto *BoundInt = dyn_cast<ConstantInt>(Bound)) {
-      assert(Step->getZExtValue() != 0 &&
-             "Expected a non-zero step size. This is chosen by the pass and "
-             "should always be non-zero to imply a finite loop.");
-      MDBuilder MDB(Preheader->getContext());
-      setFittedBranchWeights(
-          *BR, {BoundInt->getZExtValue() / Step->getZExtValue(), 1}, false);
-    } else {
-      setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
-    }
+  if (auto *BoundInt = dyn_cast<ConstantInt>(Bound)) {
+    assert(Step->getZExtValue() != 0 &&
+           "Expected a non-zero step size. This is chosen by the pass and "
+           "should always be non-zero to imply a finite loop.");
+    MDBuilder MDB(Preheader->getContext());
+    setFittedBranchWeights(
+        *BR, {BoundInt->getZExtValue() / Step->getZExtValue(), 1}, false);
+  } else {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
   }
   IV->addIncoming(Inc, Latch);
 

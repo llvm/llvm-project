@@ -2015,7 +2015,10 @@ entry:
 define void @ldi_d(ptr %ptr) {
 ; MSA32-LABEL: ldi_d:
 ; MSA32:       # %bb.0: # %entry
-; MSA32-NEXT:    ldi.d $w0, 3
+; MSA32-NEXT:    ori $1, $zero, 3
+; MSA32-NEXT:    fill.w $w0, $zero
+; MSA32-NEXT:    insert.w $w0[1], $1
+; MSA32-NEXT:    splati.d $w0, $w0[0]
 ; MSA32-NEXT:    jr $ra
 ; MSA32-NEXT:    st.w $w0, 0($4)
 ;

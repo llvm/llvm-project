@@ -29,7 +29,7 @@ see the {doc}`CMakePrimer` page. It has a basic overview of the CMake language.
 We use here the command-line, non-interactive CMake interface.
 
 1. [Download](http://www.cmake.org/cmake/resources/software.html) and install
-   CMake. Version 3.20.0 is the minimum required.
+   CMake. Version 3.31.0 is the minimum required.
 
 2. Open a shell. Your development tools must be reachable from this shell
    through the `PATH` environment variable.
@@ -584,13 +584,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     is passed to invocations of both so that the project is built using libc++
     instead of stdlibc++. Defaults to OFF.
 
-**LLVM_ENABLE_LIBEDIT**:BOOL
+**LLVM_ENABLE_LIBEDIT**:STRING
 
 :   Controls whether to enable libedit support for command-line editing and
-    history in LLVM tools. When `ON`, forces libedit support to be enabled and
-    will cause a CMake configuration error if libedit cannot be found. When
-    `OFF`, disables libedit support entirely. If not specified, LLVM will
-    auto-detect libedit availability. Defaults to auto-detection.
+    history in LLVM tools. When `FORCE_ON`, forces libedit support to be
+    enabled and will cause a CMake configuration error if libedit cannot be
+    found. When `OFF`, disables libedit support entirely. If not specified or
+    set to `ON`, LLVM will auto-detect libedit availability. Defaults to `ON`.
 
 **LLVM_ENABLE_LIBPFM**:BOOL
 
@@ -1002,8 +1002,8 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     runs each command as `/path/to/launcher --config=/path/to/config <tablegen> ...`.
     The launcher must support the generator being invoked and is responsible
     for any input discovery and execution environment it requires. This also
-    applies to other generators invoked through the `tablegen()` CMake
-    function, such as MLIR source sharding.
+    applies to other generators invoked through the `tablegen_internal()`
+    CMake function, such as MLIR source sharding.
 
 **LLVM_TARGET_ARCH**:STRING
 
@@ -1203,7 +1203,7 @@ Here is a simple example of a `CMakeLists.txt` file that imports the LLVM librar
 and uses them to build a simple application `simple-tool`.
 
 ``` cmake
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.31.0)
 project(SimpleProject)
 
 find_package(LLVM REQUIRED CONFIG)

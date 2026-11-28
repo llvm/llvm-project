@@ -58,8 +58,7 @@ void f1(A *a) {
 // CIR:   %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[A]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>
-// CIR:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_PTR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
+// CIR:   %[[FN_PTR:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
 // CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A> {{.*}}, !s8i {{.*}}) -> ()
 
 // LLVM: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])

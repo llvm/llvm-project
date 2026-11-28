@@ -247,9 +247,9 @@ void SHA1::pad() {
     addUncounted(0x00);
 
   // Append length in the last 8 bytes
-  addUncounted(0); // We're only using 32 bit lengths
-  addUncounted(0); // But SHA-1 supports 64 bit lengths
-  addUncounted(0); // So zero pad the top bits
+  addUncounted(InternalState.ByteCount >> 53);
+  addUncounted(InternalState.ByteCount >> 45);
+  addUncounted(InternalState.ByteCount >> 37);
   addUncounted(InternalState.ByteCount >> 29); // Shifting to multiply by 8
   addUncounted(InternalState.ByteCount >>
                21); // as SHA-1 supports bitstreams as well as

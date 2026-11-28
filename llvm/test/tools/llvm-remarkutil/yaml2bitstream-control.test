@@ -1,0 +1,18 @@
+# Control characters survive a round trip through the bitstream format, both in
+# a single-line value and in a multi-line value that would otherwise be written
+# as a literal block scalar.
+# RUN: llvm-remarkutil yaml2bitstream %s -o %t.bitstream
+# RUN: llvm-remarkutil bitstream2yaml %t.bitstream -o - | FileCheck %s --strict-whitespace
+
+# CHECK:      Args:
+# CHECK-NEXT:   - String:          "a\x01b"
+# CHECK-NEXT:   - Block:           "abc\ndef\n\x01ghi"
+
+--- !Missed
+Pass:            pass
+Name:            name
+Function:        func
+Args:
+  - String:          "a\x01b"
+  - Block:           "abc\ndef\n\x01ghi"
+...

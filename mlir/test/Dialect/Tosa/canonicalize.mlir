@@ -2228,6 +2228,19 @@ func.func @canonicalize_tile_broadcast_mul(%arg0: tensor<1x197x768xf32>, %arg1: 
 
 // -----
 
+// CHECK-LABEL: @dont_canonicalize_tile_negative_multiple
+// CHECK: %[[TILE:.+]] = tosa.tile
+// CHECK: %[[ADD:.+]] = tosa.add %[[TILE]],
+// CHECK: return %[[ADD]]
+func.func @dont_canonicalize_tile_negative_multiple(%arg0: tensor<1xf32>, %arg1: tensor<4xf32>) -> tensor<4xf32> {
+  %multiples = tosa.const_shape values(dense<-2> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %tile = tosa.tile %arg0, %multiples : (tensor<1xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  %add = tosa.add %tile, %arg1 : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
+  return %add : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @dont_canonicalize_tile_when_result_no_longer_broadcastable
 // CHECK: tosa.tile
 // CHECK: tosa.sub

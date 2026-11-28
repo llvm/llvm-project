@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Regression coverage for free-function interlocked operations on a typed
 // resource subscript (RWBuffer<T>[i]). This exercises the
 // LangAS::hlsl_device branch of the dest-argument address-space check in

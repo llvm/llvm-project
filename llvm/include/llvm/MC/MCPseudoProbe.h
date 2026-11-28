@@ -109,7 +109,7 @@ public:
       return Desc.FuncGUID < GUID;
     };
     auto It = llvm::lower_bound(*this, GUID, CompareDesc);
-    if (It->FuncGUID != GUID)
+    if (It == end() || It->FuncGUID != GUID)
       return end();
     return It;
   }

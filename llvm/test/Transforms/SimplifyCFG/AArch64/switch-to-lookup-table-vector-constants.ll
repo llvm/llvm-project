@@ -8,7 +8,7 @@ define <2 x float> @switch_to_lookup_table_const_vector(i32 %c) {
 ; CHECK-SAME: i32 [[C:%.*]]) {
 ; CHECK-NEXT:  [[RET:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[C]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x <2 x float>], ptr @switch.table.switch_to_lookup_table_const_vector, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.switch_to_lookup_table_const_vector, i64 [[TMP0]]
 ; CHECK-NEXT:    [[PHI:%.*]] = load <2 x float>, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[PHI]]
 ;
@@ -41,7 +41,7 @@ define <4 x float> @switch_to_lookup_table_const_vector_splat(i32 %c) {
 ; CHECK-SAME: i32 [[C:%.*]]) {
 ; CHECK-NEXT:  [[RET:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[C]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x <4 x float>], ptr @switch.table.switch_to_lookup_table_const_vector_splat, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [16 x i8], ptr @switch.table.switch_to_lookup_table_const_vector_splat, i64 [[TMP0]]
 ; CHECK-NEXT:    [[PHI:%.*]] = load <4 x float>, ptr [[SWITCH_GEP]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[PHI]]
 ;

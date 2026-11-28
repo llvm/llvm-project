@@ -10,7 +10,6 @@
 # PR41790
 ---
 name: instruction_with_1virtreg_1physreg_defs
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-NOT: $rax = KILL implicit-def dead $rax
@@ -23,7 +22,6 @@ body: |
 # goes first and takes its hint $rax; %1 then takes $ecx.
 # Assigning %1 first would put it in $eax and leave %0 a copy out of $rax.
 name: partial_def_before_other_defs
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rax, $edx, $ecx

@@ -353,8 +353,8 @@ define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ucvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    ucvtf z2.s, p0/m, z2.s
 ; CHECK-NEXT:    ucvtf z3.s, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_v16i16_v16f32:
@@ -408,8 +408,8 @@ define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w8
 ; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -429,8 +429,8 @@ define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.s, p0/m, z1.s
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.s, p0/m, z2.s
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.s, p0/m, z3.s
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x float>
@@ -601,8 +601,8 @@ define void @ucvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ucvtf d0, w8
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -673,8 +673,8 @@ define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ucvtf z7.d, p0/m, z7.d
 ; CHECK-NEXT:    stp q3, q5, [x1]
 ; CHECK-NEXT:    stp q0, q4, [x1, #64]
-; CHECK-NEXT:    stp q1, q7, [x1, #32]
 ; CHECK-NEXT:    stp q2, q6, [x1, #96]
+; CHECK-NEXT:    stp q1, q7, [x1, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_v16i16_v16f64:
@@ -733,8 +733,8 @@ define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q2, q5, [sp, #128]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -775,8 +775,8 @@ define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z7.d, p0/m, z7.d
 ; USE-NEON-NO-GPRS-NEXT:    stp q3, q5, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q4, [x1, #64]
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
 ; USE-NEON-NO-GPRS-NEXT:    stp q2, q6, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x double>
@@ -933,9 +933,9 @@ define void @ucvtf_v16i32_v16f16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #40]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w9
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
@@ -1207,8 +1207,8 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    ucvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_v8i32_v8f64:
@@ -1238,8 +1238,8 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ucvtf d0, w8
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -1259,8 +1259,8 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.d, p0/m, z2.d
 ; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.d, p0/m, z3.d
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x double>
@@ -1379,9 +1379,9 @@ define <8 x half> @ucvtf_v8i64_v8f16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 80
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0, #32]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    stp q0, q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    str q2, [sp]
 ; NONEON-NOSVE-NEXT:    ucvtf s0, x9
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
@@ -1508,9 +1508,9 @@ define void @ucvtf_v8i64_v8f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #32]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ucvtf s1, x9
 ; NONEON-NOSVE-NEXT:    ucvtf s0, x8
@@ -1951,8 +1951,8 @@ define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    scvtf z2.s, p0/m, z2.s
 ; CHECK-NEXT:    scvtf z3.s, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i16_v16f32:
@@ -2006,8 +2006,8 @@ define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -2027,8 +2027,8 @@ define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z1.s, p0/m, z1.s
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z2.s, p0/m, z2.s
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z3.s, p0/m, z3.s
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x float>
@@ -2178,8 +2178,8 @@ define void @scvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -2250,8 +2250,8 @@ define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    scvtf z7.d, p0/m, z7.d
 ; CHECK-NEXT:    stp q3, q5, [x1]
 ; CHECK-NEXT:    stp q0, q4, [x1, #64]
-; CHECK-NEXT:    stp q1, q7, [x1, #32]
 ; CHECK-NEXT:    stp q2, q6, [x1, #96]
+; CHECK-NEXT:    stp q1, q7, [x1, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i16_v16f64:
@@ -2310,8 +2310,8 @@ define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q2, q5, [sp, #128]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -2352,8 +2352,8 @@ define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z7.d, p0/m, z7.d
 ; USE-NEON-NO-GPRS-NEXT:    stp q3, q5, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q4, [x1, #64]
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
 ; USE-NEON-NO-GPRS-NEXT:    stp q2, q6, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x double>
@@ -2689,8 +2689,8 @@ define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v8i32_v8f64:
@@ -2720,8 +2720,8 @@ define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -2741,8 +2741,8 @@ define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z2.d, p0/m, z2.d
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z3.d, p0/m, z3.d
-; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x double>
@@ -2781,9 +2781,9 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    scvtf z6.d, p0/m, z6.d
 ; CHECK-NEXT:    scvtf z7.d, p0/m, z7.d
 ; CHECK-NEXT:    stp q1, q4, [x1, #64]
-; CHECK-NEXT:    stp q5, q7, [x1]
 ; CHECK-NEXT:    stp q3, q6, [x1, #32]
 ; CHECK-NEXT:    stp q0, q2, [x1, #96]
+; CHECK-NEXT:    stp q5, q7, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i32_v16f64:
@@ -2795,8 +2795,8 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q3, q2, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp]
+; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp]
 ; NONEON-NOSVE-NEXT:    str q3, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #48]
@@ -2846,9 +2846,9 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #128]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [sp, #176]
 ; NONEON-NOSVE-NEXT:    stp q7, q6, [x1, #64]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    stp q4, q3, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q2, q5, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #272
 ; NONEON-NOSVE-NEXT:    ret
 ;
@@ -2882,9 +2882,9 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z6.d, p0/m, z6.d
 ; USE-NEON-NO-GPRS-NEXT:    scvtf z7.d, p0/m, z7.d
 ; USE-NEON-NO-GPRS-NEXT:    stp q1, q4, [x1, #64]
-; USE-NEON-NO-GPRS-NEXT:    stp q5, q7, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    stp q3, q6, [x1, #32]
 ; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    stp q5, q7, [x1]
 ; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x double>

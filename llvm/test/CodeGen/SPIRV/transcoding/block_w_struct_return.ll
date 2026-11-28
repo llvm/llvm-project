@@ -24,8 +24,8 @@
 ;; }
 
 ; CHECK-SPIRV1_4-DAG: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]] %[[#InterfaceId2:]]
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__spirv_BuiltInGlobalInvocationId"
 
 ; CHECK-SPIRV1_1: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]]
 ; CHECK-SPIRV1_1: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"

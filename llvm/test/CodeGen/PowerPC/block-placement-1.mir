@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu \
+# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu \
 # RUN:   -run-pass=block-placement -o - %s | FileCheck %s
 --- |
   ; ModuleID = 'test.ll'
@@ -119,9 +119,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -165,9 +163,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

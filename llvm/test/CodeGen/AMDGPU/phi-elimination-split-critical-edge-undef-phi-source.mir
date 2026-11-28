@@ -10,7 +10,6 @@
 
 ---
 name: split_critical_edge_undef_phi_source
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

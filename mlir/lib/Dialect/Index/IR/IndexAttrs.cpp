@@ -16,17 +16,6 @@ using namespace mlir;
 using namespace mlir::index;
 
 //===----------------------------------------------------------------------===//
-// IndexDialect
-//===----------------------------------------------------------------------===//
-
-void IndexDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Index/IR/IndexAttrs.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
 // ODS-Generated Declarations
 //===----------------------------------------------------------------------===//
 

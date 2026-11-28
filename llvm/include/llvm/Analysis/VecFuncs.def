@@ -1345,10 +1345,8 @@ TLI_DEFINE_VECFUNC("hypot", "Sleef_hypotdx_u05rvvm2", SCALABLE(2), NOMASK, "_ZGV
 TLI_DEFINE_VECFUNC("hypotf", "Sleef_hypotfx_u05rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
 
 TLI_DEFINE_VECFUNC("ilogb", "Sleef_ilogbdx_rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxv")
-TLI_DEFINE_VECFUNC("ilogbf", "Sleef_ilogbfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 
 TLI_DEFINE_VECFUNC("ldexp", "Sleef_ldexpdx_rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxvv")
-TLI_DEFINE_VECFUNC("ldexpf", "Sleef_ldexpfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
 
 TLI_DEFINE_VECFUNC("lgamma", "Sleef_lgammadx_u10rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("lgammaf", "Sleef_lgammafx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")

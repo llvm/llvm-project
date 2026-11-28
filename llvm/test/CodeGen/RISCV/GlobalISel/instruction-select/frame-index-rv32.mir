@@ -13,8 +13,6 @@
 name:            frame_index
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gprb, preferred-register: '' }
 stack:
   - { id: 0, name: x, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

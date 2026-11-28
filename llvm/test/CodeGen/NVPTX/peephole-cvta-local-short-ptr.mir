@@ -19,8 +19,8 @@ body: |
     ; FOLD: %1:b64 = LEA_ADDRi64 $vrframelocal64, 4
     ; FOLD-NOT: cvta_to_local_64
     ; NOFOLD: %0:b64 = LEA_ADDRi64 $vrframe64, 4
-    ; NOFOLD-NEXT: %1:b64 = cvta_to_local_64 killed %0
+    ; NOFOLD-NEXT: %1:b64 = cvta_to_local_64 %0
     %0:b64 = LEA_ADDRi64 $vrframe64, 4
-    %1:b64 = cvta_to_local_64 killed %0
+    %1:b64 = cvta_to_local_64 %0
     Return
 ...

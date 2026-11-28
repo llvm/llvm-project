@@ -730,6 +730,24 @@ LogicalResult SwitchOp::verify() {
                          << ") should match number of "
                             "case destinations ("
                          << caseDestinations.size() << ")";
+
+  // A repeated case value has no single destination, and LLVM IR rejects it.
+  if (caseValues) {
+    llvm::SmallDenseMap<APInt, unsigned> firstCase;
+    for (auto [index, value] :
+         llvm::enumerate(caseValues->getValues<APInt>())) {
+      auto [it, inserted] = firstCase.try_emplace(value, index);
+      if (inserted)
+        continue;
+      std::string asSigned = llvm::toString(value, 10, /*Signed=*/true);
+      std::string asUnsigned = llvm::toString(value, 10, /*Signed=*/false);
+      InFlightDiagnostic diag = emitOpError() << "case value " << asSigned;
+      if (asSigned != asUnsigned)
+        diag << " (unsigned " << asUnsigned << ")";
+      return diag << " is repeated (cases " << it->second << " and " << index
+                  << ")";
+    }
+  }
   return success();
 }
 

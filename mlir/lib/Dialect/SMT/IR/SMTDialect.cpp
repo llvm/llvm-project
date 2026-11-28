@@ -15,8 +15,6 @@ using namespace mlir;
 using namespace smt;
 
 void SMTDialect::initialize() {
-  registerAttributes();
-  registerTypes();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/SMT/IR/SMT.cpp.inc"

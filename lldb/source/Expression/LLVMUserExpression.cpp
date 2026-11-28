@@ -241,10 +241,11 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
     if (execution_result == lldb::eExpressionCompleted &&
         user_expression_plan->HitErrorBackstop()) {
-      lldb::ValueObjectSP error_sp =
-          user_expression_plan->GetReturnValueObject();
-      if (error_sp && error_sp->GetError().Success())
-        error_backstop_result_sp = error_sp;
+      ThreadPlanReturnValue return_value =
+          user_expression_plan->GetReturnValue();
+      if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+        if (returned->valobj_sp->GetError().Success())
+          error_backstop_result_sp = returned->valobj_sp;
     }
 
     if (execution_result == lldb::eExpressionThreadVanished) {

@@ -226,7 +226,7 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ; X64-LABEL: ashr_add_shl_v4i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pslld $24, %xmm0
-; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [16777216,16777216,16777216,16777216]
 ; X64-NEXT:    psrad $24, %xmm0
 ; X64-NEXT:    retq
   %conv = shl <4 x i32> %r, <i32 24, i32 24, i32 24, i32 24>
@@ -827,4 +827,58 @@ define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
   %res = shl i192 %or, 160
   store i192 %res, ptr %p, align 8
   ret void
+}
+
+; https://github.com/llvm/llvm-project/issues/231378
+define i32 @lshr_exact_narrow_shl(i32 %x, ptr %p) {
+; X86-LABEL: lshr_exact_narrow_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    andl $-4, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: lshr_exact_narrow_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $2, %ecx
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    retq
+  %z = zext i32 %x to i64
+  %s = lshr exact i64 %z, 2
+  %t = trunc i64 %s to i32
+  store volatile i32 %t, ptr %p
+  %r = shl i32 %t, 2
+  ret i32 %r
+}
+
+define i32 @lshr_narrow_shl(i32 %x, ptr %p) {
+; X86-LABEL: lshr_narrow_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    andl $-4, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: lshr_narrow_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $2, %ecx
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    andl $-4, %eax
+; X64-NEXT:    retq
+  %z = zext i32 %x to i64
+  %s = lshr i64 %z, 2
+  %t = trunc i64 %s to i32
+  store volatile i32 %t, ptr %p
+  %r = shl i32 %t, 2
+  ret i32 %r
 }

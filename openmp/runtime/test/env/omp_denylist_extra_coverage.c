@@ -3,6 +3,7 @@
 // RUN:   OMP_TOOL_LIBRARIES_ALL=libfoo.so \
 // RUN:   OMP_CANCELLATION_DEV=true \
 // RUN:   OMP_NUM_THREADS_ALL=8 \
+// RUN:   env -u OMP_NUM_THREADS \
 // RUN:   %libomp-run 2>&1 | FileCheck %s
 //
 // Denylist: suffixed global OMP_* warns; OMP_NUM_THREADS_ALL still applies.

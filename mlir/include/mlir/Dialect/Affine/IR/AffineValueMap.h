@@ -19,7 +19,6 @@
 
 namespace mlir {
 namespace affine {
-
 /// An AffineValueMap is an affine map plus its ML value operands and
 /// results for analysis purposes. The structure is still a tree form that is
 /// same as that of an affine map or an AffineApplyOp. However, its operands,
@@ -49,11 +48,27 @@ public:
   /// operands, but the result count remains the same.
   void composeSimplifyAndCanonicalize();
 
-  /// Return the value map that is the difference of value maps 'a' and 'b',
-  /// represented as an affine map and its operands. The output map + operands
-  /// are canonicalized and simplified.
+  /// Combine results from 'a' and 'b' using 'expr'. If 'pairwise' is true (the
+  /// default), apply 'expr' to the results of 'a' and 'b' at each matching
+  /// index; the result counts must be equal. Otherwise, apply 'expr' to the
+  /// Cartesian product of the results. The expression may refer only to d0 and
+  /// d1, which stand for the results of 'a' and 'b', respectively. The output
+  /// map and operands are composed, canonicalized, and simplified.
+  static void combine(const AffineValueMap &a, const AffineValueMap &b,
+                      AffineExpr expr, AffineValueMap *res,
+                      bool pairwise = true);
+
+  /// Subtract each result of 'b' from the result of 'a' at the same index; the
+  /// result counts must be equal. The output map and operands are composed,
+  /// canonicalized, and simplified.
   static void difference(const AffineValueMap &a, const AffineValueMap &b,
                          AffineValueMap *res);
+
+  /// Subtract results of 'b' from results of 'a' over their Cartesian product.
+  /// The output map and operands are composed, canonicalized, and simplified.
+  static void cartesianProductDifference(const AffineValueMap &a,
+                                         const AffineValueMap &b,
+                                         AffineValueMap *res);
 
   /// Return true if the idx^th result can be proved to be a multiple of
   /// 'factor', false otherwise.
@@ -101,7 +116,6 @@ private:
   /// The SSA results binding to the results of 'map'.
   SmallVector<Value, 4> results;
 };
-
 } // namespace affine
 } // namespace mlir
 

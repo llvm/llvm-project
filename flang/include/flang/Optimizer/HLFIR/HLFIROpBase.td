@@ -39,7 +39,7 @@ def hlfir_Dialect : Dialect {
     into sequence of lower level FIR operations operating on memory.
   }];
 
-  let useDefaultTypePrinterParser = 1;
+  let hasTypes = 1;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }

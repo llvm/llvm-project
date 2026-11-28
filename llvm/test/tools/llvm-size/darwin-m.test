@@ -29,6 +29,7 @@
 # DARWIN2-NEXT:total 48
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACE
   cputype:    0x0000000C
@@ -76,6 +77,7 @@ LoadCommands:
         reserved3: 0x00000000
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACE
   cputype:    0x0000000C

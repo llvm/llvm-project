@@ -341,28 +341,38 @@ std::string CharacterValueImpl::ToStdString() const {
       storage_);
 }
 
-CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
+// Not a nested lambda inside ToAscii: GCC 7 wrongly requires 'this' to be
+// captured there.
+template <typename FromStringT>
+static std::optional<CharacterValueImpl> StringToAscii(
+    int kind, const FromStringT &s) {
+  return CharacterValueImpl::WithCharProto(
+      kind, [&s](auto ct) -> std::optional<CharacterValueImpl> {
+        using CharT = std::decay_t<decltype(ct)>;
+        using StringT = std::basic_string<CharT>;
+
+        // Fortran character conversion is well defined between distinct
+        // kinds only when the actual characters are valid 7-bit ASCII.
+        StringT str;
+        for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
+          if (static_cast<std::uint64_t>(*iter) > 127) {
+            return std::nullopt;
+          }
+          str.push_back(static_cast<CharT>(*iter));
+        }
+        return CharacterValueImpl{sizeof(CharT), str};
+      });
+}
+
+std::optional<CharacterValueImpl> CharacterValueImpl::ToAscii(int kind) const {
   if (IsNull()) {
     return Zero(kind);
   }
 
-  return WithBasicString([kind](const auto &s) -> CharacterValueImpl {
-    return WithCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
-      using CharT = std::decay_t<decltype(ct)>;
-      using StringT = std::basic_string<CharT>;
-
-      // Fortran character conversion is well defined between distinct kinds
-      // only when the actual characters are valid 7-bit ASCII.
-      StringT str;
-      for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
-        if (static_cast<std::uint64_t>(*iter) > 127) {
-          return Zero(sizeof(ct));
-        }
-        str.push_back(static_cast<CharT>(*iter));
-      }
-      return CharacterValueImpl{sizeof(CharT), str};
-    });
-  });
+  return WithBasicString(
+      [kind](const auto &s) -> std::optional<CharacterValueImpl> {
+        return StringToAscii(kind, s);
+      });
 }
 
 void CharacterValueImpl::reserve(std::size_t n) {

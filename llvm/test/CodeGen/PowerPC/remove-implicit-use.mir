@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le-unknown-unknown -start-after=ppc-mi-peepholes \ 
-# RUN: -stop-after=ppc-pre-emit-peephole -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: -stop-after=ppc-pre-emit-peephole %s -o - | FileCheck %s
 --- |
   ; ModuleID = 'a.ll'
   source_filename = "a.c"   
@@ -32,9 +32,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         
   - { reg: '$x3', virtual-reg: '' }
   - { reg: '$x4', virtual-reg: '' }

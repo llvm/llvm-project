@@ -1,0 +1,61 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+  cir.func @fcmp_kinds(%arg0: !cir.float, %arg1: !cir.float) {
+    // CHECK: cir.fcmp false %arg0, %arg1 : !cir.float
+    %false = cir.fcmp false %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp oeq %arg0, %arg1 : !cir.float
+    %oeq = cir.fcmp oeq %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ogt %arg0, %arg1 : !cir.float
+    %ogt = cir.fcmp ogt %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp oge %arg0, %arg1 : !cir.float
+    %oge = cir.fcmp oge %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp olt %arg0, %arg1 : !cir.float
+    %olt = cir.fcmp olt %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ole %arg0, %arg1 : !cir.float
+    %ole = cir.fcmp ole %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp one %arg0, %arg1 : !cir.float
+    %one = cir.fcmp one %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ord %arg0, %arg1 : !cir.float
+    %ord = cir.fcmp ord %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ueq %arg0, %arg1 : !cir.float
+    %ueq = cir.fcmp ueq %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ugt %arg0, %arg1 : !cir.float
+    %ugt = cir.fcmp ugt %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp uge %arg0, %arg1 : !cir.float
+    %uge = cir.fcmp uge %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ult %arg0, %arg1 : !cir.float
+    %ult = cir.fcmp ult %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp ule %arg0, %arg1 : !cir.float
+    %ule = cir.fcmp ule %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp une %arg0, %arg1 : !cir.float
+    %une = cir.fcmp une %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp uno %arg0, %arg1 : !cir.float
+    %uno = cir.fcmp uno %arg0, %arg1 : !cir.float
+    // CHECK: cir.fcmp true %arg0, %arg1 : !cir.float
+    %true = cir.fcmp true %arg0, %arg1 : !cir.float
+    cir.return
+  }
+
+  cir.func @fcmp_types(%arg0: !cir.double, %arg1: !cir.double) {
+    // CHECK: cir.fcmp olt %arg0, %arg1 : !cir.double
+    %0 = cir.fcmp olt %arg0, %arg1 : !cir.double
+    cir.return
+  }
+
+  cir.func @fcmp_signaling(%arg0: !cir.float, %arg1: !cir.float) {
+    // CHECK: cir.fcmp ogt %arg0, %arg1 : !cir.float signaling
+    %0 = cir.fcmp ogt %arg0, %arg1 : !cir.float signaling
+    cir.return
+  }
+
+  cir.func @fcmp_fenv(%arg0: !cir.float, %arg1: !cir.float) {
+    // CHECK: cir.fcmp oeq %arg0, %arg1 : !cir.float fenv<strict_except = true>
+    %0 = cir.fcmp oeq %arg0, %arg1 : !cir.float fenv<strict_except = true>
+    // CHECK: cir.fcmp olt %arg0, %arg1 : !cir.float signaling fenv<strict_except = true>
+    %1 = cir.fcmp olt %arg0, %arg1 : !cir.float signaling fenv<strict_except = true>
+    // CHECK: cir.fcmp une %arg0, %arg1 : !cir.float fenv<>
+    %2 = cir.fcmp une %arg0, %arg1 : !cir.float fenv<>
+    cir.return
+  }
+}

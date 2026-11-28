@@ -35,9 +35,9 @@ protected:
       std::function<void(const DynamicRegisterInfo::Register &)> adder,
       std::vector<uint32_t> value_regs = {},
       std::vector<uint32_t> invalidate_regs = {}) {
-    DynamicRegisterInfo::Register new_reg{ConstString(name),
-                                          ConstString(),
-                                          ConstString(group),
+    DynamicRegisterInfo::Register new_reg{name,
+                                          "",
+                                          group,
                                           byte_size,
                                           LLDB_INVALID_INDEX32,
                                           lldb::eEncodingUint,
@@ -58,7 +58,7 @@ protected:
     ASSERT_GT(m_regs.size(), reg_num);
 
     const DynamicRegisterInfo::Register &reg = m_regs[reg_num];
-    ConstString expected_reg_name{reg_name};
+    std::string expected_reg_name{reg_name};
     EXPECT_EQ(reg.name, expected_reg_name);
     EXPECT_EQ(reg.value_regs, value_regs);
     EXPECT_EQ(reg.invalidate_regs, invalidate_regs);

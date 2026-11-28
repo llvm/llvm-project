@@ -42,7 +42,9 @@ void Pointer::print(raw_ostream &OS) const {
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());
     MemoryObjectState State = Obj->getState();
-    if (State != MemoryObjectState::Alive)
+    if (Obj->isInaccessible())
+      OS << " (inaccessible)";
+    else if (State != MemoryObjectState::Alive)
       OS << (State == MemoryObjectState::Dead ? " (dead)" : " (dangling)");
   } else {
     OS << (Prov->isWildcard() ? "wildcard" : "nullary");
@@ -99,9 +101,9 @@ void AnyValue::print(Context &Ctx, raw_ostream &OS) const {
     // exponential notation if it is lossless, otherwise output it in
     // hexadecimal notation.
     SmallString<16> StrVal;
-    FloatVal.toString(StrVal, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
-                      /*TruncateZero=*/false);
-    if (APFloat(FloatVal.getSemantics(), StrVal).bitwiseIsEqual(FloatVal)) {
+    if (FloatVal.toStringRoundTrip(StrVal, /*FormatPrecision=*/6,
+                                   /*FormatMaxPadding=*/0,
+                                   /*TruncateZero=*/false)) {
       OS << StrVal;
     } else {
       StrVal.clear();
@@ -342,7 +344,7 @@ ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
   return ByteValue(BitWidth,
                    std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
-                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
+                   IsLittleEndian, ByteValue::CanonicalizeMode::Canonical);
 }
 
 void ByteValue::print(Context &Ctx, raw_ostream &OS) const {

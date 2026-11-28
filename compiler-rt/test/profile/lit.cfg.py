@@ -56,7 +56,9 @@ config.excludes = ["Inputs"]
 registered_targets = lit_config.run_command_cached(
     shlex.split(config.clang) + ["--print-targets"], allow_failure=True, text=True
 )
-if re.search(r"^\s*amdgcn\s+-", registered_targets, re.MULTILINE):
+if registered_targets and re.search(
+    r"^\s*(?:amdgpu|amdgcn)\s+-", registered_targets, re.MULTILINE
+):
     config.available_features.add("amdgpu-registered-target")
 
 # Clang flags.

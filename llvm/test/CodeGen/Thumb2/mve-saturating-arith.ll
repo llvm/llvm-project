@@ -36,19 +36,19 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r2, d2
-; CHECK-NEXT:    vmov r3, r1, d0
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    adds.w r12, r3, r0
-; CHECK-NEXT:    adc.w r0, r1, r2
-; CHECK-NEXT:    subs.w r3, r12, r3
-; CHECK-NEXT:    sbcs.w r1, r0, r1
+; CHECK-NEXT:    adds.w r12, r2, r0
+; CHECK-NEXT:    adc.w r0, r3, r1
+; CHECK-NEXT:    subs.w r2, r12, r2
+; CHECK-NEXT:    sbcs.w r2, r0, r3
 ; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    cset r1, lt
-; CHECK-NEXT:    cmp.w r3, r2, lsr #31
+; CHECK-NEXT:    cset r2, lt
+; CHECK-NEXT:    cmp.w r3, r1, lsr #31
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    eorne r1, r1, #1
-; CHECK-NEXT:    rsb.w lr, r1, #0
+; CHECK-NEXT:    eorne r2, r2, #1
+; CHECK-NEXT:    rsb.w lr, r2, #0
 ; CHECK-NEXT:    vmov r2, r1, d3
 ; CHECK-NEXT:    adds r2, r2, r4
 ; CHECK-NEXT:    adc.w r6, r5, r1
@@ -118,28 +118,28 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @uadd_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: uadd_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov lr, r12, d2
 ; CHECK-NEXT:    adds r5, r2, r0
-; CHECK-NEXT:    adc.w lr, r3, r1
+; CHECK-NEXT:    adc.w r6, r3, r1
 ; CHECK-NEXT:    subs r2, r5, r2
-; CHECK-NEXT:    sbcs.w r2, lr, r3
-; CHECK-NEXT:    vmov r3, r12, d2
-; CHECK-NEXT:    vmov r1, r4, d0
+; CHECK-NEXT:    sbcs.w r2, r6, r3
+; CHECK-NEXT:    vmov r3, r4, d0
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    adds r3, r3, r1
-; CHECK-NEXT:    adc.w r0, r4, r12
-; CHECK-NEXT:    subs r1, r3, r1
-; CHECK-NEXT:    sbcs.w r1, r0, r4
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r5
-; CHECK-NEXT:    csetm r1, lo
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, lr
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r2
+; CHECK-NEXT:    adds.w r0, r3, lr
+; CHECK-NEXT:    adc.w r1, r4, r12
+; CHECK-NEXT:    subs r3, r0, r3
+; CHECK-NEXT:    sbcs.w r3, r1, r4
+; CHECK-NEXT:    vmov q1[2], q1[0], r0, r5
+; CHECK-NEXT:    csetm r3, lo
+; CHECK-NEXT:    vmov q1[3], q1[1], r1, r6
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    vorr q0, q1, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %0 = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %src1, <2 x i64> %src2)
   ret <2 x i64> %0
@@ -184,31 +184,31 @@ define arm_aapcs_vfpcc <2 x i64> @ssub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    subs.w r12, r2, r0
-; CHECK-NEXT:    vmov r2, r4, d0
-; CHECK-NEXT:    sbcs.w r0, r3, r1
-; CHECK-NEXT:    mrs r1, apsr
-; CHECK-NEXT:    cmp.w r0, #-1
+; CHECK-NEXT:    vmov r0, r4, d0
+; CHECK-NEXT:    sbcs.w r1, r3, r1
+; CHECK-NEXT:    mrs r2, apsr
+; CHECK-NEXT:    cmp.w r1, #-1
 ; CHECK-NEXT:    cset r3, gt
-; CHECK-NEXT:    msr apsr_nzcvq, r1
-; CHECK-NEXT:    vmov r1, lr, d2
+; CHECK-NEXT:    msr apsr_nzcvq, r2
+; CHECK-NEXT:    vmov r2, lr, d2
 ; CHECK-NEXT:    it ge
-; CHECK-NEXT:    lsrge r3, r0, #31
-; CHECK-NEXT:    subs r5, r2, r1
+; CHECK-NEXT:    lsrge r3, r1, #31
+; CHECK-NEXT:    subs r5, r0, r2
 ; CHECK-NEXT:    sbcs.w r2, r4, lr
 ; CHECK-NEXT:    mrs r4, apsr
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r5, r12
-; CHECK-NEXT:    cset r1, gt
+; CHECK-NEXT:    cset r0, gt
 ; CHECK-NEXT:    msr apsr_nzcvq, r4
 ; CHECK-NEXT:    it ge
-; CHECK-NEXT:    lsrge r1, r2, #31
+; CHECK-NEXT:    lsrge r0, r2, #31
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r2, r0
-; CHECK-NEXT:    bfi r4, r1, #0, #8
-; CHECK-NEXT:    rsbs r1, r3, #0
-; CHECK-NEXT:    bfi r4, r1, #8, #8
-; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-NEXT:    bfi r4, r0, #0, #8
+; CHECK-NEXT:    rsbs r0, r3, #0
+; CHECK-NEXT:    bfi r4, r0, #8, #8
+; CHECK-NEXT:    asrs r0, r1, #31
 ; CHECK-NEXT:    asrs r1, r2, #31
 ; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
@@ -263,28 +263,28 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @usub_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: usub_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov lr, r12, d2
 ; CHECK-NEXT:    subs r5, r2, r0
-; CHECK-NEXT:    sbc.w lr, r3, r1
+; CHECK-NEXT:    sbc.w r6, r3, r1
 ; CHECK-NEXT:    subs r2, r2, r5
-; CHECK-NEXT:    sbcs.w r2, r3, lr
-; CHECK-NEXT:    vmov r3, r12, d2
-; CHECK-NEXT:    vmov r1, r4, d0
+; CHECK-NEXT:    sbcs.w r2, r3, r6
+; CHECK-NEXT:    vmov r3, r4, d0
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    subs r3, r1, r3
-; CHECK-NEXT:    sbc.w r0, r4, r12
-; CHECK-NEXT:    subs r1, r1, r3
-; CHECK-NEXT:    sbcs.w r1, r4, r0
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r5
-; CHECK-NEXT:    csetm r1, lo
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, lr
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r2
+; CHECK-NEXT:    subs.w r0, r3, lr
+; CHECK-NEXT:    sbc.w r1, r4, r12
+; CHECK-NEXT:    subs r3, r3, r0
+; CHECK-NEXT:    sbcs.w r3, r4, r1
+; CHECK-NEXT:    vmov q1[2], q1[0], r0, r5
+; CHECK-NEXT:    csetm r3, lo
+; CHECK-NEXT:    vmov q1[3], q1[1], r1, r6
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    vbic q0, q1, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %0 = call <2 x i64> @llvm.usub.sat.v2i64(<2 x i64> %src1, <2 x i64> %src2)
   ret <2 x i64> %0

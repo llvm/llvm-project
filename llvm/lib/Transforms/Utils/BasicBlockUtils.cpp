@@ -1741,6 +1741,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1765,6 +1766,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {

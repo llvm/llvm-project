@@ -51,10 +51,10 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[NEXT_GEP8]], i64 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[NEXT_GEP12]], i64 4
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP17]], i32 -4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP18]], i32 -4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP19]], i32 -4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP20]], i32 -4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP17]], i64 -4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP18]], i64 -4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP19]], i64 -4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP20]], i64 -4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC16:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

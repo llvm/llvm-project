@@ -98,7 +98,6 @@
 ...
 ---
 name: chiasm
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 stack:

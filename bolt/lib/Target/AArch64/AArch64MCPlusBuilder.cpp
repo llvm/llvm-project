@@ -1105,7 +1105,7 @@ public:
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
 
-  bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
+  bool isExclusiveLoad(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::LDXPX ||
             Inst.getOpcode() == AArch64::LDXPW ||
             Inst.getOpcode() == AArch64::LDXRX ||
@@ -1120,7 +1120,7 @@ public:
             Inst.getOpcode() == AArch64::LDAXRB);
   }
 
-  bool isAArch64ExclusiveStore(const MCInst &Inst) const override {
+  bool isExclusiveStore(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::STXPX ||
             Inst.getOpcode() == AArch64::STXPW ||
             Inst.getOpcode() == AArch64::STXRX ||
@@ -1135,7 +1135,7 @@ public:
             Inst.getOpcode() == AArch64::STLXRB);
   }
 
-  bool isAArch64ExclusiveClear(const MCInst &Inst) const override {
+  bool isExclusiveClear(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::CLREX);
   }
 
@@ -2656,8 +2656,7 @@ public:
   }
 
   bool mayStore(const MCInst &Inst) const override {
-    return isStorePair(Inst) || isStoreReg(Inst) ||
-           isAArch64ExclusiveStore(Inst);
+    return isStorePair(Inst) || isStoreReg(Inst) || isExclusiveStore(Inst);
   }
 
   bool isCleanReg(const MCInst &Inst) const override {

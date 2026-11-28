@@ -1,18 +1,189 @@
 /// Tests for Intel GPU names in --offload-arch.
 
-/// An Intel GPU name names a device job.
+/// A device job is named after the IGCA target of an Intel GPU, e.g. igca_40r
+/// for xe-bmg-g21.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-bmg-g21 \
 // RUN:   --offload-arch=xe-dg2 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-SYCL %s
-// CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
-// CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-dg2)"
+// CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_40r)"
+// CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_15ra)"
 
-/// A device name, an alias and a numeric name are kept as given.
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+/// A device name, an alias and a numeric name of the same device result in one
+/// device image for its IGCA target, with all names kept as given.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-mtl-u \
 // RUN:   --offload-arch=xe-arl-u --offload-arch=xe_12.70.0 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-AS-GIVEN %s
-// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-mtl-u)"
-// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-arl-u)"
-// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_12.70.0)"
+// CHK-AS-GIVEN: llvm-offload-binary" "-o" "{{[^"]*}}" "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u,code=xe_12.70.0"{{$}}
+
+/// The devices are sorted, so that objects compiled for the same devices in any
+/// order have the same list.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-mtl-h,xe-mtl-u -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-SORTED %s
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-mtl-u,xe-mtl-h -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-SORTED %s
+// CHK-SORTED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-h,code=xe-mtl-u"
+
+/// An IGCA target given directly together with one of its Intel GPUs gives one
+/// device compile, which lists that GPU.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=igca_30r,xe-mtl-u -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-MIXED-PHASES %s
+// CHK-MIXED-PHASES: offload, "device-sycl (spirv64-unknown-unknown:igca_30r)"
+// CHK-MIXED-PHASES-NOT: device-sycl (spirv
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=igca_30r,xe-mtl-u -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-MIXED %s
+// CHK-MIXED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u"{{$}}
+
+/// An IGCA target given directly lists no devices.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=igca_30r -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-IGCA-ONLY %s
+// CHK-IGCA-ONLY: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl"
+
+/// -Xarch_ names the IGCA target of the device compile, not an Intel GPU, as
+/// one device compile can be for several Intel GPUs.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc -Xarch_igca_20ca -DFOO -Xarch_xe-pvc -DBAR \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-XARCH %s
+// CHK-XARCH: warning: argument unused during compilation: '-Xarch_xe-pvc -DBAR'
+// CHK-XARCH-NOT: "-D" "BAR"
+// CHK-XARCH: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-D" "FOO"
+// CHK-XARCH-NOT: "-D" "BAR"
+
+/// Static libraries are searched for the IGCA target of an Intel GPU, once for
+/// Intel GPUs that share it.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-mtl-u,xe-mtl-h %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-EXTRACT %s
+// CHK-EXTRACT: clang-linker-wrapper"
+// CHK-EXTRACT-SAME: "--should-extract=igca_30r"
+// CHK-EXTRACT-NOT: --should-extract=
+
+/// Without --offload-targets, an Intel device (by name or numeric name), an IGCA
+/// target or "generic" picks SPIR-V of the host's width.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc --offload-arch=xe-bmg-g21 --offload-arch=graniterapids \
+// RUN:   --offload-arch=generic --offload-arch=igca_20ca --offload-arch=xe_12.60.7 \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-NO-TARGETS %s
+// CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:generic)"
+// CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
+// CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_20ca)"
+// CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_40r)"
+// RUN: %clang -ccc-print-phases --target=i386-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc --offload-arch=igca_20ca -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS-32 %s
+// CHK-NO-TARGETS-32: offload, "device-sycl (spirv32-unknown-unknown:igca_20ca)"
+// CHK-NO-TARGETS-32-NOT: device-sycl (spirv
+
+/// Two names of one device give one device image that lists both, and
+/// --no-offload-arch removes a name.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-mtl-u --offload-arch=xe-arl-u --offload-arch=xe-pvc \
+// RUN:   --no-offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS-AS-GIVEN %s
+// CHK-NO-TARGETS-AS-GIVEN: llvm-offload-binary" "-o" "{{[^"]*}}" "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u"{{$}}
+
+/// As for CUDA and HIP, -foffload-via-llvm gives the inferred target the LLVM
+/// environment.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -foffload-via-llvm \
+// RUN:   --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-VIA-LLVM %s
+// CHK-VIA-LLVM: "-cc1" "-triple" "spirv64-unknown-unknown-llvm"
+
+/// Only SYCL infers a target from an Intel name.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -x cuda -nocudainc \
+// RUN:   -nocudalib --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-CUDA %s
+// CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
+
+/// On a plain SPIR-V target, a SYCL device must be an Intel GPU or CPU, an IGCA
+/// target (e.g. igca_20ca) or "generic".
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s
+// CHK-BAD-ARCH: error: unsupported SYCL gpu architecture: xe-pcv
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-OLD %s
+// CHK-BAD-ARCH-OLD: error: unsupported SYCL gpu architecture: bmg_g21
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
+// CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
+
+/// A GPU from another vendor is not a SYCL device on a plain SPIR-V target.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=sm_80 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=sm_80 %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=gfx906 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=gfx906 %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=gfx90a:xnack+ -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=gfx90a:xnack+ %s
+// CHK-OTHER-VENDOR: error: unsupported SYCL gpu architecture: [[ARCH]]
+// CHK-OTHER-VENDOR-NOT: llvm-offload-binary
+
+/// A numeric name names no device unless the list has its GPU IP version.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// CHK-BAD-ARCH-UNLISTED: error: unsupported SYCL gpu architecture: xe_40.11.0
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED-INFER %s
+// CHK-BAD-ARCH-UNLISTED-INFER: error: unsupported offload gpu architecture: xe_40.11.0
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-SUFFIX %s
+// CHK-BAD-ARCH-SUFFIX: error: unsupported SYCL gpu architecture: xe-pvc:garbage
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic:foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-GENERIC %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=generic:foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-GENERIC %s
+// CHK-BAD-GENERIC: error: unsupported SYCL gpu architecture: generic:foo
+
+/// As for CUDA and HIP, --no-offload-arch is checked too when the target is
+/// given.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc \
+// RUN:   --no-offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-NO-ARCH %s
+// CHK-BAD-NO-ARCH: error: unsupported SYCL gpu architecture: foo
+
+/// Only a plain SPIR-V target is checked.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
+// CHK-NOT-CHECKED-NOT: error:
+
+/// An Intel name needs a plain SPIR-V target.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-intel %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-amd-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-unknown-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=graniterapids -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=graniterapids -DTRIPLE=spirv64-intel %s
+// CHK-NOT-PLAIN: error: the target architecture '[[ARCH]]' is not supported by the target '[[TRIPLE]]'
+
+/// An Intel CPU is accepted on a plain SPIR-V target.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
+// CHK-GOOD-ARCH: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"

@@ -337,8 +337,54 @@ TEST(BitstreamRemarks, ParsingEmpty) {
   parseBad(StringRef(), "End of file reached.");
 }
 
+TEST(BitstreamRemarks, ParsingUnknownType) {
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Unknown;
+  R.PassName = "inline";
+  R.RemarkName = "NoDefinition";
+  R.FunctionName = "foo";
+
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> Serializer =
+      remarks::createRemarkSerializer(remarks::Format::Bitstream, OS);
+  ASSERT_FALSE(errorToBool(Serializer.takeError()));
+  (*Serializer)->emit(R);
+  (*Serializer)->finalize();
+
+  parseBad(Buf, "Error while parsing Remark block: Unknown remark type.");
+}
+
 TEST(BitstreamRemarks, ParsingBadMagic) {
   parseBad("KRMR", "Unknown magic number: expecting RMRK, got KRMR.");
+}
+
+// A container that ends inside or right after a block header makes
+// BitstreamCursor::EnterSubBlock fail. The parser has to return that error.
+TEST(BitstreamRemarks, ParsingTruncated) {
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = "inline";
+  R.RemarkName = "NoDefinition";
+  R.FunctionName = "foo";
+
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> Serializer =
+      remarks::createRemarkSerializer(remarks::Format::Bitstream, OS);
+  ASSERT_FALSE(errorToBool(Serializer.takeError()));
+  (*Serializer)->emit(R);
+  (*Serializer)->finalize();
+
+  // A block starts on a 32-bit boundary and its header is two words long, so
+  // cutting after every word covers both places.
+  for (size_t Len = 0; Len < Buf.size(); Len += 4) {
+    Expected<std::unique_ptr<remarks::RemarkParser>> Parser =
+        remarks::createRemarkParser(remarks::Format::Bitstream,
+                                    StringRef(Buf).take_front(Len));
+    ASSERT_FALSE(errorToBool(Parser.takeError()));
+    EXPECT_TRUE(errorToBool((*Parser)->next().takeError())) << "length " << Len;
+  }
 }
 
 // Testing malformed bitstream is not easy. We would need to replace bytes in
@@ -369,12 +415,10 @@ TEST(BitstreamRemarks, ParsingBadMagic) {
 // * Error while parsing REMARK_BLOCK: unknown record entry (NUM).
 // * Error while parsing META_BLOCK: expecting [ENTER_SUBBLOCO, META_BLOCK,
 // ...].
-// * Error while entering META_BLOCK.
 // * Error while parsing META_BLOCK: expecting records.
 // * Error while parsing META_BLOCK: unterminated block.
 // * Error while parsing REMARK_BLOCK: expecting [ENTER_SUBBLOCO, REMARK_BLOCK,
 // ...].
-// * Error while entering REMARK_BLOCK.
 // * Error while parsing REMARK_BLOCK: expecting records.
 // * Error while parsing REMARK_BLOCK: unterminated block.
 // * Error while parsing BLOCKINFO_BLOCK: expecting [ENTER_SUBBLOCK,
@@ -393,7 +437,6 @@ TEST(BitstreamRemarks, ParsingBadMagic) {
 // original meta: NUM, external file meta: NUM.
 // * Error while parsing BLOCK_REMARK: missing string table.
 // * Error while parsing BLOCK_REMARK: missing remark type.
-// * Error while parsing BLOCK_REMARK: unknown remark type.
 // * Error while parsing BLOCK_REMARK: missing remark name.
 // * Error while parsing BLOCK_REMARK: missing remark pass.
 // * Error while parsing BLOCK_REMARK: missing remark function name.

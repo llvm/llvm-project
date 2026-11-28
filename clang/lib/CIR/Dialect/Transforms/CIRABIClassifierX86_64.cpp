@@ -14,12 +14,40 @@
 #include "CIRABIClassifier.h"
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringExtras.h"
 
+#include <algorithm>
 #include <array>
 
 using namespace mlir;
 using namespace mlir::abi;
 using namespace cir;
+
+/// The AVX level to classify \p func at: \p base, raised if the function's own
+/// recorded feature list enables a wider vector.
+static llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
+                                              llvm::abi::X86AVXABILevel base) {
+  // Only a `target` attribute may raise the level.  A multiversioned function
+  // carries a raised feature list too, and must stay at the module's level.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+
+  auto features = func->getAttrOfType<mlir::StringAttr>("cir.target-features");
+  if (!features)
+    return base;
+  // A '-' entry disables the feature, so match a whole '+' entry rather than
+  // searching for the name.  avx512f implies avx, so both entries are present:
+  // return on the wider name so one pass suffices.
+  bool avx = false;
+  for (llvm::StringRef feature : llvm::split(features.getValue(), ',')) {
+    if (!feature.consume_front("+"))
+      continue;
+    if (feature == "avx512f")
+      return std::max(base, llvm::abi::X86AVXABILevel::AVX512);
+    avx |= feature == "avx";
+  }
+  return avx ? std::max(base, llvm::abi::X86AVXABILevel::AVX) : base;
+}
 
 namespace {
 
@@ -34,7 +62,8 @@ public:
   /// cir.va_arg is expanded into the SysV register-save-area / overflow-area
   /// sequence, which reads the fetched type's classification as an unnamed
   /// argument, as classic's X86_64ABIInfo::EmitVAArg does.
-  std::optional<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) override {
+  mlir::FailureOr<ArgClassification>
+  classifyVAArg(cir::VAArgOp vaArg) override {
     return classifyVarArgType(
         vaArg.getType(), getTargetInfo(vaArg->getParentOfType<cir::FuncOp>()),
         [&]() { return vaArg->emitOpError(); });

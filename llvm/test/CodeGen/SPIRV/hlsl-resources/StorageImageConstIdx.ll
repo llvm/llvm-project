@@ -5,7 +5,6 @@
 
 ; CHECK-DAG: OpCapability Shader
 ; CHECK-DAG: OpCapability Image1D
-; CHECK-DAG: OpCapability Int8
 ; CHECK-NOT: OpCapability
 
 ; CHECK-DAG: OpDecorate [[Var:%[0-9]+]] DescriptorSet 3

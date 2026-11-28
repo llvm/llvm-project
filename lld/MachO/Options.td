@@ -205,6 +205,10 @@ def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
     HelpText<"Load passes from plugin library">, Group<grp_lld>;
+def pass_plugin_arg : Separate<["--"], "pass-plugin-arg">, Group<grp_lld>;
+def pass_plugin_arg_eq : Joined<["--"], "pass-plugin-arg=">,
+    Alias<!cast<Separate>(pass_plugin_arg)>, MetaVarName<"<plugin>,<arg>">,
+    HelpText<"Pass <arg> to the pass plugin named <plugin>">, Group<grp_lld>;
 def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
 def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
     Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
@@ -694,7 +698,8 @@ def whyload : Flag<["-"], "whyload">,
     Group<grp_introspect>;
 def why_live : Separate<["-"], "why_live">,
     MetaVarName<"<symbol>">,
-    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip">,
+    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip. "
+             "The chain is deterministic only with --threads=1">,
     Group<grp_introspect>;
 def print_statistics : Flag<["-"], "print_statistics">,
     HelpText<"Log the linker's memory and CPU usage">,

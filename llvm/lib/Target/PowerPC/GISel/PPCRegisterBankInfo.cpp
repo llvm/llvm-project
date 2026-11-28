@@ -101,7 +101,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV: {
     Register SrcReg = MI.getOperand(1).getReg();
-    unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
+    unsigned Size = TRI.getRegSizeInBits(SrcReg, MRI);
 
     assert((Size == 32 || Size == 64 || Size == 128) &&
            "Unsupported floating point types!\n");
@@ -136,7 +136,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FPTOSI: {
     Register SrcReg = MI.getOperand(1).getReg();
-    unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
+    unsigned Size = TRI.getRegSizeInBits(SrcReg, MRI);
 
     OperandsMapping = getOperandsMapping(
         {getValueMapping(PMI_GPR64),
@@ -146,7 +146,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_SITOFP: {
     Register SrcReg = MI.getOperand(0).getReg();
-    unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
+    unsigned Size = TRI.getRegSizeInBits(SrcReg, MRI);
 
     OperandsMapping =
         getOperandsMapping({getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64),

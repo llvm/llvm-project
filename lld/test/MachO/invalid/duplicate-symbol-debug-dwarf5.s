@@ -15,6 +15,8 @@
 # CHECK:      error: duplicate symbol: _x
 # CHECK-NEXT: >>> defined in v.c:1 (.{{[/\\]}}v.c:1)
 # CHECK-NEXT: >>>            [[FILE_1]]
+# CHECK-NEXT: >>> defined in v.c:1 (.{{[/\\]}}v.c:1)
+# CHECK-NEXT: >>>            [[FILE_2]]
 
 ## Everything below is the unmodified output of
 ##   clang --target=x86_64-apple-macos11 -gdwarf-5 -O0 -S v.c -fno-ident \

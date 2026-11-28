@@ -16,13 +16,11 @@ llvm.func @large_merge_block(%arg0: i64) {
   // CHECK: ^bb{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64, %[[arg2:.*]]: i64, %[[arg3:.*]]: i64):
   // CHECK:    llvm.cond_br %{{.*}}, ^bb2(%[[arg0]] : i64), ^bb2(%[[arg3]] : i64)
   // CHECK: ^bb{{.*}}(%11: i64):
-  // CHECK:    llvm.br ^bb{{.*}}
-  // CHECK: ^bb{{.*}}:
-  // CHECK:   llvm.call
+  // CHECK:   llvm.call @foo(%11)
   // CHECK:   llvm.cond_br {{.*}}, ^bb{{.*}}(%[[arg1]] : i64), ^bb{{.*}}(%[[arg2]] : i64)
-  // CHECK: ^bb{{.*}}:
-  // CHECK:   llvm.call
-  // CHECK    llvm.br ^bb{{.*}}
+  // CHECK: ^bb{{.*}}(%{{.*}}: i64):
+  // CHECK:   llvm.call @foo
+  // CHECK:   llvm.return
 
   %0 = llvm.mlir.constant(0 : i64) : i64
   %1 = llvm.mlir.constant(1 : i64) : i64

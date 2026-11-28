@@ -5,7 +5,6 @@
 
 ---
 name: block_sync_lds_loop
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: block_sync_lds_loop
   ; CHECK: bb.0:

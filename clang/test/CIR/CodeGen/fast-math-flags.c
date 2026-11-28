@@ -224,3 +224,19 @@ float4 vector(float4 a, float4 b, float4 c) {
 // LLVM-FAST: fsub fast <4 x float> %{{.*}}, %{{.*}}
 // LLVM-FAST: fmul fast <4 x float> %{{.*}}, %{{.*}}
 // LLVM-FAST: fdiv fast <4 x float> %{{.*}}, %{{.*}}
+
+float fma_builtin(float a, float b, float c) {
+  return __builtin_fmaf(a, b, c);
+}
+// CIR-LABEL: cir.func {{.*}}@fma_builtin(
+// LLVM-LABEL: define {{.*}}@fma_builtin(
+// CIR-FAST-NO-CONTRACT: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [nnan, ninf, nsz, arcp, afn, reassoc]>{{( loc.*)?$}}
+// LLVM-FAST-NO-CONTRACT: call reassoc nnan ninf nsz arcp afn float @llvm.fma.f32(
+
+float unary_minus(float a) {
+  return -a;
+}
+// CIR-LABEL: cir.func {{.*}}@unary_minus(
+// LLVM-LABEL: define {{.*}}@unary_minus(
+// CIR-FAST-NO-CONTRACT: cir.fneg %{{.*}} : !cir.float <fastmath_flags = [nnan, ninf, nsz, arcp, afn, reassoc]>{{( loc.*)?$}}
+// LLVM-FAST-NO-CONTRACT: fneg reassoc nnan ninf nsz arcp afn float %{{.*}}

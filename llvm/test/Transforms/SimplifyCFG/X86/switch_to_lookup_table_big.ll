@@ -19,7 +19,7 @@ define i32 @reachable_default_dense_0to31(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 32
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [32 x i8], ptr @switch.table.reachable_default_dense_0to31, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.reachable_default_dense_0to31, i32 [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -83,7 +83,7 @@ return:
 define i32 @unreachable_default_dense_0to31(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unreachable_default_dense_0to31(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [32 x i8], ptr @switch.table.unreachable_default_dense_0to31, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.unreachable_default_dense_0to31, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
@@ -150,7 +150,7 @@ define i32 @reachable_default_holes_0to31(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [32 x i8], ptr @switch.table.reachable_default_holes_0to31, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.reachable_default_holes_0to31, i32 [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -208,7 +208,7 @@ return:
 define i32 @unreachable_default_holes_0to31(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unreachable_default_holes_0to31(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [32 x i8], ptr @switch.table.unreachable_default_holes_0to31, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.unreachable_default_holes_0to31, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
@@ -266,7 +266,7 @@ define i32 @reachable_default_dense_0to32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 33
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [33 x i8], ptr @switch.table.reachable_default_dense_0to32, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.reachable_default_dense_0to32, i32 [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -331,7 +331,7 @@ return:
 define i32 @unreachable_default_dense_0to32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unreachable_default_dense_0to32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [33 x i8], ptr @switch.table.unreachable_default_dense_0to32, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.unreachable_default_dense_0to32, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
@@ -495,7 +495,7 @@ return:
 define i32 @unreachable_default_holes_0to32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unreachable_default_holes_0to32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [33 x i8], ptr @switch.table.unreachable_default_holes_0to32, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.unreachable_default_holes_0to32, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]

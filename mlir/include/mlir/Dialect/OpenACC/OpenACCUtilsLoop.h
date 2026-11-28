@@ -49,7 +49,8 @@ wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
 
 /// Convert a structured acc.loop to scf.for.
 /// The loop arguments are converted to index type. If enableCollapse is true,
-/// nested loops are collapsed into a single loop.
+/// nested loops are collapsed into a single loop. A multi-block body is wrapped
+/// in scf.execute_region, since scf.for has a single-block region.
 /// @param loopOp The acc.loop operation to convert (must not be unstructured)
 /// @param rewriter RewriterBase for creating operations
 /// @param enableCollapse Whether to collapse nested loops into one

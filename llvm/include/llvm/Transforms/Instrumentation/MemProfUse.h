@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MemProfUsePass class and related utilities.
+// This file declares the MemProfUsePass class and related utilities for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H

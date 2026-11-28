@@ -1,3 +1,7 @@
+lldb_tablegen(LanguageCPlusPlusOptions.inc -gen-lldb-option-defs
+  SOURCE LanguageCPlusPlusOptions.td
+  TARGET LLDBPluginLanguageCPlusPlusOptionsGen)
+
 lldb_tablegen(LanguageCPlusPlusProperties.inc -gen-lldb-property-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesGen)
@@ -71,5 +75,6 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
 )
 
 add_dependencies(lldbPluginCPlusPlusLanguage
+  LLDBPluginLanguageCPlusPlusOptionsGen
   LLDBPluginLanguageCPlusPlusPropertiesGen
   LLDBPluginLanguageCPlusPlusPropertiesEnumGen)

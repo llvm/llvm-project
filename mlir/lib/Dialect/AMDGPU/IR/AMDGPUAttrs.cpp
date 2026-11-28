@@ -12,15 +12,5 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
-
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc"
-
-void mlir::amdgpu::AMDGPUDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc"
-      >();
-}

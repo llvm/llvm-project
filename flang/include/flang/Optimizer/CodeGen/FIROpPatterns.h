@@ -11,9 +11,13 @@
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include <type_traits>
+
+namespace mlir::LLVM {
+class ConstantOp;
+} // namespace mlir::LLVM
 
 namespace fir {
 
@@ -259,8 +263,7 @@ protected:
   // the program and allocation address space will be the default of 0 and no
   // cast will be emitted.
   mlir::Value
-  genAllocaAndAddrCastWithType(mlir::Location loc, mlir::Type llvmObjectTy,
-                               unsigned alignment,
+  genAllocaAndAddrCastWithType(mlir::Type llvmObjectTy, unsigned alignment,
                                mlir::ConversionPatternRewriter &rewriter) const;
 
   const fir::LLVMTypeConverter &lowerTy() const {

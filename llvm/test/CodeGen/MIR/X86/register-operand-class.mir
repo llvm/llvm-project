@@ -15,7 +15,7 @@ name: func
 tracksRegLiveness: false
 body: |
   bb.0:
-    %0 : gr32 = COPY $rax
+    %0 : gr32 = COPY $eax
     %1.sub_32bit : gr64 = COPY $eax
     $rdx = COPY %1
     %2 = COPY $ecx

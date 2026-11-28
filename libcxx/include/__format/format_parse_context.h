@@ -30,8 +30,7 @@ public:
   using const_iterator = typename basic_string_view<_CharT>::const_iterator;
   using iterator       = const_iterator;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_format_parse_context(
-      basic_string_view<_CharT> __fmt, size_t __num_args = 0) noexcept
+  constexpr explicit basic_format_parse_context(basic_string_view<_CharT> __fmt, size_t __num_args = 0) noexcept
       : __begin_(__fmt.begin()),
         __end_(__fmt.end()),
         __indexing_(__unknown),
@@ -41,11 +40,11 @@ public:
   basic_format_parse_context(const basic_format_parse_context&)            = delete;
   basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept { return __begin_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept { return __end_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr void advance_to(const_iterator __it) { __begin_ = __it; }
+  [[nodiscard]] constexpr const_iterator begin() const noexcept { return __begin_; }
+  [[nodiscard]] constexpr const_iterator end() const noexcept { return __end_; }
+  constexpr void advance_to(const_iterator __it) { __begin_ = __it; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr size_t next_arg_id() {
+  constexpr size_t next_arg_id() {
     if (__indexing_ == __manual)
       std::__throw_format_error("Using automatic argument numbering in manual argument numbering mode");
 
@@ -65,7 +64,7 @@ public:
 
     return __next_arg_id_++;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr void check_arg_id(size_t __id) {
+  constexpr void check_arg_id(size_t __id) {
     if (__indexing_ == __automatic)
       std::__throw_format_error("Using manual argument numbering in automatic argument numbering mode");
 

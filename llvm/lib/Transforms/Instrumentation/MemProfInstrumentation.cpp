@@ -153,7 +153,7 @@ private:
 class ModuleMemProfiler {
 public:
   ModuleMemProfiler(const InstrumentationOptions &Opts, Module &M)
-      : Opts(Opts), Mapping(Opts) {
+      : Opts(Opts) {
     TargetTriple = M.getTargetTriple();
   }
 
@@ -162,7 +162,6 @@ public:
 private:
   const InstrumentationOptions &Opts;
   Triple TargetTriple;
-  ShadowMapping Mapping;
   Function *MemProfCtorFunction = nullptr;
 };
 
@@ -343,6 +342,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     }
 
     IRBuilder<> IRB(InsertBefore);
+    IRB.disableGEPCanonicalization();
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
     instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);

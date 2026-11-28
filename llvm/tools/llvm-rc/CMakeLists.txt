@@ -6,11 +6,11 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(RcOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS WindresOpts.td)
-tablegen(LLVM WindresOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(WindresOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(WindresOptsTableGen)
 
 add_llvm_tool(llvm-rc

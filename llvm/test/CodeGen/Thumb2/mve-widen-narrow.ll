@@ -117,9 +117,9 @@ define void @foo_int8_int32_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r1, #32]
 ; CHECK-NEXT:    vldrw.u32 q3, [r1, #48]
 ; CHECK-NEXT:    vstrb.32 q1, [r0, #4]
-; CHECK-NEXT:    vstrb.32 q0, [r0]
 ; CHECK-NEXT:    vstrb.32 q3, [r0, #12]
 ; CHECK-NEXT:    vstrb.32 q2, [r0, #8]
+; CHECK-NEXT:    vstrb.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i32>, ptr %src, align 4
@@ -221,9 +221,9 @@ define void @foo_int32_int8_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-NEXT:    vldrb.s32 q2, [r1, #8]
 ; CHECK-NEXT:    vldrb.s32 q3, [r1, #12]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, ptr %src, align 1
@@ -326,9 +326,9 @@ define void @foo_uint32_uint8_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-NEXT:    vldrb.u32 q2, [r1, #8]
 ; CHECK-NEXT:    vldrb.u32 q3, [r1, #12]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, ptr %src, align 1
@@ -393,8 +393,8 @@ define ptr @foo_uint32_uint16_double_offset(ptr %dest, ptr readonly %src, i32 %n
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #16]!
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
-; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -414,8 +414,8 @@ define ptr @foo_uint32_uint16_quad_offset(ptr %dest, ptr readonly %src, i32 %n) 
 ; CHECK-NEXT:    vldrh.s32 q3, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
-; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
 ; CHECK-NEXT:    vstrw.32 q3, [r0, #32]
+; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -436,8 +436,8 @@ define void @foo_int16_int32_align1(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    vstrh.32 q0, [r1]
 ; CHECK-NEXT:    ldrd r1, r2, [sp]
-; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    str r2, [r0, #4]
+; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:

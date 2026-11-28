@@ -112,7 +112,7 @@ void TestElementAccess() {
 // CHECK: [[HANDLE_PTR:%.*]] = getelementptr inbounds nuw %"class.hlsl::ConstantBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL: [[HANDLE:%.*]] = load target("dx.CBuffer", %MyConstants), ptr [[HANDLE_PTR]], align 4
 // CHECK-DXIL: [[BASE_PTR:%.*]] = call ptr addrspace([[CONST_ADDR_SPACE]]) @llvm.dx.resource.getbasepointer.p2.tdx.CBuffer_s_MyConstantsst(target("dx.CBuffer", %MyConstants) [[HANDLE]])
-// CHECK-SPV: [[HANDLE:%.*]] = load target("spirv.VulkanBuffer", %MyConstants, 2, 0), ptr [[HANDLE_PTR]], align 8
+// CHECK-SPV: [[HANDLE:%.*]] = load target("spirv.VulkanBuffer", %MyConstants, 2, 0), ptr [[HANDLE_PTR]], align 4
 // CHECK-SPV: [[BASE_PTR:%.*]] = call ptr addrspace([[CONST_ADDR_SPACE]]) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_MyConstantss_2_0t(target("spirv.VulkanBuffer", %MyConstants, 2, 0) [[HANDLE]])
 // CHECK: ret ptr addrspace([[CONST_ADDR_SPACE]]) [[BASE_PTR]]
 

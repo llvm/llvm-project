@@ -159,7 +159,7 @@ void libdispatch_leaked_retained_data(void) {
 #if !HAS_ARC
 // expected-warning@-2{{Potential leak of an object stored into 'data'}}
 // expected-note@-9{{Call to function 'dispatch_data_create' returns an Objective-C object with a +1 retain count}}
-// expected-note@-7{{Reference count incremented. The object now has a +2 retain count}}
-// expected-note@-7{{Reference count decremented. The object now has a +1 retain count}}
+// expected-note@-7{{Reference count incremented; the object now has a +2 retain count}}
+// expected-note@-7{{Reference count decremented; the object now has a +1 retain count}}
 // expected-note@-6{{Object leaked: object allocated and stored into 'data' is not referenced later in this execution path and has a retain count of +1}}
 #endif

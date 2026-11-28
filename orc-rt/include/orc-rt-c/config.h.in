@@ -16,6 +16,10 @@
 /* Define to 1 if exceptions are enabled */
 #cmakedefine01 ORC_RT_ENABLE_EXCEPTIONS
 
+/* Define to 1 if the runtime is built with its shared POSIX host
+   implementation (see ORC_RT_TARGET_POSIX in orc-rt/CMakeLists.txt). */
+#cmakedefine01 ORC_RT_TARGET_POSIX
+
 /* Logging: available levels, and the minimum level compiled in. */
 #define ORC_RT_LOG_LEVEL_DEBUG   0
 #define ORC_RT_LOG_LEVEL_INFO    1

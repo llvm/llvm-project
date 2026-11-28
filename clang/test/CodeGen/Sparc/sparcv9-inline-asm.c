@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 
 void test_gcc_registers(void) {
     register unsigned int regO6 asm("o6") = 0;

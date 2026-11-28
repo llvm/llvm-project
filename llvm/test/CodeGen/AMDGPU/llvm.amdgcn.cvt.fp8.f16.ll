@@ -5,8 +5,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13-REAL16,GFX13-SDAG-REAL16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13-REAL16,GFX13-GISEL-REAL16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13-REAL16,GFX13-GISEL-REAL16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13-FAKE16 %s
 
 declare i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half>)
 declare i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half>)

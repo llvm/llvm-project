@@ -25,6 +25,7 @@
 #include "Target.h"
 #include "Thunks.h"
 #include "Writer.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -103,8 +104,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 SectionBase &section) {
-  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
-                           type, value, size, &section);
+  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
+                           value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -1932,9 +1933,9 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
 
   // Get offsets for all relative relocations and sort them.
   std::unique_ptr<uint64_t[]> offsets(new uint64_t[relocs.size()]);
-  for (auto [i, r] : llvm::enumerate(relocs))
-    offsets[i] = r.getOffset();
-  llvm::sort(offsets.get(), offsets.get() + relocs.size());
+  parallelFor(0, relocs.size(),
+              [&](size_t i) { offsets[i] = relocs[i].getOffset(); });
+  parallelSort(offsets.get(), offsets.get() + relocs.size());
 
   // For each leading relocation, find following ones that can be folded
   // as a bitmap and fold them.
@@ -2076,7 +2077,7 @@ void SymbolTableBaseSection::maybeAddSttFile() {
           syms.drop_front(firstGlobalIdx),
           [](const SymbolTableEntry &s) { return s.sym->isLocal(); })) {
     synthSttFileSym =
-        makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
+        makeDefined(ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
                     /*value=*/0, /*size=*/0, nullptr);
     addSymbol(synthSttFileSym);
   }
@@ -2354,6 +2355,7 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
       std::stable_partition(v.begin(), v.end(), [&](const SymbolTableEntry &s) {
         return !s.sym->isDefined();
       });
+  size_t numDefined = v.end() - mid;
 
   // We chose load factor 4 for the on-disk hash table. For each hash
   // collision, the dynamic linker will compare a uint32_t hash value.
@@ -2364,19 +2366,20 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
   // Android loader as of 2018 doesn't like a .gnu.hash containing such
   // table. If that's the case, we create a hash table with one unused
   // dummy slot.
-  nBuckets = std::max<size_t>((v.end() - mid) / 4, 1);
+  nBuckets = std::max<size_t>(numDefined / 4, 1);
 
-  if (mid == v.end())
+  if (numDefined == 0)
     return;
 
-  for (SymbolTableEntry &ent : llvm::make_range(mid, v.end())) {
-    Symbol *b = ent.sym;
+  symbols.resize(numDefined);
+  parallelFor(0, numDefined, [&](size_t i) {
+    Symbol *b = mid[i].sym;
     uint32_t hash = hashGnu(b->getName());
     uint32_t bucketIdx = hash % nBuckets;
-    symbols.push_back({b, ent.strTabOffset, hash, bucketIdx});
-  }
+    symbols[i] = {b, mid[i].strTabOffset, hash, bucketIdx};
+  });
 
-  llvm::sort(symbols, [](const Entry &l, const Entry &r) {
+  parallelSort(symbols, [](const Entry &l, const Entry &r) {
     return std::tie(l.bucketIdx, l.strTabOffset) <
            std::tie(r.bucketIdx, r.strTabOffset);
   });
@@ -3432,7 +3435,7 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
   SmallVector<GdbChunk, 0> chunks(files.size());
   SmallVector<SmallVector<NameAttrEntry, 0>, 0> nameAttrs(files.size());
 
-  parallelFor(0, files.size(), [&](size_t i) {
+  parallelForFineGrained(files.size(), [&](size_t i) {
     // To keep memory usage low, we don't want to keep cached DWARFContext, so
     // avoid getDwarf() here.
     ObjFile<ELFT> *file = cast<ObjFile<ELFT>>(files[i]);
@@ -3821,7 +3824,7 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents().
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
+  parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
     for (InputSectionBase *sec : file->getSections()) {
       if (!sec)
         continue;

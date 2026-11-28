@@ -728,6 +728,10 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
       // individually.  The data buffer is binary data in this case, instead of
       // ascii characters.
 
+      // The buffer is only valid for the register layout it was saved with.
+      if (data_sp->GetByteSize() != m_reg_info_sp->GetRegisterDataByteSize())
+        return false;
+
       bool arm64_debugserver = false;
       if (m_thread.GetProcess().get()) {
         const ArchSpec &arch =

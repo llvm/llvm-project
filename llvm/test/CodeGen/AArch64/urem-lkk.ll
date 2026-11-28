@@ -16,14 +16,12 @@ define i32 @fold_urem_positive_odd(i32 %x) {
 ;
 ; CHECK-GI-LABEL: fold_urem_positive_odd:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #8969 // =0x2309
-; CHECK-GI-NEXT:    movk w8, #22765, lsl #16
-; CHECK-GI-NEXT:    umull x8, w0, w8
-; CHECK-GI-NEXT:    lsr x8, x8, #32
-; CHECK-GI-NEXT:    sub w9, w0, w8
-; CHECK-GI-NEXT:    add w8, w8, w9, lsr #1
+; CHECK-GI-NEXT:    mov x8, #301989888 // =0x12000000
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    movk x8, #55878, lsl #32
+; CHECK-GI-NEXT:    movk x8, #689, lsl #48
+; CHECK-GI-NEXT:    umulh x8, x9, x8
 ; CHECK-GI-NEXT:    mov w9, #-95 // =0xffffffa1
-; CHECK-GI-NEXT:    lsr w8, w8, #6
 ; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
   %1 = urem i32 %x, 95

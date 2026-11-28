@@ -629,8 +629,8 @@ define void @test_revhv32i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ror w8, w8, #16
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
-; NONEON-NOSVE-NEXT:    stp q3, q2, [x0]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0, #32]
+; NONEON-NOSVE-NEXT:    stp q3, q2, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <32 x i16>, ptr %a

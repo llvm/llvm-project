@@ -685,15 +685,13 @@ class ModuleAddressSanitizer {
 public:
   ModuleAddressSanitizer(const InstrumentationOptions &Opts, Module &M,
                          bool InsertVersionCheck, bool CompileKernel = false,
-                         bool Recover = false, bool UseGlobalsGC = true,
-                         bool UseOdrIndicator = true,
+                         bool UseGlobalsGC = true, bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
       : Opts(Opts), M(M), Inserter(M),
         CompileKernel(valueOr(Opts.asan_kernel, CompileKernel)),
         InsertVersionCheck(valueOr(Opts.asan_guard_against_version_mismatch,
                                    InsertVersionCheck)),
-        Recover(valueOr(Opts.asan_recover, Recover)),
         UseGlobalsGC(UseGlobalsGC && Opts.asan_globals_live_support &&
                      !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
@@ -714,7 +712,6 @@ public:
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
-    PtrTy = PointerType::getUnqual(*C);
     TargetTriple = M.getTargetTriple();
     Mapping =
         getShadowMapping(Opts, TargetTriple, LongSize, this->CompileKernel);
@@ -767,7 +764,6 @@ private:
   AsanFunctionInserter Inserter;
   bool CompileKernel;
   bool InsertVersionCheck;
-  bool Recover;
   bool UseGlobalsGC;
   bool UsePrivateAlias;
   bool UseOdrIndicator;
@@ -775,7 +771,6 @@ private:
   AsanDtorKind DestructorKind;
   AsanCtorKind ConstructorKind;
   Type *IntptrTy;
-  PointerType *PtrTy;
   LLVMContext *C;
   Triple TargetTriple;
   ShadowMapping Mapping;
@@ -1059,10 +1054,9 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
 
   const InstrumentationOptions &Opts = getInstrumentationOptions(M);
-  ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
-                                         Options.CompileKernel, Options.Recover,
-                                         UseGlobalGC, UseOdrIndicator,
-                                         DestructorKind, ConstructorKind);
+  ModuleAddressSanitizer ModuleSanitizer(
+      Opts, M, Options.InsertVersionCheck, Options.CompileKernel, UseGlobalGC,
+      UseOdrIndicator, DestructorKind, ConstructorKind);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   const StackSafetyGlobalInfo *const SSGI =
@@ -2141,8 +2135,7 @@ void ModuleAddressSanitizer::SetComdatForGlobalMetadata(
     }
 
     if (!InternalSuffix.empty() && G->hasLocalLinkage()) {
-      std::string Name = std::string(G->getName());
-      Name += InternalSuffix;
+      std::string Name = (G->getName() + "." + InternalSuffix).str();
       C = M.getOrInsertComdat(Name);
     } else {
       C = M.getOrInsertComdat(G->getName());
@@ -3534,8 +3527,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   for (const auto &Desc : SVD) {
     AllocaInst *AI = Desc.AI;
     replaceDbgDeclare(AI, LocalStackBaseAlloca, DIB, DIExprFlags, Desc.Offset);
-    Value *NewAllocaPtr = IRB.CreatePtrAdd(
-        LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset));
+    Value *NewAllocaPtr =
+        IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, Desc.Offset);
     if (NewAllocaPtr->getType() != AI->getType())
       NewAllocaPtr = IRB.CreateAddrSpaceCast(NewAllocaPtr, AI->getType());
     AI->replaceAllUsesWith(NewAllocaPtr);
@@ -3547,16 +3540,16 @@ void FunctionStackPoisoner::processStaticAllocas() {
   IRB.CreateStore(ConstantInt::get(IntptrTy, kCurrentStackFrameMagic),
                   LocalStackBase);
   // Write the frame description constant to redzone[1].
-  Value *BasePlus1 = IRB.CreatePtrAdd(
-      LocalStackBase, ConstantInt::get(IntptrTy, ASan.LongSize / 8));
+  Value *BasePlus1 =
+      IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, ASan.LongSize / 8);
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
                                    /*AllowMerging*/ true, genName("stack"));
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].
-  Value *BasePlus2 = IRB.CreatePtrAdd(
-      LocalStackBase, ConstantInt::get(IntptrTy, 2 * ASan.LongSize / 8));
+  Value *BasePlus2 =
+      IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, 2 * ASan.LongSize / 8);
   IRB.CreateStore(IRB.CreatePointerCast(&F, IntptrTy), BasePlus2);
 
   const auto &ShadowAfterScope = GetShadowBytesAfterScope(SVD, L);

@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass hexagon-bit-simplify -verify-machineinstrs -o - %s | FileCheck %s
+
+# Check that HexagonBitSimplify handles HLX register pairs and replaces the
+# sub-register copies with direct uses of the pair halves.
+
+# CHECK-NOT: hlxlr = COPY
+# CHECK-DAG: LX_S16b_pseudo %10, %8.vsub_hi
+# CHECK-DAG: LX_S16b_pseudo %2, %8.vsub_lo
+---
+name: foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:hlxlr = LX_L16b_pseudo %0
+    %4:intregs = A2_addi %0, 2048
+    %5:hlxlr = LX_L16b_pseudo %4
+    %6:hlxllr = REG_SEQUENCE %3, %subreg.vsub_hi, %5, %subreg.vsub_lo
+    %7:hlxlr = LX_L16b_pseudo %1
+    %8:hlxllr = LX_add_wwh %6, %7
+    %9:hlxlr = COPY %8.vsub_hi
+    %10:intregs = A2_addi %2, 2048
+    LX_S16b_pseudo %10, %9
+    %11:hlxlr = COPY %8.vsub_lo
+    LX_S16b_pseudo %2, %11
+    PS_jmpret $r31, implicit-def dead $pc
+...

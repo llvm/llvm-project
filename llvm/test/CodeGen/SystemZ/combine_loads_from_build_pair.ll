@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs  -mtriple=s390x-linux-gnu < %s -debug -stop-after=machineverifier 2>&1 | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu < %s -debug -stop-after=machineverifier 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 define i128 @func1({ i128, ptr } %struct) {

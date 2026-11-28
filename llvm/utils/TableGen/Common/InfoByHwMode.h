@@ -16,6 +16,7 @@
 
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
@@ -33,7 +34,8 @@ class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
 
-template <typename InfoT> struct InfoByHwMode;
+template <typename InfoT, typename MapT = std::map<unsigned, InfoT>>
+struct InfoByHwMode;
 
 std::string getModeName(unsigned Mode);
 
@@ -41,8 +43,8 @@ enum : unsigned {
   DefaultMode = CodeGenHwModes::DefaultMode,
 };
 
-template <typename InfoT>
-void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
+template <typename InfoByHwModeT>
+void union_modes(const InfoByHwModeT &A, const InfoByHwModeT &B,
                  SmallVectorImpl<unsigned> &Modes) {
   auto AI = A.begin();
   auto BI = B.begin();
@@ -86,8 +88,8 @@ void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
     Modes.push_back(DefaultMode);
 }
 
-template <typename InfoT> struct InfoByHwMode {
-  using MapType = std::map<unsigned, InfoT>;
+template <typename InfoT, typename MapT> struct InfoByHwMode {
+  using MapType = MapT;
   using PairType = typename MapType::value_type;
   using iterator = typename MapType::iterator;
   using const_iterator = typename MapType::const_iterator;
@@ -143,12 +145,6 @@ template <typename InfoT> struct InfoByHwMode {
   const InfoT &getSimple() const {
     assert(isSimple());
     return Map.begin()->second;
-  }
-  void makeSimple(unsigned Mode) {
-    assert(hasMode(Mode) || hasDefault());
-    InfoT I = get(Mode);
-    Map.clear();
-    Map.try_emplace(DefaultMode, I);
   }
 
   const Record *getRecord() const { return Def; }

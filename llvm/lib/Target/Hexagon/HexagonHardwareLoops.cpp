@@ -1049,7 +1049,10 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     //   DistCheck = CMP_GT DistR,  0   --> CmpLess
     //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
     Register DistCheckR = MRI->createVirtualRegister(PredRC);
-    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    unsigned DistCheckOpc = (CmpLess && Comparison::isUnsigned(Cmp))
+                                ? Hexagon::C2_cmpgtui
+                                : Hexagon::C2_cmpgti;
+    const MCInstrDesc &DistCheckD = TII->get(DistCheckOpc);
     BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
         .addReg(DistR, {}, DistSR)
         .addImm((CmpLess) ? 0 : -1);
@@ -1269,8 +1272,22 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   }
 
   MachineBasicBlock *LastMBB = L->findLoopControlBlock();
-  // Don't generate hw loop if the loop has more than one exit.
-  if (!LastMBB) {
+  // Check actual CFG successors: analyzeBranch omits implicit fallthroughs.
+  // Only reject multi-exit loops whose selected exit reaches an unreachable
+  // sink, preserving valid multi-exit loops.
+  SmallVector<MachineBasicBlock *, 2> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  bool HasUnreachableExit = false;
+  if (LastMBB && ExitingBlocks.size() > 1) {
+    for (MachineBasicBlock *Succ : LastMBB->successors()) {
+      if (!L->contains(Succ) && !Succ->empty() && Succ->succ_empty() &&
+          !Succ->isReturnBlock()) {
+        HasUnreachableExit = true;
+        break;
+      }
+    }
+  }
+  if (!LastMBB || HasUnreachableExit) {
     MORE->emit([&]() {
       return MachineOptimizationRemarkMissed(DEBUG_TYPE, "MultipleExits",
                                              L->getStartLoc(), L->getHeader())

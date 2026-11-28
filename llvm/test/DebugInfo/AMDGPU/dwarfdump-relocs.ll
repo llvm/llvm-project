@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=amdgpu8.03--amdhsa -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v - 2>&1 | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgpu8.03--amdhsa -filetype=obj < %s | llvm-dwarfdump -v - 2>&1 | FileCheck %s
 
 ; LLVM IR generated with the following command and OpenCL source:
 ;

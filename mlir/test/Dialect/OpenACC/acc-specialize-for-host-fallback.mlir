@@ -141,6 +141,65 @@ func.func @kernels_construct(%arg0 : memref<i32>) attributes {acc.routine_info =
   return
 }
 
+// A multi-block region cannot be inlined into the parent block, so it is
+// wrapped in scf.execute_region.
+func.func private @then_fn()
+func.func private @else_fn()
+
+acc.routine @acc_routine_host_data_multi_block func(@host_data_multi_block) seq
+// CHECK-LABEL: func.func @host_data_multi_block(
+// CHECK-NOT:   acc.host_data
+// CHECK:       scf.execute_region {
+// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+// CHECK-NEXT:  ^[[THEN]]:
+// CHECK-NEXT:    call @then_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  ^[[ELSE]]:
+// CHECK-NEXT:    call @else_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+func.func @host_data_multi_block(%arg0 : memref<i32>, %cond : i1) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_host_data_multi_block]>} {
+  %0 = acc.use_device varPtr(%arg0 : memref<i32>) -> memref<i32>
+  acc.host_data dataOperands(%0 : memref<i32>) {
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    func.call @then_fn() : () -> ()
+    acc.terminator
+  ^bb2:
+    func.call @else_fn() : () -> ()
+    acc.terminator
+  }
+  return
+}
+
+acc.routine @acc_routine_data_multi_block func(@data_multi_block) seq
+// CHECK-LABEL: func.func @data_multi_block(
+// CHECK-NOT:   acc.data
+// CHECK:       scf.execute_region {
+// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+// CHECK-NEXT:  ^[[THEN]]:
+// CHECK-NEXT:    call @then_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  ^[[ELSE]]:
+// CHECK-NEXT:    call @else_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+func.func @data_multi_block(%arg0 : memref<i32>, %cond : i1) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_data_multi_block]>} {
+  %0 = acc.create varPtr(%arg0 : memref<i32>) -> memref<i32>
+  acc.data dataOperands(%0 : memref<i32>) {
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    func.call @then_fn() : () -> ()
+    acc.terminator
+  ^bb2:
+    func.call @else_fn() : () -> ()
+    acc.terminator
+  }
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Declare enter/exit - erased (host fallback)
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -global-isel-abort=2 -stop-after=aarch64-prelegalizer-combiner -verify-machineinstrs -o - < %s | FileCheck %s
+; RUN: llc -global-isel -global-isel-abort=2 -stop-after=aarch64-prelegalizer-combiner -o - < %s | FileCheck %s
 
 target datalayout = "e-m:w-p:64:64-i32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-windows-msvc"

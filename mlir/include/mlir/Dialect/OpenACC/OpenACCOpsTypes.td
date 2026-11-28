@@ -17,6 +17,7 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 
 class OpenACC_Type<string name, string typeMnemonic> : TypeDef<OpenACC_Dialect, name> {
+  let cppIncludes = ["mlir/Dialect/OpenACC/OpenACC.h"];
   let mnemonic = typeMnemonic;
 }
 

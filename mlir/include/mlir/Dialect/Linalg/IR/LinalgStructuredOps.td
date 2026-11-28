@@ -840,6 +840,11 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     dimensions in the set `dims` (with `I`, `J`, and `K` treated as _sets_ of
     dim identifiers).
 
+    Currently, this operation supports multiplication followed by summation,
+    with the corresponding type-specific operations (`int`, `float`, `bool`, `complex`).
+    Support for other combinations can be added in the future if required
+    by concrete use cases and can be lowered to appropriate lower-level operations.
+
     The iteration space consists of all dimensions in `I`, `J` and `H`, i.e. the
     domain of each of the `affine_map`s. Like for einsums, the iteration type of
     each dim is inferred and is either:
@@ -882,9 +887,6 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
     Numeric casting is performed on the operands to the inner multiplication,
     promoting/truncating them to the same data type as the accumulator/output.
-
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
   }];
 
   let arguments = (ins
@@ -1230,6 +1232,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
 //===----------------------------------------------------------------------===//
 
 def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
+    DeclareOpInterfaceMethods<AggregatedOpInterface, ["decomposeOperation"]>,
     AttrSizedOperandSegments]> {
   let summary = [{
     Perform a scaled contraction on two inputs where their scaling is described
@@ -1250,6 +1253,9 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
       `D[H] = (SUM_{(I ∪ J) \ H} (A[I] * scale_A[I]) * (B[J] * scale_B[J])) + C[H]`
 
     The iteration type of each dim is inferred.
+
+    Currently, this operation supports multiplication followed by summation,
+    with the corresponding type-specific operations.
 
     The input operands `A`, `B`, and `C` follow the standard contraction semantics
     together with broadcasting and transposition rules.
@@ -1311,8 +1317,21 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
 
     Numeric casting promotes inputs and scales to the accumulator/output type.
 
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
+    **Decomposition**
+
+    The op can be decomposed by first expanding block scaled dims at scaling
+    block boundaries. The unscaled inputs are then contracted over reduction
+    dims `R` not used by the scales, followed by scaling of the partial results
+    and reduction over the remaining reduction dims `S`:
+
+      `T[H ∪ S] = SUM_{R} A[I] * B[J]`
+
+      `D[H] = (SUM_{S} T[H ∪ S] * scale_A[I] * scale_B[J]) + C[H]`
+
+    This follows the dot product definition of the OCP Microscaling
+    specification, where the order of operations and internal precision are
+    implementation-defined. Intermediate values may be computed in a wider type
+    than the output element type.
   }];
 
   let arguments = (ins
@@ -1384,6 +1403,16 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     // Implement function necessary for DestinationStyleOpInterface.
     ::mlir::MutableOperandRange getDpsInitsMutable() {
       return getOutputsMutable();
+    }
+
+    /// Returns the input data operands.
+    SmallVector<OpOperand *> getDataOperands() {
+      return {getDpsInputOperand(0), getDpsInputOperand(2)};
+    }
+
+    /// Returns the input scale operands.
+    SmallVector<OpOperand *> getScaleOperands() {
+      return {getDpsInputOperand(1), getDpsInputOperand(3)};
     }
   }];
 }

@@ -1,0 +1,168 @@
+// RUN: cir-opt %s -cir-fold-empty-branches -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @chain(%arg0: !cir.bool) -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.brcond %arg0 ^bb1, ^bb4
+  ^bb1:
+    cir.br ^bb2
+  ^bb2:
+    cir.br ^bb3
+  ^bb3:
+    cir.return %0 : !s32i
+  ^bb4:
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @chain
+  // CHECK:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]]:
+  // CHECK-NEXT:    cir.return %[[ONE]] : !s32i
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.return %[[ONE]] : !s32i
+  // CHECK-NEXT:  }
+
+  cir.func @forward_operands(%arg0: !cir.bool, %arg1: !s32i,
+                             %arg2: !s32i) -> !s32i {
+    cir.brcond %arg0 ^bb1, ^bb3
+  ^bb1:
+    cir.br ^bb2(%arg1 : !s32i)
+  ^bb2(%0: !s32i):
+    cir.return %0 : !s32i
+  ^bb3:
+    cir.return %arg2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @forward_operands
+  // CHECK-SAME:      (%[[COND:.*]]: !cir.bool, %[[A:.*]]: !s32i, %[[B:.*]]: !s32i)
+  // CHECK-NEXT:    cir.brcond %[[COND]] ^[[THEN:bb[0-9]+]](%[[A]] : !s32i), ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]](%[[V:.*]]: !s32i):
+  // CHECK-NEXT:    cir.return %[[V]] : !s32i
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.return %[[B]] : !s32i
+  // CHECK-NEXT:  }
+
+  cir.func @keep_shared_destination(%arg0: !cir.bool) {
+    cir.brcond %arg0 ^bb1, ^bb2
+  ^bb1:
+    cir.br ^bb3
+  ^bb2:
+    cir.br ^bb3
+  ^bb3:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @keep_shared_destination
+  // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]]:
+  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.br ^[[RET]]
+  // CHECK-NEXT:  ^[[RET]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @unreachable_empty_block() {
+    cir.return
+  ^bb1:
+    cir.br ^bb2
+  ^bb2:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @unreachable_empty_block
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  ^bb1:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @keep_entry_block() {
+    cir.br ^bb1
+  ^bb1:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @keep_entry_block
+  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[RET]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @keep_non_empty_block(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
+    cir.brcond %arg0 ^bb1, ^bb3
+  ^bb1:
+    %0 = cir.add %arg1, %arg1 : !s32i
+    cir.br ^bb2
+  ^bb2:
+    cir.return %0 : !s32i
+  ^bb3:
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @keep_non_empty_block
+  // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]]:
+  // CHECK-NEXT:    %[[SUM:.*]] = cir.add
+  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[RET]]:
+  // CHECK-NEXT:    cir.return %[[SUM]] : !s32i
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @keep_block_with_arguments(%arg0: !cir.bool, %arg1: !s32i) {
+    cir.brcond %arg0 ^bb1(%arg1 : !s32i), ^bb3
+  ^bb1(%0: !s32i):
+    cir.br ^bb2
+  ^bb2:
+    cir.return
+  ^bb3:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @keep_block_with_arguments
+  // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]](%{{.*}} : !s32i), ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]](%{{.*}}: !s32i):
+  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[RET]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @keep_loop_back_edge(%arg0: !cir.bool) {
+    cir.brcond %arg0 ^bb1, ^bb2
+  ^bb1:
+    cir.br ^bb3 loop_id distinct[0]<>
+  ^bb2:
+    cir.return
+  ^bb3:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @keep_loop_back_edge
+  // CHECK-NEXT:    cir.brcond %{{.*}} ^[[EDGE:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[EDGE]]:
+  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]] loop_id distinct[0]<>
+  // CHECK-NEXT:  ^[[ELSE]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  ^[[RET]]:
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @keep_self_loop() {
+    cir.br ^bb1
+  ^bb1:
+    cir.br ^bb1
+  }
+
+  // CHECK-LABEL: cir.func @keep_self_loop
+  // CHECK-NEXT:    cir.br ^[[LOOP:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[LOOP]]:
+  // CHECK-NEXT:    cir.br ^[[LOOP]]
+  // CHECK-NEXT:  }
+}

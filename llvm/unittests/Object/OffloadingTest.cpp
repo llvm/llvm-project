@@ -308,12 +308,18 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   EXPECT_LT(Compressed.size(), Uncompressed.size());
 
   // Verify that the uncompressed and compressed versions are identical.
-  auto HeaderOrErr = OffloadBinary::extractHeader(MemoryBufferRef(
-      StringRef(Compressed.data(), Compressed.size()), "compressed"));
+  MemoryBufferRef CompressedBuf(StringRef(Compressed.data(), Compressed.size()),
+                                "compressed");
+  auto HeaderOrErr = OffloadBinary::extractHeader(CompressedBuf);
   ASSERT_THAT_EXPECTED(HeaderOrErr, Succeeded());
   EXPECT_EQ(Compressed.size(),
             alignTo((*HeaderOrErr)->Size, OffloadBinary::getAlignment()));
   EXPECT_EQ((*HeaderOrErr)->InflatedSize, Uncompressed.size());
+  EXPECT_TRUE(OffloadBinary::isCompressed(CompressedBuf));
+  EXPECT_FALSE(OffloadBinary::isCompressed(MemoryBufferRef(
+      StringRef(Uncompressed.data(), Uncompressed.size()), "uncompressed")));
+  EXPECT_FALSE(OffloadBinary::isCompressed(
+      MemoryBufferRef(StringRef("not a package"), "garbage")));
 
   auto BinaryBuffer = MemoryBuffer::getMemBufferCopy(Compressed);
   auto BinariesOrErr = OffloadBinary::create(*BinaryBuffer);
@@ -350,4 +356,34 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   ASSERT_EQ(Files.size(), 2u);
   EXPECT_EQ(Files[0].getBinary()->getImage(), ImageContent);
   EXPECT_EQ(Files[1].getBinary()->getImage(), "SecondImage");
+}
+
+TEST(OffloadingTest, checkTargetsWithCode) {
+  using TargetID = OffloadFile::TargetID;
+  TargetID U{"spirv64-unknown-unknown", "igca_30r", "xe-mtl-u"};
+  TargetID HU{"spirv64-unknown-unknown", "igca_30r", "xe-mtl-h,xe-mtl-u"};
+  TargetID NoCode{"spirv64-unknown-unknown", "igca_30r", ""};
+  TargetID Generic{"spirv64-unknown-unknown", "generic", ""};
+
+  // A target given without "code" lists no real devices.
+  EXPECT_EQ(TargetID("spirv64-unknown-unknown", "igca_30r"), NoCode);
+
+  // Device images that list the same real devices are linked together.
+  EXPECT_TRUE(areTargetsEquivalent(U, U));
+  EXPECT_TRUE(areTargetsCompatible(U, U));
+
+  // Device images that list different real devices are linked separately.
+  EXPECT_FALSE(areTargetsEquivalent(U, HU));
+  EXPECT_FALSE(areTargetsEquivalent(U, NoCode));
+  EXPECT_FALSE(areTargetsCompatible(U, HU));
+  EXPECT_FALSE(areTargetsCompatible(NoCode, U));
+
+  // A generic device image can be linked into device images that list real
+  // devices, but not the other way round.
+  EXPECT_TRUE(areTargetsCompatible(Generic, U));
+  EXPECT_FALSE(areTargetsCompatible(U, Generic));
+
+  // A device image that lists no real devices can be linked into generic
+  // device images.
+  EXPECT_TRUE(areTargetsCompatible(NoCode, Generic));
 }

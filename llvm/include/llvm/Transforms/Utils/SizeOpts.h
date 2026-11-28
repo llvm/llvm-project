@@ -89,19 +89,21 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq,
   return !PSI->isHotBlockNthPercentile(PgsoCutoffInstrProf, BBOrBlockFreq, BFI);
 }
 
-/// Returns true if function \p F is suggested to be size-optimized based on the
-/// profile.
+/// Returns true if function \p F is suggested to be size-optimized based on IR
+/// attributes, and profiling information if \p UseProfilingInfo.
 LLVM_ABI bool
 shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI,
-                      PGSOQueryType QueryType = PGSOQueryType::Other);
+                      PGSOQueryType QueryType = PGSOQueryType::Other,
+                      bool UseProfilingInfo = true);
 
 /// Returns true if basic block \p BB is suggested to be size-optimized based on
-/// the profile.
+/// IR attributes, and profiling information if \p UseProfilingInfo.
 LLVM_ABI bool
 shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI,
-                      PGSOQueryType QueryType = PGSOQueryType::Other);
+                      PGSOQueryType QueryType = PGSOQueryType::Other,
+                      bool UseProfilingInfo = true);
 
 } // end namespace llvm
 

@@ -12,6 +12,7 @@
 
 #include "mlir/Target/LLVM/ROCDL/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/Offloading/Utility.h"

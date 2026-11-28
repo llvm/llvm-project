@@ -1,0 +1,267 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -gpu=unified %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s --check-prefix=IMPLICIT -DATTR=managed
+! RUN: bbc -emit-hlfir -fcuda -gpu=pinned %s -o - | FileCheck %s --check-prefix=IMPLICIT -DATTR=pinned
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s --check-prefix=DEFAULT
+! RUN: bbc -emit-hlfir -gpu=managed %s -o - | FileCheck %s --check-prefix=DEFAULT
+
+! Under -gpu=unified, a plain allocatable function result is given the unified
+! allocator, so its storage may come from that allocator (allocate-on-assignment,
+! ALLOCATE, MOVE_ALLOC). The caller must release it through the runtime, which
+! frees it with the allocator recorded in its descriptor, and not move it into
+! an hlfir.expr whose buffer would be released with an inlined free. This does
+! not depend on CUDA Fortran being enabled.
+!
+! With CUDA Fortran, -gpu=managed and -gpu=pinned instead give a plain
+! allocatable an implicit managed or pinned attribute, so its result is
+! released with the CUDA deallocation. Without CUDA Fortran, -gpu=managed
+! leaves allocatables with the default allocator.
+
+module m
+  type t
+    integer, allocatable :: a(:)
+  end type
+  type tf
+    integer :: i
+  contains
+    final :: fin
+  end type
+contains
+  subroutine fin(x)
+    type(tf), intent(inout) :: x
+  end subroutine
+  function char_result(n) result(s)
+    integer, intent(in) :: n
+    character(:), allocatable :: s
+    s = repeat('a', n)
+  end function
+  function array_result(n) result(r)
+    integer, intent(in) :: n
+    integer, allocatable :: r(:)
+    integer, allocatable :: tmp(:)
+    allocate(tmp(n))
+    tmp = 1
+    call move_alloc(tmp, r)
+  end function
+  function derived_result(n) result(r)
+    integer, intent(in) :: n
+    type(t), allocatable :: r
+    r = t([n])
+  end function
+  function final_result(n) result(r)
+    integer, intent(in) :: n
+    type(tf), allocatable :: r
+    r = tf(n)
+  end function
+  function class_result(n) result(r)
+    integer, intent(in) :: n
+    class(t), allocatable :: r
+    allocate(r)
+    r%a = [n]
+  end function
+  function shifted_result(n) result(r)
+    integer, intent(in) :: n
+    integer, allocatable :: r(:)
+    allocate(r(-n:n))
+    r = 42
+  end function
+end module
+
+subroutine use_char(n)
+  use m
+  integer :: n
+  character(10) :: c
+  c = trim(char_result(n))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_char(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPchar_result(
+! CHECK-NOT: hlfir.as_expr
+! CHECK: hlfir.char_trim %{{.*}} : (!fir.boxchar<1>)
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_char(
+! DEFAULT: fir.call @_QMmPchar_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT-NOT: _FortranAAllocatableDeallocate
+! DEFAULT: return
+
+! IMPLICIT-LABEL: func.func @_QPuse_char(
+! IMPLICIT: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
+! IMPLICIT: fir.call @_QMmPchar_result(
+! IMPLICIT-NOT: hlfir.as_expr
+! IMPLICIT: hlfir.char_trim %{{.*}} : (!fir.boxchar<1>)
+! IMPLICIT: fir.if
+! IMPLICIT: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>> data_attr([[ATTR]])
+! IMPLICIT-NOT: fir.freemem
+! IMPLICIT: return
+
+subroutine use_array(n)
+  use m
+  integer :: n, s
+  s = sum(array_result(n))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_array(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmParray_result(
+! CHECK-NOT: hlfir.as_expr
+! CHECK: hlfir.sum %{{.*}} : (!fir.box<!fir.array<?xi32>>) -> i32
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_array(
+! DEFAULT: fir.call @_QMmParray_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT-NOT: _FortranAAllocatableDeallocate
+! DEFAULT: return
+
+! IMPLICIT-LABEL: func.func @_QPuse_array(
+! IMPLICIT: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! IMPLICIT: fir.call @_QMmParray_result(
+! IMPLICIT-NOT: hlfir.as_expr
+! IMPLICIT: hlfir.sum
+! IMPLICIT: fir.if
+! IMPLICIT: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr([[ATTR]])
+! IMPLICIT-NOT: fir.freemem
+! IMPLICIT: return
+
+subroutine use_bounds(n, dim, lb)
+  use m
+  integer :: n, dim, lb
+  lb = lbound(shifted_result(n), dim)
+end subroutine
+
+! A function reference is not a variable: the result kept as a variable is
+! declared without the lower bounds of its descriptor, so LBOUND gives one.
+! CHECK-LABEL: func.func @_QPuse_bounds(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPshifted_result(
+! CHECK: %[[LOAD:.*]] = fir.load %[[RES]]
+! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[LOAD]], %{{.*}}
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]]
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
+! CHECK: hlfir.declare %[[ADDR]](%[[SHAPE]]) uniq_name(".tmp.func_result")
+! CHECK: fir.call @_FortranALboundDim(
+! CHECK: fir.call @_FortranAAllocatableDeallocate(
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_bounds(
+! DEFAULT: fir.call @_QMmPshifted_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT: return
+
+! IMPLICIT-LABEL: func.func @_QPuse_bounds(
+! IMPLICIT: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! IMPLICIT: fir.call @_QMmPshifted_result(
+! IMPLICIT: %[[LOAD:.*]] = fir.load %[[RES]]
+! IMPLICIT: %[[DIMS:.*]]:3 = fir.box_dims %[[LOAD]], %{{.*}}
+! IMPLICIT: %[[ADDR:.*]] = fir.box_addr %[[LOAD]]
+! IMPLICIT: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
+! IMPLICIT: hlfir.declare %[[ADDR]](%[[SHAPE]]) uniq_name(".tmp.func_result")
+! IMPLICIT: fir.call @_FortranALboundDim(
+! IMPLICIT: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr([[ATTR]])
+! IMPLICIT: return
+
+subroutine use_derived(n)
+  use m
+  integer :: n
+  type(t) :: x
+  x = derived_result(n)
+end subroutine
+
+! The result is first destroyed, which also performs any finalization. The
+! top-level entity is then released without finalizing it again.
+! CHECK-LABEL: func.func @_QPuse_derived(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPderived_result(
+! CHECK: fir.call @_FortranADestroy(
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_derived(
+! DEFAULT: fir.call @_QMmPderived_result(
+! DEFAULT: fir.call @_FortranADestroy(
+! DEFAULT: fir.if
+! DEFAULT: fir.freemem
+! DEFAULT-NOT: _FortranAAllocatableDeallocateNoFinal
+! DEFAULT: return
+
+! IMPLICIT-LABEL: func.func @_QPuse_derived(
+! IMPLICIT: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> <{bindc_name = ".result"}>
+! IMPLICIT: fir.call @_QMmPderived_result(
+! IMPLICIT: fir.call @_FortranADestroy(
+! IMPLICIT: fir.if
+! IMPLICIT: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! IMPLICIT: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! IMPLICIT-NOT: fir.freemem
+! IMPLICIT: return
+
+subroutine use_final(n)
+  use m
+  integer :: n
+  type(tf) :: x
+  x = final_result(n)
+end subroutine
+
+! A result with a final procedure is finalized by Destroy, and the same
+! descriptor is then released without being finalized a second time.
+! CHECK-LABEL: func.func @_QPuse_final(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmTtf{i:i32}>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPfinal_result(
+! CHECK: hlfir.assign
+! CHECK: %[[LOAD:.*]] = fir.load %[[RES]]
+! CHECK: %[[BOX:.*]] = fir.convert %[[LOAD]] : {{.*}} -> !fir.box<none>
+! CHECK: fir.call @_FortranADestroy(%[[BOX]])
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_final(
+! DEFAULT: fir.call @_QMmPfinal_result(
+! DEFAULT: fir.call @_FortranADestroy(
+! DEFAULT: fir.if
+! DEFAULT: fir.freemem
+! DEFAULT-NOT: _FortranAAllocatableDeallocateNoFinal
+! DEFAULT: return
+
+subroutine use_class(n)
+  use m
+  integer :: n
+  type(t) :: x
+  x = class_result(n)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_class(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPclass_result(
+! CHECK: hlfir.assign
+! CHECK: %[[LOAD:.*]] = fir.load %[[RES]]
+! CHECK: %[[BOX:.*]] = fir.convert %[[LOAD]] : {{.*}} -> !fir.box<none>
+! CHECK: fir.call @_FortranADestroy(%[[BOX]])
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_class(
+! DEFAULT: fir.call @_QMmPclass_result(
+! DEFAULT: fir.call @_FortranADestroy(
+! DEFAULT: fir.if
+! DEFAULT: fir.freemem
+! DEFAULT-NOT: _FortranAAllocatableDeallocateNoFinal
+! DEFAULT: return

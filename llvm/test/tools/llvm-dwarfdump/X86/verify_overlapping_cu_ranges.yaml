@@ -65,6 +65,7 @@
 # CHECK-NEXT:              DW_AT_high_pc     [DW_FORM_data4] (0x00000020)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

@@ -86,21 +86,21 @@ define %struct.__neon_float32x2x4_t @test_ld4r(ptr %addr) {
 
 define %struct.__neon_float32x2x2_t @test_ld2lane(<2 x float> %a, <2 x float> %b, ptr %addr) {
   ; CHECK-LABEL: name: test_ld2lane
-  ; CHECK: {{.*}} LD2i32 {{.*}}
+  ; CHECK: LD2i32 {{.*}} :: (load (s64) {{.*}})
   %val = call %struct.__neon_float32x2x2_t @llvm.aarch64.neon.ld2lane.v2f32.p0(<2 x float> %a, <2 x float> %b, i64 1, ptr %addr)
   ret %struct.__neon_float32x2x2_t %val
 }
 
 define %struct.__neon_float32x2x3_t @test_ld3lane(<2 x float> %a, <2 x float> %b, <2 x float> %c, ptr %addr) {
   ; CHECK-LABEL: name: test_ld3lane
-  ; CHECK: {{.*}} LD3i32 {{.*}}
+  ; CHECK: LD3i32 {{.*}} :: (load (s96) {{.*}})
   %val = call %struct.__neon_float32x2x3_t @llvm.aarch64.neon.ld3lane.v2f32.p0(<2 x float> %a, <2 x float> %b, <2 x float> %c, i64 1, ptr %addr)
   ret %struct.__neon_float32x2x3_t %val
 }
 
 define %struct.__neon_float32x2x4_t @test_ld4lane(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d, ptr %addr) {
   ; CHECK-LABEL: name: test_ld4lane
-  ; CHECK: {{.*}} LD4i32 {{.*}}
+  ; CHECK: LD4i32 {{.*}} :: (load (s128) {{.*}})
   %val = call %struct.__neon_float32x2x4_t @llvm.aarch64.neon.ld4lane.v2f32.p0(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d, i64 1, ptr %addr)
   ret %struct.__neon_float32x2x4_t %val
 }

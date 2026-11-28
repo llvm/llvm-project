@@ -1,8 +1,10 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
+// FIXME: Remove -fno-clangir-call-conv-lowering from the RUN lines once
+// calling-convention lowering is implemented for the mfp8 types.
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir   %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-cir   %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -742,7 +744,7 @@ float16x4_t test_vset_lane_f16(float16_t a, float16x4_t b) {
 
 // ALL-LABEL: @test_vset_lane_mf8(
 mfloat8x8_t test_vset_lane_mf8(mfloat8_t a, mfloat8x8_t b) {
-// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !u8i>
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !cir.mfp8>
 
 // LLVM-SAME: {{.*}}<8 x i8> {{.*}}[[B:%.*]])
 // LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 {{.*}}, i32 7
@@ -895,7 +897,7 @@ float16x8_t test_vsetq_lane_f16(float16_t a, float16x8_t b) {
 
 // ALL-LABEL: @test_vsetq_lane_mf8(
 mfloat8x16_t test_vsetq_lane_mf8(mfloat8_t a, mfloat8x16_t b) {
-// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !u8i>
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !cir.mfp8>
 
 // LLVM-SAME: {{.*}}<16 x i8> {{.*}}[[B:%.*]])
 // LLVM: [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 {{.*}}, i32 15

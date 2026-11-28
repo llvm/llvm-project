@@ -31,11 +31,11 @@ using SymbolRef = common::Reference<const Symbol>;
 
 // Wraps a constant value in a class templated by its resolved type.
 // This Constant<> template class should be instantiated only for
-// concrete intrinsic types and SomeDerived.  There is no instance
-// Constant<SomeType> since there is no way to constrain each
-// element of its array to hold the same type.  To represent a generic
-// constant, use a generic expression like Expr<SomeInteger> or
-// Expr<SomeType>) to wrap the appropriate instantiation of Constant<>.
+// concrete intrinsic types and Type<TypeCategory::Derived>.  There is no
+// instance Constant<SomeType> since there is no way to constrain each element
+// of its array to hold the same type.  To represent a generic constant, use a
+// generic expression like Expr<Type<TypeCategory::Integer>> or Expr<SomeType>)
+// to wrap the appropriate instantiation of Constant<>.
 
 template <typename> class Constant;
 
@@ -99,9 +99,10 @@ private:
   ConstantSubscripts lbounds_;
 };
 
-// Constant<> is specialized for Character kinds and SomeDerived.
-// The non-Character intrinsic types, and SomeDerived, share enough
-// common behavior that they use this common base class.
+// Constant<> is specialized for Character kinds and
+// Type<TypeCategory::Derived>. The non-Character intrinsic types, and
+// Type<TypeCategory::Derived>, share enough common behavior that they use this
+// common base class.
 template <typename RESULT, typename ELEMENT = Scalar<RESULT>>
 class ConstantBase : public ConstantBounds {
   static_assert(RESULT::category != TypeCategory::Character);
@@ -110,16 +111,48 @@ public:
   using Result = RESULT;
   using Element = ELEMENT;
 
+  constexpr int kind() const { return kind_; }
+
   // Constructor for creating ConstantBase from an actual value (i.e.
   // literals, etc.)
-  template <typename A,
-      typename = std::enable_if_t<std::is_convertible_v<A, Element>>>
-  ConstantBase(const A &x, Result res = Result{}) : result_{res}, values_{x} {}
+  template <typename A>
+  ConstantBase(int kind, const A &x, Result res)
+      : kind_{kind}, result_{res}, values_{Element{kind, x}} {
+    CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(res.kind() == kind);
+    }
+  }
+  ConstantBase(int kind, ELEMENT &&x)
+      : kind_{kind}, result_{Result{kind}}, values_{std::move(x)} {
+    CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(values_.front().kind() == kind);
+    }
+  }
 
-  ConstantBase(ELEMENT &&x, Result res = Result{})
-      : result_{res}, values_{std::move(x)} {}
+  template <typename A>
+  ConstantBase(int kind, const A &x)
+      : kind_{kind}, result_{Result{kind}}, values_{Element{kind, x}} {
+    CHECK_KIND(kind, RESULT);
+  }
+  ConstantBase(int kind, ELEMENT &&x, Result res)
+      : kind_{kind}, result_{res}, values_{std::move(x)} {
+    CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(res.kind() == kind);
+    }
+  }
+
+  ConstantBase(int kind, std::vector<Element> &&x, ConstantSubscripts &&sh)
+      : ConstantBase{kind, std::move(x), std::move(sh), Result{kind}} {}
   ConstantBase(
-      std::vector<Element> &&, ConstantSubscripts &&, Result = Result{});
+      int kind, std::vector<Element> &&, ConstantSubscripts &&, Result);
+  template <typename A, typename B, typename C>
+  ConstantBase(int kind, const std::map<A, B, C> &x, Result res)
+      : kind_{kind}, result_{res}, values_{x} {
+    CHECK_KIND(kind, RESULT);
+  }
 
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConstantBase)
   ~ConstantBase();
@@ -140,6 +173,7 @@ protected:
   std::size_t CopyFrom(const ConstantBase &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
+  int kind_;
   Result result_; // usually empty except for Real & Complex
   std::vector<Element> values_;
 };
@@ -170,22 +204,24 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 };
 
-template <int KIND>
-class Constant<Type<TypeCategory::Character, KIND>> : public ConstantBounds {
+template <>
+class Constant<Type<TypeCategory::Character>> : public ConstantBounds {
 public:
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   using Element = Scalar<Result>;
 
+  constexpr int kind() const { return kind_; }
+
   CLASS_BOILERPLATE(Constant)
-  explicit Constant(const Scalar<Result> &);
-  explicit Constant(Scalar<Result> &&);
-  Constant(
-      ConstantSubscript length, std::vector<Element> &&, ConstantSubscripts &&);
+  explicit Constant(int kind, const Scalar<Result> &);
+  explicit Constant(int kind, Scalar<Result> &&);
+  Constant(int kind, ConstantSubscript length, std::vector<Element> &&,
+      ConstantSubscripts &&);
   ~Constant();
 
   bool operator==(const Constant &that) const {
-    return LEN() == that.LEN() && shape() == that.shape() &&
-        values_ == that.values_;
+    return kind() == that.kind() && LEN() == that.LEN() &&
+        shape() == that.shape() && values_ == that.values_;
   }
   bool empty() const;
   std::size_t size() const;
@@ -212,11 +248,12 @@ public:
   Constant Reshape(ConstantSubscripts &&) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   std::string AsFortran() const;
-  DynamicType GetType() const { return {KIND, length_}; }
+  DynamicType GetType() const { return {kind_, length_}; }
   std::size_t CopyFrom(const Constant &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
 private:
+  int kind_;
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
   bool wasHollerith_{false};
@@ -230,15 +267,23 @@ using StructureConstructorValues = std::map<SymbolRef,
     common::CopyableIndirection<Expr<SomeType>>, ComponentCompare>;
 
 template <>
-class Constant<SomeDerived>
-    : public ConstantBase<SomeDerived, StructureConstructorValues> {
+class Constant<Type<TypeCategory::Derived>>
+    : public ConstantBase<Type<TypeCategory::Derived>,
+          StructureConstructorValues> {
 public:
-  using Result = SomeDerived;
+  using Result = Type<TypeCategory::Derived>;
   using Element = StructureConstructorValues;
-  using Base = ConstantBase<SomeDerived, StructureConstructorValues>;
+  using Base =
+      ConstantBase<Type<TypeCategory::Derived>, StructureConstructorValues>;
 
   Constant(const StructureConstructor &);
   Constant(StructureConstructor &&);
+  Constant(int kind, const StructureConstructor &v) : Constant(v) {
+    CHECK(kind == 0);
+  }
+  Constant(int kind, StructureConstructor &&v) : Constant(std::move(v)) {
+    CHECK(kind == 0);
+  }
   Constant(const semantics::DerivedTypeSpec &,
       std::vector<StructureConstructorValues> &&, ConstantSubscripts &&);
   Constant(const semantics::DerivedTypeSpec &,
@@ -254,13 +299,49 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 };
 
+inline Constant<SubscriptInteger> MakeSubscriptIntConstant(int64_t v) {
+  return Constant<SubscriptInteger>{
+      SubscriptIntegerKind, Scalar<SubscriptInteger>{SubscriptIntegerKind, v}};
+}
+
+inline Constant<CInteger> MakeCIntegerConstant(int32_t v) {
+  return Constant<CInteger>{CIntegerKind, Scalar<CInteger>{CIntegerKind, v}};
+}
+
+inline Constant<LogicalResult> MakeLogicalResultConstant(bool v) {
+  return Constant<LogicalResult>{
+      LogicalResultKind, Scalar<LogicalResult>{LogicalResultKind, v}};
+}
+
+template <typename T, typename CharT,
+    typename =
+        std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Character>>>>
+inline Constant<T> MakeConstant(int kind, const std::basic_string<CharT> &v) {
+  return Constant<T>{kind, value::CharacterValue{kind, v}};
+}
+
+template <typename T, typename CharT,
+    typename =
+        std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Character>>>>
+inline Constant<T> MakeConstant(int kind, std::basic_string<CharT> &&v) {
+  return Constant<T>{kind, value::CharacterValue{kind, std::move(v)}};
+}
+
+template <typename T,
+    typename = std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Integer>>>>
+inline Constant<T> MakeConstant(int kind, int64_t v) {
+  return Constant<T>{kind, value::IntegerValue{kind, v}};
+}
+
 FOR_EACH_LENGTHLESS_INTRINSIC_KIND(extern template class ConstantBase, )
-extern template class ConstantBase<SomeDerived, StructureConstructorValues>;
+extern template class ConstantBase<Type<TypeCategory::Derived>,
+    StructureConstructorValues>;
 FOR_EACH_INTRINSIC_KIND(extern template class Constant, )
 
 #define INSTANTIATE_CONSTANT_TEMPLATES \
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(template class ConstantBase, ) \
-  template class ConstantBase<SomeDerived, StructureConstructorValues>; \
+  template class ConstantBase<Type<TypeCategory::Derived>, \
+      StructureConstructorValues>; \
   FOR_EACH_INTRINSIC_KIND(template class Constant, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CONSTANT_H_

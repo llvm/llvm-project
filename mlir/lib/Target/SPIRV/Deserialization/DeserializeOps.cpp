@@ -48,17 +48,24 @@ static NameLoc getLocFromDebugInfoString(OpBuilder &builder, StringRef source) {
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
           getConstantCompositeReplicate(id)) {
-    return spirv::EXTConstantCompositeReplicateOp::create(
-        opBuilder, unknownLoc, constCompositeReplicateInfo->second,
-        constCompositeReplicateInfo->first);
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value)
+      value = spirv::EXTConstantCompositeReplicateOp::create(
+          opBuilder, unknownLoc, constCompositeReplicateInfo->second,
+          constCompositeReplicateInfo->first);
+    return value;
   }
   if (auto constInfo = getConstant(id)) {
-    // Materialize a `spirv.Constant` op at every use site.
-    Location loc = unknownLoc;
-    if (LocationAttr locAttr = constantLocMap.lookup(id))
-      loc = Location(locAttr);
-    return spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
-                                     constInfo->first);
+    // Materialize a `spirv.Constant` op once per block.
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value) {
+      Location loc = unknownLoc;
+      if (LocationAttr locAttr = constantLocMap.lookup(id))
+        loc = Location(locAttr);
+      value = spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
+                                        constInfo->first);
+    }
+    return value;
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp =
@@ -93,7 +100,10 @@ Value spirv::Deserializer::getValue(uint32_t id) {
         specConstOperationInfo->enclosedOpOperands);
   }
   if (auto undef = getUndefType(id)) {
-    return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value)
+      value = spirv::UndefOp::create(opBuilder, unknownLoc, undef);
+    return value;
   }
   if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
           graphConstantARMInfo = getGraphConstantARM(id)) {
@@ -238,6 +248,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeRuntimeArray:
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
+  case spirv::Opcode::OpTypeUntypedPointerKHR:
   case spirv::Opcode::OpTypeTensorARM:
   case spirv::Opcode::OpTypeGraphARM:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
@@ -684,6 +695,47 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
 }
 
 template <>
+LogicalResult Deserializer::processOp<spirv::INTELFunctionPointerCallOp>(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() < 3) {
+    return emitError(
+        unknownLoc, "OpFunctionPointerCallINTEL must have at least 3 operands");
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  if (isVoidType(resultType))
+    resultType = nullptr;
+
+  uint32_t resultID = operands[1];
+  SmallVector<Value, 4> values;
+  for (uint32_t operand : llvm::drop_begin(operands, 2)) {
+    Value value = getValue(operand);
+    if (!value) {
+      return emitError(unknownLoc, "unknown <id> ")
+             << operand << " used by OpFunctionPointerCallINTEL";
+    }
+    values.push_back(value);
+  }
+
+  auto callOp = spirv::INTELFunctionPointerCallOp::create(
+      opBuilder, unknownLoc, resultType, values.front(),
+      ArrayRef(values).drop_front());
+
+  if (auto it = decorations.find(resultID); it != decorations.end())
+    for (NamedAttribute attr : it->second)
+      callOp->setAttr(attr.getName(), attr.getValue());
+
+  if (resultType)
+    valueMap[resultID] = callOp.getReturnValue();
+  return success();
+}
+
+template <>
 LogicalResult
 Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   SmallVector<Type, 1> resultTypes;
@@ -795,6 +847,32 @@ LogicalResult Deserializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   Operation *op = spirv::GenericCastToPtrExplicitOp::create(
       opBuilder, loc, resultTypes, operands);
   valueMap[valueID] = op->getResult(0);
+  return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::KHRAbortOp>(ArrayRef<uint32_t> words) {
+  if (words.size() != 2)
+    return emitError(unknownLoc, "OpAbortKHR must have two operands");
+
+  Type messageType = getType(words[0]);
+  if (!messageType)
+    return emitError(unknownLoc, "unknown type <id> : ") << words[0];
+
+  Value message = getValue(words[1]);
+  if (!message)
+    return emitError(unknownLoc, "unknown <id> : ") << words[1];
+
+  // Only the case where Message Type is the type of Message is modeled.
+  if (message.getType() != messageType)
+    return emitError(unknownLoc, "OpAbortKHR Message Type ")
+           << messageType << " differs from the type of Message "
+           << message.getType();
+
+  spirv::KHRAbortOp::create(opBuilder, createFileLineColLoc(opBuilder),
+                            message);
+  clearDebugLine();
   return success();
 }
 

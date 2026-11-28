@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-linux-gnu -std=c++2a | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple=x86_64-linux-gnu -std=c++2a | FileCheck %s %}
 
 namespace spaceship {
   struct X {};

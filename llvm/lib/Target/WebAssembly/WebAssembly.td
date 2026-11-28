@@ -22,6 +22,11 @@ include "llvm/Target/Target.td"
 // WebAssembly Subtarget features.
 //===----------------------------------------------------------------------===//
 
+def FeatureAcquireReleaseAtomics :
+      SubtargetFeature<"acquire-release-atomics",
+                       "HasAcquireReleaseAtomics", "true",
+                       "Enable acquire-release-atomics proposal">;
+
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
 
@@ -76,10 +81,6 @@ def FeatureNontrappingFPToInt :
       SubtargetFeature<"nontrapping-fptoint",
                        "HasNontrappingFPToInt", "true",
                        "Enable non-trapping float-to-int conversion operators">;
-
-def FeatureRelaxedAtomics :
-      SubtargetFeature<"relaxed-atomics", "HasRelaxedAtomics", "true",
-                       "Enable relaxed-atomics proposal">;
 
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",

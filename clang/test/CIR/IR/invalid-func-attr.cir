@@ -56,3 +56,13 @@ module {
     cir.return
   }
 }
+
+// -----
+
+module {
+  // unnamed_addr is printed after dso_local, so the opposite order does not parse.
+  // expected-error@+1 {{expected valid '@'-identifier for symbol name}}
+  cir.func no_inline unnamed_addr dso_local @badUnnamedAddrOrder() {
+    cir.return
+  }
+}

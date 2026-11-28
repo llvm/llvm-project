@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
-#include "orc-rt-internal/bedrock/sys/CPUFeatures.h"
-#include "orc-rt-internal/bedrock/sys/PageSize.h"
-#include "orc-rt-internal/bedrock/sys/TargetTriple.h"
+#include "orc-rt-internal/bedrock/host/CPUFeatures.h"
+#include "orc-rt-internal/bedrock/host/PageSize.h"
+#include "orc-rt-internal/bedrock/host/TargetTriple.h"
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/bit.h"
 
@@ -32,15 +32,15 @@ ExecutorProcessInfo::ExecutorProcessInfo(std::string Triple, size_t PageSize,
 
 /// Create an ExecutorProcessInfo, auto-detecting property values.
 Expected<ExecutorProcessInfo> ExecutorProcessInfo::Detect() noexcept {
-  auto Features = sys::detectTargetCPUFeatures();
+  auto Features = host::detectTargetCPUFeatures();
   std::string CPUFeatures;
   if (!Features.empty()) {
     // Every feature is emitted with a '+' prefix, so the separator carries
     // the prefix for all but the first.
     CPUFeatures = "+" + join(Features, ",+");
   }
-  auto Triple = sys::detectTargetTriple();
-  auto PageSize = sys::detectPageSize();
+  auto Triple = host::detectTargetTriple();
+  auto PageSize = host::detectPageSize();
   if (!PageSize)
     return PageSize.takeError();
   return ExecutorProcessInfo(std::move(Triple), std::move(*PageSize),

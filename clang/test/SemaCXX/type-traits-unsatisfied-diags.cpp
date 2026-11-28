@@ -339,7 +339,7 @@ static_assert(__is_constructible(S1, char*));
 // expected-error@-1 {{no matching constructor for initialization of 'S1'}} \
 // expected-note@#c-S1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'char *' to 'const S1' for 1st argument}} \
 // expected-note@#c-S1 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'char *' to 'S1' for 1st argument}} \
-// expected-note@#cc-S1 {{candidate constructor not viable: no known conversion from 'char *' to 'int' for 1st argument; dereference the argument with *}} \
+// expected-note@#cc-S1 {{candidate constructor not viable: no known conversion from 'char *' to 'int' for 1st argument}} \
 // expected-note@#c-S1 {{'S1' defined here}}
 
 struct S2 { // #c-S2

@@ -327,6 +327,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // The builtin include directory does not include any multilib path, as the
+    // builtin include files come from clang's build, not a runtimes build.
     SmallString<128> Dir(getDriver().ResourceDir);
     llvm::sys::path::append(Dir, "include");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
@@ -583,20 +585,23 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) {
       auto RuntimeLib = TC.GetRuntimeLibType(Args);
       switch (RuntimeLib) {
-      case (ToolChain::RLT_Libgcc): {
+      case ToolChain::RLT_None:
+        CRTBegin = nullptr;
+        CRTEnd = nullptr;
+        break;
+      case ToolChain::RLT_Libgcc:
         CRTBegin = IsStaticPIE ? "crtbeginS.o" : "crtbegin.o";
         CRTEnd = IsStaticPIE ? "crtendS.o" : "crtend.o";
         break;
-      }
-      case (ToolChain::RLT_CompilerRT): {
+      case ToolChain::RLT_CompilerRT:
         CRTBegin =
             TC.getCompilerRTArgString(Args, "crtbegin", ToolChain::FT_Object);
         CRTEnd =
             TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
         break;
       }
-      }
-      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTBegin)));
+      if (CRTBegin)
+        CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTBegin)));
     }
   }
 
@@ -636,7 +641,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
-      NeedCRTs)
+      NeedCRTs && CRTEnd)
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf

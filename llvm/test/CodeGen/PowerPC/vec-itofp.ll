@@ -45,11 +45,11 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs3, vs3
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8:
@@ -67,7 +67,6 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI0_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI0_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
-; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs1, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI0_3@toc@ha
@@ -80,6 +79,7 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs3, v2
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test8:
@@ -97,7 +97,6 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI0_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI0_2@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs1, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI0_3@toc@ha
@@ -110,6 +109,7 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs3, v2
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %SrcPtr, align 16
@@ -138,9 +138,9 @@ define void @test4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    vperm v2, v5, v2, v4
 ; CHECK-P8-NEXT:    xvcvuxddp vs1, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test4:
@@ -156,9 +156,9 @@ define void @test4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    xvcvuxddp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
-; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs1, v2
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test4:
@@ -174,9 +174,9 @@ define void @test4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs1, v2
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <4 x i16>, ptr %SrcPtr, align 16
@@ -278,10 +278,10 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: stest8:
@@ -299,7 +299,6 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    vextsh2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs1, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
@@ -315,6 +314,7 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs3, v2
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: stest8:
@@ -332,7 +332,6 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_2@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
@@ -348,6 +347,7 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs3, v2
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %SrcPtr, align 16
@@ -400,10 +400,10 @@ define void @stest4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
-; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs1, v2
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: stest4:
@@ -419,10 +419,10 @@ define void @stest4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v2
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <4 x i16>, ptr %SrcPtr, align 16

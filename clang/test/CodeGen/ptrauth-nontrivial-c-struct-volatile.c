@@ -56,12 +56,11 @@ void copyComplex(volatile struct HasComplexField *dst,
   *dst = *src;
 }
 
-// _Complex fields aren't given any TBAA at all.
 // CHECK: define{{.*}} void @[[COPY_ASSIGNMENT_COMPLEX]](
-// CHECK: %[[SRC_REAL:.*]] = load volatile double, ptr %{{.*}}, align 8{{$}}
-// CHECK: %[[SRC_IMAG:.*]] = load volatile double, ptr %{{.*}}, align 8{{$}}
-// CHECK: store volatile double %[[SRC_REAL]], ptr %{{.*}}, align 8{{$}}
-// CHECK: store volatile double %[[SRC_IMAG]], ptr %{{.*}}, align 8{{$}}
+// CHECK: %[[SRC_REAL:.*]] = load volatile double, ptr %{{.*}}, align 8, !tbaa ![[TBAA_DOUBLE:[0-9]+]]{{$}}
+// CHECK: %[[SRC_IMAG:.*]] = load volatile double, ptr %{{.*}}, align 8, !tbaa ![[TBAA_DOUBLE]]{{$}}
+// CHECK: store volatile double %[[SRC_REAL]], ptr %{{.*}}, align 8, !tbaa ![[TBAA_DOUBLE]]{{$}}
+// CHECK: store volatile double %[[SRC_IMAG]], ptr %{{.*}}, align 8, !tbaa ![[TBAA_DOUBLE]]{{$}}
 // CHECK: ret void
 
 // CHECK: ![[TBAA_INT:[0-9]+]] = !{!"int", ![[TBAA_CHAR:[0-9]+]], i64 0}
@@ -73,3 +72,5 @@ void copyComplex(volatile struct HasComplexField *dst,
 
 // CHECK: ![[TBAA_STRUCT]] = !{i64 0, i64 4, ![[TBAA_STRUCT_TAG:[0-9]+]], i64 4, i64 4, ![[TBAA_STRUCT_TAG]]}
 // CHECK: ![[TBAA_STRUCT_TAG]] = !{![[TBAA_INT]], ![[TBAA_INT]], i64 0}
+// CHECK: ![[TBAA_DOUBLE]] = !{![[TBAA_DOUBLE_TYPE:[0-9]+]], ![[TBAA_DOUBLE_TYPE]], i64 0}
+// CHECK: ![[TBAA_DOUBLE_TYPE]] = !{!"double", ![[TBAA_CHAR]], i64 0}

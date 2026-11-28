@@ -50,6 +50,15 @@ def DirectiveCommaBitEnum
 def DirectiveCommaBitEnumAttr
     : EnumAttr<TestDialect, DirectiveCommaBitEnum, "comma_bit_enum">;
 
+def DirectiveSpaceBitEnum
+    : I32BitEnum<"DirectiveSpaceBitEnum", "space bit enum",
+                 [DirectiveBitEnumNone, DirectiveBitEnumCase]> {
+  let cppNamespace = "::test";
+  let separator = " ";
+}
+def DirectiveSpaceBitEnumAttr
+    : EnumAttr<TestDialect, DirectiveSpaceBitEnum, "space_bit_enum">;
+
 def DirectiveNoZeroBitEnum
     : I32BitEnum<"DirectiveNoZeroBitEnum", "bit enum without zero",
                  [DirectiveBitEnumCase]> {
@@ -97,6 +106,11 @@ def DirectiveAEnumInvalidG : TestFormat_Op<[{
 def DirectiveAEnumInvalidH : TestFormat_Op<[{
   enum($attr) `,` attr-dict
 }]>, Arguments<(ins DirectiveCommaBitEnumAttr:$attr)>;
+
+// CHECK: error: space-separated bit enum cannot be followed by its 'case' case literal
+def DirectiveAEnumInvalidI : TestFormat_Op<[{
+  enum($attr) `case` attr-dict
+}]>, Arguments<(ins DirectiveSpaceBitEnumAttr:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // attr-dict

@@ -12,9 +12,9 @@ declare float @llvm.nearbyint.f32(float)
 ; trunc
 
 define float @ret_trunc_negsubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero psub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub pnorm) float @ret_trunc_negsubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_trunc_negsubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub pnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -22,9 +22,9 @@ define float @ret_trunc_negsubnormal_mode_dynamic_ieee(float nofpclass(nan inf z
 }
 
 define float @ret_trunc_negsubnormal_mode_dynamic_preservesign(float nofpclass(nan inf zero psub norm) %arg) #1 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub pnorm) float @ret_trunc_negsubnormal_mode_dynamic_preservesign(
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_trunc_negsubnormal_mode_dynamic_preservesign(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub pnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -32,9 +32,9 @@ define float @ret_trunc_negsubnormal_mode_dynamic_preservesign(float nofpclass(n
 }
 
 define float @ret_trunc_negsubnormal_mode_dynamic_positivezero(float nofpclass(nan inf zero psub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(nan inf sub pnorm) float @ret_trunc_negsubnormal_mode_dynamic_positivezero(
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_trunc_negsubnormal_mode_dynamic_positivezero(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub pnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -42,9 +42,9 @@ define float @ret_trunc_negsubnormal_mode_dynamic_positivezero(float nofpclass(n
 }
 
 define float @ret_trunc_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg) #3 {
-; CHECK-LABEL: define nofpclass(nan inf sub pnorm) float @ret_trunc_negsubnormal_mode_dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_trunc_negsubnormal_mode_dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub pnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -52,9 +52,9 @@ define float @ret_trunc_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan in
 }
 
 define float @ret_trunc_possubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero nsub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_trunc_possubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_trunc_possubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -62,9 +62,9 @@ define float @ret_trunc_possubnormal_mode_dynamic_ieee(float nofpclass(nan inf z
 }
 
 define float @ret_trunc_possubnormal_mode_dynamic_preservesign(float nofpclass(nan inf zero nsub norm) %arg) #1 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_trunc_possubnormal_mode_dynamic_preservesign(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_trunc_possubnormal_mode_dynamic_preservesign(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -72,9 +72,9 @@ define float @ret_trunc_possubnormal_mode_dynamic_preservesign(float nofpclass(n
 }
 
 define float @ret_trunc_possubnormal_mode_dynamic_positivezero(float nofpclass(nan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_trunc_possubnormal_mode_dynamic_positivezero(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_trunc_possubnormal_mode_dynamic_positivezero(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -82,9 +82,9 @@ define float @ret_trunc_possubnormal_mode_dynamic_positivezero(float nofpclass(n
 }
 
 define float @ret_trunc_possubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #3 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_trunc_possubnormal_mode_dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_trunc_possubnormal_mode_dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.trunc.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.trunc.f32(float %arg)
@@ -94,9 +94,9 @@ define float @ret_trunc_possubnormal_mode_dynamic_dynamic(float nofpclass(nan in
 ; floor
 
 define float @ret_floor_negsubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero psub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub pnorm) float @ret_floor_negsubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf zero sub pnorm) float @ret_floor_negsubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub pnorm) float @llvm.floor.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf zero sub pnorm) float @llvm.floor.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -114,9 +114,9 @@ define float @ret_floor_negsubnormal_mode_dynamic_preservesign(float nofpclass(n
 }
 
 define float @ret_floor_negsubnormal_mode_dynamic_positivezero(float nofpclass(nan inf zero psub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(nan inf sub pnorm) float @ret_floor_negsubnormal_mode_dynamic_positivezero(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub pnorm) float @ret_floor_negsubnormal_mode_dynamic_positivezero(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub pnorm) float @llvm.floor.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub pnorm) float @llvm.floor.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -134,9 +134,9 @@ define float @ret_floor_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan in
 }
 
 define float @ret_floor_possubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero nsub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_floor_possubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_floor_possubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -144,9 +144,9 @@ define float @ret_floor_possubnormal_mode_dynamic_ieee(float nofpclass(nan inf z
 }
 
 define float @ret_floor_possubnormal_mode_dynamic_preservesign(float nofpclass(nan inf zero nsub norm) %arg) #1 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_floor_possubnormal_mode_dynamic_preservesign(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_floor_possubnormal_mode_dynamic_preservesign(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -154,9 +154,9 @@ define float @ret_floor_possubnormal_mode_dynamic_preservesign(float nofpclass(n
 }
 
 define float @ret_floor_possubnormal_mode_dynamic_positivezero(float nofpclass(nan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_floor_possubnormal_mode_dynamic_positivezero(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_floor_possubnormal_mode_dynamic_positivezero(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -164,9 +164,9 @@ define float @ret_floor_possubnormal_mode_dynamic_positivezero(float nofpclass(n
 }
 
 define float @ret_floor_possubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #3 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_floor_possubnormal_mode_dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_floor_possubnormal_mode_dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub norm) float @llvm.floor.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.floor.f32(float %arg)
@@ -176,9 +176,9 @@ define float @ret_floor_possubnormal_mode_dynamic_dynamic(float nofpclass(nan in
 ; ceil
 
 define float @ret_ceil_negsubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero psub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub pnorm) float @ret_ceil_negsubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_ceil_negsubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub pnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub norm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.ceil.f32(float %arg)
@@ -186,9 +186,9 @@ define float @ret_ceil_negsubnormal_mode_dynamic_ieee(float nofpclass(nan inf ze
 }
 
 define float @ret_ceil_negsubnormal_mode_dynamic_preservesign(float nofpclass(nan inf zero psub norm) %arg) #1 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub pnorm) float @ret_ceil_negsubnormal_mode_dynamic_preservesign(
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_ceil_negsubnormal_mode_dynamic_preservesign(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub pnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf pzero sub norm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.ceil.f32(float %arg)
@@ -196,9 +196,9 @@ define float @ret_ceil_negsubnormal_mode_dynamic_preservesign(float nofpclass(na
 }
 
 define float @ret_ceil_negsubnormal_mode_dynamic_positivezero(float nofpclass(nan inf zero psub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(nan inf sub pnorm) float @ret_ceil_negsubnormal_mode_dynamic_positivezero(
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_ceil_negsubnormal_mode_dynamic_positivezero(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub pnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub norm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.ceil.f32(float %arg)
@@ -206,9 +206,9 @@ define float @ret_ceil_negsubnormal_mode_dynamic_positivezero(float nofpclass(na
 }
 
 define float @ret_ceil_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg) #3 {
-; CHECK-LABEL: define nofpclass(nan inf sub pnorm) float @ret_ceil_negsubnormal_mode_dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_ceil_negsubnormal_mode_dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub pnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf sub norm) float @llvm.ceil.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.ceil.f32(float %arg)
@@ -216,9 +216,9 @@ define float @ret_ceil_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf
 }
 
 define float @ret_ceil_possubnormal_mode_dynamic_ieee(float nofpclass(nan inf zero nsub norm) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_ceil_possubnormal_mode_dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @ret_ceil_possubnormal_mode_dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan inf zero sub nnorm) float @llvm.ceil.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.ceil.f32(float %arg)

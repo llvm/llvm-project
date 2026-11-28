@@ -59,6 +59,51 @@ entry:
   ret void
 }
 
+define void @aarch64_vector_interleave6(ptr %ptr, <2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d, <2 x double> %e, <2 x double> %f) {
+; CHECK-LABEL: aarch64_vector_interleave6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    zip2 v18.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip1 v7.2d, v2.2d, v5.2d
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    zip2 v17.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip1 v6.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip2 v16.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v5.2d, v0.2d, v3.2d
+; CHECK-NEXT:    st3 { v16.2d, v17.2d, v18.2d }, [x8]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    st3 { v5.2d, v6.2d, v7.2d }, [x8], #48
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q1, q0, [x0, #64]
+; CHECK-NEXT:    str q2, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %interleave = call <12 x double> @llvm.vector.interleave6.v12f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d, <2 x double> %e, <2 x double> %f)
+  store <12 x double> %interleave, ptr %ptr, align 8
+  ret void
+}
+
+define void @aarch64_vector_interleave8(ptr %ptr, <2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d, <2 x double> %e, <2 x double> %f, <2 x double> %g, <2 x double> %h) {
+; CHECK-LABEL: aarch64_vector_interleave8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v19.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip2 v23.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip1 v18.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip2 v22.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip1 v17.2d, v1.2d, v5.2d
+; CHECK-NEXT:    zip2 v21.2d, v1.2d, v5.2d
+; CHECK-NEXT:    zip1 v16.2d, v0.2d, v4.2d
+; CHECK-NEXT:    zip2 v20.2d, v0.2d, v4.2d
+; CHECK-NEXT:    st4 { v16.2d, v17.2d, v18.2d, v19.2d }, [x0], #64
+; CHECK-NEXT:    st4 { v20.2d, v21.2d, v22.2d, v23.2d }, [x0]
+; CHECK-NEXT:    ret
+  %interleave = call <16 x double> @llvm.vector.interleave8.v16f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d, <2 x double> %e, <2 x double> %f, <2 x double> %g, <2 x double> %h)
+  store <16 x double> %interleave, ptr %ptr, align 8
+  ret void
+}
+
 define void @wide_vector_interleave_st2(ptr %input0, ptr %input1, ptr %output) {
 ; CHECK-LABEL: wide_vector_interleave_st2:
 ; CHECK:       // %bb.0:
@@ -271,8 +316,8 @@ define void @wide_vector_interleave_st3_i32_dreg(ptr %output, <6 x i32> %v0, <6 
 ; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v2.s }[3], [x8]
 ; CHECK-NEXT:    str d4, [x0, #64]
-; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    ret
   %interleave = call <18 x i32> @llvm.vector.interleave3.v18i32(<6 x i32> %v0, <6 x i32> %v1, <6 x i32> %v2)
   store <18 x i32> %interleave, ptr %output, align 4
@@ -514,6 +559,77 @@ define void @wide_vector_interleave_st4_i8_dreg(ptr %output, ptr %input0, ptr %i
   store <96 x i8> %interleave, ptr %output, align 1
   ret void
 }
+
+define void @wide_interleave6_store_fixed(ptr %ptr, <4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f) {
+; CHECK-LABEL: wide_interleave6_store_fixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q16, [sp, #48]
+; CHECK-NEXT:    ldr q17, [sp, #16]
+; CHECK-NEXT:    add x8, x0, #144
+; CHECK-NEXT:    zip2 v20.2d, v5.2d, v16.2d
+; CHECK-NEXT:    zip1 v23.2d, v5.2d, v16.2d
+; CHECK-NEXT:    zip2 v19.2d, v3.2d, v17.2d
+; CHECK-NEXT:    zip1 v22.2d, v3.2d, v17.2d
+; CHECK-NEXT:    ldr q3, [sp, #32]
+; CHECK-NEXT:    zip2 v18.2d, v1.2d, v7.2d
+; CHECK-NEXT:    zip1 v21.2d, v1.2d, v7.2d
+; CHECK-NEXT:    ldr q1, [sp]
+; CHECK-NEXT:    st3 { v18.2d, v19.2d, v20.2d }, [x8]
+; CHECK-NEXT:    zip1 v18.2d, v4.2d, v3.2d
+; CHECK-NEXT:    zip2 v5.2d, v4.2d, v3.2d
+; CHECK-NEXT:    zip1 v17.2d, v2.2d, v1.2d
+; CHECK-NEXT:    zip2 v4.2d, v2.2d, v1.2d
+; CHECK-NEXT:    add x8, x0, #96
+; CHECK-NEXT:    zip1 v16.2d, v0.2d, v6.2d
+; CHECK-NEXT:    zip2 v3.2d, v0.2d, v6.2d
+; CHECK-NEXT:    st3 { v21.2d, v22.2d, v23.2d }, [x8]
+; CHECK-NEXT:    st3 { v16.2d, v17.2d, v18.2d }, [x0], #48
+; CHECK-NEXT:    st3 { v3.2d, v4.2d, v5.2d }, [x0]
+; CHECK-NEXT:    ret
+  %interleave = call <24 x double> @llvm.vector.interleave6.v24f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f)
+  store <24 x double> %interleave, ptr %ptr, align 8
+  ret void
+}
+
+define void @wide_interleave8_store_fixed(ptr %output, <4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f, <4 x double> %g, <4 x double> %h) {
+; CHECK-LABEL: wide_interleave8_store_fixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q16, [sp, #112]
+; CHECK-NEXT:    ldr q17, [sp, #80]
+; CHECK-NEXT:    add x8, x0, #192
+; CHECK-NEXT:    ldr q18, [sp, #48]
+; CHECK-NEXT:    ldr q23, [sp, #16]
+; CHECK-NEXT:    zip2 v22.2d, v7.2d, v16.2d
+; CHECK-NEXT:    zip1 v27.2d, v7.2d, v16.2d
+; CHECK-NEXT:    ldr q7, [sp]
+; CHECK-NEXT:    zip2 v21.2d, v5.2d, v17.2d
+; CHECK-NEXT:    zip1 v26.2d, v5.2d, v17.2d
+; CHECK-NEXT:    ldr q5, [sp, #96]
+; CHECK-NEXT:    zip2 v20.2d, v3.2d, v18.2d
+; CHECK-NEXT:    zip1 v25.2d, v3.2d, v18.2d
+; CHECK-NEXT:    ldr q3, [sp, #64]
+; CHECK-NEXT:    zip2 v19.2d, v1.2d, v23.2d
+; CHECK-NEXT:    zip1 v24.2d, v1.2d, v23.2d
+; CHECK-NEXT:    ldr q1, [sp, #32]
+; CHECK-NEXT:    st4 { v19.2d, v20.2d, v21.2d, v22.2d }, [x8]
+; CHECK-NEXT:    zip1 v19.2d, v6.2d, v5.2d
+; CHECK-NEXT:    zip2 v23.2d, v6.2d, v5.2d
+; CHECK-NEXT:    zip1 v18.2d, v4.2d, v3.2d
+; CHECK-NEXT:    zip2 v22.2d, v4.2d, v3.2d
+; CHECK-NEXT:    add x8, x0, #128
+; CHECK-NEXT:    zip1 v17.2d, v2.2d, v1.2d
+; CHECK-NEXT:    zip2 v21.2d, v2.2d, v1.2d
+; CHECK-NEXT:    zip1 v16.2d, v0.2d, v7.2d
+; CHECK-NEXT:    zip2 v20.2d, v0.2d, v7.2d
+; CHECK-NEXT:    st4 { v24.2d, v25.2d, v26.2d, v27.2d }, [x8]
+; CHECK-NEXT:    st4 { v16.2d, v17.2d, v18.2d, v19.2d }, [x0], #64
+; CHECK-NEXT:    st4 { v20.2d, v21.2d, v22.2d, v23.2d }, [x0]
+; CHECK-NEXT:    ret
+  %interleave = call <32 x double> @llvm.vector.interleave8.v32f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f, <4 x double> %g, <4 x double> %h)
+  store <32 x double> %interleave, ptr %output, align 8
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-IADISABLED: {{.*}}
 ; CHECK-IAENABLED: {{.*}}

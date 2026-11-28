@@ -45,7 +45,7 @@ define void @non_outermost_loop_hcfg_construction(i64 %n, ptr %a) {
 ; CHECK-NEXT:    br label %[[INNERMOST_LOOP3:.*]]
 ; CHECK:       [[INNERMOST_LOOP3]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNERMOST_LOOP3]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, <4 x ptr> [[WIDE_MASKED_GATHER]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], <4 x ptr> [[WIDE_MASKED_GATHER]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT]], <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT3]]
@@ -185,9 +185,9 @@ define void @non_outermost_loop_hcfg_construction_other_loops_at_same_level(i64 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNERMOST_LOOP3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[BROADCAST_SPLAT]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[INVARIANT_GEP]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[INVARIANT_GEP]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP3]], <4 x i1> splat (i1 true), <4 x ptr> poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, <4 x ptr> [[WIDE_MASKED_GATHER]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], <4 x ptr> [[WIDE_MASKED_GATHER]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP2]], <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT3]]

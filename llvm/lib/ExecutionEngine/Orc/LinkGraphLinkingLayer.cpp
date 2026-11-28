@@ -147,7 +147,7 @@ public:
     MR->failMaterialization();
   }
 
-  void lookup(const LookupMap &Symbols,
+  void lookup(LookupMap Symbols,
               std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
     JITDylibSearchOrder LinkOrder;
@@ -157,18 +157,11 @@ public:
     auto &ES = Layer.getExecutionSession();
 
     SymbolLookupSet LookupSet;
-    for (auto &KV : Symbols) {
-      orc::SymbolLookupFlags LookupFlags;
-      switch (KV.second) {
-      case jitlink::SymbolLookupFlags::RequiredSymbol:
-        LookupFlags = orc::SymbolLookupFlags::RequiredSymbol;
-        break;
-      case jitlink::SymbolLookupFlags::WeaklyReferencedSymbol:
-        LookupFlags = orc::SymbolLookupFlags::WeaklyReferencedSymbol;
-        break;
-      }
-      LookupSet.add(KV.first, LookupFlags);
-    }
+    for (auto &[Name, JLFlags] : Symbols)
+      LookupSet.add(std::move(Name),
+                    JLFlags == jitlink::SymbolLookupFlags::RequiredSymbol
+                        ? orc::SymbolLookupFlags::RequiredSymbol
+                        : orc::SymbolLookupFlags::WeaklyReferencedSymbol);
 
     // OnResolve -- De-intern the symbols and pass the result to the linker.
     auto OnResolve = [LookupContinuation =

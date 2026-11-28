@@ -190,6 +190,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64TargetMachine.cpp",
     "AArch64TargetObjectFile.cpp",
     "AArch64TargetTransformInfo.cpp",
+    "AArch64WinCFI.cpp",
     "GISel/AArch64CallLowering.cpp",
     "GISel/AArch64GlobalISelUtils.cpp",
     "GISel/AArch64InstructionSelector.cpp",

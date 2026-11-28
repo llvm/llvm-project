@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1  %s -o - | FileCheck %s
 ---
 name:            scalar_to_oversize_vector
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: scalar_to_oversize_vector
   ; CHECK: bb.0:
@@ -49,7 +48,6 @@ body:             |
 ...
 ---
 name:            boolean_vector_to_scalar
-tracksRegLiveness: true
 body:             |
     bb.1:
     ; CHECK-LABEL: name: boolean_vector_to_scalar
@@ -119,7 +117,6 @@ body:             |
 ...
 ---
 name:            v3i16_to_v2i24
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -158,7 +155,6 @@ body:             |
 ...
 ---
 name:            v2i24_to_v3i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -185,7 +181,6 @@ body:             |
 ...
 ---
 name:            v2i12_to_v3i8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -216,7 +211,6 @@ body:             |
 ...
 ---
 name:            v4i3_to_v3i4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0

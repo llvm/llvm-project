@@ -170,6 +170,20 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
   return AnyValue();
 }
 
+AnyValue Library::executeMemTransfer(ArrayRef<AnyValue> Args,
+                                     Intrinsic::ID IID) {
+  const AnyValue &Dest = Args[0];
+  Executor.executeMemTransfer(Dest, Args[1], Args[2], IID,
+                              /*IsLibCall=*/true);
+  return Dest;
+}
+
+AnyValue Library::executeMemset(ArrayRef<AnyValue> Args) {
+  const AnyValue &Dest = Args[0];
+  Executor.executeMemSet(Dest, Args[1], Args[2]);
+  return Dest;
+}
+
 AnyValue Library::executePuts(ArrayRef<AnyValue> Args) {
   const auto &PtrVal = Args[0];
 
@@ -380,6 +394,15 @@ std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
   case LibFunc_ZdlPv:
     return executeFree(Args,
                        FuncType->getParamType(0)->getPointerAddressSpace());
+
+  case LibFunc_memcpy:
+    return executeMemTransfer(Args, Intrinsic::memcpy);
+
+  case LibFunc_memmove:
+    return executeMemTransfer(Args, Intrinsic::memmove);
+
+  case LibFunc_memset:
+    return executeMemset(Args);
 
   case LibFunc_puts:
     return executePuts(Args);

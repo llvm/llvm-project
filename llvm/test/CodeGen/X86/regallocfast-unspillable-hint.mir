@@ -1,0 +1,64 @@
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes=regallocfast %s \
+# RUN:   -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error:
+
+# The fast register allocator prefers a value's hint, a register that the
+# value is copied from or to, by taking a little off that register's spill
+# cost. A register that can't be spilled at all, such as one that the
+# instruction clobbers, must stay unavailable, or the value silently gets a
+# register that the instruction overwrites. Each inline asm below clobbers
+# every GPR, so each one is an error, whether its operand has a hint or not.
+
+# CHECK: error: inline assembly requires more registers than available at line 1
+# CHECK: error: inline assembly requires more registers than available at line 2
+# CHECK: error: inline assembly requires more registers than available at line 3
+
+--- |
+  define void @test_use_with_hint() { ret void }
+  define void @test_use_without_hint() { ret void }
+  define i64 @test_tied_with_hint(i64 %a) { ret i64 %a }
+
+  !0 = !{i64 1}
+  !1 = !{i64 2}
+  !2 = !{i64 3}
+...
+---
+# The "r" input %0 is a copy of $rdi, which is its hint.
+#
+#   void test_use_with_hint(long a) {
+#     asm volatile("" : : "r"(a) : ALL_GPRS);
+#   }
+name: test_use_with_hint
+body: |
+  bb.0:
+    liveins: $rdi
+    %0:gr64 = COPY $rdi
+    INLINEASM &"", sideeffect attdialect, reguse:GR64, %0, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15, !0
+    RET 0
+...
+---
+# The same input without a hint, a load.
+name: test_use_without_hint
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gr64 = MOV64ri 0
+    INLINEASM &"", sideeffect attdialect, reguse:GR64, %0, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15, !1
+    RET 0
+...
+---
+# A "+r" operand: the tied input %0 is a copy of $rdi, which is its hint.
+#
+#   long test_tied_with_hint(long a) {
+#     asm volatile("" : "+r"(a) : : ALL_GPRS);
+#     return a;
+#   }
+name: test_tied_with_hint
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+    %0:gr64 = COPY $rdi
+    INLINEASM &"", sideeffect attdialect, regdef:GR64, def %1:gr64, reguse tiedto:$0, %0(tied-def 3), clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15, !2
+    $rax = COPY %1
+    RET 0, $rax
+...

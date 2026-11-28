@@ -44,7 +44,6 @@ void getRegNameFromBitVec(const BinaryContext &BC, const BitVector &RegV,
 
 void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
-  BitVector RegV(NumRegs, false);
   for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->empty())
       continue;

@@ -63,12 +63,12 @@ bext a0, a0, a0
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      42
-# CHECK-NEXT: Total Cycles:      158
+# CHECK-NEXT: Total Cycles:      160
 # CHECK-NEXT: Total uOps:        42
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.27
-# CHECK-NEXT: IPC:               0.27
+# CHECK-NEXT: uOps Per Cycle:    0.26
+# CHECK-NEXT: IPC:               0.26
 # CHECK-NEXT: Block RThroughput: 80.0
 
 # CHECK:      Instruction Info:

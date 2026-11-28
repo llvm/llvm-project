@@ -100,7 +100,8 @@ static void initField(std::byte *Ptr, bool IsConst, bool IsMutable,
   auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
   Desc->Offset = FieldOffset;
   Desc->Desc = D;
-  Desc->IsInitialized = D->IsArray;
+  Desc->IsInitialized =
+      D->IsArray || (D->isRecord() && D->ElemRecord->isEmpty());
   Desc->IsBase = false;
   Desc->IsActive = IsActive && !IsUnionField;
   Desc->InUnion = InUnion;

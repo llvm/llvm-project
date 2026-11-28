@@ -27,7 +27,6 @@ define amdgpu_kernel void @f(ptr %ptr, i32 %arg) "amdgpu-flat-work-group-size"="
 ; CHECK-NEXT:    scratch_load_b32 v2, off, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    v_add_co_u32 v0, s0, s2, v0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off

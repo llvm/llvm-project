@@ -16,15 +16,10 @@ def SMTDialect : Dialect {
   let summary = "a dialect that models satisfiability modulo theories";
   let cppNamespace = "mlir::smt";
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 
   let hasConstantMaterializer = 1;
-
-  let extraClassDeclaration = [{
-    void registerAttributes();
-    void registerTypes();
-  }];
 }
 
 #endif // MLIR_DIALECT_SMT_IR_SMTDIALECT_TD

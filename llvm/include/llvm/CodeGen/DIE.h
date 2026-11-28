@@ -852,7 +852,14 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
 
   explicit DIE(dwarf::Tag Tag) : Tag(Tag) {}
 
+  /// Get parent of a (possibly placeholder) DIE.
+  DIE *getRawParent() const;
+
 public:
+  /// Internal tag for temporary containers. Such DIEs must be removed before
+  /// abbreviation generation or emission.
+  static constexpr dwarf::Tag PlaceholderTag = dwarf::DW_TAG_null;
+
   DIE() = delete;
   DIE(const DIE &RHS) = delete;
   DIE(DIE &&RHS) = delete;
@@ -861,6 +868,11 @@ public:
 
   static DIE *get(BumpPtrAllocator &Alloc, dwarf::Tag Tag) {
     return new (Alloc) DIE(Tag);
+  }
+
+  /// Create a temporary placeholder DIE.
+  static DIE *getPlaceholder(BumpPtrAllocator &Alloc) {
+    return DIE::get(Alloc, PlaceholderTag);
   }
 
   // Accessors.
@@ -878,6 +890,9 @@ public:
     return Size;
   }
   bool hasChildren() const { return !Children.empty(); }
+
+  /// Returns true if DIE is a temporary placeholder.
+  bool isPlaceholder() const { return getTag() == PlaceholderTag; }
 
   using child_iterator = IntrusiveBackList<DIE>::iterator;
   using const_child_iterator = IntrusiveBackList<DIE>::const_iterator;
@@ -943,18 +958,27 @@ public:
 
   /// Add a child to the DIE.
   DIE &addChild(DIE *Child) {
-    assert(!Child->getParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_back(*Child);
     return Children.back();
   }
 
   DIE &addChildFront(DIE *Child) {
-    assert(!Child->getParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_front(*Child);
     return Children.front();
   }
+
+  /// Remove \p Child from the children of this DIE. Takes constant time if
+  /// \p Child is the first child, and linear time otherwise.
+  LLVM_ABI void removeChild(DIE &Child);
+
+  /// Move all children of \p Other to this DIE, preserving their order.
+  /// If \p AtFront is true, the moved children are placed before the existing
+  /// children of this DIE, otherwise after them.
+  LLVM_ABI void takeChildren(DIE &Other, bool AtFront = false);
 
   /// Find a value in the DIE with the attribute given.
   ///

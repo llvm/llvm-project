@@ -5,9 +5,11 @@ doesn't influence synchronous user level stepping.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@requireThreadSupport
 class TestStepVrsInterruptTimeout(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

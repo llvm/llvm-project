@@ -4,6 +4,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z8Return00u11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

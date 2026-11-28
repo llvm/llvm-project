@@ -162,6 +162,50 @@ TEST(AnyCallTest, StaticOperatorCallExcludesObjectArgument) {
   expectIntegerArguments(Call, {5});
 }
 
+TEST(AnyCallTest, StaticSubscriptOperatorCallExcludesObjectArgument) {
+  auto AST = buildAST(R"cpp(
+    struct Table {
+      static int operator[](int row, int column);
+    };
+    int target(Table &table) { return table[6, 7]; }
+  )cpp",
+                      {"-fsyntax-only", "-std=c++23"});
+  ASTContext &Ctx = AST->getASTContext();
+  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const auto *CE = selectFirst<CXXOperatorCallExpr>(
+      "call",
+      match(cxxOperatorCallExpr(hasOverloadedOperatorName("[]")).bind("call"),
+            Ctx));
+  ASSERT_NE(CE, nullptr);
+
+  AnyCall Call(CE);
+  expectIntegerArguments(Call, {6, 7});
+}
+
+TEST(AnyCallTest, StaticFreeOperatorCallKeepsFirstArgument) {
+  auto AST = buildAST(R"cpp(
+    struct Value {};
+    static bool operator==(const Value &lhs, int rhs);
+    bool target(Value value) { return value == 8; }
+  )cpp");
+  ASTContext &Ctx = AST->getASTContext();
+  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const auto *CE = selectFirst<CXXOperatorCallExpr>(
+      "call",
+      match(cxxOperatorCallExpr(hasOverloadedOperatorName("==")).bind("call"),
+            Ctx));
+  ASSERT_NE(CE, nullptr);
+
+  AnyCall Call(CE);
+  ASSERT_EQ(Call.arg_size(), 2U);
+  EXPECT_TRUE(isa<DeclRefExpr>(Call.getArg(0)->IgnoreImplicit()));
+  const auto *RHS = asIntegerLiteral(Call.getArg(1));
+  ASSERT_NE(RHS, nullptr);
+  EXPECT_EQ(RHS->getValue(), 8);
+}
+
 TEST(AnyCallTest, ExposesBlockCallArguments) {
   auto AST = buildAST(R"cpp(
     void target() {

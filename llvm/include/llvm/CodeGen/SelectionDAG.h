@@ -40,6 +40,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/UndefPoison.h"
@@ -85,6 +86,7 @@ class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
+struct SelectionDAGOptions;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
 class TargetLowering;
@@ -230,6 +232,7 @@ class SelectionDAG {
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
+  const SelectionDAGOptions *DAGOpts = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
@@ -470,9 +473,6 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
-  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
-  LLVM_ABI static unsigned getHasPredecessorMaxSteps();
-
   LLVM_ABI explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -508,6 +508,9 @@ public:
 
   LLVM_ABI bool hasSwiftErrorArg() const;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  LLVM_ABI unsigned getHasPredecessorMaxSteps() const;
+
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
@@ -526,6 +529,7 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
+  const SelectionDAGOptions &getSelectionDAGOptions() const { return *DAGOpts; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -753,6 +757,9 @@ public:
                                  bool isTarget = false);
   LLVM_ABI SDValue getConstantFP(const APFloat &Val, const SDLoc &DL, EVT VT,
                                  bool isTarget = false);
+  /// Return the folded constant, or an empty SDValue if folding failed.
+  LLVM_ABI SDValue getConstFP(std::optional<FPFoldResult> Result,
+                              const SDLoc &DL, EVT VT, bool isTarget = false);
   LLVM_ABI SDValue getConstantFP(const ConstantFP &V, const SDLoc &DL, EVT VT,
                                  bool isTarget = false);
   SDValue getTargetConstantFP(double Val, const SDLoc &DL, EVT VT) {
@@ -1722,8 +1729,10 @@ public:
                                     unsigned SrcAS, unsigned DestAS,
                                     const SDNodeFlags Flags = SDNodeFlags());
 
-  /// Return a freeze using the SDLoc of the value operand.
-  LLVM_ABI SDValue getFreeze(SDValue V);
+  /// Return a freeze of \p V using the SDLoc of the value operand.
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
   /// \p Kind can be used to selectively freeze poison and/or undef bits only.
@@ -2559,14 +2568,24 @@ public:
   /// 'Bytes' bytes from a location that is 'Dist' units away from the
   /// location that the 'Base' load is loading from.
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
-                                               unsigned Bytes, int Dist) const;
+                                               TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
+                                      unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveLoads(LD, Base, TypeSize::getFixed(Bytes),
+                                          Dist);
+  }
 
   /// Return true if stores are next to each other and can be merged. Check that
   /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
   /// that is \p Dist units away from the location that \p Base is storing to.
   LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
                                                 StoreSDNode *Base,
-                                                unsigned Bytes, int Dist) const;
+                                                TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveStores(StoreSDNode *ST, StoreSDNode *Base,
+                                       unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveStores(ST, Base, TypeSize::getFixed(Bytes),
+                                           Dist);
+  }
 
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.

@@ -284,3 +284,27 @@ func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5x
 
   return %0, %r : tensor<5xf32>, f32
 }
+
+// -----
+
+// Writing through a value yielded by `scf.index_switch` must not modify a
+// non-writable input in place: the write goes to a fresh buffer.
+// CHECK-LABEL: func @index_switch_non_writable
+func.func @index_switch_non_writable(%t: tensor<4xf32> {bufferization.writable = false},
+                                     %v: vector<4xf32>, %i: index) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.index_switch
+  %0 = scf.index_switch %i -> tensor<4xf32>
+  case 1 {
+    %e = tensor.empty() : tensor<4xf32>
+    scf.yield %e : tensor<4xf32>
+  }
+  // CHECK: default
+  default {
+    scf.yield %t : tensor<4xf32>
+  }
+  // CHECK: %[[ALLOC:.*]] = memref.alloc
+  // CHECK-NEXT: vector.transfer_write {{.*}}, %[[ALLOC]]
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  return %1 : tensor<4xf32>
+}

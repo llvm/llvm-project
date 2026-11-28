@@ -147,15 +147,32 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
     // Get stacksize from rlimit, but clip it so that it does not overlap
     // with other mappings.
     uptr stacksize = rl.rlim_cur;
+#  if SANITIZER_HPPA
+    // The stack grows up from the start of the mapping, so clip against the
+    // next mapping instead.
+    (void)prev_end;
+    uptr next_start = GetMaxUserVirtualAddress();
+    MemoryMappedSegment next_segment;
+    if (proc_maps.Next(&next_segment))
+      next_start = next_segment.start;
+    if (stacksize > next_start - segment.start)
+      stacksize = next_start - segment.start;
+#  else
     if (stacksize > segment.end - prev_end)
       stacksize = segment.end - prev_end;
+#  endif
     // When running with unlimited stack size, we still want to set some limit.
     // The unlimited stack size is caused by 'ulimit -s unlimited'.
     // Also, for some reason, GNU make spawns subprocesses with unlimited stack.
     if (stacksize > kMaxThreadStackSize)
       stacksize = kMaxThreadStackSize;
+#  if SANITIZER_HPPA
+    *stack_bottom = segment.start;
+    *stack_top = segment.start + stacksize;
+#  else
     *stack_top = segment.end;
     *stack_bottom = segment.end - stacksize;
+#  endif
 
     uptr maxAddr = GetMaxUserVirtualAddress();
     // Edge case: the stack mapping on some systems may be off-by-one e.g.,
@@ -296,6 +313,10 @@ static uptr ThreadDescriptorSizeFallback() {
 
 #    if defined(__alpha__)
   return 1824;  // from glibc 2.43
+#    endif
+
+#    if defined(__hppa__)
+  return 1216;  // from glibc 2.43
 #    endif
 }
 #  endif  // SANITIZER_GLIBC && !SANITIZER_GO

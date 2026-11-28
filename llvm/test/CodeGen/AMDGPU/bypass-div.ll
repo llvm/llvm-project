@@ -36,8 +36,8 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v12, v3
@@ -185,8 +185,8 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v6, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v6, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v10, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v12, v10
@@ -329,8 +329,8 @@ define i64 @srem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v10, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v11, v3
@@ -474,8 +474,8 @@ define i64 @urem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v6, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v6, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v10, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v12, v10
@@ -741,8 +741,8 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v12, v3
@@ -910,8 +910,8 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v12, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v2, v13, v3
@@ -1063,8 +1063,8 @@ define i64 @sdiv64_known32(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v6, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v6, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v10, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v0
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v12, v10

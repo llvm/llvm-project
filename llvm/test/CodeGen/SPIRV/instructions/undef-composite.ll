@@ -1,5 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown -enable-new-pm %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown -enable-new-pm %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
@@ -23,11 +25,22 @@
 ; CHECK-DAG: %[[#COMPOSITE:]] = OpConstantComposite %[[#INNER]] %[[#C1]] %[[#UI]]
 ; CHECK-DAG: %[[#NESTMIX:]] = OpConstantComposite %[[#NEST]] %[[#COMPOSITE]] %[[#UINNER]]
 
+; Poison <2 x i32> and <2 x float> share LLT <2 x s32> and must not be CSEd.
+; CHECK-DAG: %[[#V2I32:]] = OpTypeVector %[[#I32]] 2
+; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#V2F32:]] = OpTypeVector %[[#F32]] 2
+; CHECK-DAG: %[[#POISON_I:]] = OpUndef %[[#V2I32]]
+; CHECK-DAG: %[[#POISON_F:]] = OpUndef %[[#V2F32]]
+
 ; CHECK: OpFunction
 ; CHECK: OpStore %[[#]] %[[#MIX]]
 
 ; CHECK: OpFunction
 ; CHECK: OpStore %[[#]] %[[#NESTMIX]]
+
+; CHECK: OpFunction
+; CHECK: OpStore %[[#]] %[[#POISON_I]]
+; CHECK: OpStore %[[#]] %[[#POISON_F]]
 
 %arr = type [4 x i32]
 %nest = type [2 x [2 x i32]]
@@ -41,5 +54,11 @@ define void @undef_composite(ptr %dst) {
 
 define void @undef_nested_composite(ptr %dst) {
   store %nest [[2 x i32] [i32 1, i32 poison], [2 x i32] poison], ptr %dst
+  ret void
+}
+
+define void @poison_vector_same_llt(ptr %pi, ptr %pf) {
+  store <2 x i32> poison, ptr %pi
+  store <2 x float> poison, ptr %pf
   ret void
 }

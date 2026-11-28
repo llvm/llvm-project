@@ -10,51 +10,20 @@
 
 #include "hdr/types/nfds_t.h"
 #include "hdr/types/struct_pollfd.h"
-#include "hdr/types/struct_timespec.h"
-#include "src/__support/OSUtil/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/poll.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <sys/syscall.h> // SYS_poll, SYS_ppoll, SYS_ppoll_time64
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
-  int ret = 0;
-
-#if defined(SYS_poll)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
-#else // no SYS_poll
-  timespec ts, *tsp;
-  if (timeout >= 0) {
-    ts.tv_sec = timeout / 1000;
-    ts.tv_nsec = (timeout % 1000) * 1000000;
-    tsp = &ts;
-  } else {
-    tsp = nullptr;
-  }
-#if defined(SYS_ppoll_time64)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll_time64, fds, nfds, tsp,
-                                          nullptr, 0);
-#elif defined(SYS_ppoll)
-  static_assert(
-      sizeof(timespec::tv_nsec) == sizeof(long),
-      "This legacy syscall fallback is only safe on platforms where tv_nsec "
-      "matches the register size (long). It is unsafe on 32-bit platforms "
-      "with 64-bit tv_nsec.");
-  ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
-#else
-#error "poll, ppoll, ppoll_time64 syscalls not available."
-#endif // defined(SYS_ppoll) || defined(SYS_ppoll_time64)
-#endif // defined(SYS_poll)
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::poll(fds, nfds, timeout);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

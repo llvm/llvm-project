@@ -130,3 +130,106 @@ define i32 @ctlz_zero_poison_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
   ret i32 %1
 }
+
+define i8 @cttz_i8(i8 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB11_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB11_2:
+; RV64XTHEADBB-NEXT:    li a0, 8
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i8 @llvm.cttz.i8(i8 %a, i1 false)
+  ret i8 %1
+}
+
+define i16 @cttz_i16(i16 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    slli a1, a0, 48
+; RV64XTHEADBB-NEXT:    srli a1, a1, 48
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB12_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB12_2:
+; RV64XTHEADBB-NEXT:    li a0, 16
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i16 @llvm.cttz.i16(i16 %a, i1 false)
+  ret i16 %1
+}
+
+define i32 @cttz_i32(i32 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    sext.w a1, a0
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB13_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB13_2:
+; RV64XTHEADBB-NEXT:    li a0, 32
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
+  ret i32 %1
+}
+
+define i8 @cttz_zero_poison_i8(i8 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    not a2, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a2, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i8 @llvm.cttz.i8(i8 %a, i1 true)
+  ret i8 %1
+}
+
+define i16 @cttz_zero_poison_i16(i16 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    not a2, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a2, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i16 @llvm.cttz.i16(i16 %a, i1 true)
+  ret i16 %1
+}
+
+define i32 @cttz_zero_poison_i32(i32 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    li a1, 64
+; RV64XTHEADBB-NEXT:    not a2, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a2, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i32 @llvm.cttz.i32(i32 %a, i1 true)
+  ret i32 %1
+}

@@ -17,6 +17,16 @@
 
 ! NOSPLIT-NOT: "-split-dwarf
 
+! The debug options after -gsplit-dwarf are still passed on when split DWARF
+! ends up off.
+! RUN: %flang -### -c -target x86_64-apple-darwin -g -gsplit-dwarf -gz=none -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefixes=WARN,AFTER
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf -gno-split-dwarf -gz=none -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=AFTER
+! RUN: %flang -### -c -target x86_64 -gsplit-dwarf -gz=none -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=AFTER
+
+! AFTER: "-fc1"
+! AFTER-SAME: "--compress-debug-sections=none"
+! AFTER-SAME: "-fdebug-info-for-profiling"
+
 ! Test -gsplit-dwarf=single.
 ! RUN: %flang -### -c -target x86_64 -gsplit-dwarf=single -g %s 2>&1 | FileCheck %s --check-prefix=SINGLE
 

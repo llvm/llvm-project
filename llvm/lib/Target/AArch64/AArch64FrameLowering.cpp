@@ -938,6 +938,9 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
 bool AArch64FrameLowering::canUseAsPrologue(
     const MachineBasicBlock &MBB) const {
   const MachineFunction *MF = MBB.getParent();
+  if (MF->usesWindowsUnwindInfo() && !enableWindowsCFIShrinkWrapping(*MF))
+    return false;
+
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
@@ -972,6 +975,41 @@ bool AArch64FrameLowering::canUseAsPrologue(
       windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
     if (!findScratchNonCalleeSaveRegister(TmpMBB, true).isValid())
       return false;
+
+  return true;
+}
+
+bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+
+  // The range-insertion pass currently runs only on Windows, not UEFI.
+  if (!Subtarget.isTargetWindows())
+    return false;
+
+  // Range insertion relies on SEH pseudos, which are emitted only when the
+  // function needs an unwind table entry.
+  if (!F.needsUnwindTableEntry())
+    return false;
+
+  // Splitting ranges does not yet preserve language-specific handler data.
+  if (F.hasPersonalityFn())
+    return false;
+
+  // Funclets have independent frames; range insertion assumes a single frame.
+  if (MF.hasEHFunclets())
+    return false;
+
+  // Naked functions do not have a compiler-generated prologue to shrink-wrap.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // Signed return addresses need authentication-state handling across ranges
+  // that is not yet implemented.
+  if (MF.getInfo<AArch64FunctionInfo>()->getSignReturnAddressCondition() !=
+      SignReturnAddress::None)
+    return false;
 
   return true;
 }
@@ -3577,10 +3615,15 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
       // but STGloop is way too unusual for that, and also it only
       // realistically happens in function epilogue. Also, STGloop is expanded
       // before that pass.
-      if (InsertI != MBB->end() &&
-          canMergeRegUpdate(InsertI, FrameReg, FrameRegOffset.getFixed() + Size,
+      auto UpdateI = skipDebugInstructionsForward(InsertI, MBB->end(),
+                                                  /*SkipPseudoOp=*/false);
+      if (UpdateI != MBB->end() &&
+          canMergeRegUpdate(UpdateI, FrameReg, FrameRegOffset.getFixed() + Size,
                             &TotalOffset)) {
-        UpdateInstr = &*InsertI++;
+        // Keep skipped debug instructions before the loop so debug values see
+        // the pre-update SP; only the tag stores move past them.
+        UpdateInstr = &*UpdateI++;
+        InsertI = UpdateI;
         LLVM_DEBUG(dbgs() << "Folding SP update into loop:\n  "
                           << *UpdateInstr);
       }

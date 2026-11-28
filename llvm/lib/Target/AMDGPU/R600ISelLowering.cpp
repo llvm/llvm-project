@@ -956,35 +956,6 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   return Op;
 }
 
-void R600TargetLowering::getStackAddress(unsigned StackWidth,
-                                         unsigned ElemIdx,
-                                         unsigned &Channel,
-                                         unsigned &PtrIncr) const {
-  switch (StackWidth) {
-  default:
-  case 1:
-    Channel = 0;
-    if (ElemIdx > 0) {
-      PtrIncr = 1;
-    } else {
-      PtrIncr = 0;
-    }
-    break;
-  case 2:
-    Channel = ElemIdx % 2;
-    if (ElemIdx == 2) {
-      PtrIncr = 1;
-    } else {
-      PtrIncr = 0;
-    }
-    break;
-  case 4:
-    Channel = ElemIdx;
-    PtrIncr = 0;
-    break;
-  }
-}
-
 SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
                                                    SelectionDAG &DAG) const {
   SDLoc DL(Store);
@@ -1828,7 +1799,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     SDValue RHS = N->getOperand(1);
     SDValue True = N->getOperand(2);
     SDValue False = N->getOperand(3);
-    ISD::CondCode NCC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    ISD::CondCode NCC = N->getOperandCondCode(4);
 
     if (LHS.getOperand(2).getNode() != True.getNode() ||
         LHS.getOperand(3).getNode() != False.getNode() ||
@@ -1840,7 +1811,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     default: return SDValue();
     case ISD::SETNE: return LHS;
     case ISD::SETEQ: {
-      ISD::CondCode LHSCC = cast<CondCodeSDNode>(LHS.getOperand(4))->get();
+      ISD::CondCode LHSCC = LHS.getOperandCondCode(4);
       LHSCC = ISD::getSetCCInverse(LHSCC, LHS.getOperand(0).getValueType());
       if (DCI.isBeforeLegalizeOps() ||
           isCondCodeLegal(LHSCC, LHS.getOperand(0).getSimpleValueType()))

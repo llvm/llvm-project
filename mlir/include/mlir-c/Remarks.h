@@ -147,6 +147,13 @@ MLIR_CAPI_EXPORTED MlirLocation mlirRemarkGetLocation(MlirRemark remark);
 /// Returns the unique id of the remark within its engine (0 when unset).
 MLIR_CAPI_EXPORTED uint64_t mlirRemarkGetId(MlirRemark remark);
 
+/// Returns the number of related remark IDs.
+MLIR_CAPI_EXPORTED intptr_t mlirRemarkGetNumRelatedRemarks(MlirRemark remark);
+
+/// Returns the `pos`-th related remark ID.
+MLIR_CAPI_EXPORTED uint64_t mlirRemarkGetRelatedRemarkId(MlirRemark remark,
+                                                         intptr_t pos);
+
 /// Returns the number of key/value arguments attached to the remark.
 MLIR_CAPI_EXPORTED intptr_t mlirRemarkGetNumArgs(MlirRemark remark);
 

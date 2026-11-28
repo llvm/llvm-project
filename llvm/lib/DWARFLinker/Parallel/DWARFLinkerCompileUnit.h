@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include "llvm/DWARFLinker/RelocationFixups.h"
 #include <limits>
 #include <optional>
 
@@ -61,8 +62,13 @@ public:
     /// Input DWARF is loaded.
     Loaded,
 
-    /// Input DWARF is analysed(DIEs pointing to the real code section are
-    /// discovered, type names are assigned if ODR is requested).
+    /// DIEs with a live address are found. Marking a unit reads whether the
+    /// DIEs it references in other units have an address, so every
+    /// inter-connected unit gets here before any of them is marked.
+    LiveRootsCollected,
+
+    /// Input DWARF is analysed(DIEs pointing to the real code section and the
+    /// DIEs they depend on are marked).
     LivenessAnalysisDone,
 
     /// Check if dependencies have incompatible placement.
@@ -114,6 +120,10 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContainingFile() const { return File; }
 
+  std::string remapPath(StringRef Path) const override {
+    return File.remapPath(Path);
+  }
+
   /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
   /// first. Returns false when one of them has no name making the module
   /// unidentifiable across units.
@@ -158,12 +168,22 @@ public:
   /// Cleanup unneeded resources after compile unit is cloned.
   void cleanupDataAfterClonning();
 
+  RelocationFixups &getRelocFixups() { return RelocFixups; }
+
+  /// Saves the relocations, at offsets relative to the output of the unit,
+  /// which reportUnitOffsets() tells once the sections are placed.
+  void saveRelocations();
+  void reportUnitOffsets();
+
   /// After cloning stage the output DIEs offsets are deallocated.
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
 
-  /// Search for subprograms and variables referencing live code and discover
-  /// dependend DIEs. Mark live DIEs, set placement for DIEs.
+  /// Search for subprograms and variables referencing live code.
+  void collectLiveRoots();
+
+  /// Discover the DIEs the live roots depend on. Mark live DIEs, set placement
+  /// for DIEs.
   bool resolveDependenciesAndMarkLiveness(
       bool InterCUProcessingStarted,
       std::atomic<bool> &HasNewInterconnectedCUs);
@@ -303,6 +323,10 @@ public:
 
     /// Track liveness for the DIE.
     SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
+
+    /// DIE is a function-local variable with a live address that does not keep
+    /// its function, and is kept wherever the function is.
+    SINGLE_FLAG_METHODS_SET(KeepWithParent, 0x1000)
 
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();
@@ -496,12 +520,18 @@ public:
   // Clone and emit line table.
   Error cloneAndEmitLineTable(const Triple &TargetTriple);
 
-  /// Clone attribute location axpression.
-  void cloneDieAttrExpression(const DWARFExpression &InputExpression,
-                              SmallVectorImpl<uint8_t> &OutputExpression,
-                              SectionDescriptor &Section,
-                              std::optional<int64_t> VarAddressAdjustment,
-                              OffsetsPtrVector &PatchesOffsets);
+  /// Clone attribute location expression. \p Cloned, if set, receives where
+  /// its operations were cloned to in \p OutputExpression. With
+  /// \p KeepAddrIndices, DW_OP_addrx and DW_OP_constx index the output
+  /// .debug_addr, whose entries carry their relocations.
+  void
+  cloneDieAttrExpression(const DWARFExpression &InputExpression,
+                         SmallVectorImpl<uint8_t> &OutputExpression,
+                         SectionDescriptor &Section,
+                         std::optional<int64_t> VarAddressAdjustment,
+                         OffsetsPtrVector &PatchesOffsets,
+                         RelocationFixups::ClonedExpression *Cloned = nullptr,
+                         bool KeepAddrIndices = false);
 
   /// Returns index(inside .debug_addr) of an address.
   uint64_t getDebugAddrIndex(uint64_t Addr) {
@@ -809,6 +839,12 @@ private:
 
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;
+
+  RelocationFixups RelocFixups;
+
+  /// The input offset of the unit, kept by saveRelocations() for
+  /// reportUnitOffsets(), as the input is unloaded in between.
+  std::optional<uint64_t> SavedRelocsUnitOffset;
 
   std::unique_ptr<DependencyTracker> Dependencies;
 

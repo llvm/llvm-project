@@ -2676,7 +2676,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; SSE2-NEXT:    ucomiss %xmm1, %xmm1
 ; SSE2-NEXT:    cmovnpl %ecx, %eax
 ; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximumnum_bf16:
@@ -2698,7 +2698,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX1-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX1-NEXT:    cmovnpl %ecx, %eax
 ; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_fmaximumnum_bf16:
@@ -2721,7 +2721,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm2
 ; AVX512F-NEXT:    cmovnpl %ecx, %eax
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fmaximumnum_bf16:
@@ -2744,7 +2744,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX512DQ-NEXT:    vucomiss %xmm2, %xmm2
 ; AVX512DQ-NEXT:    cmovnpl %ecx, %eax
 ; AVX512DQ-NEXT:    shrl $16, %eax
-; AVX512DQ-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vmovd %eax, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: test_fmaximumnum_bf16:
@@ -2791,7 +2791,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; X86-NEXT:    vucomiss %xmm0, %xmm0
 ; X86-NEXT:    cmovnpl %ecx, %eax
 ; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    retl
   %z = call bfloat @llvm.maximumnum.bf16(bfloat %x, bfloat %y)
   ret bfloat %z
@@ -2913,11 +2913,11 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
 ; SSE2-NEXT:    ucomiss %xmm2, %xmm2
 ; SSE2-NEXT:    cmovnpl %edi, %esi
 ; SSE2-NEXT:    shrl $16, %esi
-; SSE2-NEXT:    pinsrw $0, %esi, %xmm0
-; SSE2-NEXT:    pinsrw $0, %edx, %xmm1
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    movd %edx, %xmm1
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    pinsrw $0, %ecx, %xmm0
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm2
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
@@ -3102,10 +3102,10 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
 ; AVX1-NEXT:    movq %rax, %rdx
 ; AVX1-NEXT:    shrq $32, %rdx
 ; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX1-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm2
+; AVX1-NEXT:    vmovd %eax, %xmm1
+; AVX1-NEXT:    vmovd %edx, %xmm2
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX1-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm2
+; AVX1-NEXT:    vmovd %ecx, %xmm2
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX1-NEXT:    popq %rbx
@@ -3884,9 +3884,9 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
 ; X86-NEXT:    vpblendvb %xmm2, %xmm0, %xmm3, %xmm0
 ; X86-NEXT:    vpblendvb %xmm1, %xmm0, %xmm3, %xmm0
 ; X86-NEXT:    vpextrw $1, %xmm0, %eax
-; X86-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vpextrw $3, %xmm0, %eax
-; X86-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
+; X86-NEXT:    vmovd %eax, %xmm2
 ; X86-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-NEXT:    vpslld $16, %xmm1, %xmm1
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
@@ -3932,7 +3932,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; SSE2-NEXT:    ucomiss %xmm1, %xmm1
 ; SSE2-NEXT:    cmovnpl %ecx, %eax
 ; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fminimumnum_bf16:
@@ -3954,7 +3954,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX1-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX1-NEXT:    cmovnpl %ecx, %eax
 ; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_fminimumnum_bf16:
@@ -3977,7 +3977,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm2
 ; AVX512F-NEXT:    cmovnpl %ecx, %eax
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fminimumnum_bf16:
@@ -4000,7 +4000,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX512DQ-NEXT:    vucomiss %xmm2, %xmm2
 ; AVX512DQ-NEXT:    cmovnpl %ecx, %eax
 ; AVX512DQ-NEXT:    shrl $16, %eax
-; AVX512DQ-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vmovd %eax, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: test_fminimumnum_bf16:
@@ -4047,7 +4047,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; X86-NEXT:    vucomiss %xmm0, %xmm0
 ; X86-NEXT:    cmovnpl %ecx, %eax
 ; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    retl
   %z = call bfloat @llvm.minimumnum.bf16(bfloat %x, bfloat %y)
   ret bfloat %z

@@ -135,6 +135,7 @@ endif()
 
 add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCHAIN
   OUTPUT_NAME ${output_name}
+  FILE_DESCRIPTION "Clang C interface library"
   ${SOURCES}
 
   DEPENDS

@@ -20,6 +20,7 @@ include "mlir/Dialect/Complex/IR/ComplexBase.td"
 class Complex_Attr<string attrName, string attrMnemonic,
                    list<Trait> traits = []>
     : AttrDef<Complex_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Complex/IR/Complex.h"];
   let mnemonic = attrMnemonic;
 }
 

@@ -3,6 +3,7 @@
 # Test that the deployment target is parsed from the load commands.
 # CHECK: x86_64-apple-macosx10.14.0
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007

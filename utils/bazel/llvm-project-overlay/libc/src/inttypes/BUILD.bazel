@@ -1,0 +1,64 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+libc_function(
+    name = "strtoimax",
+    srcs = ["strtoimax.cpp"],
+    hdrs = ["strtoimax.h"],
+    deps = [
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support:str_to_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "strtoumax",
+    srcs = ["strtoumax.cpp"],
+    hdrs = ["strtoumax.h"],
+    deps = [
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support:str_to_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "imaxabs",
+    srcs = ["imaxabs.cpp"],
+    hdrs = ["imaxabs.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "imaxdiv",
+    srcs = ["imaxdiv.cpp"],
+    hdrs = ["imaxdiv.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)

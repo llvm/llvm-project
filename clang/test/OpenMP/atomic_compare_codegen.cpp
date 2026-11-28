@@ -13961,84 +13961,60 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP55:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP53]], i8 [[TMP54]] monotonic monotonic, align 1
 // CHECK-NEXT:    [[TMP56:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP57:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP56]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    [[TMP58:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP59:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP58]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP60:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP61:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP60]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP62:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP63:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP62]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP64:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP65:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP64]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP67:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP66]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP68:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP69:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP68]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP70:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP71:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP70]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP72:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP73:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP74:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP72]], i8 [[TMP73]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP75:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP76:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP77:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP75]], i8 [[TMP76]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP78:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP79:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP80:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP78]], i8 [[TMP79]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP81:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP82:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP83:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP81]], i8 [[TMP82]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP84:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP85:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP84]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP86:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP87:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP86]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP88:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP88]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP90]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP93:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP92]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP94:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP95:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP94]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP96]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP98:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP99:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP98]] acq_rel, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP101:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP102:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP100]], i8 [[TMP101]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP103:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP104:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP105:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP103]], i8 [[TMP104]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP106:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP107:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP108:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP106]], i8 [[TMP107]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP109:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP110:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP111:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP109]], i8 [[TMP110]] acq_rel acquire, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP112]] acquire, align 1
 // CHECK-NEXT:    [[TMP114:%.*]] = load i8, ptr [[CE]], align 1
@@ -14153,164 +14129,116 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP223:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP221]], i8 [[TMP222]] monotonic monotonic, align 1
 // CHECK-NEXT:    [[TMP224:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP225:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP224]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP226:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP227:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP226]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP228:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP229:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP228]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP230:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP231:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP230]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP232:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP233:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP232]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP234:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP235:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP234]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP236:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP237:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP236]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP238:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP239:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP238]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP240:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP241:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP242:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP240]], i8 [[TMP241]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP243:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP244:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP245:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP243]], i8 [[TMP244]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP246:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP247:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP248:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP246]], i8 [[TMP247]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP249:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP250:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP251:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP249]], i8 [[TMP250]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP252:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP253:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP252]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP254:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP255:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP254]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP256:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP257:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP256]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP258:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP259:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP258]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP260:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP261:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP260]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP262:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP263:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP262]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP264:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP265:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP264]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP266:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP267:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP266]] release, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP268:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP269:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP270:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP268]], i8 [[TMP269]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP271:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP272:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP273:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP271]], i8 [[TMP272]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP274:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP275:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP276:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP274]], i8 [[TMP275]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP277:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP278:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP279:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP277]], i8 [[TMP278]] release monotonic, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP280:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP281:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP280]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP282:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP283:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP282]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP284:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP285:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP284]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP286:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP287:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP286]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP288:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP289:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP288]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP290:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP291:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP290]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP292:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP293:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP292]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP294:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP295:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP294]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP296:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP297:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP298:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP296]], i8 [[TMP297]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP299:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP300:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP301:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP299]], i8 [[TMP300]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP302:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP303:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP304:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP302]], i8 [[TMP303]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP305:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP306:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP307:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP305]], i8 [[TMP306]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP308:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP309:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP308]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP310:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP311:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP310]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP312:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP313:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP312]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP314:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP315:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP314]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP316:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP317:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP316]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP318:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP319:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP318]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP320:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP321:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP320]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP322:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP323:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP322]] seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP324:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP325:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP326:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP324]], i8 [[TMP325]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP327:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP328:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP329:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP327]], i8 [[TMP328]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP330:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP331:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP332:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP330]], i8 [[TMP331]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP333:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP334:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP335:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP333]], i8 [[TMP334]] seq_cst seq_cst, align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP336:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP337:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP336]] monotonic, align 2
 // CHECK-NEXT:    [[TMP338:%.*]] = load i16, ptr [[SE]], align 2
@@ -14369,84 +14297,60 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP391:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP389]], i16 [[TMP390]] monotonic monotonic, align 2
 // CHECK-NEXT:    [[TMP392:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP393:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP392]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP394:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP395:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP394]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP396:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP397:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP396]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP398:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP399:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP398]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP400:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP401:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP400]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP402:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP403:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP402]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP404:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP405:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP404]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP406:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP407:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP406]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP408:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP409:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP410:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP408]], i16 [[TMP409]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP411:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP412:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP413:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP411]], i16 [[TMP412]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP414:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP415:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP416:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP414]], i16 [[TMP415]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP417:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP418:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP419:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP417]], i16 [[TMP418]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP420:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP421:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP420]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP422:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP423:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP422]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP424:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP425:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP424]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP426:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP427:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP426]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP428:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP429:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP428]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP430:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP431:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP430]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP432:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP433:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP432]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP434:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP435:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP434]] acq_rel, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP436:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP437:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP438:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP436]], i16 [[TMP437]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP439:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP440:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP441:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP439]], i16 [[TMP440]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP442:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP443:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP444:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP442]], i16 [[TMP443]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP445:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP446:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP447:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP445]], i16 [[TMP446]] acq_rel acquire, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP448:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP449:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP448]] acquire, align 2
 // CHECK-NEXT:    [[TMP450:%.*]] = load i16, ptr [[SE]], align 2
@@ -14561,164 +14465,116 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP559:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP557]], i16 [[TMP558]] monotonic monotonic, align 2
 // CHECK-NEXT:    [[TMP560:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP561:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP560]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP562:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP563:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP562]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP564:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP565:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP564]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP566:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP567:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP566]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP568:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP569:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP568]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP570:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP571:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP570]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP572:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP573:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP572]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP574:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP575:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP574]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP576:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP577:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP578:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP576]], i16 [[TMP577]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP579:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP580:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP581:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP579]], i16 [[TMP580]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP582:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP583:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP584:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP582]], i16 [[TMP583]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP585:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP586:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP587:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP585]], i16 [[TMP586]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP588:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP589:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP588]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP590:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP591:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP590]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP592:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP593:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP592]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP594:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP595:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP594]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP596:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP597:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP596]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP598:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP599:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP598]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP600:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP601:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP600]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP602:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP603:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP602]] release, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP604:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP605:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP606:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP604]], i16 [[TMP605]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP607:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP608:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP609:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP607]], i16 [[TMP608]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP610:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP611:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP612:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP610]], i16 [[TMP611]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP613:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP614:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP615:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP613]], i16 [[TMP614]] release monotonic, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP616:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP617:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP616]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP618:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP619:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP618]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP620:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP621:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP620]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP622:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP623:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP622]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP624:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP625:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP624]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP626:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP627:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP626]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP628:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP629:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP628]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP630:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP631:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP630]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP632:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP633:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP634:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP632]], i16 [[TMP633]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP635:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP636:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP637:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP635]], i16 [[TMP636]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP638:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP639:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP640:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP638]], i16 [[TMP639]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP641:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP642:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP643:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP641]], i16 [[TMP642]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP644:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP645:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP644]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP646:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP647:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP646]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP648:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP649:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP648]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP650:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP651:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP650]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP652:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP653:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP652]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP654:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP655:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP654]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP656:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP657:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP656]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP658:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP659:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP658]] seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP660:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP661:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP662:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP660]], i16 [[TMP661]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP663:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP664:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP665:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP663]], i16 [[TMP664]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP666:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP667:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP668:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP666]], i16 [[TMP667]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP669:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP670:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP671:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP669]], i16 [[TMP670]] seq_cst seq_cst, align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP672:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP673:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP672]] monotonic, align 4
 // CHECK-NEXT:    [[TMP674:%.*]] = load i32, ptr [[IE]], align 4
@@ -14777,84 +14633,60 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP727:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP725]], i32 [[TMP726]] monotonic monotonic, align 4
 // CHECK-NEXT:    [[TMP728:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP729:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP728]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP730:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP731:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP730]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP732:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP733:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP732]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP734:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP735:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP734]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP736:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP737:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP736]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP738:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP739:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP738]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP740:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP741:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP740]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP742:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP743:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP742]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP744:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP745:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP746:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP744]], i32 [[TMP745]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP747:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP748:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP749:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP747]], i32 [[TMP748]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP750:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP751:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP752:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP750]], i32 [[TMP751]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP753:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP754:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP755:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP753]], i32 [[TMP754]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP756:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP757:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP756]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP758:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP759:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP758]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP760:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP761:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP760]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP762:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP763:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP762]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP764:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP765:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP764]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP766:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP767:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP766]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP768:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP769:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP768]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP770:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP771:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP770]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP772:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP773:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP774:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP772]], i32 [[TMP773]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP775:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP776:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP777:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP775]], i32 [[TMP776]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP778:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP779:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP780:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP778]], i32 [[TMP779]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP781:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP782:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP783:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP781]], i32 [[TMP782]] acq_rel acquire, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP784:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP785:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP784]] acquire, align 4
 // CHECK-NEXT:    [[TMP786:%.*]] = load i32, ptr [[IE]], align 4
@@ -14969,164 +14801,116 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP895:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP893]], i32 [[TMP894]] monotonic monotonic, align 4
 // CHECK-NEXT:    [[TMP896:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP897:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP896]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP898:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP899:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP898]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP900:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP901:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP900]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP902:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP903:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP902]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP904:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP905:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP904]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP906:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP907:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP906]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP908:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP909:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP908]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP910:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP911:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP910]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP912:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP913:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP914:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP912]], i32 [[TMP913]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP915:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP916:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP917:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP915]], i32 [[TMP916]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP918:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP919:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP920:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP918]], i32 [[TMP919]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP921:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP922:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP923:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP921]], i32 [[TMP922]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP924:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP925:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP924]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP926:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP927:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP926]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP928:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP929:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP928]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP930:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP931:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP930]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP932:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP933:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP932]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP934:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP935:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP934]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP936:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP937:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP936]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP938:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP939:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP938]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP940:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP941:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP942:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP940]], i32 [[TMP941]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP943:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP944:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP945:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP943]], i32 [[TMP944]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP946:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP947:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP948:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP946]], i32 [[TMP947]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP949:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP950:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP951:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP949]], i32 [[TMP950]] release monotonic, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP952:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP953:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP952]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP954:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP955:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP954]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP956:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP957:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP956]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP958:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP959:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP958]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP960:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP961:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP960]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP962:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP963:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP962]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP964:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP965:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP964]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP966:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP967:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP966]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP968:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP969:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP970:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP968]], i32 [[TMP969]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP971:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP972:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP973:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP971]], i32 [[TMP972]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP974:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP975:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP976:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP974]], i32 [[TMP975]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP977:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP978:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP979:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP977]], i32 [[TMP978]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP980:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP981:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP980]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP982:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP983:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP982]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP984:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP985:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP984]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP986:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP987:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP986]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP988:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP989:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP988]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP990:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP991:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP990]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP992:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP993:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP992]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP994:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP995:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP994]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP996:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP997:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP998:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP996]], i32 [[TMP997]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP999:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP1000:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP1001:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP999]], i32 [[TMP1000]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1002:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP1003:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP1004:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP1002]], i32 [[TMP1003]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1005:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP1006:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP1007:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP1005]], i32 [[TMP1006]] seq_cst seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1008:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1009:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1008]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1010:%.*]] = load i64, ptr [[LE]], align 8
@@ -15185,84 +14969,60 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1063:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1061]], i64 [[TMP1062]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1064:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1065:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1064]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1066:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1067:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1066]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1068:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1069:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1068]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1070:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1071:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1070]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1072:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1073:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1072]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1074:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1075:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1074]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1076:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1077:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1076]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1078:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1079:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1078]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1080:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1081:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1082:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1080]], i64 [[TMP1081]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1083:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1084:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1085:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1083]], i64 [[TMP1084]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1086:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1087:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1088:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1086]], i64 [[TMP1087]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1089:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1090:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1091:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1089]], i64 [[TMP1090]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1092:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1093:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1092]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1094:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1095:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1094]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1096:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1097:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1096]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1098:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1099:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1098]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1100:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1101:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1100]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1102:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1103:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1102]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1104:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1105:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1104]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1106:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1107:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1106]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1108:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1109:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1110:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1108]], i64 [[TMP1109]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1111:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1112:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1113:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1111]], i64 [[TMP1112]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1114:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1115:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1116:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1114]], i64 [[TMP1115]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1117:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1118:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1119:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1117]], i64 [[TMP1118]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1120:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1121:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1120]] acquire, align 8
 // CHECK-NEXT:    [[TMP1122:%.*]] = load i64, ptr [[LE]], align 8
@@ -15377,164 +15137,116 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1231:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1229]], i64 [[TMP1230]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1232:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1233:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1232]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1234:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1235:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1234]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1236:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1237:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1236]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1238:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1239:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1238]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1240:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1241:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1240]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1242:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1243:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1242]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1244:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1245:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1244]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1246:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1247:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1246]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1248:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1249:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1250:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1248]], i64 [[TMP1249]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1251:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1252:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1253:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1251]], i64 [[TMP1252]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1254:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1255:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1256:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1254]], i64 [[TMP1255]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1257:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1258:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1259:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1257]], i64 [[TMP1258]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1260:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1261:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1260]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1262:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1263:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1262]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1264:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1265:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1264]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1266:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1267:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1266]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1268:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1269:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1268]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1270:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1271:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1270]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1272:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1273:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1272]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1274:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1275:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1274]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1276:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1277:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1278:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1276]], i64 [[TMP1277]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1279:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1280:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1281:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1279]], i64 [[TMP1280]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1282:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1283:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1284:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1282]], i64 [[TMP1283]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1285:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1286:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1287:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1285]], i64 [[TMP1286]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1288:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1289:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1288]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1290:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1291:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1290]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1292:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1293:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1292]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1294:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1295:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1294]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1296:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1297:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1296]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1298:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1299:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1298]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1300:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1301:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP1300]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1302:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1303:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP1302]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1304:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1305:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1306:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1304]], i64 [[TMP1305]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1307:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1308:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1309:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1307]], i64 [[TMP1308]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1310:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1311:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1312:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1310]], i64 [[TMP1311]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1313:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP1314:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP1315:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP1313]], i64 [[TMP1314]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1316:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1317:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1316]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1318:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1319:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1318]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1320:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1321:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1320]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1322:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1323:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1322]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1324:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1325:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1324]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1326:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1327:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1326]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1328:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1329:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP1328]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1330:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1331:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP1330]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1332:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1333:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1334:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1332]], i64 [[TMP1333]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1335:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1336:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1337:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1335]], i64 [[TMP1336]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1338:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1339:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1340:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1338]], i64 [[TMP1339]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1341:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP1342:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1343:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP1341]], i64 [[TMP1342]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1344:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1345:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1344]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1346:%.*]] = load i64, ptr [[LLE]], align 8
@@ -15593,84 +15305,60 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1399:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1397]], i64 [[TMP1398]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1400:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1401:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1400]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1402:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1403:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1402]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1404:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1405:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1404]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1406:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1407:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1406]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1408:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1409:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1408]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1410:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1411:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1410]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1412:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1413:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1412]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1414:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1415:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1414]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1416:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1417:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1418:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1416]], i64 [[TMP1417]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1419:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1420:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1421:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1419]], i64 [[TMP1420]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1422:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1423:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1424:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1422]], i64 [[TMP1423]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1425:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1426:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1427:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1425]], i64 [[TMP1426]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1428:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1429:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1428]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1430:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1431:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1430]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1432:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1433:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1432]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1434:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1435:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1434]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1436:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1437:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1436]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1438:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1439:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1438]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1440:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1441:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1440]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1442:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1443:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1442]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1444:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1445:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1446:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1444]], i64 [[TMP1445]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1447:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1448:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1449:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1447]], i64 [[TMP1448]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1450:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1451:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1452:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1450]], i64 [[TMP1451]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1453:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1454:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1455:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1453]], i64 [[TMP1454]] acq_rel acquire, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1456:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1457:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1456]] acquire, align 8
 // CHECK-NEXT:    [[TMP1458:%.*]] = load i64, ptr [[LLE]], align 8
@@ -15785,164 +15473,116 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1567:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1565]], i64 [[TMP1566]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1568:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1569:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1568]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1570:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1571:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1570]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1572:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1573:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1572]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1574:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1575:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1574]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1576:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1577:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1576]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1578:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1579:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1578]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1580:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1581:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1580]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1582:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1583:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1582]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1584:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1585:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1586:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1584]], i64 [[TMP1585]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1587:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1588:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1589:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1587]], i64 [[TMP1588]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1590:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1591:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1592:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1590]], i64 [[TMP1591]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1593:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1594:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1595:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1593]], i64 [[TMP1594]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1596:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1597:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1596]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1598:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1599:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1598]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1600:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1601:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1600]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1602:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1603:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1602]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1604:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1605:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1604]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1606:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1607:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1606]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1608:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1609:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1608]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1610:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1611:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1610]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1612:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1613:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1614:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1612]], i64 [[TMP1613]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1615:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1616:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1617:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1615]], i64 [[TMP1616]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1618:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1619:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1620:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1618]], i64 [[TMP1619]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1621:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1622:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1623:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1621]], i64 [[TMP1622]] release monotonic, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1624:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1625:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1624]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1626:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1627:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1626]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1628:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1629:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1628]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1630:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1631:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1630]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1632:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1633:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1632]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1634:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1635:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1634]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1636:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1637:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP1636]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1638:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1639:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP1638]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1640:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1641:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1642:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1640]], i64 [[TMP1641]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1643:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1644:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1645:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1643]], i64 [[TMP1644]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1646:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1647:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1648:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1646]], i64 [[TMP1647]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1649:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1650:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1651:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP1649]], i64 [[TMP1650]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1652:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1653:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1652]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1654:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1655:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1654]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1656:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1657:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1656]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1658:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1659:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1658]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1660:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1661:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1660]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1662:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1663:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1662]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1664:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1665:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP1664]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1666:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1667:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP1666]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1668:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1669:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1670:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1668]], i64 [[TMP1669]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1671:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1672:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1673:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1671]], i64 [[TMP1672]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1674:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1675:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1676:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1674]], i64 [[TMP1675]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1677:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP1678:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1679:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP1677]], i64 [[TMP1678]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1680:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1681:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1680]] monotonic, align 4
 // CHECK-NEXT:    [[TMP1682:%.*]] = load float, ptr [[FE]], align 4
@@ -15961,28 +15601,20 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1695:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1694]] monotonic, align 4
 // CHECK-NEXT:    [[TMP1696:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1697:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1696]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1698:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1699:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1698]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1700:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1701:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1700]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1702:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1703:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1702]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1704:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1705:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1704]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1706:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1707:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1706]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1708:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1709:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1708]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1710:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1711:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1710]] acq_rel, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1712:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1713:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1712]] acquire, align 4
 // CHECK-NEXT:    [[TMP1714:%.*]] = load float, ptr [[FE]], align 4
@@ -16017,52 +15649,36 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1743:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1742]] monotonic, align 4
 // CHECK-NEXT:    [[TMP1744:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1745:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1744]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1746:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1747:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1746]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1748:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1749:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1748]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1750:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1751:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1750]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1752:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1753:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1752]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1754:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1755:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1754]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1756:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1757:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1756]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1758:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1759:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1758]] release, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1760:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1761:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1760]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1762:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1763:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1762]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1764:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1765:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1764]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1766:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1767:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1766]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1768:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1769:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1768]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1770:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1771:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1770]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1772:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1773:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP1772]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1774:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP1775:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP1774]] seq_cst, align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1776:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1777:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1776]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1778:%.*]] = load double, ptr [[DE]], align 8
@@ -16081,28 +15697,20 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1791:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1790]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1792:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1793:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1792]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1794:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1795:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1794]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1796:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1797:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1796]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1798:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1799:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1798]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1800:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1801:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1800]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1802:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1803:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1802]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1804:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1805:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1804]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1806:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1807:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1806]] acq_rel, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1808:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1809:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1808]] acquire, align 8
 // CHECK-NEXT:    [[TMP1810:%.*]] = load double, ptr [[DE]], align 8
@@ -16137,52 +15745,36 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1839:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1838]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1840:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1841:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1840]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1842:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1843:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1842]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1844:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1845:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1844]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1846:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1847:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1846]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1848:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1849:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1848]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1850:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1851:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1850]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1852:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1853:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1852]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1854:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1855:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1854]] release, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1856:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1857:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1856]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1858:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1859:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1858]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1860:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1861:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1860]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1862:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1863:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1862]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1864:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1865:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1864]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1866:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1867:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1866]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1868:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1869:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP1868]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1870:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP1871:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP1870]] seq_cst, align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    ret void
 //
 //
@@ -16363,55 +15955,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP78:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP79:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP78]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP79]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP80:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP81:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP80]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP81]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP82:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP83:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP82]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP83]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP84:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP85:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP84]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP85]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP86:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP87:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP88:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP86]], i8 [[TMP87]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP89:%.*]] = extractvalue { i8, i1 } [[TMP88]], 0
 // CHECK-NEXT:    store i8 [[TMP89]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP91:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP92:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP90]], i8 [[TMP91]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP93:%.*]] = extractvalue { i8, i1 } [[TMP92]], 0
 // CHECK-NEXT:    store i8 [[TMP93]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP94:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP95:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP94]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP96:%.*]] = icmp sgt i8 [[TMP95]], [[TMP94]]
 // CHECK-NEXT:    [[TMP97:%.*]] = select i1 [[TMP96]], i8 [[TMP94]], i8 [[TMP95]]
 // CHECK-NEXT:    store i8 [[TMP97]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP98:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP99:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP98]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP100:%.*]] = icmp slt i8 [[TMP99]], [[TMP98]]
 // CHECK-NEXT:    [[TMP101:%.*]] = select i1 [[TMP100]], i8 [[TMP98]], i8 [[TMP99]]
 // CHECK-NEXT:    store i8 [[TMP101]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP102:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP103:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP102]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP104:%.*]] = icmp slt i8 [[TMP103]], [[TMP102]]
 // CHECK-NEXT:    [[TMP105:%.*]] = select i1 [[TMP104]], i8 [[TMP102]], i8 [[TMP103]]
 // CHECK-NEXT:    store i8 [[TMP105]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP106:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP107:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP106]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP108:%.*]] = icmp sgt i8 [[TMP107]], [[TMP106]]
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i8 [[TMP106]], i8 [[TMP107]]
 // CHECK-NEXT:    store i8 [[TMP109]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP111:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP112:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP110]], i8 [[TMP111]] acq_rel acquire, align 1
@@ -16419,7 +16001,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP114:%.*]] = extractvalue { i8, i1 } [[TMP112]], 1
 // CHECK-NEXT:    [[TMP115:%.*]] = select i1 [[TMP114]], i8 [[TMP110]], i8 [[TMP113]]
 // CHECK-NEXT:    store i8 [[TMP115]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP116:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP117:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP118:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP116]], i8 [[TMP117]] acq_rel acquire, align 1
@@ -16427,7 +16008,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP120:%.*]] = extractvalue { i8, i1 } [[TMP118]], 1
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i8 [[TMP116]], i8 [[TMP119]]
 // CHECK-NEXT:    store i8 [[TMP121]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP123:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP124:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP122]], i8 [[TMP123]] acq_rel acquire, align 1
@@ -16438,7 +16018,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP125]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT7]]
 // CHECK:       cx.atomic.exit7:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP127:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP128:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP129:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP127]], i8 [[TMP128]] acq_rel acquire, align 1
@@ -16449,21 +16028,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP130]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT9]]
 // CHECK:       cx.atomic.exit9:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP133:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP134:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP132]], i8 [[TMP133]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP135:%.*]] = extractvalue { i8, i1 } [[TMP134]], 1
 // CHECK-NEXT:    [[TMP136:%.*]] = sext i1 [[TMP135]] to i8
 // CHECK-NEXT:    store i8 [[TMP136]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP137:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP138:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP139:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP137]], i8 [[TMP138]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP140:%.*]] = extractvalue { i8, i1 } [[TMP139]], 1
 // CHECK-NEXT:    [[TMP141:%.*]] = sext i1 [[TMP140]] to i8
 // CHECK-NEXT:    store i8 [[TMP141]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP142:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP143:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP144:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP142]], i8 [[TMP143]] acq_rel acquire, align 1
@@ -16477,7 +16053,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP147:%.*]] = extractvalue { i8, i1 } [[TMP144]], 1
 // CHECK-NEXT:    [[TMP148:%.*]] = sext i1 [[TMP147]] to i8
 // CHECK-NEXT:    store i8 [[TMP148]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP149:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP150:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP151:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP149]], i8 [[TMP150]] acq_rel acquire, align 1
@@ -16491,7 +16066,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP154:%.*]] = extractvalue { i8, i1 } [[TMP151]], 1
 // CHECK-NEXT:    [[TMP155:%.*]] = sext i1 [[TMP154]] to i8
 // CHECK-NEXT:    store i8 [[TMP155]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP156:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP157:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP156]] acquire, align 1
 // CHECK-NEXT:    store i8 [[TMP157]], ptr [[CV]], align 1
@@ -16723,55 +16297,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP312:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP313:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP312]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP313]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP314:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP315:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP314]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP315]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP316:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP317:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP316]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP317]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP318:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP319:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP318]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP319]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP320:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP321:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP322:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP320]], i8 [[TMP321]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP323:%.*]] = extractvalue { i8, i1 } [[TMP322]], 0
 // CHECK-NEXT:    store i8 [[TMP323]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP324:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP325:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP326:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP324]], i8 [[TMP325]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP327:%.*]] = extractvalue { i8, i1 } [[TMP326]], 0
 // CHECK-NEXT:    store i8 [[TMP327]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP328:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP329:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP328]] release, align 1
 // CHECK-NEXT:    [[TMP330:%.*]] = icmp sgt i8 [[TMP329]], [[TMP328]]
 // CHECK-NEXT:    [[TMP331:%.*]] = select i1 [[TMP330]], i8 [[TMP328]], i8 [[TMP329]]
 // CHECK-NEXT:    store i8 [[TMP331]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP332:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP333:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP332]] release, align 1
 // CHECK-NEXT:    [[TMP334:%.*]] = icmp slt i8 [[TMP333]], [[TMP332]]
 // CHECK-NEXT:    [[TMP335:%.*]] = select i1 [[TMP334]], i8 [[TMP332]], i8 [[TMP333]]
 // CHECK-NEXT:    store i8 [[TMP335]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP336:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP337:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP336]] release, align 1
 // CHECK-NEXT:    [[TMP338:%.*]] = icmp slt i8 [[TMP337]], [[TMP336]]
 // CHECK-NEXT:    [[TMP339:%.*]] = select i1 [[TMP338]], i8 [[TMP336]], i8 [[TMP337]]
 // CHECK-NEXT:    store i8 [[TMP339]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP340:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP341:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP340]] release, align 1
 // CHECK-NEXT:    [[TMP342:%.*]] = icmp sgt i8 [[TMP341]], [[TMP340]]
 // CHECK-NEXT:    [[TMP343:%.*]] = select i1 [[TMP342]], i8 [[TMP340]], i8 [[TMP341]]
 // CHECK-NEXT:    store i8 [[TMP343]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP344:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP345:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP346:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP344]], i8 [[TMP345]] release monotonic, align 1
@@ -16779,7 +16343,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP348:%.*]] = extractvalue { i8, i1 } [[TMP346]], 1
 // CHECK-NEXT:    [[TMP349:%.*]] = select i1 [[TMP348]], i8 [[TMP344]], i8 [[TMP347]]
 // CHECK-NEXT:    store i8 [[TMP349]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP350:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP351:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP352:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP350]], i8 [[TMP351]] release monotonic, align 1
@@ -16787,7 +16350,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP354:%.*]] = extractvalue { i8, i1 } [[TMP352]], 1
 // CHECK-NEXT:    [[TMP355:%.*]] = select i1 [[TMP354]], i8 [[TMP350]], i8 [[TMP353]]
 // CHECK-NEXT:    store i8 [[TMP355]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP356:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP357:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP358:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP356]], i8 [[TMP357]] release monotonic, align 1
@@ -16798,7 +16360,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP359]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT31]]
 // CHECK:       cx.atomic.exit31:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP361:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP362:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP363:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP361]], i8 [[TMP362]] release monotonic, align 1
@@ -16809,21 +16370,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP364]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT33]]
 // CHECK:       cx.atomic.exit33:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP366:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP367:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP368:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP366]], i8 [[TMP367]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP369:%.*]] = extractvalue { i8, i1 } [[TMP368]], 1
 // CHECK-NEXT:    [[TMP370:%.*]] = sext i1 [[TMP369]] to i8
 // CHECK-NEXT:    store i8 [[TMP370]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP371:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP372:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP373:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP371]], i8 [[TMP372]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP374:%.*]] = extractvalue { i8, i1 } [[TMP373]], 1
 // CHECK-NEXT:    [[TMP375:%.*]] = sext i1 [[TMP374]] to i8
 // CHECK-NEXT:    store i8 [[TMP375]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP376:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP377:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP378:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP376]], i8 [[TMP377]] release monotonic, align 1
@@ -16837,7 +16395,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP381:%.*]] = extractvalue { i8, i1 } [[TMP378]], 1
 // CHECK-NEXT:    [[TMP382:%.*]] = sext i1 [[TMP381]] to i8
 // CHECK-NEXT:    store i8 [[TMP382]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP383:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP384:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP385:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP383]], i8 [[TMP384]] release monotonic, align 1
@@ -16851,59 +16408,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP388:%.*]] = extractvalue { i8, i1 } [[TMP385]], 1
 // CHECK-NEXT:    [[TMP389:%.*]] = sext i1 [[TMP388]] to i8
 // CHECK-NEXT:    store i8 [[TMP389]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP390:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP391:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP390]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP391]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP392:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP393:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP392]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP393]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP394:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP395:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP394]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP395]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP396:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP397:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP396]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP397]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP398:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP399:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP400:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP398]], i8 [[TMP399]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP401:%.*]] = extractvalue { i8, i1 } [[TMP400]], 0
 // CHECK-NEXT:    store i8 [[TMP401]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP402:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP403:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP404:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP402]], i8 [[TMP403]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP405:%.*]] = extractvalue { i8, i1 } [[TMP404]], 0
 // CHECK-NEXT:    store i8 [[TMP405]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP406:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP407:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP406]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP408:%.*]] = icmp sgt i8 [[TMP407]], [[TMP406]]
 // CHECK-NEXT:    [[TMP409:%.*]] = select i1 [[TMP408]], i8 [[TMP406]], i8 [[TMP407]]
 // CHECK-NEXT:    store i8 [[TMP409]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP410:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP411:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP410]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP412:%.*]] = icmp slt i8 [[TMP411]], [[TMP410]]
 // CHECK-NEXT:    [[TMP413:%.*]] = select i1 [[TMP412]], i8 [[TMP410]], i8 [[TMP411]]
 // CHECK-NEXT:    store i8 [[TMP413]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP414:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP415:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP414]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP416:%.*]] = icmp slt i8 [[TMP415]], [[TMP414]]
 // CHECK-NEXT:    [[TMP417:%.*]] = select i1 [[TMP416]], i8 [[TMP414]], i8 [[TMP415]]
 // CHECK-NEXT:    store i8 [[TMP417]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP418:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP419:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP418]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP420:%.*]] = icmp sgt i8 [[TMP419]], [[TMP418]]
 // CHECK-NEXT:    [[TMP421:%.*]] = select i1 [[TMP420]], i8 [[TMP418]], i8 [[TMP419]]
 // CHECK-NEXT:    store i8 [[TMP421]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP422:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP423:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP424:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP422]], i8 [[TMP423]] seq_cst seq_cst, align 1
@@ -16911,7 +16457,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP426:%.*]] = extractvalue { i8, i1 } [[TMP424]], 1
 // CHECK-NEXT:    [[TMP427:%.*]] = select i1 [[TMP426]], i8 [[TMP422]], i8 [[TMP425]]
 // CHECK-NEXT:    store i8 [[TMP427]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP428:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP429:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP430:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP428]], i8 [[TMP429]] seq_cst seq_cst, align 1
@@ -16919,7 +16464,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP432:%.*]] = extractvalue { i8, i1 } [[TMP430]], 1
 // CHECK-NEXT:    [[TMP433:%.*]] = select i1 [[TMP432]], i8 [[TMP428]], i8 [[TMP431]]
 // CHECK-NEXT:    store i8 [[TMP433]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP434:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP435:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP436:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP434]], i8 [[TMP435]] seq_cst seq_cst, align 1
@@ -16930,7 +16474,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP437]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT39]]
 // CHECK:       cx.atomic.exit39:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP439:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP440:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP441:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP439]], i8 [[TMP440]] seq_cst seq_cst, align 1
@@ -16941,21 +16484,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP442]], ptr [[CV]], align 1
 // CHECK-NEXT:    br label [[CX_ATOMIC_EXIT41]]
 // CHECK:       cx.atomic.exit41:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP444:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP445:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP446:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP444]], i8 [[TMP445]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP447:%.*]] = extractvalue { i8, i1 } [[TMP446]], 1
 // CHECK-NEXT:    [[TMP448:%.*]] = sext i1 [[TMP447]] to i8
 // CHECK-NEXT:    store i8 [[TMP448]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP449:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP450:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP451:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP449]], i8 [[TMP450]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP452:%.*]] = extractvalue { i8, i1 } [[TMP451]], 1
 // CHECK-NEXT:    [[TMP453:%.*]] = sext i1 [[TMP452]] to i8
 // CHECK-NEXT:    store i8 [[TMP453]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP454:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP455:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP456:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP454]], i8 [[TMP455]] seq_cst seq_cst, align 1
@@ -16969,7 +16509,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP459:%.*]] = extractvalue { i8, i1 } [[TMP456]], 1
 // CHECK-NEXT:    [[TMP460:%.*]] = sext i1 [[TMP459]] to i8
 // CHECK-NEXT:    store i8 [[TMP460]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP461:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP462:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP463:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP461]], i8 [[TMP462]] seq_cst seq_cst, align 1
@@ -16983,7 +16522,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP466:%.*]] = extractvalue { i8, i1 } [[TMP463]], 1
 // CHECK-NEXT:    [[TMP467:%.*]] = sext i1 [[TMP466]] to i8
 // CHECK-NEXT:    store i8 [[TMP467]], ptr [[CR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP468:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP469:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP468]] monotonic, align 1
 // CHECK-NEXT:    store i8 [[TMP469]], ptr [[UCV]], align 1
@@ -17101,55 +16639,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP546:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP547:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP546]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP547]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP548:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP549:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP548]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP549]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP550:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP551:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP550]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP551]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP552:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP553:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP552]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP553]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP554:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP555:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP556:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP554]], i8 [[TMP555]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP557:%.*]] = extractvalue { i8, i1 } [[TMP556]], 0
 // CHECK-NEXT:    store i8 [[TMP557]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP558:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP559:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP560:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP558]], i8 [[TMP559]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP561:%.*]] = extractvalue { i8, i1 } [[TMP560]], 0
 // CHECK-NEXT:    store i8 [[TMP561]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP562:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP563:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP562]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP564:%.*]] = icmp ugt i8 [[TMP563]], [[TMP562]]
 // CHECK-NEXT:    [[TMP565:%.*]] = select i1 [[TMP564]], i8 [[TMP562]], i8 [[TMP563]]
 // CHECK-NEXT:    store i8 [[TMP565]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP566:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP567:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP566]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP568:%.*]] = icmp ult i8 [[TMP567]], [[TMP566]]
 // CHECK-NEXT:    [[TMP569:%.*]] = select i1 [[TMP568]], i8 [[TMP566]], i8 [[TMP567]]
 // CHECK-NEXT:    store i8 [[TMP569]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP570:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP571:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP570]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP572:%.*]] = icmp ult i8 [[TMP571]], [[TMP570]]
 // CHECK-NEXT:    [[TMP573:%.*]] = select i1 [[TMP572]], i8 [[TMP570]], i8 [[TMP571]]
 // CHECK-NEXT:    store i8 [[TMP573]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP574:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP575:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP574]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP576:%.*]] = icmp ugt i8 [[TMP575]], [[TMP574]]
 // CHECK-NEXT:    [[TMP577:%.*]] = select i1 [[TMP576]], i8 [[TMP574]], i8 [[TMP575]]
 // CHECK-NEXT:    store i8 [[TMP577]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP578:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP579:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP580:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP578]], i8 [[TMP579]] acq_rel acquire, align 1
@@ -17157,7 +16685,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP582:%.*]] = extractvalue { i8, i1 } [[TMP580]], 1
 // CHECK-NEXT:    [[TMP583:%.*]] = select i1 [[TMP582]], i8 [[TMP578]], i8 [[TMP581]]
 // CHECK-NEXT:    store i8 [[TMP583]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP584:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP585:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP586:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP584]], i8 [[TMP585]] acq_rel acquire, align 1
@@ -17165,7 +16692,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP588:%.*]] = extractvalue { i8, i1 } [[TMP586]], 1
 // CHECK-NEXT:    [[TMP589:%.*]] = select i1 [[TMP588]], i8 [[TMP584]], i8 [[TMP587]]
 // CHECK-NEXT:    store i8 [[TMP589]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP590:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP591:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP592:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP590]], i8 [[TMP591]] acq_rel acquire, align 1
@@ -17176,7 +16702,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP593]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT53]]
 // CHECK:       ucx.atomic.exit53:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP595:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP596:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP597:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP595]], i8 [[TMP596]] acq_rel acquire, align 1
@@ -17187,21 +16712,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP598]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT55]]
 // CHECK:       ucx.atomic.exit55:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP600:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP601:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP602:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP600]], i8 [[TMP601]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP603:%.*]] = extractvalue { i8, i1 } [[TMP602]], 1
 // CHECK-NEXT:    [[TMP604:%.*]] = zext i1 [[TMP603]] to i8
 // CHECK-NEXT:    store i8 [[TMP604]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP605:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP606:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP607:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP605]], i8 [[TMP606]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP608:%.*]] = extractvalue { i8, i1 } [[TMP607]], 1
 // CHECK-NEXT:    [[TMP609:%.*]] = zext i1 [[TMP608]] to i8
 // CHECK-NEXT:    store i8 [[TMP609]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP610:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP611:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP612:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP610]], i8 [[TMP611]] acq_rel acquire, align 1
@@ -17215,7 +16737,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP615:%.*]] = extractvalue { i8, i1 } [[TMP612]], 1
 // CHECK-NEXT:    [[TMP616:%.*]] = zext i1 [[TMP615]] to i8
 // CHECK-NEXT:    store i8 [[TMP616]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP617:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP618:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP619:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP617]], i8 [[TMP618]] acq_rel acquire, align 1
@@ -17229,7 +16750,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP622:%.*]] = extractvalue { i8, i1 } [[TMP619]], 1
 // CHECK-NEXT:    [[TMP623:%.*]] = zext i1 [[TMP622]] to i8
 // CHECK-NEXT:    store i8 [[TMP623]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP624:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP625:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP624]] acquire, align 1
 // CHECK-NEXT:    store i8 [[TMP625]], ptr [[UCV]], align 1
@@ -17461,55 +16981,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP780:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP781:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP780]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP781]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP782:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP783:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP782]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP783]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP784:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP785:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP784]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP785]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP786:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP787:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP786]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP787]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP788:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP789:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP790:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP788]], i8 [[TMP789]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP791:%.*]] = extractvalue { i8, i1 } [[TMP790]], 0
 // CHECK-NEXT:    store i8 [[TMP791]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP792:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP793:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP794:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP792]], i8 [[TMP793]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP795:%.*]] = extractvalue { i8, i1 } [[TMP794]], 0
 // CHECK-NEXT:    store i8 [[TMP795]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP796:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP797:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP796]] release, align 1
 // CHECK-NEXT:    [[TMP798:%.*]] = icmp ugt i8 [[TMP797]], [[TMP796]]
 // CHECK-NEXT:    [[TMP799:%.*]] = select i1 [[TMP798]], i8 [[TMP796]], i8 [[TMP797]]
 // CHECK-NEXT:    store i8 [[TMP799]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP800:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP801:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP800]] release, align 1
 // CHECK-NEXT:    [[TMP802:%.*]] = icmp ult i8 [[TMP801]], [[TMP800]]
 // CHECK-NEXT:    [[TMP803:%.*]] = select i1 [[TMP802]], i8 [[TMP800]], i8 [[TMP801]]
 // CHECK-NEXT:    store i8 [[TMP803]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP804:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP805:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP804]] release, align 1
 // CHECK-NEXT:    [[TMP806:%.*]] = icmp ult i8 [[TMP805]], [[TMP804]]
 // CHECK-NEXT:    [[TMP807:%.*]] = select i1 [[TMP806]], i8 [[TMP804]], i8 [[TMP805]]
 // CHECK-NEXT:    store i8 [[TMP807]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP808:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP809:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP808]] release, align 1
 // CHECK-NEXT:    [[TMP810:%.*]] = icmp ugt i8 [[TMP809]], [[TMP808]]
 // CHECK-NEXT:    [[TMP811:%.*]] = select i1 [[TMP810]], i8 [[TMP808]], i8 [[TMP809]]
 // CHECK-NEXT:    store i8 [[TMP811]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP812:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP813:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP814:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP812]], i8 [[TMP813]] release monotonic, align 1
@@ -17517,7 +17027,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP816:%.*]] = extractvalue { i8, i1 } [[TMP814]], 1
 // CHECK-NEXT:    [[TMP817:%.*]] = select i1 [[TMP816]], i8 [[TMP812]], i8 [[TMP815]]
 // CHECK-NEXT:    store i8 [[TMP817]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP818:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP819:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP820:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP818]], i8 [[TMP819]] release monotonic, align 1
@@ -17525,7 +17034,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP822:%.*]] = extractvalue { i8, i1 } [[TMP820]], 1
 // CHECK-NEXT:    [[TMP823:%.*]] = select i1 [[TMP822]], i8 [[TMP818]], i8 [[TMP821]]
 // CHECK-NEXT:    store i8 [[TMP823]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP824:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP825:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP826:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP824]], i8 [[TMP825]] release monotonic, align 1
@@ -17536,7 +17044,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP827]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT77]]
 // CHECK:       ucx.atomic.exit77:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP829:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP830:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP831:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP829]], i8 [[TMP830]] release monotonic, align 1
@@ -17547,21 +17054,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP832]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT79]]
 // CHECK:       ucx.atomic.exit79:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP834:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP835:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP836:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP834]], i8 [[TMP835]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP837:%.*]] = extractvalue { i8, i1 } [[TMP836]], 1
 // CHECK-NEXT:    [[TMP838:%.*]] = zext i1 [[TMP837]] to i8
 // CHECK-NEXT:    store i8 [[TMP838]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP839:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP840:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP841:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP839]], i8 [[TMP840]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP842:%.*]] = extractvalue { i8, i1 } [[TMP841]], 1
 // CHECK-NEXT:    [[TMP843:%.*]] = zext i1 [[TMP842]] to i8
 // CHECK-NEXT:    store i8 [[TMP843]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP844:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP845:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP846:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP844]], i8 [[TMP845]] release monotonic, align 1
@@ -17575,7 +17079,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP849:%.*]] = extractvalue { i8, i1 } [[TMP846]], 1
 // CHECK-NEXT:    [[TMP850:%.*]] = zext i1 [[TMP849]] to i8
 // CHECK-NEXT:    store i8 [[TMP850]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP851:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP852:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP853:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP851]], i8 [[TMP852]] release monotonic, align 1
@@ -17589,59 +17092,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP856:%.*]] = extractvalue { i8, i1 } [[TMP853]], 1
 // CHECK-NEXT:    [[TMP857:%.*]] = zext i1 [[TMP856]] to i8
 // CHECK-NEXT:    store i8 [[TMP857]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP858:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP859:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP858]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP859]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP860:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP861:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP860]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP861]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP862:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP863:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP862]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP863]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP864:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP865:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP864]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP865]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP866:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP867:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP868:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP866]], i8 [[TMP867]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP869:%.*]] = extractvalue { i8, i1 } [[TMP868]], 0
 // CHECK-NEXT:    store i8 [[TMP869]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP870:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP871:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP872:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP870]], i8 [[TMP871]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP873:%.*]] = extractvalue { i8, i1 } [[TMP872]], 0
 // CHECK-NEXT:    store i8 [[TMP873]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP874:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP875:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP874]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP876:%.*]] = icmp ugt i8 [[TMP875]], [[TMP874]]
 // CHECK-NEXT:    [[TMP877:%.*]] = select i1 [[TMP876]], i8 [[TMP874]], i8 [[TMP875]]
 // CHECK-NEXT:    store i8 [[TMP877]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP878:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP879:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP878]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP880:%.*]] = icmp ult i8 [[TMP879]], [[TMP878]]
 // CHECK-NEXT:    [[TMP881:%.*]] = select i1 [[TMP880]], i8 [[TMP878]], i8 [[TMP879]]
 // CHECK-NEXT:    store i8 [[TMP881]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP882:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP883:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP882]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP884:%.*]] = icmp ult i8 [[TMP883]], [[TMP882]]
 // CHECK-NEXT:    [[TMP885:%.*]] = select i1 [[TMP884]], i8 [[TMP882]], i8 [[TMP883]]
 // CHECK-NEXT:    store i8 [[TMP885]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP886:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP887:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP886]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP888:%.*]] = icmp ugt i8 [[TMP887]], [[TMP886]]
 // CHECK-NEXT:    [[TMP889:%.*]] = select i1 [[TMP888]], i8 [[TMP886]], i8 [[TMP887]]
 // CHECK-NEXT:    store i8 [[TMP889]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP890:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP891:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP892:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP890]], i8 [[TMP891]] seq_cst seq_cst, align 1
@@ -17649,7 +17141,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP894:%.*]] = extractvalue { i8, i1 } [[TMP892]], 1
 // CHECK-NEXT:    [[TMP895:%.*]] = select i1 [[TMP894]], i8 [[TMP890]], i8 [[TMP893]]
 // CHECK-NEXT:    store i8 [[TMP895]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP896:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP897:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP898:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP896]], i8 [[TMP897]] seq_cst seq_cst, align 1
@@ -17657,7 +17148,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP900:%.*]] = extractvalue { i8, i1 } [[TMP898]], 1
 // CHECK-NEXT:    [[TMP901:%.*]] = select i1 [[TMP900]], i8 [[TMP896]], i8 [[TMP899]]
 // CHECK-NEXT:    store i8 [[TMP901]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP902:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP903:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP904:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP902]], i8 [[TMP903]] seq_cst seq_cst, align 1
@@ -17668,7 +17158,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP905]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT85]]
 // CHECK:       ucx.atomic.exit85:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP907:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP908:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP909:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP907]], i8 [[TMP908]] seq_cst seq_cst, align 1
@@ -17679,21 +17168,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i8 [[TMP910]], ptr [[UCV]], align 1
 // CHECK-NEXT:    br label [[UCX_ATOMIC_EXIT87]]
 // CHECK:       ucx.atomic.exit87:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP912:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP913:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP914:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP912]], i8 [[TMP913]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP915:%.*]] = extractvalue { i8, i1 } [[TMP914]], 1
 // CHECK-NEXT:    [[TMP916:%.*]] = zext i1 [[TMP915]] to i8
 // CHECK-NEXT:    store i8 [[TMP916]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP917:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP918:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP919:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP917]], i8 [[TMP918]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP920:%.*]] = extractvalue { i8, i1 } [[TMP919]], 1
 // CHECK-NEXT:    [[TMP921:%.*]] = zext i1 [[TMP920]] to i8
 // CHECK-NEXT:    store i8 [[TMP921]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP922:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP923:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP924:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP922]], i8 [[TMP923]] seq_cst seq_cst, align 1
@@ -17707,7 +17193,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP927:%.*]] = extractvalue { i8, i1 } [[TMP924]], 1
 // CHECK-NEXT:    [[TMP928:%.*]] = zext i1 [[TMP927]] to i8
 // CHECK-NEXT:    store i8 [[TMP928]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP929:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP930:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP931:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP929]], i8 [[TMP930]] seq_cst seq_cst, align 1
@@ -17721,7 +17206,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP934:%.*]] = extractvalue { i8, i1 } [[TMP931]], 1
 // CHECK-NEXT:    [[TMP935:%.*]] = zext i1 [[TMP934]] to i8
 // CHECK-NEXT:    store i8 [[TMP935]], ptr [[UCR]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP936:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP937:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP936]] monotonic, align 2
 // CHECK-NEXT:    store i16 [[TMP937]], ptr [[SV]], align 2
@@ -17839,55 +17323,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1014:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1015:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1014]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1015]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1016:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1017:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1016]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1017]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1018:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1019:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1018]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1019]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1020:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1021:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1020]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1021]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1022:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1023:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1024:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1022]], i16 [[TMP1023]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1025:%.*]] = extractvalue { i16, i1 } [[TMP1024]], 0
 // CHECK-NEXT:    store i16 [[TMP1025]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1026:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1027:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1028:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1026]], i16 [[TMP1027]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1029:%.*]] = extractvalue { i16, i1 } [[TMP1028]], 0
 // CHECK-NEXT:    store i16 [[TMP1029]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1030:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1031:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1030]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1032:%.*]] = icmp sgt i16 [[TMP1031]], [[TMP1030]]
 // CHECK-NEXT:    [[TMP1033:%.*]] = select i1 [[TMP1032]], i16 [[TMP1030]], i16 [[TMP1031]]
 // CHECK-NEXT:    store i16 [[TMP1033]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1034:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1035:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1034]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1036:%.*]] = icmp slt i16 [[TMP1035]], [[TMP1034]]
 // CHECK-NEXT:    [[TMP1037:%.*]] = select i1 [[TMP1036]], i16 [[TMP1034]], i16 [[TMP1035]]
 // CHECK-NEXT:    store i16 [[TMP1037]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1038:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1039:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1038]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1040:%.*]] = icmp slt i16 [[TMP1039]], [[TMP1038]]
 // CHECK-NEXT:    [[TMP1041:%.*]] = select i1 [[TMP1040]], i16 [[TMP1038]], i16 [[TMP1039]]
 // CHECK-NEXT:    store i16 [[TMP1041]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1042:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1043:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1042]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1044:%.*]] = icmp sgt i16 [[TMP1043]], [[TMP1042]]
 // CHECK-NEXT:    [[TMP1045:%.*]] = select i1 [[TMP1044]], i16 [[TMP1042]], i16 [[TMP1043]]
 // CHECK-NEXT:    store i16 [[TMP1045]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1046:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1047:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1048:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1046]], i16 [[TMP1047]] acq_rel acquire, align 2
@@ -17895,7 +17369,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1050:%.*]] = extractvalue { i16, i1 } [[TMP1048]], 1
 // CHECK-NEXT:    [[TMP1051:%.*]] = select i1 [[TMP1050]], i16 [[TMP1046]], i16 [[TMP1049]]
 // CHECK-NEXT:    store i16 [[TMP1051]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1052:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1053:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1054:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1052]], i16 [[TMP1053]] acq_rel acquire, align 2
@@ -17903,7 +17376,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1056:%.*]] = extractvalue { i16, i1 } [[TMP1054]], 1
 // CHECK-NEXT:    [[TMP1057:%.*]] = select i1 [[TMP1056]], i16 [[TMP1052]], i16 [[TMP1055]]
 // CHECK-NEXT:    store i16 [[TMP1057]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1058:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1059:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1060:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1058]], i16 [[TMP1059]] acq_rel acquire, align 2
@@ -17914,7 +17386,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1061]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT99]]
 // CHECK:       sx.atomic.exit99:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1063:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1064:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1065:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1063]], i16 [[TMP1064]] acq_rel acquire, align 2
@@ -17925,21 +17396,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1066]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT101]]
 // CHECK:       sx.atomic.exit101:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1068:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1069:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1070:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1068]], i16 [[TMP1069]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1071:%.*]] = extractvalue { i16, i1 } [[TMP1070]], 1
 // CHECK-NEXT:    [[TMP1072:%.*]] = sext i1 [[TMP1071]] to i16
 // CHECK-NEXT:    store i16 [[TMP1072]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1073:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1074:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1075:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1073]], i16 [[TMP1074]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1076:%.*]] = extractvalue { i16, i1 } [[TMP1075]], 1
 // CHECK-NEXT:    [[TMP1077:%.*]] = sext i1 [[TMP1076]] to i16
 // CHECK-NEXT:    store i16 [[TMP1077]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1078:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1079:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1080:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1078]], i16 [[TMP1079]] acq_rel acquire, align 2
@@ -17953,7 +17421,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1083:%.*]] = extractvalue { i16, i1 } [[TMP1080]], 1
 // CHECK-NEXT:    [[TMP1084:%.*]] = sext i1 [[TMP1083]] to i16
 // CHECK-NEXT:    store i16 [[TMP1084]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1085:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1086:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1087:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1085]], i16 [[TMP1086]] acq_rel acquire, align 2
@@ -17967,7 +17434,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1090:%.*]] = extractvalue { i16, i1 } [[TMP1087]], 1
 // CHECK-NEXT:    [[TMP1091:%.*]] = sext i1 [[TMP1090]] to i16
 // CHECK-NEXT:    store i16 [[TMP1091]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1092:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1093:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1092]] acquire, align 2
 // CHECK-NEXT:    store i16 [[TMP1093]], ptr [[SV]], align 2
@@ -18199,55 +17665,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1248:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1249:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1248]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1249]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1250:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1251:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1250]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1251]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1252:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1253:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1252]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1253]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1254:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1255:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1254]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1255]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1256:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1257:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1258:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1256]], i16 [[TMP1257]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1259:%.*]] = extractvalue { i16, i1 } [[TMP1258]], 0
 // CHECK-NEXT:    store i16 [[TMP1259]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1260:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1261:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1262:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1260]], i16 [[TMP1261]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1263:%.*]] = extractvalue { i16, i1 } [[TMP1262]], 0
 // CHECK-NEXT:    store i16 [[TMP1263]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1264:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1265:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1264]] release, align 2
 // CHECK-NEXT:    [[TMP1266:%.*]] = icmp sgt i16 [[TMP1265]], [[TMP1264]]
 // CHECK-NEXT:    [[TMP1267:%.*]] = select i1 [[TMP1266]], i16 [[TMP1264]], i16 [[TMP1265]]
 // CHECK-NEXT:    store i16 [[TMP1267]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1268:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1269:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1268]] release, align 2
 // CHECK-NEXT:    [[TMP1270:%.*]] = icmp slt i16 [[TMP1269]], [[TMP1268]]
 // CHECK-NEXT:    [[TMP1271:%.*]] = select i1 [[TMP1270]], i16 [[TMP1268]], i16 [[TMP1269]]
 // CHECK-NEXT:    store i16 [[TMP1271]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1272:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1273:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1272]] release, align 2
 // CHECK-NEXT:    [[TMP1274:%.*]] = icmp slt i16 [[TMP1273]], [[TMP1272]]
 // CHECK-NEXT:    [[TMP1275:%.*]] = select i1 [[TMP1274]], i16 [[TMP1272]], i16 [[TMP1273]]
 // CHECK-NEXT:    store i16 [[TMP1275]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1276:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1277:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1276]] release, align 2
 // CHECK-NEXT:    [[TMP1278:%.*]] = icmp sgt i16 [[TMP1277]], [[TMP1276]]
 // CHECK-NEXT:    [[TMP1279:%.*]] = select i1 [[TMP1278]], i16 [[TMP1276]], i16 [[TMP1277]]
 // CHECK-NEXT:    store i16 [[TMP1279]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1280:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1281:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1282:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1280]], i16 [[TMP1281]] release monotonic, align 2
@@ -18255,7 +17711,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1284:%.*]] = extractvalue { i16, i1 } [[TMP1282]], 1
 // CHECK-NEXT:    [[TMP1285:%.*]] = select i1 [[TMP1284]], i16 [[TMP1280]], i16 [[TMP1283]]
 // CHECK-NEXT:    store i16 [[TMP1285]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1286:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1287:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1288:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1286]], i16 [[TMP1287]] release monotonic, align 2
@@ -18263,7 +17718,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1290:%.*]] = extractvalue { i16, i1 } [[TMP1288]], 1
 // CHECK-NEXT:    [[TMP1291:%.*]] = select i1 [[TMP1290]], i16 [[TMP1286]], i16 [[TMP1289]]
 // CHECK-NEXT:    store i16 [[TMP1291]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1292:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1293:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1294:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1292]], i16 [[TMP1293]] release monotonic, align 2
@@ -18274,7 +17728,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1295]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT123]]
 // CHECK:       sx.atomic.exit123:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1297:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1298:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1299:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1297]], i16 [[TMP1298]] release monotonic, align 2
@@ -18285,21 +17738,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1300]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT125]]
 // CHECK:       sx.atomic.exit125:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1302:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1303:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1304:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1302]], i16 [[TMP1303]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1305:%.*]] = extractvalue { i16, i1 } [[TMP1304]], 1
 // CHECK-NEXT:    [[TMP1306:%.*]] = sext i1 [[TMP1305]] to i16
 // CHECK-NEXT:    store i16 [[TMP1306]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1307:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1308:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1309:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1307]], i16 [[TMP1308]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1310:%.*]] = extractvalue { i16, i1 } [[TMP1309]], 1
 // CHECK-NEXT:    [[TMP1311:%.*]] = sext i1 [[TMP1310]] to i16
 // CHECK-NEXT:    store i16 [[TMP1311]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1312:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1313:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1314:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1312]], i16 [[TMP1313]] release monotonic, align 2
@@ -18313,7 +17763,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1317:%.*]] = extractvalue { i16, i1 } [[TMP1314]], 1
 // CHECK-NEXT:    [[TMP1318:%.*]] = sext i1 [[TMP1317]] to i16
 // CHECK-NEXT:    store i16 [[TMP1318]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1319:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1320:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1321:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1319]], i16 [[TMP1320]] release monotonic, align 2
@@ -18327,59 +17776,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1324:%.*]] = extractvalue { i16, i1 } [[TMP1321]], 1
 // CHECK-NEXT:    [[TMP1325:%.*]] = sext i1 [[TMP1324]] to i16
 // CHECK-NEXT:    store i16 [[TMP1325]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1326:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1327:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1326]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1327]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1328:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1329:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1328]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1329]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1330:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1331:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1330]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1331]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1332:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1333:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1332]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1333]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1334:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1335:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1336:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1334]], i16 [[TMP1335]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1337:%.*]] = extractvalue { i16, i1 } [[TMP1336]], 0
 // CHECK-NEXT:    store i16 [[TMP1337]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1338:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1339:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1340:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1338]], i16 [[TMP1339]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1341:%.*]] = extractvalue { i16, i1 } [[TMP1340]], 0
 // CHECK-NEXT:    store i16 [[TMP1341]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1342:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1343:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1342]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1344:%.*]] = icmp sgt i16 [[TMP1343]], [[TMP1342]]
 // CHECK-NEXT:    [[TMP1345:%.*]] = select i1 [[TMP1344]], i16 [[TMP1342]], i16 [[TMP1343]]
 // CHECK-NEXT:    store i16 [[TMP1345]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1346:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1347:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1346]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1348:%.*]] = icmp slt i16 [[TMP1347]], [[TMP1346]]
 // CHECK-NEXT:    [[TMP1349:%.*]] = select i1 [[TMP1348]], i16 [[TMP1346]], i16 [[TMP1347]]
 // CHECK-NEXT:    store i16 [[TMP1349]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1350:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1351:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP1350]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1352:%.*]] = icmp slt i16 [[TMP1351]], [[TMP1350]]
 // CHECK-NEXT:    [[TMP1353:%.*]] = select i1 [[TMP1352]], i16 [[TMP1350]], i16 [[TMP1351]]
 // CHECK-NEXT:    store i16 [[TMP1353]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1354:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1355:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP1354]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1356:%.*]] = icmp sgt i16 [[TMP1355]], [[TMP1354]]
 // CHECK-NEXT:    [[TMP1357:%.*]] = select i1 [[TMP1356]], i16 [[TMP1354]], i16 [[TMP1355]]
 // CHECK-NEXT:    store i16 [[TMP1357]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1358:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1359:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1360:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1358]], i16 [[TMP1359]] seq_cst seq_cst, align 2
@@ -18387,7 +17825,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1362:%.*]] = extractvalue { i16, i1 } [[TMP1360]], 1
 // CHECK-NEXT:    [[TMP1363:%.*]] = select i1 [[TMP1362]], i16 [[TMP1358]], i16 [[TMP1361]]
 // CHECK-NEXT:    store i16 [[TMP1363]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1364:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1365:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1366:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1364]], i16 [[TMP1365]] seq_cst seq_cst, align 2
@@ -18395,7 +17832,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1368:%.*]] = extractvalue { i16, i1 } [[TMP1366]], 1
 // CHECK-NEXT:    [[TMP1369:%.*]] = select i1 [[TMP1368]], i16 [[TMP1364]], i16 [[TMP1367]]
 // CHECK-NEXT:    store i16 [[TMP1369]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1370:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1371:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1372:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1370]], i16 [[TMP1371]] seq_cst seq_cst, align 2
@@ -18406,7 +17842,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1373]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT131]]
 // CHECK:       sx.atomic.exit131:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1375:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1376:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1377:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1375]], i16 [[TMP1376]] seq_cst seq_cst, align 2
@@ -18417,21 +17852,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1378]], ptr [[SV]], align 2
 // CHECK-NEXT:    br label [[SX_ATOMIC_EXIT133]]
 // CHECK:       sx.atomic.exit133:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1380:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1381:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1382:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1380]], i16 [[TMP1381]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1383:%.*]] = extractvalue { i16, i1 } [[TMP1382]], 1
 // CHECK-NEXT:    [[TMP1384:%.*]] = sext i1 [[TMP1383]] to i16
 // CHECK-NEXT:    store i16 [[TMP1384]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1385:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1386:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1387:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1385]], i16 [[TMP1386]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1388:%.*]] = extractvalue { i16, i1 } [[TMP1387]], 1
 // CHECK-NEXT:    [[TMP1389:%.*]] = sext i1 [[TMP1388]] to i16
 // CHECK-NEXT:    store i16 [[TMP1389]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1390:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1391:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1392:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1390]], i16 [[TMP1391]] seq_cst seq_cst, align 2
@@ -18445,7 +17877,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1395:%.*]] = extractvalue { i16, i1 } [[TMP1392]], 1
 // CHECK-NEXT:    [[TMP1396:%.*]] = sext i1 [[TMP1395]] to i16
 // CHECK-NEXT:    store i16 [[TMP1396]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1397:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP1398:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP1399:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP1397]], i16 [[TMP1398]] seq_cst seq_cst, align 2
@@ -18459,7 +17890,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1402:%.*]] = extractvalue { i16, i1 } [[TMP1399]], 1
 // CHECK-NEXT:    [[TMP1403:%.*]] = sext i1 [[TMP1402]] to i16
 // CHECK-NEXT:    store i16 [[TMP1403]], ptr [[SR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1404:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1405:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1404]] monotonic, align 2
 // CHECK-NEXT:    store i16 [[TMP1405]], ptr [[USV]], align 2
@@ -18577,55 +18007,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1482:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1483:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1482]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1483]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1484:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1485:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1484]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1485]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1486:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1487:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1486]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1487]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1488:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1489:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1488]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP1489]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1490:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1491:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1492:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1490]], i16 [[TMP1491]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1493:%.*]] = extractvalue { i16, i1 } [[TMP1492]], 0
 // CHECK-NEXT:    store i16 [[TMP1493]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1494:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1495:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1496:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1494]], i16 [[TMP1495]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1497:%.*]] = extractvalue { i16, i1 } [[TMP1496]], 0
 // CHECK-NEXT:    store i16 [[TMP1497]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1498:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1499:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1498]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1500:%.*]] = icmp ugt i16 [[TMP1499]], [[TMP1498]]
 // CHECK-NEXT:    [[TMP1501:%.*]] = select i1 [[TMP1500]], i16 [[TMP1498]], i16 [[TMP1499]]
 // CHECK-NEXT:    store i16 [[TMP1501]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1502:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1503:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1502]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1504:%.*]] = icmp ult i16 [[TMP1503]], [[TMP1502]]
 // CHECK-NEXT:    [[TMP1505:%.*]] = select i1 [[TMP1504]], i16 [[TMP1502]], i16 [[TMP1503]]
 // CHECK-NEXT:    store i16 [[TMP1505]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1506:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1507:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1506]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1508:%.*]] = icmp ult i16 [[TMP1507]], [[TMP1506]]
 // CHECK-NEXT:    [[TMP1509:%.*]] = select i1 [[TMP1508]], i16 [[TMP1506]], i16 [[TMP1507]]
 // CHECK-NEXT:    store i16 [[TMP1509]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1510:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1511:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1510]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP1512:%.*]] = icmp ugt i16 [[TMP1511]], [[TMP1510]]
 // CHECK-NEXT:    [[TMP1513:%.*]] = select i1 [[TMP1512]], i16 [[TMP1510]], i16 [[TMP1511]]
 // CHECK-NEXT:    store i16 [[TMP1513]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1514:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1515:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1516:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1514]], i16 [[TMP1515]] acq_rel acquire, align 2
@@ -18633,7 +18053,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1518:%.*]] = extractvalue { i16, i1 } [[TMP1516]], 1
 // CHECK-NEXT:    [[TMP1519:%.*]] = select i1 [[TMP1518]], i16 [[TMP1514]], i16 [[TMP1517]]
 // CHECK-NEXT:    store i16 [[TMP1519]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1520:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1521:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1522:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1520]], i16 [[TMP1521]] acq_rel acquire, align 2
@@ -18641,7 +18060,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1524:%.*]] = extractvalue { i16, i1 } [[TMP1522]], 1
 // CHECK-NEXT:    [[TMP1525:%.*]] = select i1 [[TMP1524]], i16 [[TMP1520]], i16 [[TMP1523]]
 // CHECK-NEXT:    store i16 [[TMP1525]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1526:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1527:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1528:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1526]], i16 [[TMP1527]] acq_rel acquire, align 2
@@ -18652,7 +18070,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1529]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT145]]
 // CHECK:       usx.atomic.exit145:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1531:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1532:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1533:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1531]], i16 [[TMP1532]] acq_rel acquire, align 2
@@ -18663,21 +18080,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1534]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT147]]
 // CHECK:       usx.atomic.exit147:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1536:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1537:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1538:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1536]], i16 [[TMP1537]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1539:%.*]] = extractvalue { i16, i1 } [[TMP1538]], 1
 // CHECK-NEXT:    [[TMP1540:%.*]] = zext i1 [[TMP1539]] to i16
 // CHECK-NEXT:    store i16 [[TMP1540]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1541:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1542:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1543:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1541]], i16 [[TMP1542]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP1544:%.*]] = extractvalue { i16, i1 } [[TMP1543]], 1
 // CHECK-NEXT:    [[TMP1545:%.*]] = zext i1 [[TMP1544]] to i16
 // CHECK-NEXT:    store i16 [[TMP1545]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1546:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1547:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1548:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1546]], i16 [[TMP1547]] acq_rel acquire, align 2
@@ -18691,7 +18105,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1551:%.*]] = extractvalue { i16, i1 } [[TMP1548]], 1
 // CHECK-NEXT:    [[TMP1552:%.*]] = zext i1 [[TMP1551]] to i16
 // CHECK-NEXT:    store i16 [[TMP1552]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1553:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1554:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1555:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1553]], i16 [[TMP1554]] acq_rel acquire, align 2
@@ -18705,7 +18118,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1558:%.*]] = extractvalue { i16, i1 } [[TMP1555]], 1
 // CHECK-NEXT:    [[TMP1559:%.*]] = zext i1 [[TMP1558]] to i16
 // CHECK-NEXT:    store i16 [[TMP1559]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1560:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1561:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1560]] acquire, align 2
 // CHECK-NEXT:    store i16 [[TMP1561]], ptr [[USV]], align 2
@@ -18937,55 +18349,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1716:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1717:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1716]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1717]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1718:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1719:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1718]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1719]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1720:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1721:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1720]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1721]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1722:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1723:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1722]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP1723]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1724:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1725:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1726:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1724]], i16 [[TMP1725]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1727:%.*]] = extractvalue { i16, i1 } [[TMP1726]], 0
 // CHECK-NEXT:    store i16 [[TMP1727]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1728:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1729:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1730:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1728]], i16 [[TMP1729]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1731:%.*]] = extractvalue { i16, i1 } [[TMP1730]], 0
 // CHECK-NEXT:    store i16 [[TMP1731]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1732:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1733:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1732]] release, align 2
 // CHECK-NEXT:    [[TMP1734:%.*]] = icmp ugt i16 [[TMP1733]], [[TMP1732]]
 // CHECK-NEXT:    [[TMP1735:%.*]] = select i1 [[TMP1734]], i16 [[TMP1732]], i16 [[TMP1733]]
 // CHECK-NEXT:    store i16 [[TMP1735]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1736:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1737:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1736]] release, align 2
 // CHECK-NEXT:    [[TMP1738:%.*]] = icmp ult i16 [[TMP1737]], [[TMP1736]]
 // CHECK-NEXT:    [[TMP1739:%.*]] = select i1 [[TMP1738]], i16 [[TMP1736]], i16 [[TMP1737]]
 // CHECK-NEXT:    store i16 [[TMP1739]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1740:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1741:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1740]] release, align 2
 // CHECK-NEXT:    [[TMP1742:%.*]] = icmp ult i16 [[TMP1741]], [[TMP1740]]
 // CHECK-NEXT:    [[TMP1743:%.*]] = select i1 [[TMP1742]], i16 [[TMP1740]], i16 [[TMP1741]]
 // CHECK-NEXT:    store i16 [[TMP1743]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1744:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1745:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1744]] release, align 2
 // CHECK-NEXT:    [[TMP1746:%.*]] = icmp ugt i16 [[TMP1745]], [[TMP1744]]
 // CHECK-NEXT:    [[TMP1747:%.*]] = select i1 [[TMP1746]], i16 [[TMP1744]], i16 [[TMP1745]]
 // CHECK-NEXT:    store i16 [[TMP1747]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1748:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1749:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1750:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1748]], i16 [[TMP1749]] release monotonic, align 2
@@ -18993,7 +18395,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1752:%.*]] = extractvalue { i16, i1 } [[TMP1750]], 1
 // CHECK-NEXT:    [[TMP1753:%.*]] = select i1 [[TMP1752]], i16 [[TMP1748]], i16 [[TMP1751]]
 // CHECK-NEXT:    store i16 [[TMP1753]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1754:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1755:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1756:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1754]], i16 [[TMP1755]] release monotonic, align 2
@@ -19001,7 +18402,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1758:%.*]] = extractvalue { i16, i1 } [[TMP1756]], 1
 // CHECK-NEXT:    [[TMP1759:%.*]] = select i1 [[TMP1758]], i16 [[TMP1754]], i16 [[TMP1757]]
 // CHECK-NEXT:    store i16 [[TMP1759]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1760:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1761:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1762:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1760]], i16 [[TMP1761]] release monotonic, align 2
@@ -19012,7 +18412,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1763]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT169]]
 // CHECK:       usx.atomic.exit169:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1765:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1766:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1767:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1765]], i16 [[TMP1766]] release monotonic, align 2
@@ -19023,21 +18422,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1768]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT171]]
 // CHECK:       usx.atomic.exit171:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1770:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1771:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1772:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1770]], i16 [[TMP1771]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1773:%.*]] = extractvalue { i16, i1 } [[TMP1772]], 1
 // CHECK-NEXT:    [[TMP1774:%.*]] = zext i1 [[TMP1773]] to i16
 // CHECK-NEXT:    store i16 [[TMP1774]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1775:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1776:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1777:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1775]], i16 [[TMP1776]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP1778:%.*]] = extractvalue { i16, i1 } [[TMP1777]], 1
 // CHECK-NEXT:    [[TMP1779:%.*]] = zext i1 [[TMP1778]] to i16
 // CHECK-NEXT:    store i16 [[TMP1779]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1780:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1781:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1782:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1780]], i16 [[TMP1781]] release monotonic, align 2
@@ -19051,7 +18447,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1785:%.*]] = extractvalue { i16, i1 } [[TMP1782]], 1
 // CHECK-NEXT:    [[TMP1786:%.*]] = zext i1 [[TMP1785]] to i16
 // CHECK-NEXT:    store i16 [[TMP1786]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1787:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1788:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1789:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1787]], i16 [[TMP1788]] release monotonic, align 2
@@ -19065,59 +18460,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1792:%.*]] = extractvalue { i16, i1 } [[TMP1789]], 1
 // CHECK-NEXT:    [[TMP1793:%.*]] = zext i1 [[TMP1792]] to i16
 // CHECK-NEXT:    store i16 [[TMP1793]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1794:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1795:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1794]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1795]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1796:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1797:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1796]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1797]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1798:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1799:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1798]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1799]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1800:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1801:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1800]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP1801]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1802:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1803:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1804:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1802]], i16 [[TMP1803]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1805:%.*]] = extractvalue { i16, i1 } [[TMP1804]], 0
 // CHECK-NEXT:    store i16 [[TMP1805]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1806:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1807:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1808:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1806]], i16 [[TMP1807]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1809:%.*]] = extractvalue { i16, i1 } [[TMP1808]], 0
 // CHECK-NEXT:    store i16 [[TMP1809]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1810:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1811:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1810]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1812:%.*]] = icmp ugt i16 [[TMP1811]], [[TMP1810]]
 // CHECK-NEXT:    [[TMP1813:%.*]] = select i1 [[TMP1812]], i16 [[TMP1810]], i16 [[TMP1811]]
 // CHECK-NEXT:    store i16 [[TMP1813]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1814:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1815:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1814]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1816:%.*]] = icmp ult i16 [[TMP1815]], [[TMP1814]]
 // CHECK-NEXT:    [[TMP1817:%.*]] = select i1 [[TMP1816]], i16 [[TMP1814]], i16 [[TMP1815]]
 // CHECK-NEXT:    store i16 [[TMP1817]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1818:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1819:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP1818]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1820:%.*]] = icmp ult i16 [[TMP1819]], [[TMP1818]]
 // CHECK-NEXT:    [[TMP1821:%.*]] = select i1 [[TMP1820]], i16 [[TMP1818]], i16 [[TMP1819]]
 // CHECK-NEXT:    store i16 [[TMP1821]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1822:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1823:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP1822]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP1824:%.*]] = icmp ugt i16 [[TMP1823]], [[TMP1822]]
 // CHECK-NEXT:    [[TMP1825:%.*]] = select i1 [[TMP1824]], i16 [[TMP1822]], i16 [[TMP1823]]
 // CHECK-NEXT:    store i16 [[TMP1825]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1826:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1827:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1828:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1826]], i16 [[TMP1827]] seq_cst seq_cst, align 2
@@ -19125,7 +18509,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1830:%.*]] = extractvalue { i16, i1 } [[TMP1828]], 1
 // CHECK-NEXT:    [[TMP1831:%.*]] = select i1 [[TMP1830]], i16 [[TMP1826]], i16 [[TMP1829]]
 // CHECK-NEXT:    store i16 [[TMP1831]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1832:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1833:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1834:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1832]], i16 [[TMP1833]] seq_cst seq_cst, align 2
@@ -19133,7 +18516,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1836:%.*]] = extractvalue { i16, i1 } [[TMP1834]], 1
 // CHECK-NEXT:    [[TMP1837:%.*]] = select i1 [[TMP1836]], i16 [[TMP1832]], i16 [[TMP1835]]
 // CHECK-NEXT:    store i16 [[TMP1837]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1838:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1839:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1840:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1838]], i16 [[TMP1839]] seq_cst seq_cst, align 2
@@ -19144,7 +18526,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1841]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT177]]
 // CHECK:       usx.atomic.exit177:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1843:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1844:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1845:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1843]], i16 [[TMP1844]] seq_cst seq_cst, align 2
@@ -19155,21 +18536,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i16 [[TMP1846]], ptr [[USV]], align 2
 // CHECK-NEXT:    br label [[USX_ATOMIC_EXIT179]]
 // CHECK:       usx.atomic.exit179:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1848:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1849:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1850:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1848]], i16 [[TMP1849]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1851:%.*]] = extractvalue { i16, i1 } [[TMP1850]], 1
 // CHECK-NEXT:    [[TMP1852:%.*]] = zext i1 [[TMP1851]] to i16
 // CHECK-NEXT:    store i16 [[TMP1852]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1853:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1854:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1855:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1853]], i16 [[TMP1854]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP1856:%.*]] = extractvalue { i16, i1 } [[TMP1855]], 1
 // CHECK-NEXT:    [[TMP1857:%.*]] = zext i1 [[TMP1856]] to i16
 // CHECK-NEXT:    store i16 [[TMP1857]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1858:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1859:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1860:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1858]], i16 [[TMP1859]] seq_cst seq_cst, align 2
@@ -19183,7 +18561,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1863:%.*]] = extractvalue { i16, i1 } [[TMP1860]], 1
 // CHECK-NEXT:    [[TMP1864:%.*]] = zext i1 [[TMP1863]] to i16
 // CHECK-NEXT:    store i16 [[TMP1864]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1865:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP1866:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP1867:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP1865]], i16 [[TMP1866]] seq_cst seq_cst, align 2
@@ -19197,7 +18574,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1870:%.*]] = extractvalue { i16, i1 } [[TMP1867]], 1
 // CHECK-NEXT:    [[TMP1871:%.*]] = zext i1 [[TMP1870]] to i16
 // CHECK-NEXT:    store i16 [[TMP1871]], ptr [[USR]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1872:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1873:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP1872]] monotonic, align 4
 // CHECK-NEXT:    store i32 [[TMP1873]], ptr [[IV]], align 4
@@ -19315,55 +18691,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1950:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1951:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP1950]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP1951]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1952:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1953:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP1952]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP1953]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1954:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1955:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP1954]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP1955]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1956:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1957:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP1956]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP1957]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1958:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1959:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP1960:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1958]], i32 [[TMP1959]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP1961:%.*]] = extractvalue { i32, i1 } [[TMP1960]], 0
 // CHECK-NEXT:    store i32 [[TMP1961]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1962:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1963:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP1964:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1962]], i32 [[TMP1963]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP1965:%.*]] = extractvalue { i32, i1 } [[TMP1964]], 0
 // CHECK-NEXT:    store i32 [[TMP1965]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1966:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1967:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP1966]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP1968:%.*]] = icmp sgt i32 [[TMP1967]], [[TMP1966]]
 // CHECK-NEXT:    [[TMP1969:%.*]] = select i1 [[TMP1968]], i32 [[TMP1966]], i32 [[TMP1967]]
 // CHECK-NEXT:    store i32 [[TMP1969]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1970:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1971:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP1970]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP1972:%.*]] = icmp slt i32 [[TMP1971]], [[TMP1970]]
 // CHECK-NEXT:    [[TMP1973:%.*]] = select i1 [[TMP1972]], i32 [[TMP1970]], i32 [[TMP1971]]
 // CHECK-NEXT:    store i32 [[TMP1973]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1974:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1975:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP1974]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP1976:%.*]] = icmp slt i32 [[TMP1975]], [[TMP1974]]
 // CHECK-NEXT:    [[TMP1977:%.*]] = select i1 [[TMP1976]], i32 [[TMP1974]], i32 [[TMP1975]]
 // CHECK-NEXT:    store i32 [[TMP1977]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1978:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1979:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP1978]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP1980:%.*]] = icmp sgt i32 [[TMP1979]], [[TMP1978]]
 // CHECK-NEXT:    [[TMP1981:%.*]] = select i1 [[TMP1980]], i32 [[TMP1978]], i32 [[TMP1979]]
 // CHECK-NEXT:    store i32 [[TMP1981]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1982:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1983:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP1984:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1982]], i32 [[TMP1983]] acq_rel acquire, align 4
@@ -19371,7 +18737,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1986:%.*]] = extractvalue { i32, i1 } [[TMP1984]], 1
 // CHECK-NEXT:    [[TMP1987:%.*]] = select i1 [[TMP1986]], i32 [[TMP1982]], i32 [[TMP1985]]
 // CHECK-NEXT:    store i32 [[TMP1987]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1988:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1989:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP1990:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1988]], i32 [[TMP1989]] acq_rel acquire, align 4
@@ -19379,7 +18744,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP1992:%.*]] = extractvalue { i32, i1 } [[TMP1990]], 1
 // CHECK-NEXT:    [[TMP1993:%.*]] = select i1 [[TMP1992]], i32 [[TMP1988]], i32 [[TMP1991]]
 // CHECK-NEXT:    store i32 [[TMP1993]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1994:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP1995:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP1996:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1994]], i32 [[TMP1995]] acq_rel acquire, align 4
@@ -19390,7 +18754,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP1997]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT191]]
 // CHECK:       ix.atomic.exit191:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1999:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2000:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2001:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP1999]], i32 [[TMP2000]] acq_rel acquire, align 4
@@ -19401,21 +18764,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2002]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT193]]
 // CHECK:       ix.atomic.exit193:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2004:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2005:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2006:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2004]], i32 [[TMP2005]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2007:%.*]] = extractvalue { i32, i1 } [[TMP2006]], 1
 // CHECK-NEXT:    [[TMP2008:%.*]] = sext i1 [[TMP2007]] to i32
 // CHECK-NEXT:    store i32 [[TMP2008]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2009:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2010:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2011:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2009]], i32 [[TMP2010]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2012:%.*]] = extractvalue { i32, i1 } [[TMP2011]], 1
 // CHECK-NEXT:    [[TMP2013:%.*]] = sext i1 [[TMP2012]] to i32
 // CHECK-NEXT:    store i32 [[TMP2013]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2014:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2015:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2016:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2014]], i32 [[TMP2015]] acq_rel acquire, align 4
@@ -19429,7 +18789,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2019:%.*]] = extractvalue { i32, i1 } [[TMP2016]], 1
 // CHECK-NEXT:    [[TMP2020:%.*]] = sext i1 [[TMP2019]] to i32
 // CHECK-NEXT:    store i32 [[TMP2020]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2021:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2022:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2023:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2021]], i32 [[TMP2022]] acq_rel acquire, align 4
@@ -19443,7 +18802,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2026:%.*]] = extractvalue { i32, i1 } [[TMP2023]], 1
 // CHECK-NEXT:    [[TMP2027:%.*]] = sext i1 [[TMP2026]] to i32
 // CHECK-NEXT:    store i32 [[TMP2027]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2028:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2029:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2028]] acquire, align 4
 // CHECK-NEXT:    store i32 [[TMP2029]], ptr [[IV]], align 4
@@ -19675,55 +19033,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2184:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2185:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2184]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2185]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2186:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2187:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2186]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2187]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2188:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2189:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2188]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2189]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2190:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2191:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2190]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2191]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2192:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2193:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2194:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2192]], i32 [[TMP2193]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2195:%.*]] = extractvalue { i32, i1 } [[TMP2194]], 0
 // CHECK-NEXT:    store i32 [[TMP2195]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2196:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2197:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2198:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2196]], i32 [[TMP2197]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2199:%.*]] = extractvalue { i32, i1 } [[TMP2198]], 0
 // CHECK-NEXT:    store i32 [[TMP2199]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2200:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2201:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2200]] release, align 4
 // CHECK-NEXT:    [[TMP2202:%.*]] = icmp sgt i32 [[TMP2201]], [[TMP2200]]
 // CHECK-NEXT:    [[TMP2203:%.*]] = select i1 [[TMP2202]], i32 [[TMP2200]], i32 [[TMP2201]]
 // CHECK-NEXT:    store i32 [[TMP2203]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2204:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2205:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2204]] release, align 4
 // CHECK-NEXT:    [[TMP2206:%.*]] = icmp slt i32 [[TMP2205]], [[TMP2204]]
 // CHECK-NEXT:    [[TMP2207:%.*]] = select i1 [[TMP2206]], i32 [[TMP2204]], i32 [[TMP2205]]
 // CHECK-NEXT:    store i32 [[TMP2207]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2208:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2209:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2208]] release, align 4
 // CHECK-NEXT:    [[TMP2210:%.*]] = icmp slt i32 [[TMP2209]], [[TMP2208]]
 // CHECK-NEXT:    [[TMP2211:%.*]] = select i1 [[TMP2210]], i32 [[TMP2208]], i32 [[TMP2209]]
 // CHECK-NEXT:    store i32 [[TMP2211]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2212:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2213:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2212]] release, align 4
 // CHECK-NEXT:    [[TMP2214:%.*]] = icmp sgt i32 [[TMP2213]], [[TMP2212]]
 // CHECK-NEXT:    [[TMP2215:%.*]] = select i1 [[TMP2214]], i32 [[TMP2212]], i32 [[TMP2213]]
 // CHECK-NEXT:    store i32 [[TMP2215]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2216:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2217:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2218:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2216]], i32 [[TMP2217]] release monotonic, align 4
@@ -19731,7 +19079,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2220:%.*]] = extractvalue { i32, i1 } [[TMP2218]], 1
 // CHECK-NEXT:    [[TMP2221:%.*]] = select i1 [[TMP2220]], i32 [[TMP2216]], i32 [[TMP2219]]
 // CHECK-NEXT:    store i32 [[TMP2221]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2222:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2223:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2224:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2222]], i32 [[TMP2223]] release monotonic, align 4
@@ -19739,7 +19086,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2226:%.*]] = extractvalue { i32, i1 } [[TMP2224]], 1
 // CHECK-NEXT:    [[TMP2227:%.*]] = select i1 [[TMP2226]], i32 [[TMP2222]], i32 [[TMP2225]]
 // CHECK-NEXT:    store i32 [[TMP2227]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2228:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2229:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2230:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2228]], i32 [[TMP2229]] release monotonic, align 4
@@ -19750,7 +19096,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2231]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT215]]
 // CHECK:       ix.atomic.exit215:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2233:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2234:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2235:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2233]], i32 [[TMP2234]] release monotonic, align 4
@@ -19761,21 +19106,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2236]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT217]]
 // CHECK:       ix.atomic.exit217:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2238:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2239:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2240:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2238]], i32 [[TMP2239]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2241:%.*]] = extractvalue { i32, i1 } [[TMP2240]], 1
 // CHECK-NEXT:    [[TMP2242:%.*]] = sext i1 [[TMP2241]] to i32
 // CHECK-NEXT:    store i32 [[TMP2242]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2243:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2244:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2245:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2243]], i32 [[TMP2244]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2246:%.*]] = extractvalue { i32, i1 } [[TMP2245]], 1
 // CHECK-NEXT:    [[TMP2247:%.*]] = sext i1 [[TMP2246]] to i32
 // CHECK-NEXT:    store i32 [[TMP2247]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2248:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2249:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2250:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2248]], i32 [[TMP2249]] release monotonic, align 4
@@ -19789,7 +19131,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2253:%.*]] = extractvalue { i32, i1 } [[TMP2250]], 1
 // CHECK-NEXT:    [[TMP2254:%.*]] = sext i1 [[TMP2253]] to i32
 // CHECK-NEXT:    store i32 [[TMP2254]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2255:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2256:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2257:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2255]], i32 [[TMP2256]] release monotonic, align 4
@@ -19803,59 +19144,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2260:%.*]] = extractvalue { i32, i1 } [[TMP2257]], 1
 // CHECK-NEXT:    [[TMP2261:%.*]] = sext i1 [[TMP2260]] to i32
 // CHECK-NEXT:    store i32 [[TMP2261]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2262:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2263:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2262]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2263]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2264:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2265:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2264]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2265]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2266:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2267:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2266]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2267]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2268:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2269:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2268]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2269]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2270:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2271:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2272:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2270]], i32 [[TMP2271]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2273:%.*]] = extractvalue { i32, i1 } [[TMP2272]], 0
 // CHECK-NEXT:    store i32 [[TMP2273]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2274:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2275:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2276:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2274]], i32 [[TMP2275]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2277:%.*]] = extractvalue { i32, i1 } [[TMP2276]], 0
 // CHECK-NEXT:    store i32 [[TMP2277]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2278:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2279:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2278]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2280:%.*]] = icmp sgt i32 [[TMP2279]], [[TMP2278]]
 // CHECK-NEXT:    [[TMP2281:%.*]] = select i1 [[TMP2280]], i32 [[TMP2278]], i32 [[TMP2279]]
 // CHECK-NEXT:    store i32 [[TMP2281]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2282:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2283:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2282]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2284:%.*]] = icmp slt i32 [[TMP2283]], [[TMP2282]]
 // CHECK-NEXT:    [[TMP2285:%.*]] = select i1 [[TMP2284]], i32 [[TMP2282]], i32 [[TMP2283]]
 // CHECK-NEXT:    store i32 [[TMP2285]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2286:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2287:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP2286]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2288:%.*]] = icmp slt i32 [[TMP2287]], [[TMP2286]]
 // CHECK-NEXT:    [[TMP2289:%.*]] = select i1 [[TMP2288]], i32 [[TMP2286]], i32 [[TMP2287]]
 // CHECK-NEXT:    store i32 [[TMP2289]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2290:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2291:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP2290]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2292:%.*]] = icmp sgt i32 [[TMP2291]], [[TMP2290]]
 // CHECK-NEXT:    [[TMP2293:%.*]] = select i1 [[TMP2292]], i32 [[TMP2290]], i32 [[TMP2291]]
 // CHECK-NEXT:    store i32 [[TMP2293]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2294:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2295:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2296:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2294]], i32 [[TMP2295]] seq_cst seq_cst, align 4
@@ -19863,7 +19193,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2298:%.*]] = extractvalue { i32, i1 } [[TMP2296]], 1
 // CHECK-NEXT:    [[TMP2299:%.*]] = select i1 [[TMP2298]], i32 [[TMP2294]], i32 [[TMP2297]]
 // CHECK-NEXT:    store i32 [[TMP2299]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2300:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2301:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2302:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2300]], i32 [[TMP2301]] seq_cst seq_cst, align 4
@@ -19871,7 +19200,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2304:%.*]] = extractvalue { i32, i1 } [[TMP2302]], 1
 // CHECK-NEXT:    [[TMP2305:%.*]] = select i1 [[TMP2304]], i32 [[TMP2300]], i32 [[TMP2303]]
 // CHECK-NEXT:    store i32 [[TMP2305]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2306:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2307:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2308:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2306]], i32 [[TMP2307]] seq_cst seq_cst, align 4
@@ -19882,7 +19210,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2309]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT223]]
 // CHECK:       ix.atomic.exit223:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2311:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2312:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2313:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2311]], i32 [[TMP2312]] seq_cst seq_cst, align 4
@@ -19893,21 +19220,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2314]], ptr [[IV]], align 4
 // CHECK-NEXT:    br label [[IX_ATOMIC_EXIT225]]
 // CHECK:       ix.atomic.exit225:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2316:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2317:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2318:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2316]], i32 [[TMP2317]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2319:%.*]] = extractvalue { i32, i1 } [[TMP2318]], 1
 // CHECK-NEXT:    [[TMP2320:%.*]] = sext i1 [[TMP2319]] to i32
 // CHECK-NEXT:    store i32 [[TMP2320]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2321:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2322:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2323:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2321]], i32 [[TMP2322]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2324:%.*]] = extractvalue { i32, i1 } [[TMP2323]], 1
 // CHECK-NEXT:    [[TMP2325:%.*]] = sext i1 [[TMP2324]] to i32
 // CHECK-NEXT:    store i32 [[TMP2325]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2326:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2327:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2328:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2326]], i32 [[TMP2327]] seq_cst seq_cst, align 4
@@ -19921,7 +19245,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2331:%.*]] = extractvalue { i32, i1 } [[TMP2328]], 1
 // CHECK-NEXT:    [[TMP2332:%.*]] = sext i1 [[TMP2331]] to i32
 // CHECK-NEXT:    store i32 [[TMP2332]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2333:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP2334:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP2335:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP2333]], i32 [[TMP2334]] seq_cst seq_cst, align 4
@@ -19935,7 +19258,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2338:%.*]] = extractvalue { i32, i1 } [[TMP2335]], 1
 // CHECK-NEXT:    [[TMP2339:%.*]] = sext i1 [[TMP2338]] to i32
 // CHECK-NEXT:    store i32 [[TMP2339]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2340:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2341:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2340]] monotonic, align 4
 // CHECK-NEXT:    store i32 [[TMP2341]], ptr [[UIV]], align 4
@@ -20053,55 +19375,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2418:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2419:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2418]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP2419]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2420:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2421:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2420]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP2421]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2422:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2423:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2422]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP2423]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2424:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2425:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2424]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP2425]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2426:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2427:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2428:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2426]], i32 [[TMP2427]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2429:%.*]] = extractvalue { i32, i1 } [[TMP2428]], 0
 // CHECK-NEXT:    store i32 [[TMP2429]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2430:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2431:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2432:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2430]], i32 [[TMP2431]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2433:%.*]] = extractvalue { i32, i1 } [[TMP2432]], 0
 // CHECK-NEXT:    store i32 [[TMP2433]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2434:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2435:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2434]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP2436:%.*]] = icmp ugt i32 [[TMP2435]], [[TMP2434]]
 // CHECK-NEXT:    [[TMP2437:%.*]] = select i1 [[TMP2436]], i32 [[TMP2434]], i32 [[TMP2435]]
 // CHECK-NEXT:    store i32 [[TMP2437]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2438:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2439:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2438]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP2440:%.*]] = icmp ult i32 [[TMP2439]], [[TMP2438]]
 // CHECK-NEXT:    [[TMP2441:%.*]] = select i1 [[TMP2440]], i32 [[TMP2438]], i32 [[TMP2439]]
 // CHECK-NEXT:    store i32 [[TMP2441]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2442:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2443:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2442]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP2444:%.*]] = icmp ult i32 [[TMP2443]], [[TMP2442]]
 // CHECK-NEXT:    [[TMP2445:%.*]] = select i1 [[TMP2444]], i32 [[TMP2442]], i32 [[TMP2443]]
 // CHECK-NEXT:    store i32 [[TMP2445]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2446:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2447:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2446]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP2448:%.*]] = icmp ugt i32 [[TMP2447]], [[TMP2446]]
 // CHECK-NEXT:    [[TMP2449:%.*]] = select i1 [[TMP2448]], i32 [[TMP2446]], i32 [[TMP2447]]
 // CHECK-NEXT:    store i32 [[TMP2449]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2450:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2451:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2452:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2450]], i32 [[TMP2451]] acq_rel acquire, align 4
@@ -20109,7 +19421,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2454:%.*]] = extractvalue { i32, i1 } [[TMP2452]], 1
 // CHECK-NEXT:    [[TMP2455:%.*]] = select i1 [[TMP2454]], i32 [[TMP2450]], i32 [[TMP2453]]
 // CHECK-NEXT:    store i32 [[TMP2455]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2456:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2457:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2458:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2456]], i32 [[TMP2457]] acq_rel acquire, align 4
@@ -20117,7 +19428,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2460:%.*]] = extractvalue { i32, i1 } [[TMP2458]], 1
 // CHECK-NEXT:    [[TMP2461:%.*]] = select i1 [[TMP2460]], i32 [[TMP2456]], i32 [[TMP2459]]
 // CHECK-NEXT:    store i32 [[TMP2461]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2462:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2463:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2464:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2462]], i32 [[TMP2463]] acq_rel acquire, align 4
@@ -20128,7 +19438,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2465]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT237]]
 // CHECK:       uix.atomic.exit237:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2467:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2468:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2469:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2467]], i32 [[TMP2468]] acq_rel acquire, align 4
@@ -20139,21 +19448,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2470]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT239]]
 // CHECK:       uix.atomic.exit239:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2472:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2473:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2474:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2472]], i32 [[TMP2473]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2475:%.*]] = extractvalue { i32, i1 } [[TMP2474]], 1
 // CHECK-NEXT:    [[TMP2476:%.*]] = zext i1 [[TMP2475]] to i32
 // CHECK-NEXT:    store i32 [[TMP2476]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2477:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2478:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2479:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2477]], i32 [[TMP2478]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP2480:%.*]] = extractvalue { i32, i1 } [[TMP2479]], 1
 // CHECK-NEXT:    [[TMP2481:%.*]] = zext i1 [[TMP2480]] to i32
 // CHECK-NEXT:    store i32 [[TMP2481]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2482:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2483:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2484:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2482]], i32 [[TMP2483]] acq_rel acquire, align 4
@@ -20167,7 +19473,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2487:%.*]] = extractvalue { i32, i1 } [[TMP2484]], 1
 // CHECK-NEXT:    [[TMP2488:%.*]] = zext i1 [[TMP2487]] to i32
 // CHECK-NEXT:    store i32 [[TMP2488]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2489:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2490:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2491:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2489]], i32 [[TMP2490]] acq_rel acquire, align 4
@@ -20181,7 +19486,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2494:%.*]] = extractvalue { i32, i1 } [[TMP2491]], 1
 // CHECK-NEXT:    [[TMP2495:%.*]] = zext i1 [[TMP2494]] to i32
 // CHECK-NEXT:    store i32 [[TMP2495]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2496:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2497:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2496]] acquire, align 4
 // CHECK-NEXT:    store i32 [[TMP2497]], ptr [[UIV]], align 4
@@ -20413,55 +19717,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2652:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2653:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2652]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2653]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2654:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2655:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2654]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2655]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2656:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2657:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2656]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2657]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2658:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2659:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2658]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP2659]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2660:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2661:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2662:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2660]], i32 [[TMP2661]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2663:%.*]] = extractvalue { i32, i1 } [[TMP2662]], 0
 // CHECK-NEXT:    store i32 [[TMP2663]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2664:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2665:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2666:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2664]], i32 [[TMP2665]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2667:%.*]] = extractvalue { i32, i1 } [[TMP2666]], 0
 // CHECK-NEXT:    store i32 [[TMP2667]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2668:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2669:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2668]] release, align 4
 // CHECK-NEXT:    [[TMP2670:%.*]] = icmp ugt i32 [[TMP2669]], [[TMP2668]]
 // CHECK-NEXT:    [[TMP2671:%.*]] = select i1 [[TMP2670]], i32 [[TMP2668]], i32 [[TMP2669]]
 // CHECK-NEXT:    store i32 [[TMP2671]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2672:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2673:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2672]] release, align 4
 // CHECK-NEXT:    [[TMP2674:%.*]] = icmp ult i32 [[TMP2673]], [[TMP2672]]
 // CHECK-NEXT:    [[TMP2675:%.*]] = select i1 [[TMP2674]], i32 [[TMP2672]], i32 [[TMP2673]]
 // CHECK-NEXT:    store i32 [[TMP2675]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2676:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2677:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2676]] release, align 4
 // CHECK-NEXT:    [[TMP2678:%.*]] = icmp ult i32 [[TMP2677]], [[TMP2676]]
 // CHECK-NEXT:    [[TMP2679:%.*]] = select i1 [[TMP2678]], i32 [[TMP2676]], i32 [[TMP2677]]
 // CHECK-NEXT:    store i32 [[TMP2679]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2680:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2681:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2680]] release, align 4
 // CHECK-NEXT:    [[TMP2682:%.*]] = icmp ugt i32 [[TMP2681]], [[TMP2680]]
 // CHECK-NEXT:    [[TMP2683:%.*]] = select i1 [[TMP2682]], i32 [[TMP2680]], i32 [[TMP2681]]
 // CHECK-NEXT:    store i32 [[TMP2683]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2684:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2685:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2686:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2684]], i32 [[TMP2685]] release monotonic, align 4
@@ -20469,7 +19763,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2688:%.*]] = extractvalue { i32, i1 } [[TMP2686]], 1
 // CHECK-NEXT:    [[TMP2689:%.*]] = select i1 [[TMP2688]], i32 [[TMP2684]], i32 [[TMP2687]]
 // CHECK-NEXT:    store i32 [[TMP2689]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2690:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2691:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2692:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2690]], i32 [[TMP2691]] release monotonic, align 4
@@ -20477,7 +19770,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2694:%.*]] = extractvalue { i32, i1 } [[TMP2692]], 1
 // CHECK-NEXT:    [[TMP2695:%.*]] = select i1 [[TMP2694]], i32 [[TMP2690]], i32 [[TMP2693]]
 // CHECK-NEXT:    store i32 [[TMP2695]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2696:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2697:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2698:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2696]], i32 [[TMP2697]] release monotonic, align 4
@@ -20488,7 +19780,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2699]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT261]]
 // CHECK:       uix.atomic.exit261:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2701:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2702:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2703:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2701]], i32 [[TMP2702]] release monotonic, align 4
@@ -20499,21 +19790,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2704]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT263]]
 // CHECK:       uix.atomic.exit263:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2706:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2707:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2708:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2706]], i32 [[TMP2707]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2709:%.*]] = extractvalue { i32, i1 } [[TMP2708]], 1
 // CHECK-NEXT:    [[TMP2710:%.*]] = zext i1 [[TMP2709]] to i32
 // CHECK-NEXT:    store i32 [[TMP2710]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2711:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2712:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2713:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2711]], i32 [[TMP2712]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP2714:%.*]] = extractvalue { i32, i1 } [[TMP2713]], 1
 // CHECK-NEXT:    [[TMP2715:%.*]] = zext i1 [[TMP2714]] to i32
 // CHECK-NEXT:    store i32 [[TMP2715]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2716:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2717:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2718:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2716]], i32 [[TMP2717]] release monotonic, align 4
@@ -20527,7 +19815,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2721:%.*]] = extractvalue { i32, i1 } [[TMP2718]], 1
 // CHECK-NEXT:    [[TMP2722:%.*]] = zext i1 [[TMP2721]] to i32
 // CHECK-NEXT:    store i32 [[TMP2722]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2723:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2724:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2725:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2723]], i32 [[TMP2724]] release monotonic, align 4
@@ -20541,59 +19828,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2728:%.*]] = extractvalue { i32, i1 } [[TMP2725]], 1
 // CHECK-NEXT:    [[TMP2729:%.*]] = zext i1 [[TMP2728]] to i32
 // CHECK-NEXT:    store i32 [[TMP2729]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2730:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2731:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2730]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2731]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2732:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2733:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2732]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2733]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2734:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2735:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2734]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2735]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2736:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2737:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2736]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP2737]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2738:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2739:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2740:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2738]], i32 [[TMP2739]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2741:%.*]] = extractvalue { i32, i1 } [[TMP2740]], 0
 // CHECK-NEXT:    store i32 [[TMP2741]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2742:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2743:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2744:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2742]], i32 [[TMP2743]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2745:%.*]] = extractvalue { i32, i1 } [[TMP2744]], 0
 // CHECK-NEXT:    store i32 [[TMP2745]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2746:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2747:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2746]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2748:%.*]] = icmp ugt i32 [[TMP2747]], [[TMP2746]]
 // CHECK-NEXT:    [[TMP2749:%.*]] = select i1 [[TMP2748]], i32 [[TMP2746]], i32 [[TMP2747]]
 // CHECK-NEXT:    store i32 [[TMP2749]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2750:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2751:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2750]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2752:%.*]] = icmp ult i32 [[TMP2751]], [[TMP2750]]
 // CHECK-NEXT:    [[TMP2753:%.*]] = select i1 [[TMP2752]], i32 [[TMP2750]], i32 [[TMP2751]]
 // CHECK-NEXT:    store i32 [[TMP2753]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2754:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2755:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP2754]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2756:%.*]] = icmp ult i32 [[TMP2755]], [[TMP2754]]
 // CHECK-NEXT:    [[TMP2757:%.*]] = select i1 [[TMP2756]], i32 [[TMP2754]], i32 [[TMP2755]]
 // CHECK-NEXT:    store i32 [[TMP2757]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2758:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2759:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP2758]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP2760:%.*]] = icmp ugt i32 [[TMP2759]], [[TMP2758]]
 // CHECK-NEXT:    [[TMP2761:%.*]] = select i1 [[TMP2760]], i32 [[TMP2758]], i32 [[TMP2759]]
 // CHECK-NEXT:    store i32 [[TMP2761]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2762:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2763:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2764:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2762]], i32 [[TMP2763]] seq_cst seq_cst, align 4
@@ -20601,7 +19877,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2766:%.*]] = extractvalue { i32, i1 } [[TMP2764]], 1
 // CHECK-NEXT:    [[TMP2767:%.*]] = select i1 [[TMP2766]], i32 [[TMP2762]], i32 [[TMP2765]]
 // CHECK-NEXT:    store i32 [[TMP2767]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2768:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2769:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2770:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2768]], i32 [[TMP2769]] seq_cst seq_cst, align 4
@@ -20609,7 +19884,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2772:%.*]] = extractvalue { i32, i1 } [[TMP2770]], 1
 // CHECK-NEXT:    [[TMP2773:%.*]] = select i1 [[TMP2772]], i32 [[TMP2768]], i32 [[TMP2771]]
 // CHECK-NEXT:    store i32 [[TMP2773]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2774:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2775:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2776:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2774]], i32 [[TMP2775]] seq_cst seq_cst, align 4
@@ -20620,7 +19894,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2777]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT269]]
 // CHECK:       uix.atomic.exit269:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2779:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2780:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2781:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2779]], i32 [[TMP2780]] seq_cst seq_cst, align 4
@@ -20631,21 +19904,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i32 [[TMP2782]], ptr [[UIV]], align 4
 // CHECK-NEXT:    br label [[UIX_ATOMIC_EXIT271]]
 // CHECK:       uix.atomic.exit271:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2784:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2785:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2786:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2784]], i32 [[TMP2785]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2787:%.*]] = extractvalue { i32, i1 } [[TMP2786]], 1
 // CHECK-NEXT:    [[TMP2788:%.*]] = zext i1 [[TMP2787]] to i32
 // CHECK-NEXT:    store i32 [[TMP2788]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2789:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2790:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2791:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2789]], i32 [[TMP2790]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP2792:%.*]] = extractvalue { i32, i1 } [[TMP2791]], 1
 // CHECK-NEXT:    [[TMP2793:%.*]] = zext i1 [[TMP2792]] to i32
 // CHECK-NEXT:    store i32 [[TMP2793]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2794:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2795:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2796:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2794]], i32 [[TMP2795]] seq_cst seq_cst, align 4
@@ -20659,7 +19929,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2799:%.*]] = extractvalue { i32, i1 } [[TMP2796]], 1
 // CHECK-NEXT:    [[TMP2800:%.*]] = zext i1 [[TMP2799]] to i32
 // CHECK-NEXT:    store i32 [[TMP2800]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2801:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP2802:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP2803:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP2801]], i32 [[TMP2802]] seq_cst seq_cst, align 4
@@ -20673,7 +19942,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2806:%.*]] = extractvalue { i32, i1 } [[TMP2803]], 1
 // CHECK-NEXT:    [[TMP2807:%.*]] = zext i1 [[TMP2806]] to i32
 // CHECK-NEXT:    store i32 [[TMP2807]], ptr [[UIR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2808:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2809:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2808]] monotonic, align 8
 // CHECK-NEXT:    store i64 [[TMP2809]], ptr [[LV]], align 8
@@ -20791,55 +20059,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2886:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2887:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2886]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP2887]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2888:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2889:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP2888]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP2889]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2890:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2891:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP2890]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP2891]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2892:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2893:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2892]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP2893]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2894:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2895:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2896:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2894]], i64 [[TMP2895]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP2897:%.*]] = extractvalue { i64, i1 } [[TMP2896]], 0
 // CHECK-NEXT:    store i64 [[TMP2897]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2898:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2899:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2900:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2898]], i64 [[TMP2899]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP2901:%.*]] = extractvalue { i64, i1 } [[TMP2900]], 0
 // CHECK-NEXT:    store i64 [[TMP2901]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2902:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2903:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2902]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP2904:%.*]] = icmp sgt i64 [[TMP2903]], [[TMP2902]]
 // CHECK-NEXT:    [[TMP2905:%.*]] = select i1 [[TMP2904]], i64 [[TMP2902]], i64 [[TMP2903]]
 // CHECK-NEXT:    store i64 [[TMP2905]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2906:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2907:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP2906]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP2908:%.*]] = icmp slt i64 [[TMP2907]], [[TMP2906]]
 // CHECK-NEXT:    [[TMP2909:%.*]] = select i1 [[TMP2908]], i64 [[TMP2906]], i64 [[TMP2907]]
 // CHECK-NEXT:    store i64 [[TMP2909]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2910:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2911:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP2910]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP2912:%.*]] = icmp slt i64 [[TMP2911]], [[TMP2910]]
 // CHECK-NEXT:    [[TMP2913:%.*]] = select i1 [[TMP2912]], i64 [[TMP2910]], i64 [[TMP2911]]
 // CHECK-NEXT:    store i64 [[TMP2913]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2914:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2915:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2914]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP2916:%.*]] = icmp sgt i64 [[TMP2915]], [[TMP2914]]
 // CHECK-NEXT:    [[TMP2917:%.*]] = select i1 [[TMP2916]], i64 [[TMP2914]], i64 [[TMP2915]]
 // CHECK-NEXT:    store i64 [[TMP2917]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2918:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2919:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2920:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2918]], i64 [[TMP2919]] acq_rel acquire, align 8
@@ -20847,7 +20105,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2922:%.*]] = extractvalue { i64, i1 } [[TMP2920]], 1
 // CHECK-NEXT:    [[TMP2923:%.*]] = select i1 [[TMP2922]], i64 [[TMP2918]], i64 [[TMP2921]]
 // CHECK-NEXT:    store i64 [[TMP2923]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2924:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2925:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2926:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2924]], i64 [[TMP2925]] acq_rel acquire, align 8
@@ -20855,7 +20112,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2928:%.*]] = extractvalue { i64, i1 } [[TMP2926]], 1
 // CHECK-NEXT:    [[TMP2929:%.*]] = select i1 [[TMP2928]], i64 [[TMP2924]], i64 [[TMP2927]]
 // CHECK-NEXT:    store i64 [[TMP2929]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2930:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2931:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2932:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2930]], i64 [[TMP2931]] acq_rel acquire, align 8
@@ -20866,7 +20122,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP2933]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT283]]
 // CHECK:       lx.atomic.exit283:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2935:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2936:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2937:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2935]], i64 [[TMP2936]] acq_rel acquire, align 8
@@ -20877,21 +20132,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP2938]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT285]]
 // CHECK:       lx.atomic.exit285:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2940:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2941:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2942:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2940]], i64 [[TMP2941]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP2943:%.*]] = extractvalue { i64, i1 } [[TMP2942]], 1
 // CHECK-NEXT:    [[TMP2944:%.*]] = sext i1 [[TMP2943]] to i64
 // CHECK-NEXT:    store i64 [[TMP2944]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2945:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2946:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2947:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2945]], i64 [[TMP2946]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP2948:%.*]] = extractvalue { i64, i1 } [[TMP2947]], 1
 // CHECK-NEXT:    [[TMP2949:%.*]] = sext i1 [[TMP2948]] to i64
 // CHECK-NEXT:    store i64 [[TMP2949]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2950:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2951:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2952:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2950]], i64 [[TMP2951]] acq_rel acquire, align 8
@@ -20905,7 +20157,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2955:%.*]] = extractvalue { i64, i1 } [[TMP2952]], 1
 // CHECK-NEXT:    [[TMP2956:%.*]] = sext i1 [[TMP2955]] to i64
 // CHECK-NEXT:    store i64 [[TMP2956]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2957:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2958:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP2959:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP2957]], i64 [[TMP2958]] acq_rel acquire, align 8
@@ -20919,7 +20170,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP2962:%.*]] = extractvalue { i64, i1 } [[TMP2959]], 1
 // CHECK-NEXT:    [[TMP2963:%.*]] = sext i1 [[TMP2962]] to i64
 // CHECK-NEXT:    store i64 [[TMP2963]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP2964:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP2965:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP2964]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP2965]], ptr [[LV]], align 8
@@ -21151,55 +20401,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3120:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3121:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3120]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3121]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3122:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3123:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3122]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3123]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3124:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3125:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3124]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3125]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3126:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3127:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3126]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3127]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3128:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3129:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3130:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3128]], i64 [[TMP3129]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3131:%.*]] = extractvalue { i64, i1 } [[TMP3130]], 0
 // CHECK-NEXT:    store i64 [[TMP3131]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3132:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3133:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3134:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3132]], i64 [[TMP3133]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3135:%.*]] = extractvalue { i64, i1 } [[TMP3134]], 0
 // CHECK-NEXT:    store i64 [[TMP3135]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3136:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3137:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3136]] release, align 8
 // CHECK-NEXT:    [[TMP3138:%.*]] = icmp sgt i64 [[TMP3137]], [[TMP3136]]
 // CHECK-NEXT:    [[TMP3139:%.*]] = select i1 [[TMP3138]], i64 [[TMP3136]], i64 [[TMP3137]]
 // CHECK-NEXT:    store i64 [[TMP3139]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3140:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3141:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3140]] release, align 8
 // CHECK-NEXT:    [[TMP3142:%.*]] = icmp slt i64 [[TMP3141]], [[TMP3140]]
 // CHECK-NEXT:    [[TMP3143:%.*]] = select i1 [[TMP3142]], i64 [[TMP3140]], i64 [[TMP3141]]
 // CHECK-NEXT:    store i64 [[TMP3143]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3144:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3145:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3144]] release, align 8
 // CHECK-NEXT:    [[TMP3146:%.*]] = icmp slt i64 [[TMP3145]], [[TMP3144]]
 // CHECK-NEXT:    [[TMP3147:%.*]] = select i1 [[TMP3146]], i64 [[TMP3144]], i64 [[TMP3145]]
 // CHECK-NEXT:    store i64 [[TMP3147]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3148:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3149:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3148]] release, align 8
 // CHECK-NEXT:    [[TMP3150:%.*]] = icmp sgt i64 [[TMP3149]], [[TMP3148]]
 // CHECK-NEXT:    [[TMP3151:%.*]] = select i1 [[TMP3150]], i64 [[TMP3148]], i64 [[TMP3149]]
 // CHECK-NEXT:    store i64 [[TMP3151]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3152:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3153:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3154:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3152]], i64 [[TMP3153]] release monotonic, align 8
@@ -21207,7 +20447,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3156:%.*]] = extractvalue { i64, i1 } [[TMP3154]], 1
 // CHECK-NEXT:    [[TMP3157:%.*]] = select i1 [[TMP3156]], i64 [[TMP3152]], i64 [[TMP3155]]
 // CHECK-NEXT:    store i64 [[TMP3157]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3158:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3159:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3160:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3158]], i64 [[TMP3159]] release monotonic, align 8
@@ -21215,7 +20454,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3162:%.*]] = extractvalue { i64, i1 } [[TMP3160]], 1
 // CHECK-NEXT:    [[TMP3163:%.*]] = select i1 [[TMP3162]], i64 [[TMP3158]], i64 [[TMP3161]]
 // CHECK-NEXT:    store i64 [[TMP3163]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3164:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3165:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3166:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3164]], i64 [[TMP3165]] release monotonic, align 8
@@ -21226,7 +20464,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3167]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT307]]
 // CHECK:       lx.atomic.exit307:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3169:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3170:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3171:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3169]], i64 [[TMP3170]] release monotonic, align 8
@@ -21237,21 +20474,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3172]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT309]]
 // CHECK:       lx.atomic.exit309:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3174:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3175:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3176:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3174]], i64 [[TMP3175]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3177:%.*]] = extractvalue { i64, i1 } [[TMP3176]], 1
 // CHECK-NEXT:    [[TMP3178:%.*]] = sext i1 [[TMP3177]] to i64
 // CHECK-NEXT:    store i64 [[TMP3178]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3179:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3180:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3181:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3179]], i64 [[TMP3180]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3182:%.*]] = extractvalue { i64, i1 } [[TMP3181]], 1
 // CHECK-NEXT:    [[TMP3183:%.*]] = sext i1 [[TMP3182]] to i64
 // CHECK-NEXT:    store i64 [[TMP3183]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3184:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3185:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3186:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3184]], i64 [[TMP3185]] release monotonic, align 8
@@ -21265,7 +20499,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3189:%.*]] = extractvalue { i64, i1 } [[TMP3186]], 1
 // CHECK-NEXT:    [[TMP3190:%.*]] = sext i1 [[TMP3189]] to i64
 // CHECK-NEXT:    store i64 [[TMP3190]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3191:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3192:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3193:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3191]], i64 [[TMP3192]] release monotonic, align 8
@@ -21279,59 +20512,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3196:%.*]] = extractvalue { i64, i1 } [[TMP3193]], 1
 // CHECK-NEXT:    [[TMP3197:%.*]] = sext i1 [[TMP3196]] to i64
 // CHECK-NEXT:    store i64 [[TMP3197]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3198:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3199:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3198]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3199]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3200:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3201:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3200]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3201]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3202:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3203:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3202]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3203]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3204:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3205:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3204]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3205]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3206:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3207:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3208:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3206]], i64 [[TMP3207]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3209:%.*]] = extractvalue { i64, i1 } [[TMP3208]], 0
 // CHECK-NEXT:    store i64 [[TMP3209]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3210:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3211:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3212:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3210]], i64 [[TMP3211]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3213:%.*]] = extractvalue { i64, i1 } [[TMP3212]], 0
 // CHECK-NEXT:    store i64 [[TMP3213]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3214:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3215:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3214]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3216:%.*]] = icmp sgt i64 [[TMP3215]], [[TMP3214]]
 // CHECK-NEXT:    [[TMP3217:%.*]] = select i1 [[TMP3216]], i64 [[TMP3214]], i64 [[TMP3215]]
 // CHECK-NEXT:    store i64 [[TMP3217]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3218:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3219:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3218]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3220:%.*]] = icmp slt i64 [[TMP3219]], [[TMP3218]]
 // CHECK-NEXT:    [[TMP3221:%.*]] = select i1 [[TMP3220]], i64 [[TMP3218]], i64 [[TMP3219]]
 // CHECK-NEXT:    store i64 [[TMP3221]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3222:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3223:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP3222]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3224:%.*]] = icmp slt i64 [[TMP3223]], [[TMP3222]]
 // CHECK-NEXT:    [[TMP3225:%.*]] = select i1 [[TMP3224]], i64 [[TMP3222]], i64 [[TMP3223]]
 // CHECK-NEXT:    store i64 [[TMP3225]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3226:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3227:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP3226]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3228:%.*]] = icmp sgt i64 [[TMP3227]], [[TMP3226]]
 // CHECK-NEXT:    [[TMP3229:%.*]] = select i1 [[TMP3228]], i64 [[TMP3226]], i64 [[TMP3227]]
 // CHECK-NEXT:    store i64 [[TMP3229]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3230:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3231:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3232:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3230]], i64 [[TMP3231]] seq_cst seq_cst, align 8
@@ -21339,7 +20561,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3234:%.*]] = extractvalue { i64, i1 } [[TMP3232]], 1
 // CHECK-NEXT:    [[TMP3235:%.*]] = select i1 [[TMP3234]], i64 [[TMP3230]], i64 [[TMP3233]]
 // CHECK-NEXT:    store i64 [[TMP3235]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3236:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3237:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3238:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3236]], i64 [[TMP3237]] seq_cst seq_cst, align 8
@@ -21347,7 +20568,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3240:%.*]] = extractvalue { i64, i1 } [[TMP3238]], 1
 // CHECK-NEXT:    [[TMP3241:%.*]] = select i1 [[TMP3240]], i64 [[TMP3236]], i64 [[TMP3239]]
 // CHECK-NEXT:    store i64 [[TMP3241]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3242:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3243:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3244:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3242]], i64 [[TMP3243]] seq_cst seq_cst, align 8
@@ -21358,7 +20578,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3245]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT315]]
 // CHECK:       lx.atomic.exit315:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3247:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3248:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3249:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3247]], i64 [[TMP3248]] seq_cst seq_cst, align 8
@@ -21369,21 +20588,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3250]], ptr [[LV]], align 8
 // CHECK-NEXT:    br label [[LX_ATOMIC_EXIT317]]
 // CHECK:       lx.atomic.exit317:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3252:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3253:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3254:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3252]], i64 [[TMP3253]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3255:%.*]] = extractvalue { i64, i1 } [[TMP3254]], 1
 // CHECK-NEXT:    [[TMP3256:%.*]] = sext i1 [[TMP3255]] to i64
 // CHECK-NEXT:    store i64 [[TMP3256]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3257:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3258:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3259:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3257]], i64 [[TMP3258]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3260:%.*]] = extractvalue { i64, i1 } [[TMP3259]], 1
 // CHECK-NEXT:    [[TMP3261:%.*]] = sext i1 [[TMP3260]] to i64
 // CHECK-NEXT:    store i64 [[TMP3261]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3262:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3263:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3264:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3262]], i64 [[TMP3263]] seq_cst seq_cst, align 8
@@ -21397,7 +20613,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3267:%.*]] = extractvalue { i64, i1 } [[TMP3264]], 1
 // CHECK-NEXT:    [[TMP3268:%.*]] = sext i1 [[TMP3267]] to i64
 // CHECK-NEXT:    store i64 [[TMP3268]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3269:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP3270:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP3271:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP3269]], i64 [[TMP3270]] seq_cst seq_cst, align 8
@@ -21411,7 +20626,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3274:%.*]] = extractvalue { i64, i1 } [[TMP3271]], 1
 // CHECK-NEXT:    [[TMP3275:%.*]] = sext i1 [[TMP3274]] to i64
 // CHECK-NEXT:    store i64 [[TMP3275]], ptr [[LR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3276:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3277:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3276]] monotonic, align 8
 // CHECK-NEXT:    store i64 [[TMP3277]], ptr [[ULV]], align 8
@@ -21529,55 +20743,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3354:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3355:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3354]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3355]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3356:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3357:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3356]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3357]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3358:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3359:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3358]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3359]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3360:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3361:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3360]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3361]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3362:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3363:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3364:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3362]], i64 [[TMP3363]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3365:%.*]] = extractvalue { i64, i1 } [[TMP3364]], 0
 // CHECK-NEXT:    store i64 [[TMP3365]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3366:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3367:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3368:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3366]], i64 [[TMP3367]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3369:%.*]] = extractvalue { i64, i1 } [[TMP3368]], 0
 // CHECK-NEXT:    store i64 [[TMP3369]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3370:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3371:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3370]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3372:%.*]] = icmp ugt i64 [[TMP3371]], [[TMP3370]]
 // CHECK-NEXT:    [[TMP3373:%.*]] = select i1 [[TMP3372]], i64 [[TMP3370]], i64 [[TMP3371]]
 // CHECK-NEXT:    store i64 [[TMP3373]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3374:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3375:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3374]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3376:%.*]] = icmp ult i64 [[TMP3375]], [[TMP3374]]
 // CHECK-NEXT:    [[TMP3377:%.*]] = select i1 [[TMP3376]], i64 [[TMP3374]], i64 [[TMP3375]]
 // CHECK-NEXT:    store i64 [[TMP3377]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3378:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3379:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3378]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3380:%.*]] = icmp ult i64 [[TMP3379]], [[TMP3378]]
 // CHECK-NEXT:    [[TMP3381:%.*]] = select i1 [[TMP3380]], i64 [[TMP3378]], i64 [[TMP3379]]
 // CHECK-NEXT:    store i64 [[TMP3381]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3382:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3383:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3382]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3384:%.*]] = icmp ugt i64 [[TMP3383]], [[TMP3382]]
 // CHECK-NEXT:    [[TMP3385:%.*]] = select i1 [[TMP3384]], i64 [[TMP3382]], i64 [[TMP3383]]
 // CHECK-NEXT:    store i64 [[TMP3385]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3386:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3387:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3388:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3386]], i64 [[TMP3387]] acq_rel acquire, align 8
@@ -21585,7 +20789,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3390:%.*]] = extractvalue { i64, i1 } [[TMP3388]], 1
 // CHECK-NEXT:    [[TMP3391:%.*]] = select i1 [[TMP3390]], i64 [[TMP3386]], i64 [[TMP3389]]
 // CHECK-NEXT:    store i64 [[TMP3391]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3392:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3393:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3394:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3392]], i64 [[TMP3393]] acq_rel acquire, align 8
@@ -21593,7 +20796,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3396:%.*]] = extractvalue { i64, i1 } [[TMP3394]], 1
 // CHECK-NEXT:    [[TMP3397:%.*]] = select i1 [[TMP3396]], i64 [[TMP3392]], i64 [[TMP3395]]
 // CHECK-NEXT:    store i64 [[TMP3397]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3398:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3399:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3400:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3398]], i64 [[TMP3399]] acq_rel acquire, align 8
@@ -21604,7 +20806,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3401]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT329]]
 // CHECK:       ulx.atomic.exit329:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3403:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3404:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3405:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3403]], i64 [[TMP3404]] acq_rel acquire, align 8
@@ -21615,21 +20816,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3406]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT331]]
 // CHECK:       ulx.atomic.exit331:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3408:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3409:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3410:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3408]], i64 [[TMP3409]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3411:%.*]] = extractvalue { i64, i1 } [[TMP3410]], 1
 // CHECK-NEXT:    [[TMP3412:%.*]] = zext i1 [[TMP3411]] to i64
 // CHECK-NEXT:    store i64 [[TMP3412]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3413:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3414:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3415:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3413]], i64 [[TMP3414]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3416:%.*]] = extractvalue { i64, i1 } [[TMP3415]], 1
 // CHECK-NEXT:    [[TMP3417:%.*]] = zext i1 [[TMP3416]] to i64
 // CHECK-NEXT:    store i64 [[TMP3417]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3418:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3419:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3420:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3418]], i64 [[TMP3419]] acq_rel acquire, align 8
@@ -21643,7 +20841,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3423:%.*]] = extractvalue { i64, i1 } [[TMP3420]], 1
 // CHECK-NEXT:    [[TMP3424:%.*]] = zext i1 [[TMP3423]] to i64
 // CHECK-NEXT:    store i64 [[TMP3424]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3425:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3426:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3427:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3425]], i64 [[TMP3426]] acq_rel acquire, align 8
@@ -21657,7 +20854,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3430:%.*]] = extractvalue { i64, i1 } [[TMP3427]], 1
 // CHECK-NEXT:    [[TMP3431:%.*]] = zext i1 [[TMP3430]] to i64
 // CHECK-NEXT:    store i64 [[TMP3431]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3432:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3433:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3432]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP3433]], ptr [[ULV]], align 8
@@ -21889,55 +21085,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3588:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3589:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3588]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3589]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3590:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3591:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3590]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3591]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3592:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3593:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3592]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3593]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3594:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3595:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3594]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP3595]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3596:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3597:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3598:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3596]], i64 [[TMP3597]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3599:%.*]] = extractvalue { i64, i1 } [[TMP3598]], 0
 // CHECK-NEXT:    store i64 [[TMP3599]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3600:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3601:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3602:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3600]], i64 [[TMP3601]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3603:%.*]] = extractvalue { i64, i1 } [[TMP3602]], 0
 // CHECK-NEXT:    store i64 [[TMP3603]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3604:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3605:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3604]] release, align 8
 // CHECK-NEXT:    [[TMP3606:%.*]] = icmp ugt i64 [[TMP3605]], [[TMP3604]]
 // CHECK-NEXT:    [[TMP3607:%.*]] = select i1 [[TMP3606]], i64 [[TMP3604]], i64 [[TMP3605]]
 // CHECK-NEXT:    store i64 [[TMP3607]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3608:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3609:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3608]] release, align 8
 // CHECK-NEXT:    [[TMP3610:%.*]] = icmp ult i64 [[TMP3609]], [[TMP3608]]
 // CHECK-NEXT:    [[TMP3611:%.*]] = select i1 [[TMP3610]], i64 [[TMP3608]], i64 [[TMP3609]]
 // CHECK-NEXT:    store i64 [[TMP3611]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3612:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3613:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3612]] release, align 8
 // CHECK-NEXT:    [[TMP3614:%.*]] = icmp ult i64 [[TMP3613]], [[TMP3612]]
 // CHECK-NEXT:    [[TMP3615:%.*]] = select i1 [[TMP3614]], i64 [[TMP3612]], i64 [[TMP3613]]
 // CHECK-NEXT:    store i64 [[TMP3615]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3616:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3617:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3616]] release, align 8
 // CHECK-NEXT:    [[TMP3618:%.*]] = icmp ugt i64 [[TMP3617]], [[TMP3616]]
 // CHECK-NEXT:    [[TMP3619:%.*]] = select i1 [[TMP3618]], i64 [[TMP3616]], i64 [[TMP3617]]
 // CHECK-NEXT:    store i64 [[TMP3619]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3620:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3621:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3622:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3620]], i64 [[TMP3621]] release monotonic, align 8
@@ -21945,7 +21131,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3624:%.*]] = extractvalue { i64, i1 } [[TMP3622]], 1
 // CHECK-NEXT:    [[TMP3625:%.*]] = select i1 [[TMP3624]], i64 [[TMP3620]], i64 [[TMP3623]]
 // CHECK-NEXT:    store i64 [[TMP3625]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3626:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3627:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3628:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3626]], i64 [[TMP3627]] release monotonic, align 8
@@ -21953,7 +21138,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3630:%.*]] = extractvalue { i64, i1 } [[TMP3628]], 1
 // CHECK-NEXT:    [[TMP3631:%.*]] = select i1 [[TMP3630]], i64 [[TMP3626]], i64 [[TMP3629]]
 // CHECK-NEXT:    store i64 [[TMP3631]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3632:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3633:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3634:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3632]], i64 [[TMP3633]] release monotonic, align 8
@@ -21964,7 +21148,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3635]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT353]]
 // CHECK:       ulx.atomic.exit353:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3637:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3638:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3639:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3637]], i64 [[TMP3638]] release monotonic, align 8
@@ -21975,21 +21158,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3640]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT355]]
 // CHECK:       ulx.atomic.exit355:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3642:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3643:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3644:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3642]], i64 [[TMP3643]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3645:%.*]] = extractvalue { i64, i1 } [[TMP3644]], 1
 // CHECK-NEXT:    [[TMP3646:%.*]] = zext i1 [[TMP3645]] to i64
 // CHECK-NEXT:    store i64 [[TMP3646]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3647:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3648:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3649:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3647]], i64 [[TMP3648]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP3650:%.*]] = extractvalue { i64, i1 } [[TMP3649]], 1
 // CHECK-NEXT:    [[TMP3651:%.*]] = zext i1 [[TMP3650]] to i64
 // CHECK-NEXT:    store i64 [[TMP3651]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3652:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3653:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3654:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3652]], i64 [[TMP3653]] release monotonic, align 8
@@ -22003,7 +21183,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3657:%.*]] = extractvalue { i64, i1 } [[TMP3654]], 1
 // CHECK-NEXT:    [[TMP3658:%.*]] = zext i1 [[TMP3657]] to i64
 // CHECK-NEXT:    store i64 [[TMP3658]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3659:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3660:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3661:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3659]], i64 [[TMP3660]] release monotonic, align 8
@@ -22017,59 +21196,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3664:%.*]] = extractvalue { i64, i1 } [[TMP3661]], 1
 // CHECK-NEXT:    [[TMP3665:%.*]] = zext i1 [[TMP3664]] to i64
 // CHECK-NEXT:    store i64 [[TMP3665]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3666:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3667:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3666]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3667]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3668:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3669:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3668]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3669]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3670:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3671:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3670]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3671]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3672:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3673:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3672]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP3673]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3674:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3675:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3676:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3674]], i64 [[TMP3675]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3677:%.*]] = extractvalue { i64, i1 } [[TMP3676]], 0
 // CHECK-NEXT:    store i64 [[TMP3677]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3678:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3679:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3680:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3678]], i64 [[TMP3679]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3681:%.*]] = extractvalue { i64, i1 } [[TMP3680]], 0
 // CHECK-NEXT:    store i64 [[TMP3681]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3682:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3683:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3682]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3684:%.*]] = icmp ugt i64 [[TMP3683]], [[TMP3682]]
 // CHECK-NEXT:    [[TMP3685:%.*]] = select i1 [[TMP3684]], i64 [[TMP3682]], i64 [[TMP3683]]
 // CHECK-NEXT:    store i64 [[TMP3685]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3686:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3687:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3686]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3688:%.*]] = icmp ult i64 [[TMP3687]], [[TMP3686]]
 // CHECK-NEXT:    [[TMP3689:%.*]] = select i1 [[TMP3688]], i64 [[TMP3686]], i64 [[TMP3687]]
 // CHECK-NEXT:    store i64 [[TMP3689]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3690:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3691:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP3690]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3692:%.*]] = icmp ult i64 [[TMP3691]], [[TMP3690]]
 // CHECK-NEXT:    [[TMP3693:%.*]] = select i1 [[TMP3692]], i64 [[TMP3690]], i64 [[TMP3691]]
 // CHECK-NEXT:    store i64 [[TMP3693]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3694:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3695:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP3694]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP3696:%.*]] = icmp ugt i64 [[TMP3695]], [[TMP3694]]
 // CHECK-NEXT:    [[TMP3697:%.*]] = select i1 [[TMP3696]], i64 [[TMP3694]], i64 [[TMP3695]]
 // CHECK-NEXT:    store i64 [[TMP3697]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3698:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3699:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3700:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3698]], i64 [[TMP3699]] seq_cst seq_cst, align 8
@@ -22077,7 +21245,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3702:%.*]] = extractvalue { i64, i1 } [[TMP3700]], 1
 // CHECK-NEXT:    [[TMP3703:%.*]] = select i1 [[TMP3702]], i64 [[TMP3698]], i64 [[TMP3701]]
 // CHECK-NEXT:    store i64 [[TMP3703]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3704:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3705:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3706:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3704]], i64 [[TMP3705]] seq_cst seq_cst, align 8
@@ -22085,7 +21252,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3708:%.*]] = extractvalue { i64, i1 } [[TMP3706]], 1
 // CHECK-NEXT:    [[TMP3709:%.*]] = select i1 [[TMP3708]], i64 [[TMP3704]], i64 [[TMP3707]]
 // CHECK-NEXT:    store i64 [[TMP3709]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3710:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3711:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3712:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3710]], i64 [[TMP3711]] seq_cst seq_cst, align 8
@@ -22096,7 +21262,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3713]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT361]]
 // CHECK:       ulx.atomic.exit361:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3715:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3716:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3717:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3715]], i64 [[TMP3716]] seq_cst seq_cst, align 8
@@ -22107,21 +21272,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3718]], ptr [[ULV]], align 8
 // CHECK-NEXT:    br label [[ULX_ATOMIC_EXIT363]]
 // CHECK:       ulx.atomic.exit363:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3720:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3721:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3722:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3720]], i64 [[TMP3721]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3723:%.*]] = extractvalue { i64, i1 } [[TMP3722]], 1
 // CHECK-NEXT:    [[TMP3724:%.*]] = zext i1 [[TMP3723]] to i64
 // CHECK-NEXT:    store i64 [[TMP3724]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3725:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3726:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3727:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3725]], i64 [[TMP3726]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP3728:%.*]] = extractvalue { i64, i1 } [[TMP3727]], 1
 // CHECK-NEXT:    [[TMP3729:%.*]] = zext i1 [[TMP3728]] to i64
 // CHECK-NEXT:    store i64 [[TMP3729]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3730:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3731:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3732:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3730]], i64 [[TMP3731]] seq_cst seq_cst, align 8
@@ -22135,7 +21297,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3735:%.*]] = extractvalue { i64, i1 } [[TMP3732]], 1
 // CHECK-NEXT:    [[TMP3736:%.*]] = zext i1 [[TMP3735]] to i64
 // CHECK-NEXT:    store i64 [[TMP3736]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3737:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP3738:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP3739:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP3737]], i64 [[TMP3738]] seq_cst seq_cst, align 8
@@ -22149,7 +21310,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3742:%.*]] = extractvalue { i64, i1 } [[TMP3739]], 1
 // CHECK-NEXT:    [[TMP3743:%.*]] = zext i1 [[TMP3742]] to i64
 // CHECK-NEXT:    store i64 [[TMP3743]], ptr [[ULR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3744:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3745:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3744]] monotonic, align 8
 // CHECK-NEXT:    store i64 [[TMP3745]], ptr [[LLV]], align 8
@@ -22267,55 +21427,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3822:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3823:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3822]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3823]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3824:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3825:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP3824]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3825]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3826:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3827:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP3826]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3827]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3828:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3829:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3828]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP3829]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3830:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3831:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3832:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3830]], i64 [[TMP3831]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3833:%.*]] = extractvalue { i64, i1 } [[TMP3832]], 0
 // CHECK-NEXT:    store i64 [[TMP3833]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3834:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3835:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3836:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3834]], i64 [[TMP3835]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3837:%.*]] = extractvalue { i64, i1 } [[TMP3836]], 0
 // CHECK-NEXT:    store i64 [[TMP3837]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3838:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3839:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3838]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3840:%.*]] = icmp sgt i64 [[TMP3839]], [[TMP3838]]
 // CHECK-NEXT:    [[TMP3841:%.*]] = select i1 [[TMP3840]], i64 [[TMP3838]], i64 [[TMP3839]]
 // CHECK-NEXT:    store i64 [[TMP3841]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3842:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3843:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP3842]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3844:%.*]] = icmp slt i64 [[TMP3843]], [[TMP3842]]
 // CHECK-NEXT:    [[TMP3845:%.*]] = select i1 [[TMP3844]], i64 [[TMP3842]], i64 [[TMP3843]]
 // CHECK-NEXT:    store i64 [[TMP3845]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3846:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3847:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP3846]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3848:%.*]] = icmp slt i64 [[TMP3847]], [[TMP3846]]
 // CHECK-NEXT:    [[TMP3849:%.*]] = select i1 [[TMP3848]], i64 [[TMP3846]], i64 [[TMP3847]]
 // CHECK-NEXT:    store i64 [[TMP3849]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3850:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3851:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3850]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP3852:%.*]] = icmp sgt i64 [[TMP3851]], [[TMP3850]]
 // CHECK-NEXT:    [[TMP3853:%.*]] = select i1 [[TMP3852]], i64 [[TMP3850]], i64 [[TMP3851]]
 // CHECK-NEXT:    store i64 [[TMP3853]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3854:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3855:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3856:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3854]], i64 [[TMP3855]] acq_rel acquire, align 8
@@ -22323,7 +21473,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3858:%.*]] = extractvalue { i64, i1 } [[TMP3856]], 1
 // CHECK-NEXT:    [[TMP3859:%.*]] = select i1 [[TMP3858]], i64 [[TMP3854]], i64 [[TMP3857]]
 // CHECK-NEXT:    store i64 [[TMP3859]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3860:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3861:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3862:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3860]], i64 [[TMP3861]] acq_rel acquire, align 8
@@ -22331,7 +21480,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3864:%.*]] = extractvalue { i64, i1 } [[TMP3862]], 1
 // CHECK-NEXT:    [[TMP3865:%.*]] = select i1 [[TMP3864]], i64 [[TMP3860]], i64 [[TMP3863]]
 // CHECK-NEXT:    store i64 [[TMP3865]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3866:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3867:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3868:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3866]], i64 [[TMP3867]] acq_rel acquire, align 8
@@ -22342,7 +21490,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3869]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT375]]
 // CHECK:       llx.atomic.exit375:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3871:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3872:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3873:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3871]], i64 [[TMP3872]] acq_rel acquire, align 8
@@ -22353,21 +21500,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP3874]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT377]]
 // CHECK:       llx.atomic.exit377:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3876:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3877:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3878:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3876]], i64 [[TMP3877]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3879:%.*]] = extractvalue { i64, i1 } [[TMP3878]], 1
 // CHECK-NEXT:    [[TMP3880:%.*]] = sext i1 [[TMP3879]] to i64
 // CHECK-NEXT:    store i64 [[TMP3880]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3881:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3882:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3883:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3881]], i64 [[TMP3882]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP3884:%.*]] = extractvalue { i64, i1 } [[TMP3883]], 1
 // CHECK-NEXT:    [[TMP3885:%.*]] = sext i1 [[TMP3884]] to i64
 // CHECK-NEXT:    store i64 [[TMP3885]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3886:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3887:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3888:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3886]], i64 [[TMP3887]] acq_rel acquire, align 8
@@ -22381,7 +21525,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3891:%.*]] = extractvalue { i64, i1 } [[TMP3888]], 1
 // CHECK-NEXT:    [[TMP3892:%.*]] = sext i1 [[TMP3891]] to i64
 // CHECK-NEXT:    store i64 [[TMP3892]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3893:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3894:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP3895:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP3893]], i64 [[TMP3894]] acq_rel acquire, align 8
@@ -22395,7 +21538,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP3898:%.*]] = extractvalue { i64, i1 } [[TMP3895]], 1
 // CHECK-NEXT:    [[TMP3899:%.*]] = sext i1 [[TMP3898]] to i64
 // CHECK-NEXT:    store i64 [[TMP3899]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP3900:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP3901:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP3900]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP3901]], ptr [[LLV]], align 8
@@ -22627,55 +21769,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4056:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4057:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4056]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4057]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4058:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4059:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4058]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4059]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4060:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4061:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4060]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4061]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4062:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4063:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4062]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4063]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4064:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4065:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4066:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4064]], i64 [[TMP4065]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4067:%.*]] = extractvalue { i64, i1 } [[TMP4066]], 0
 // CHECK-NEXT:    store i64 [[TMP4067]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4068:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4069:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4070:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4068]], i64 [[TMP4069]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4071:%.*]] = extractvalue { i64, i1 } [[TMP4070]], 0
 // CHECK-NEXT:    store i64 [[TMP4071]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4072:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4073:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4072]] release, align 8
 // CHECK-NEXT:    [[TMP4074:%.*]] = icmp sgt i64 [[TMP4073]], [[TMP4072]]
 // CHECK-NEXT:    [[TMP4075:%.*]] = select i1 [[TMP4074]], i64 [[TMP4072]], i64 [[TMP4073]]
 // CHECK-NEXT:    store i64 [[TMP4075]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4076:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4077:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4076]] release, align 8
 // CHECK-NEXT:    [[TMP4078:%.*]] = icmp slt i64 [[TMP4077]], [[TMP4076]]
 // CHECK-NEXT:    [[TMP4079:%.*]] = select i1 [[TMP4078]], i64 [[TMP4076]], i64 [[TMP4077]]
 // CHECK-NEXT:    store i64 [[TMP4079]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4080:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4081:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4080]] release, align 8
 // CHECK-NEXT:    [[TMP4082:%.*]] = icmp slt i64 [[TMP4081]], [[TMP4080]]
 // CHECK-NEXT:    [[TMP4083:%.*]] = select i1 [[TMP4082]], i64 [[TMP4080]], i64 [[TMP4081]]
 // CHECK-NEXT:    store i64 [[TMP4083]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4084:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4085:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4084]] release, align 8
 // CHECK-NEXT:    [[TMP4086:%.*]] = icmp sgt i64 [[TMP4085]], [[TMP4084]]
 // CHECK-NEXT:    [[TMP4087:%.*]] = select i1 [[TMP4086]], i64 [[TMP4084]], i64 [[TMP4085]]
 // CHECK-NEXT:    store i64 [[TMP4087]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4088:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4089:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4090:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4088]], i64 [[TMP4089]] release monotonic, align 8
@@ -22683,7 +21815,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4092:%.*]] = extractvalue { i64, i1 } [[TMP4090]], 1
 // CHECK-NEXT:    [[TMP4093:%.*]] = select i1 [[TMP4092]], i64 [[TMP4088]], i64 [[TMP4091]]
 // CHECK-NEXT:    store i64 [[TMP4093]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4094:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4095:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4096:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4094]], i64 [[TMP4095]] release monotonic, align 8
@@ -22691,7 +21822,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4098:%.*]] = extractvalue { i64, i1 } [[TMP4096]], 1
 // CHECK-NEXT:    [[TMP4099:%.*]] = select i1 [[TMP4098]], i64 [[TMP4094]], i64 [[TMP4097]]
 // CHECK-NEXT:    store i64 [[TMP4099]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4100:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4101:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4102:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4100]], i64 [[TMP4101]] release monotonic, align 8
@@ -22702,7 +21832,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4103]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT399]]
 // CHECK:       llx.atomic.exit399:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4105:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4106:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4107:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4105]], i64 [[TMP4106]] release monotonic, align 8
@@ -22713,21 +21842,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4108]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT401]]
 // CHECK:       llx.atomic.exit401:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4110:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4111:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4112:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4110]], i64 [[TMP4111]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4113:%.*]] = extractvalue { i64, i1 } [[TMP4112]], 1
 // CHECK-NEXT:    [[TMP4114:%.*]] = sext i1 [[TMP4113]] to i64
 // CHECK-NEXT:    store i64 [[TMP4114]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4115:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4116:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4117:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4115]], i64 [[TMP4116]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4118:%.*]] = extractvalue { i64, i1 } [[TMP4117]], 1
 // CHECK-NEXT:    [[TMP4119:%.*]] = sext i1 [[TMP4118]] to i64
 // CHECK-NEXT:    store i64 [[TMP4119]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4120:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4121:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4122:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4120]], i64 [[TMP4121]] release monotonic, align 8
@@ -22741,7 +21867,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4125:%.*]] = extractvalue { i64, i1 } [[TMP4122]], 1
 // CHECK-NEXT:    [[TMP4126:%.*]] = sext i1 [[TMP4125]] to i64
 // CHECK-NEXT:    store i64 [[TMP4126]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4127:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4128:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4129:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4127]], i64 [[TMP4128]] release monotonic, align 8
@@ -22755,59 +21880,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4132:%.*]] = extractvalue { i64, i1 } [[TMP4129]], 1
 // CHECK-NEXT:    [[TMP4133:%.*]] = sext i1 [[TMP4132]] to i64
 // CHECK-NEXT:    store i64 [[TMP4133]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4134:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4135:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4134]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4135]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4136:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4137:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4136]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4137]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4138:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4139:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4138]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4139]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4140:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4141:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4140]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4141]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4142:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4143:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4144:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4142]], i64 [[TMP4143]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4145:%.*]] = extractvalue { i64, i1 } [[TMP4144]], 0
 // CHECK-NEXT:    store i64 [[TMP4145]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4146:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4147:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4148:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4146]], i64 [[TMP4147]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4149:%.*]] = extractvalue { i64, i1 } [[TMP4148]], 0
 // CHECK-NEXT:    store i64 [[TMP4149]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4150:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4151:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4150]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4152:%.*]] = icmp sgt i64 [[TMP4151]], [[TMP4150]]
 // CHECK-NEXT:    [[TMP4153:%.*]] = select i1 [[TMP4152]], i64 [[TMP4150]], i64 [[TMP4151]]
 // CHECK-NEXT:    store i64 [[TMP4153]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4154:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4155:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4154]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4156:%.*]] = icmp slt i64 [[TMP4155]], [[TMP4154]]
 // CHECK-NEXT:    [[TMP4157:%.*]] = select i1 [[TMP4156]], i64 [[TMP4154]], i64 [[TMP4155]]
 // CHECK-NEXT:    store i64 [[TMP4157]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4158:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4159:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP4158]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4160:%.*]] = icmp slt i64 [[TMP4159]], [[TMP4158]]
 // CHECK-NEXT:    [[TMP4161:%.*]] = select i1 [[TMP4160]], i64 [[TMP4158]], i64 [[TMP4159]]
 // CHECK-NEXT:    store i64 [[TMP4161]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4162:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4163:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP4162]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4164:%.*]] = icmp sgt i64 [[TMP4163]], [[TMP4162]]
 // CHECK-NEXT:    [[TMP4165:%.*]] = select i1 [[TMP4164]], i64 [[TMP4162]], i64 [[TMP4163]]
 // CHECK-NEXT:    store i64 [[TMP4165]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4166:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4167:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4168:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4166]], i64 [[TMP4167]] seq_cst seq_cst, align 8
@@ -22815,7 +21929,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4170:%.*]] = extractvalue { i64, i1 } [[TMP4168]], 1
 // CHECK-NEXT:    [[TMP4171:%.*]] = select i1 [[TMP4170]], i64 [[TMP4166]], i64 [[TMP4169]]
 // CHECK-NEXT:    store i64 [[TMP4171]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4172:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4173:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4174:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4172]], i64 [[TMP4173]] seq_cst seq_cst, align 8
@@ -22823,7 +21936,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4176:%.*]] = extractvalue { i64, i1 } [[TMP4174]], 1
 // CHECK-NEXT:    [[TMP4177:%.*]] = select i1 [[TMP4176]], i64 [[TMP4172]], i64 [[TMP4175]]
 // CHECK-NEXT:    store i64 [[TMP4177]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4178:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4179:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4180:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4178]], i64 [[TMP4179]] seq_cst seq_cst, align 8
@@ -22834,7 +21946,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4181]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT407]]
 // CHECK:       llx.atomic.exit407:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4183:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4184:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4185:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4183]], i64 [[TMP4184]] seq_cst seq_cst, align 8
@@ -22845,21 +21956,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4186]], ptr [[LLV]], align 8
 // CHECK-NEXT:    br label [[LLX_ATOMIC_EXIT409]]
 // CHECK:       llx.atomic.exit409:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4188:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4189:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4190:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4188]], i64 [[TMP4189]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4191:%.*]] = extractvalue { i64, i1 } [[TMP4190]], 1
 // CHECK-NEXT:    [[TMP4192:%.*]] = sext i1 [[TMP4191]] to i64
 // CHECK-NEXT:    store i64 [[TMP4192]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4193:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4194:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4195:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4193]], i64 [[TMP4194]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4196:%.*]] = extractvalue { i64, i1 } [[TMP4195]], 1
 // CHECK-NEXT:    [[TMP4197:%.*]] = sext i1 [[TMP4196]] to i64
 // CHECK-NEXT:    store i64 [[TMP4197]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4198:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4199:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4200:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4198]], i64 [[TMP4199]] seq_cst seq_cst, align 8
@@ -22873,7 +21981,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4203:%.*]] = extractvalue { i64, i1 } [[TMP4200]], 1
 // CHECK-NEXT:    [[TMP4204:%.*]] = sext i1 [[TMP4203]] to i64
 // CHECK-NEXT:    store i64 [[TMP4204]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4205:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP4206:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP4207:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP4205]], i64 [[TMP4206]] seq_cst seq_cst, align 8
@@ -22887,7 +21994,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4210:%.*]] = extractvalue { i64, i1 } [[TMP4207]], 1
 // CHECK-NEXT:    [[TMP4211:%.*]] = sext i1 [[TMP4210]] to i64
 // CHECK-NEXT:    store i64 [[TMP4211]], ptr [[LLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4212:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4213:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4212]] monotonic, align 8
 // CHECK-NEXT:    store i64 [[TMP4213]], ptr [[ULLV]], align 8
@@ -23005,55 +22111,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4290:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4291:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4290]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP4291]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4292:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4293:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4292]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP4293]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4294:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4295:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4294]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP4295]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4296:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4297:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4296]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP4297]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4298:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4299:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4300:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4298]], i64 [[TMP4299]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP4301:%.*]] = extractvalue { i64, i1 } [[TMP4300]], 0
 // CHECK-NEXT:    store i64 [[TMP4301]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4302:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4303:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4304:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4302]], i64 [[TMP4303]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP4305:%.*]] = extractvalue { i64, i1 } [[TMP4304]], 0
 // CHECK-NEXT:    store i64 [[TMP4305]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4306:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4307:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4306]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP4308:%.*]] = icmp ugt i64 [[TMP4307]], [[TMP4306]]
 // CHECK-NEXT:    [[TMP4309:%.*]] = select i1 [[TMP4308]], i64 [[TMP4306]], i64 [[TMP4307]]
 // CHECK-NEXT:    store i64 [[TMP4309]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4310:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4311:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4310]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP4312:%.*]] = icmp ult i64 [[TMP4311]], [[TMP4310]]
 // CHECK-NEXT:    [[TMP4313:%.*]] = select i1 [[TMP4312]], i64 [[TMP4310]], i64 [[TMP4311]]
 // CHECK-NEXT:    store i64 [[TMP4313]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4314:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4315:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4314]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP4316:%.*]] = icmp ult i64 [[TMP4315]], [[TMP4314]]
 // CHECK-NEXT:    [[TMP4317:%.*]] = select i1 [[TMP4316]], i64 [[TMP4314]], i64 [[TMP4315]]
 // CHECK-NEXT:    store i64 [[TMP4317]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4318:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4319:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4318]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP4320:%.*]] = icmp ugt i64 [[TMP4319]], [[TMP4318]]
 // CHECK-NEXT:    [[TMP4321:%.*]] = select i1 [[TMP4320]], i64 [[TMP4318]], i64 [[TMP4319]]
 // CHECK-NEXT:    store i64 [[TMP4321]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4322:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4323:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4324:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4322]], i64 [[TMP4323]] acq_rel acquire, align 8
@@ -23061,7 +22157,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4326:%.*]] = extractvalue { i64, i1 } [[TMP4324]], 1
 // CHECK-NEXT:    [[TMP4327:%.*]] = select i1 [[TMP4326]], i64 [[TMP4322]], i64 [[TMP4325]]
 // CHECK-NEXT:    store i64 [[TMP4327]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4328:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4329:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4330:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4328]], i64 [[TMP4329]] acq_rel acquire, align 8
@@ -23069,7 +22164,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4332:%.*]] = extractvalue { i64, i1 } [[TMP4330]], 1
 // CHECK-NEXT:    [[TMP4333:%.*]] = select i1 [[TMP4332]], i64 [[TMP4328]], i64 [[TMP4331]]
 // CHECK-NEXT:    store i64 [[TMP4333]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4334:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4335:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4336:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4334]], i64 [[TMP4335]] acq_rel acquire, align 8
@@ -23080,7 +22174,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4337]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT421]]
 // CHECK:       ullx.atomic.exit421:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4339:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4340:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4341:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4339]], i64 [[TMP4340]] acq_rel acquire, align 8
@@ -23091,21 +22184,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4342]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT423]]
 // CHECK:       ullx.atomic.exit423:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4344:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4345:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4346:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4344]], i64 [[TMP4345]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP4347:%.*]] = extractvalue { i64, i1 } [[TMP4346]], 1
 // CHECK-NEXT:    [[TMP4348:%.*]] = zext i1 [[TMP4347]] to i64
 // CHECK-NEXT:    store i64 [[TMP4348]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4349:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4350:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4351:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4349]], i64 [[TMP4350]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP4352:%.*]] = extractvalue { i64, i1 } [[TMP4351]], 1
 // CHECK-NEXT:    [[TMP4353:%.*]] = zext i1 [[TMP4352]] to i64
 // CHECK-NEXT:    store i64 [[TMP4353]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4354:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4355:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4356:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4354]], i64 [[TMP4355]] acq_rel acquire, align 8
@@ -23119,7 +22209,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4359:%.*]] = extractvalue { i64, i1 } [[TMP4356]], 1
 // CHECK-NEXT:    [[TMP4360:%.*]] = zext i1 [[TMP4359]] to i64
 // CHECK-NEXT:    store i64 [[TMP4360]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4361:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4362:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4363:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4361]], i64 [[TMP4362]] acq_rel acquire, align 8
@@ -23133,7 +22222,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4366:%.*]] = extractvalue { i64, i1 } [[TMP4363]], 1
 // CHECK-NEXT:    [[TMP4367:%.*]] = zext i1 [[TMP4366]] to i64
 // CHECK-NEXT:    store i64 [[TMP4367]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4368:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4369:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4368]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP4369]], ptr [[ULLV]], align 8
@@ -23365,55 +22453,45 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4524:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4525:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4524]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4525]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4526:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4527:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4526]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4527]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4528:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4529:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4528]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4529]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4530:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4531:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4530]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP4531]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4532:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4533:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4534:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4532]], i64 [[TMP4533]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4535:%.*]] = extractvalue { i64, i1 } [[TMP4534]], 0
 // CHECK-NEXT:    store i64 [[TMP4535]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4536:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4537:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4538:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4536]], i64 [[TMP4537]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4539:%.*]] = extractvalue { i64, i1 } [[TMP4538]], 0
 // CHECK-NEXT:    store i64 [[TMP4539]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4540:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4541:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4540]] release, align 8
 // CHECK-NEXT:    [[TMP4542:%.*]] = icmp ugt i64 [[TMP4541]], [[TMP4540]]
 // CHECK-NEXT:    [[TMP4543:%.*]] = select i1 [[TMP4542]], i64 [[TMP4540]], i64 [[TMP4541]]
 // CHECK-NEXT:    store i64 [[TMP4543]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4544:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4545:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4544]] release, align 8
 // CHECK-NEXT:    [[TMP4546:%.*]] = icmp ult i64 [[TMP4545]], [[TMP4544]]
 // CHECK-NEXT:    [[TMP4547:%.*]] = select i1 [[TMP4546]], i64 [[TMP4544]], i64 [[TMP4545]]
 // CHECK-NEXT:    store i64 [[TMP4547]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4548:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4549:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4548]] release, align 8
 // CHECK-NEXT:    [[TMP4550:%.*]] = icmp ult i64 [[TMP4549]], [[TMP4548]]
 // CHECK-NEXT:    [[TMP4551:%.*]] = select i1 [[TMP4550]], i64 [[TMP4548]], i64 [[TMP4549]]
 // CHECK-NEXT:    store i64 [[TMP4551]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4552:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4553:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4552]] release, align 8
 // CHECK-NEXT:    [[TMP4554:%.*]] = icmp ugt i64 [[TMP4553]], [[TMP4552]]
 // CHECK-NEXT:    [[TMP4555:%.*]] = select i1 [[TMP4554]], i64 [[TMP4552]], i64 [[TMP4553]]
 // CHECK-NEXT:    store i64 [[TMP4555]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4556:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4557:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4558:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4556]], i64 [[TMP4557]] release monotonic, align 8
@@ -23421,7 +22499,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4560:%.*]] = extractvalue { i64, i1 } [[TMP4558]], 1
 // CHECK-NEXT:    [[TMP4561:%.*]] = select i1 [[TMP4560]], i64 [[TMP4556]], i64 [[TMP4559]]
 // CHECK-NEXT:    store i64 [[TMP4561]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4562:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4563:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4564:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4562]], i64 [[TMP4563]] release monotonic, align 8
@@ -23429,7 +22506,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4566:%.*]] = extractvalue { i64, i1 } [[TMP4564]], 1
 // CHECK-NEXT:    [[TMP4567:%.*]] = select i1 [[TMP4566]], i64 [[TMP4562]], i64 [[TMP4565]]
 // CHECK-NEXT:    store i64 [[TMP4567]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4568:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4569:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4570:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4568]], i64 [[TMP4569]] release monotonic, align 8
@@ -23440,7 +22516,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4571]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT445]]
 // CHECK:       ullx.atomic.exit445:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4573:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4574:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4575:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4573]], i64 [[TMP4574]] release monotonic, align 8
@@ -23451,21 +22526,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4576]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT447]]
 // CHECK:       ullx.atomic.exit447:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4578:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4579:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4580:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4578]], i64 [[TMP4579]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4581:%.*]] = extractvalue { i64, i1 } [[TMP4580]], 1
 // CHECK-NEXT:    [[TMP4582:%.*]] = zext i1 [[TMP4581]] to i64
 // CHECK-NEXT:    store i64 [[TMP4582]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4583:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4584:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4585:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4583]], i64 [[TMP4584]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP4586:%.*]] = extractvalue { i64, i1 } [[TMP4585]], 1
 // CHECK-NEXT:    [[TMP4587:%.*]] = zext i1 [[TMP4586]] to i64
 // CHECK-NEXT:    store i64 [[TMP4587]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4588:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4589:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4590:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4588]], i64 [[TMP4589]] release monotonic, align 8
@@ -23479,7 +22551,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4593:%.*]] = extractvalue { i64, i1 } [[TMP4590]], 1
 // CHECK-NEXT:    [[TMP4594:%.*]] = zext i1 [[TMP4593]] to i64
 // CHECK-NEXT:    store i64 [[TMP4594]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4595:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4596:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4597:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4595]], i64 [[TMP4596]] release monotonic, align 8
@@ -23493,59 +22564,48 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4600:%.*]] = extractvalue { i64, i1 } [[TMP4597]], 1
 // CHECK-NEXT:    [[TMP4601:%.*]] = zext i1 [[TMP4600]] to i64
 // CHECK-NEXT:    store i64 [[TMP4601]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4602:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4603:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4602]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4603]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4604:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4605:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4604]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4605]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4606:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4607:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4606]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4607]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4608:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4609:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4608]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP4609]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4610:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4611:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4612:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4610]], i64 [[TMP4611]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4613:%.*]] = extractvalue { i64, i1 } [[TMP4612]], 0
 // CHECK-NEXT:    store i64 [[TMP4613]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4614:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4615:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4616:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4614]], i64 [[TMP4615]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4617:%.*]] = extractvalue { i64, i1 } [[TMP4616]], 0
 // CHECK-NEXT:    store i64 [[TMP4617]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4618:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4619:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4618]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4620:%.*]] = icmp ugt i64 [[TMP4619]], [[TMP4618]]
 // CHECK-NEXT:    [[TMP4621:%.*]] = select i1 [[TMP4620]], i64 [[TMP4618]], i64 [[TMP4619]]
 // CHECK-NEXT:    store i64 [[TMP4621]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4622:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4623:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4622]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4624:%.*]] = icmp ult i64 [[TMP4623]], [[TMP4622]]
 // CHECK-NEXT:    [[TMP4625:%.*]] = select i1 [[TMP4624]], i64 [[TMP4622]], i64 [[TMP4623]]
 // CHECK-NEXT:    store i64 [[TMP4625]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4626:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4627:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP4626]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4628:%.*]] = icmp ult i64 [[TMP4627]], [[TMP4626]]
 // CHECK-NEXT:    [[TMP4629:%.*]] = select i1 [[TMP4628]], i64 [[TMP4626]], i64 [[TMP4627]]
 // CHECK-NEXT:    store i64 [[TMP4629]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4630:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4631:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP4630]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP4632:%.*]] = icmp ugt i64 [[TMP4631]], [[TMP4630]]
 // CHECK-NEXT:    [[TMP4633:%.*]] = select i1 [[TMP4632]], i64 [[TMP4630]], i64 [[TMP4631]]
 // CHECK-NEXT:    store i64 [[TMP4633]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4634:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4635:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4636:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4634]], i64 [[TMP4635]] seq_cst seq_cst, align 8
@@ -23553,7 +22613,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4638:%.*]] = extractvalue { i64, i1 } [[TMP4636]], 1
 // CHECK-NEXT:    [[TMP4639:%.*]] = select i1 [[TMP4638]], i64 [[TMP4634]], i64 [[TMP4637]]
 // CHECK-NEXT:    store i64 [[TMP4639]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4640:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4641:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4642:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4640]], i64 [[TMP4641]] seq_cst seq_cst, align 8
@@ -23561,7 +22620,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4644:%.*]] = extractvalue { i64, i1 } [[TMP4642]], 1
 // CHECK-NEXT:    [[TMP4645:%.*]] = select i1 [[TMP4644]], i64 [[TMP4640]], i64 [[TMP4643]]
 // CHECK-NEXT:    store i64 [[TMP4645]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4646:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4647:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4648:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4646]], i64 [[TMP4647]] seq_cst seq_cst, align 8
@@ -23572,7 +22630,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4649]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT453]]
 // CHECK:       ullx.atomic.exit453:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4651:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4652:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4653:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4651]], i64 [[TMP4652]] seq_cst seq_cst, align 8
@@ -23583,21 +22640,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    store i64 [[TMP4654]], ptr [[ULLV]], align 8
 // CHECK-NEXT:    br label [[ULLX_ATOMIC_EXIT455]]
 // CHECK:       ullx.atomic.exit455:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4656:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4657:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4658:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4656]], i64 [[TMP4657]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4659:%.*]] = extractvalue { i64, i1 } [[TMP4658]], 1
 // CHECK-NEXT:    [[TMP4660:%.*]] = zext i1 [[TMP4659]] to i64
 // CHECK-NEXT:    store i64 [[TMP4660]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4661:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4662:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4663:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4661]], i64 [[TMP4662]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP4664:%.*]] = extractvalue { i64, i1 } [[TMP4663]], 1
 // CHECK-NEXT:    [[TMP4665:%.*]] = zext i1 [[TMP4664]] to i64
 // CHECK-NEXT:    store i64 [[TMP4665]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4666:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4667:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4668:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4666]], i64 [[TMP4667]] seq_cst seq_cst, align 8
@@ -23611,7 +22665,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4671:%.*]] = extractvalue { i64, i1 } [[TMP4668]], 1
 // CHECK-NEXT:    [[TMP4672:%.*]] = zext i1 [[TMP4671]] to i64
 // CHECK-NEXT:    store i64 [[TMP4672]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4673:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP4674:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP4675:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP4673]], i64 [[TMP4674]] seq_cst seq_cst, align 8
@@ -23625,7 +22678,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4678:%.*]] = extractvalue { i64, i1 } [[TMP4675]], 1
 // CHECK-NEXT:    [[TMP4679:%.*]] = zext i1 [[TMP4678]] to i64
 // CHECK-NEXT:    store i64 [[TMP4679]], ptr [[ULLR]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4680:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4681:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4680]] monotonic, align 4
 // CHECK-NEXT:    store float [[TMP4681]], ptr [[FV]], align 4
@@ -23771,19 +22823,15 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4786:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4787:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4786]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP4787]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4788:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4789:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP4788]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP4789]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4790:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4791:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP4790]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP4791]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4792:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4793:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4792]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP4793]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4794:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4795:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4796:%.*]] = bitcast float [[TMP4794]] to i32
@@ -23792,7 +22840,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4799:%.*]] = extractvalue { i32, i1 } [[TMP4798]], 0
 // CHECK-NEXT:    [[TMP4800:%.*]] = bitcast i32 [[TMP4799]] to float
 // CHECK-NEXT:    store float [[TMP4800]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4801:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4802:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4803:%.*]] = bitcast float [[TMP4801]] to i32
@@ -23801,31 +22848,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4806:%.*]] = extractvalue { i32, i1 } [[TMP4805]], 0
 // CHECK-NEXT:    [[TMP4807:%.*]] = bitcast i32 [[TMP4806]] to float
 // CHECK-NEXT:    store float [[TMP4807]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4808:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4809:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4808]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP4810:%.*]] = fcmp ogt float [[TMP4809]], [[TMP4808]]
 // CHECK-NEXT:    [[TMP4811:%.*]] = select i1 [[TMP4810]], float [[TMP4808]], float [[TMP4809]]
 // CHECK-NEXT:    store float [[TMP4811]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4812:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4813:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP4812]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP4814:%.*]] = fcmp olt float [[TMP4813]], [[TMP4812]]
 // CHECK-NEXT:    [[TMP4815:%.*]] = select i1 [[TMP4814]], float [[TMP4812]], float [[TMP4813]]
 // CHECK-NEXT:    store float [[TMP4815]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4816:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4817:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP4816]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP4818:%.*]] = fcmp olt float [[TMP4817]], [[TMP4816]]
 // CHECK-NEXT:    [[TMP4819:%.*]] = select i1 [[TMP4818]], float [[TMP4816]], float [[TMP4817]]
 // CHECK-NEXT:    store float [[TMP4819]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4820:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4821:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4820]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP4822:%.*]] = fcmp ogt float [[TMP4821]], [[TMP4820]]
 // CHECK-NEXT:    [[TMP4823:%.*]] = select i1 [[TMP4822]], float [[TMP4820]], float [[TMP4821]]
 // CHECK-NEXT:    store float [[TMP4823]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4824:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4825:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4826:%.*]] = bitcast float [[TMP4824]] to i32
@@ -23836,7 +22878,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4831:%.*]] = extractvalue { i32, i1 } [[TMP4828]], 1
 // CHECK-NEXT:    [[TMP4832:%.*]] = select i1 [[TMP4831]], float [[TMP4824]], float [[TMP4830]]
 // CHECK-NEXT:    store float [[TMP4832]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4833:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4834:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4835:%.*]] = bitcast float [[TMP4833]] to i32
@@ -23847,7 +22888,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4840:%.*]] = extractvalue { i32, i1 } [[TMP4837]], 1
 // CHECK-NEXT:    [[TMP4841:%.*]] = select i1 [[TMP4840]], float [[TMP4833]], float [[TMP4839]]
 // CHECK-NEXT:    store float [[TMP4841]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4842:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4843:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4844:%.*]] = bitcast float [[TMP4842]] to i32
@@ -23861,7 +22901,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP4848]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT467]]
 // CHECK:       fx.atomic.exit467:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4850:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4851:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4852:%.*]] = bitcast float [[TMP4850]] to i32
@@ -23875,7 +22914,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP4856]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT469]]
 // CHECK:       fx.atomic.exit469:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4858:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4859:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4860:%.*]] = bitcast float [[TMP4858]] to i32
@@ -23884,7 +22922,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4863:%.*]] = extractvalue { i32, i1 } [[TMP4862]], 1
 // CHECK-NEXT:    [[TMP4864:%.*]] = sext i1 [[TMP4863]] to i32
 // CHECK-NEXT:    store i32 [[TMP4864]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4865:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4866:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4867:%.*]] = bitcast float [[TMP4865]] to i32
@@ -23893,7 +22930,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4870:%.*]] = extractvalue { i32, i1 } [[TMP4869]], 1
 // CHECK-NEXT:    [[TMP4871:%.*]] = sext i1 [[TMP4870]] to i32
 // CHECK-NEXT:    store i32 [[TMP4871]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4872:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4873:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4874:%.*]] = bitcast float [[TMP4872]] to i32
@@ -23910,7 +22946,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4880:%.*]] = extractvalue { i32, i1 } [[TMP4876]], 1
 // CHECK-NEXT:    [[TMP4881:%.*]] = sext i1 [[TMP4880]] to i32
 // CHECK-NEXT:    store i32 [[TMP4881]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4882:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4883:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP4884:%.*]] = bitcast float [[TMP4882]] to i32
@@ -23927,7 +22962,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP4890:%.*]] = extractvalue { i32, i1 } [[TMP4886]], 1
 // CHECK-NEXT:    [[TMP4891:%.*]] = sext i1 [[TMP4890]] to i32
 // CHECK-NEXT:    store i32 [[TMP4891]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP4892:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP4893:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP4892]] acquire, align 4
 // CHECK-NEXT:    store float [[TMP4893]], ptr [[FV]], align 4
@@ -24215,19 +23249,15 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5104:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5105:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5104]] release, align 4
 // CHECK-NEXT:    store float [[TMP5105]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5106:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5107:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5106]] release, align 4
 // CHECK-NEXT:    store float [[TMP5107]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5108:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5109:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5108]] release, align 4
 // CHECK-NEXT:    store float [[TMP5109]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5110:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5111:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5110]] release, align 4
 // CHECK-NEXT:    store float [[TMP5111]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5112:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5113:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5114:%.*]] = bitcast float [[TMP5112]] to i32
@@ -24236,7 +23266,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5117:%.*]] = extractvalue { i32, i1 } [[TMP5116]], 0
 // CHECK-NEXT:    [[TMP5118:%.*]] = bitcast i32 [[TMP5117]] to float
 // CHECK-NEXT:    store float [[TMP5118]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5119:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5120:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5121:%.*]] = bitcast float [[TMP5119]] to i32
@@ -24245,31 +23274,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5124:%.*]] = extractvalue { i32, i1 } [[TMP5123]], 0
 // CHECK-NEXT:    [[TMP5125:%.*]] = bitcast i32 [[TMP5124]] to float
 // CHECK-NEXT:    store float [[TMP5125]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5126:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5127:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5126]] release, align 4
 // CHECK-NEXT:    [[TMP5128:%.*]] = fcmp ogt float [[TMP5127]], [[TMP5126]]
 // CHECK-NEXT:    [[TMP5129:%.*]] = select i1 [[TMP5128]], float [[TMP5126]], float [[TMP5127]]
 // CHECK-NEXT:    store float [[TMP5129]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5130:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5131:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5130]] release, align 4
 // CHECK-NEXT:    [[TMP5132:%.*]] = fcmp olt float [[TMP5131]], [[TMP5130]]
 // CHECK-NEXT:    [[TMP5133:%.*]] = select i1 [[TMP5132]], float [[TMP5130]], float [[TMP5131]]
 // CHECK-NEXT:    store float [[TMP5133]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5134:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5135:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5134]] release, align 4
 // CHECK-NEXT:    [[TMP5136:%.*]] = fcmp olt float [[TMP5135]], [[TMP5134]]
 // CHECK-NEXT:    [[TMP5137:%.*]] = select i1 [[TMP5136]], float [[TMP5134]], float [[TMP5135]]
 // CHECK-NEXT:    store float [[TMP5137]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5138:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5139:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5138]] release, align 4
 // CHECK-NEXT:    [[TMP5140:%.*]] = fcmp ogt float [[TMP5139]], [[TMP5138]]
 // CHECK-NEXT:    [[TMP5141:%.*]] = select i1 [[TMP5140]], float [[TMP5138]], float [[TMP5139]]
 // CHECK-NEXT:    store float [[TMP5141]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5142:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5143:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5144:%.*]] = bitcast float [[TMP5142]] to i32
@@ -24280,7 +23304,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5149:%.*]] = extractvalue { i32, i1 } [[TMP5146]], 1
 // CHECK-NEXT:    [[TMP5150:%.*]] = select i1 [[TMP5149]], float [[TMP5142]], float [[TMP5148]]
 // CHECK-NEXT:    store float [[TMP5150]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5151:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5152:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5153:%.*]] = bitcast float [[TMP5151]] to i32
@@ -24291,7 +23314,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5158:%.*]] = extractvalue { i32, i1 } [[TMP5155]], 1
 // CHECK-NEXT:    [[TMP5159:%.*]] = select i1 [[TMP5158]], float [[TMP5151]], float [[TMP5157]]
 // CHECK-NEXT:    store float [[TMP5159]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5160:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5161:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5162:%.*]] = bitcast float [[TMP5160]] to i32
@@ -24305,7 +23327,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP5166]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT491]]
 // CHECK:       fx.atomic.exit491:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5168:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5169:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5170:%.*]] = bitcast float [[TMP5168]] to i32
@@ -24319,7 +23340,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP5174]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT493]]
 // CHECK:       fx.atomic.exit493:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5176:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5177:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5178:%.*]] = bitcast float [[TMP5176]] to i32
@@ -24328,7 +23348,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5181:%.*]] = extractvalue { i32, i1 } [[TMP5180]], 1
 // CHECK-NEXT:    [[TMP5182:%.*]] = sext i1 [[TMP5181]] to i32
 // CHECK-NEXT:    store i32 [[TMP5182]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5183:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5184:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5185:%.*]] = bitcast float [[TMP5183]] to i32
@@ -24337,7 +23356,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5188:%.*]] = extractvalue { i32, i1 } [[TMP5187]], 1
 // CHECK-NEXT:    [[TMP5189:%.*]] = sext i1 [[TMP5188]] to i32
 // CHECK-NEXT:    store i32 [[TMP5189]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5190:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5191:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5192:%.*]] = bitcast float [[TMP5190]] to i32
@@ -24354,7 +23372,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5198:%.*]] = extractvalue { i32, i1 } [[TMP5194]], 1
 // CHECK-NEXT:    [[TMP5199:%.*]] = sext i1 [[TMP5198]] to i32
 // CHECK-NEXT:    store i32 [[TMP5199]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5200:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5201:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5202:%.*]] = bitcast float [[TMP5200]] to i32
@@ -24371,23 +23388,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5208:%.*]] = extractvalue { i32, i1 } [[TMP5204]], 1
 // CHECK-NEXT:    [[TMP5209:%.*]] = sext i1 [[TMP5208]] to i32
 // CHECK-NEXT:    store i32 [[TMP5209]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5210:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5211:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5210]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP5211]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5212:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5213:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5212]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP5213]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5214:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5215:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5214]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP5215]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5216:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5217:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5216]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP5217]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5218:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5219:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5220:%.*]] = bitcast float [[TMP5218]] to i32
@@ -24396,7 +23408,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5223:%.*]] = extractvalue { i32, i1 } [[TMP5222]], 0
 // CHECK-NEXT:    [[TMP5224:%.*]] = bitcast i32 [[TMP5223]] to float
 // CHECK-NEXT:    store float [[TMP5224]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5225:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5226:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5227:%.*]] = bitcast float [[TMP5225]] to i32
@@ -24405,31 +23416,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5230:%.*]] = extractvalue { i32, i1 } [[TMP5229]], 0
 // CHECK-NEXT:    [[TMP5231:%.*]] = bitcast i32 [[TMP5230]] to float
 // CHECK-NEXT:    store float [[TMP5231]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5232:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5233:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5232]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP5234:%.*]] = fcmp ogt float [[TMP5233]], [[TMP5232]]
 // CHECK-NEXT:    [[TMP5235:%.*]] = select i1 [[TMP5234]], float [[TMP5232]], float [[TMP5233]]
 // CHECK-NEXT:    store float [[TMP5235]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5236:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5237:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5236]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP5238:%.*]] = fcmp olt float [[TMP5237]], [[TMP5236]]
 // CHECK-NEXT:    [[TMP5239:%.*]] = select i1 [[TMP5238]], float [[TMP5236]], float [[TMP5237]]
 // CHECK-NEXT:    store float [[TMP5239]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5240:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5241:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP5240]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP5242:%.*]] = fcmp olt float [[TMP5241]], [[TMP5240]]
 // CHECK-NEXT:    [[TMP5243:%.*]] = select i1 [[TMP5242]], float [[TMP5240]], float [[TMP5241]]
 // CHECK-NEXT:    store float [[TMP5243]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5244:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5245:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP5244]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP5246:%.*]] = fcmp ogt float [[TMP5245]], [[TMP5244]]
 // CHECK-NEXT:    [[TMP5247:%.*]] = select i1 [[TMP5246]], float [[TMP5244]], float [[TMP5245]]
 // CHECK-NEXT:    store float [[TMP5247]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5248:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5249:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5250:%.*]] = bitcast float [[TMP5248]] to i32
@@ -24440,7 +23446,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5255:%.*]] = extractvalue { i32, i1 } [[TMP5252]], 1
 // CHECK-NEXT:    [[TMP5256:%.*]] = select i1 [[TMP5255]], float [[TMP5248]], float [[TMP5254]]
 // CHECK-NEXT:    store float [[TMP5256]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5257:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5258:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5259:%.*]] = bitcast float [[TMP5257]] to i32
@@ -24451,7 +23456,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5264:%.*]] = extractvalue { i32, i1 } [[TMP5261]], 1
 // CHECK-NEXT:    [[TMP5265:%.*]] = select i1 [[TMP5264]], float [[TMP5257]], float [[TMP5263]]
 // CHECK-NEXT:    store float [[TMP5265]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5266:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5267:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5268:%.*]] = bitcast float [[TMP5266]] to i32
@@ -24465,7 +23469,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP5272]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT499]]
 // CHECK:       fx.atomic.exit499:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5274:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5275:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5276:%.*]] = bitcast float [[TMP5274]] to i32
@@ -24479,7 +23482,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store float [[TMP5280]], ptr [[FV]], align 4
 // CHECK-NEXT:    br label [[FX_ATOMIC_EXIT501]]
 // CHECK:       fx.atomic.exit501:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5282:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5283:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5284:%.*]] = bitcast float [[TMP5282]] to i32
@@ -24488,7 +23490,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5287:%.*]] = extractvalue { i32, i1 } [[TMP5286]], 1
 // CHECK-NEXT:    [[TMP5288:%.*]] = sext i1 [[TMP5287]] to i32
 // CHECK-NEXT:    store i32 [[TMP5288]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5289:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5290:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5291:%.*]] = bitcast float [[TMP5289]] to i32
@@ -24497,7 +23498,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5294:%.*]] = extractvalue { i32, i1 } [[TMP5293]], 1
 // CHECK-NEXT:    [[TMP5295:%.*]] = sext i1 [[TMP5294]] to i32
 // CHECK-NEXT:    store i32 [[TMP5295]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5296:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5297:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5298:%.*]] = bitcast float [[TMP5296]] to i32
@@ -24514,7 +23514,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5304:%.*]] = extractvalue { i32, i1 } [[TMP5300]], 1
 // CHECK-NEXT:    [[TMP5305:%.*]] = sext i1 [[TMP5304]] to i32
 // CHECK-NEXT:    store i32 [[TMP5305]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5306:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP5307:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP5308:%.*]] = bitcast float [[TMP5306]] to i32
@@ -24531,7 +23530,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5314:%.*]] = extractvalue { i32, i1 } [[TMP5310]], 1
 // CHECK-NEXT:    [[TMP5315:%.*]] = sext i1 [[TMP5314]] to i32
 // CHECK-NEXT:    store i32 [[TMP5315]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5316:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5317:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5316]] monotonic, align 8
 // CHECK-NEXT:    store double [[TMP5317]], ptr [[DV]], align 8
@@ -24677,19 +23675,15 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5422:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5423:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5422]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP5423]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5424:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5425:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5424]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP5425]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5426:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5427:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5426]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP5427]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5428:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5429:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5428]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP5429]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5430:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5431:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5432:%.*]] = bitcast double [[TMP5430]] to i64
@@ -24698,7 +23692,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5435:%.*]] = extractvalue { i64, i1 } [[TMP5434]], 0
 // CHECK-NEXT:    [[TMP5436:%.*]] = bitcast i64 [[TMP5435]] to double
 // CHECK-NEXT:    store double [[TMP5436]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5437:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5438:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5439:%.*]] = bitcast double [[TMP5437]] to i64
@@ -24707,31 +23700,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5442:%.*]] = extractvalue { i64, i1 } [[TMP5441]], 0
 // CHECK-NEXT:    [[TMP5443:%.*]] = bitcast i64 [[TMP5442]] to double
 // CHECK-NEXT:    store double [[TMP5443]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5444:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5445:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5444]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP5446:%.*]] = fcmp ogt double [[TMP5445]], [[TMP5444]]
 // CHECK-NEXT:    [[TMP5447:%.*]] = select i1 [[TMP5446]], double [[TMP5444]], double [[TMP5445]]
 // CHECK-NEXT:    store double [[TMP5447]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5448:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5449:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5448]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP5450:%.*]] = fcmp olt double [[TMP5449]], [[TMP5448]]
 // CHECK-NEXT:    [[TMP5451:%.*]] = select i1 [[TMP5450]], double [[TMP5448]], double [[TMP5449]]
 // CHECK-NEXT:    store double [[TMP5451]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5452:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5453:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5452]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP5454:%.*]] = fcmp olt double [[TMP5453]], [[TMP5452]]
 // CHECK-NEXT:    [[TMP5455:%.*]] = select i1 [[TMP5454]], double [[TMP5452]], double [[TMP5453]]
 // CHECK-NEXT:    store double [[TMP5455]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5456:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5457:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5456]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP5458:%.*]] = fcmp ogt double [[TMP5457]], [[TMP5456]]
 // CHECK-NEXT:    [[TMP5459:%.*]] = select i1 [[TMP5458]], double [[TMP5456]], double [[TMP5457]]
 // CHECK-NEXT:    store double [[TMP5459]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5460:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5461:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5462:%.*]] = bitcast double [[TMP5460]] to i64
@@ -24742,7 +23730,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5467:%.*]] = extractvalue { i64, i1 } [[TMP5464]], 1
 // CHECK-NEXT:    [[TMP5468:%.*]] = select i1 [[TMP5467]], double [[TMP5460]], double [[TMP5466]]
 // CHECK-NEXT:    store double [[TMP5468]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5469:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5470:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5471:%.*]] = bitcast double [[TMP5469]] to i64
@@ -24753,7 +23740,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5476:%.*]] = extractvalue { i64, i1 } [[TMP5473]], 1
 // CHECK-NEXT:    [[TMP5477:%.*]] = select i1 [[TMP5476]], double [[TMP5469]], double [[TMP5475]]
 // CHECK-NEXT:    store double [[TMP5477]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5478:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5479:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5480:%.*]] = bitcast double [[TMP5478]] to i64
@@ -24767,7 +23753,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5484]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT513]]
 // CHECK:       dx.atomic.exit513:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5486:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5487:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5488:%.*]] = bitcast double [[TMP5486]] to i64
@@ -24781,7 +23766,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5492]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT515]]
 // CHECK:       dx.atomic.exit515:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5494:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5495:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5496:%.*]] = bitcast double [[TMP5494]] to i64
@@ -24790,7 +23774,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5499:%.*]] = extractvalue { i64, i1 } [[TMP5498]], 1
 // CHECK-NEXT:    [[TMP5500:%.*]] = sext i1 [[TMP5499]] to i32
 // CHECK-NEXT:    store i32 [[TMP5500]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5501:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5502:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5503:%.*]] = bitcast double [[TMP5501]] to i64
@@ -24799,7 +23782,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5506:%.*]] = extractvalue { i64, i1 } [[TMP5505]], 1
 // CHECK-NEXT:    [[TMP5507:%.*]] = sext i1 [[TMP5506]] to i32
 // CHECK-NEXT:    store i32 [[TMP5507]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5508:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5509:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5510:%.*]] = bitcast double [[TMP5508]] to i64
@@ -24816,7 +23798,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5516:%.*]] = extractvalue { i64, i1 } [[TMP5512]], 1
 // CHECK-NEXT:    [[TMP5517:%.*]] = sext i1 [[TMP5516]] to i32
 // CHECK-NEXT:    store i32 [[TMP5517]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5518:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5519:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5520:%.*]] = bitcast double [[TMP5518]] to i64
@@ -24833,7 +23814,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5526:%.*]] = extractvalue { i64, i1 } [[TMP5522]], 1
 // CHECK-NEXT:    [[TMP5527:%.*]] = sext i1 [[TMP5526]] to i32
 // CHECK-NEXT:    store i32 [[TMP5527]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5528:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5529:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5528]] acquire, align 8
 // CHECK-NEXT:    store double [[TMP5529]], ptr [[DV]], align 8
@@ -25121,19 +24101,15 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5740:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5741:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5740]] release, align 8
 // CHECK-NEXT:    store double [[TMP5741]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5742:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5743:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5742]] release, align 8
 // CHECK-NEXT:    store double [[TMP5743]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5744:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5745:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5744]] release, align 8
 // CHECK-NEXT:    store double [[TMP5745]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5746:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5747:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5746]] release, align 8
 // CHECK-NEXT:    store double [[TMP5747]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5748:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5749:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5750:%.*]] = bitcast double [[TMP5748]] to i64
@@ -25142,7 +24118,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5753:%.*]] = extractvalue { i64, i1 } [[TMP5752]], 0
 // CHECK-NEXT:    [[TMP5754:%.*]] = bitcast i64 [[TMP5753]] to double
 // CHECK-NEXT:    store double [[TMP5754]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5755:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5756:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5757:%.*]] = bitcast double [[TMP5755]] to i64
@@ -25151,31 +24126,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5760:%.*]] = extractvalue { i64, i1 } [[TMP5759]], 0
 // CHECK-NEXT:    [[TMP5761:%.*]] = bitcast i64 [[TMP5760]] to double
 // CHECK-NEXT:    store double [[TMP5761]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5762:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5763:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5762]] release, align 8
 // CHECK-NEXT:    [[TMP5764:%.*]] = fcmp ogt double [[TMP5763]], [[TMP5762]]
 // CHECK-NEXT:    [[TMP5765:%.*]] = select i1 [[TMP5764]], double [[TMP5762]], double [[TMP5763]]
 // CHECK-NEXT:    store double [[TMP5765]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5766:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5767:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5766]] release, align 8
 // CHECK-NEXT:    [[TMP5768:%.*]] = fcmp olt double [[TMP5767]], [[TMP5766]]
 // CHECK-NEXT:    [[TMP5769:%.*]] = select i1 [[TMP5768]], double [[TMP5766]], double [[TMP5767]]
 // CHECK-NEXT:    store double [[TMP5769]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5770:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5771:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5770]] release, align 8
 // CHECK-NEXT:    [[TMP5772:%.*]] = fcmp olt double [[TMP5771]], [[TMP5770]]
 // CHECK-NEXT:    [[TMP5773:%.*]] = select i1 [[TMP5772]], double [[TMP5770]], double [[TMP5771]]
 // CHECK-NEXT:    store double [[TMP5773]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5774:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5775:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5774]] release, align 8
 // CHECK-NEXT:    [[TMP5776:%.*]] = fcmp ogt double [[TMP5775]], [[TMP5774]]
 // CHECK-NEXT:    [[TMP5777:%.*]] = select i1 [[TMP5776]], double [[TMP5774]], double [[TMP5775]]
 // CHECK-NEXT:    store double [[TMP5777]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5778:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5779:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5780:%.*]] = bitcast double [[TMP5778]] to i64
@@ -25186,7 +24156,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5785:%.*]] = extractvalue { i64, i1 } [[TMP5782]], 1
 // CHECK-NEXT:    [[TMP5786:%.*]] = select i1 [[TMP5785]], double [[TMP5778]], double [[TMP5784]]
 // CHECK-NEXT:    store double [[TMP5786]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5787:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5788:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5789:%.*]] = bitcast double [[TMP5787]] to i64
@@ -25197,7 +24166,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5794:%.*]] = extractvalue { i64, i1 } [[TMP5791]], 1
 // CHECK-NEXT:    [[TMP5795:%.*]] = select i1 [[TMP5794]], double [[TMP5787]], double [[TMP5793]]
 // CHECK-NEXT:    store double [[TMP5795]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5796:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5797:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5798:%.*]] = bitcast double [[TMP5796]] to i64
@@ -25211,7 +24179,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5802]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT537]]
 // CHECK:       dx.atomic.exit537:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5804:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5805:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5806:%.*]] = bitcast double [[TMP5804]] to i64
@@ -25225,7 +24192,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5810]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT539]]
 // CHECK:       dx.atomic.exit539:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5812:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5813:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5814:%.*]] = bitcast double [[TMP5812]] to i64
@@ -25234,7 +24200,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5817:%.*]] = extractvalue { i64, i1 } [[TMP5816]], 1
 // CHECK-NEXT:    [[TMP5818:%.*]] = sext i1 [[TMP5817]] to i32
 // CHECK-NEXT:    store i32 [[TMP5818]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5819:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5820:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5821:%.*]] = bitcast double [[TMP5819]] to i64
@@ -25243,7 +24208,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5824:%.*]] = extractvalue { i64, i1 } [[TMP5823]], 1
 // CHECK-NEXT:    [[TMP5825:%.*]] = sext i1 [[TMP5824]] to i32
 // CHECK-NEXT:    store i32 [[TMP5825]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5826:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5827:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5828:%.*]] = bitcast double [[TMP5826]] to i64
@@ -25260,7 +24224,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5834:%.*]] = extractvalue { i64, i1 } [[TMP5830]], 1
 // CHECK-NEXT:    [[TMP5835:%.*]] = sext i1 [[TMP5834]] to i32
 // CHECK-NEXT:    store i32 [[TMP5835]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5836:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5837:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5838:%.*]] = bitcast double [[TMP5836]] to i64
@@ -25277,23 +24240,18 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5844:%.*]] = extractvalue { i64, i1 } [[TMP5840]], 1
 // CHECK-NEXT:    [[TMP5845:%.*]] = sext i1 [[TMP5844]] to i32
 // CHECK-NEXT:    store i32 [[TMP5845]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5846:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5847:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5846]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP5847]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5848:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5849:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5848]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP5849]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5850:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5851:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5850]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP5851]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5852:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5853:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5852]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP5853]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5854:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5855:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5856:%.*]] = bitcast double [[TMP5854]] to i64
@@ -25302,7 +24260,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5859:%.*]] = extractvalue { i64, i1 } [[TMP5858]], 0
 // CHECK-NEXT:    [[TMP5860:%.*]] = bitcast i64 [[TMP5859]] to double
 // CHECK-NEXT:    store double [[TMP5860]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5861:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5862:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5863:%.*]] = bitcast double [[TMP5861]] to i64
@@ -25311,31 +24268,26 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5866:%.*]] = extractvalue { i64, i1 } [[TMP5865]], 0
 // CHECK-NEXT:    [[TMP5867:%.*]] = bitcast i64 [[TMP5866]] to double
 // CHECK-NEXT:    store double [[TMP5867]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5868:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5869:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5868]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP5870:%.*]] = fcmp ogt double [[TMP5869]], [[TMP5868]]
 // CHECK-NEXT:    [[TMP5871:%.*]] = select i1 [[TMP5870]], double [[TMP5868]], double [[TMP5869]]
 // CHECK-NEXT:    store double [[TMP5871]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5872:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5873:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5872]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP5874:%.*]] = fcmp olt double [[TMP5873]], [[TMP5872]]
 // CHECK-NEXT:    [[TMP5875:%.*]] = select i1 [[TMP5874]], double [[TMP5872]], double [[TMP5873]]
 // CHECK-NEXT:    store double [[TMP5875]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5876:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5877:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP5876]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP5878:%.*]] = fcmp olt double [[TMP5877]], [[TMP5876]]
 // CHECK-NEXT:    [[TMP5879:%.*]] = select i1 [[TMP5878]], double [[TMP5876]], double [[TMP5877]]
 // CHECK-NEXT:    store double [[TMP5879]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5880:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5881:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP5880]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP5882:%.*]] = fcmp ogt double [[TMP5881]], [[TMP5880]]
 // CHECK-NEXT:    [[TMP5883:%.*]] = select i1 [[TMP5882]], double [[TMP5880]], double [[TMP5881]]
 // CHECK-NEXT:    store double [[TMP5883]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5884:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5885:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5886:%.*]] = bitcast double [[TMP5884]] to i64
@@ -25346,7 +24298,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5891:%.*]] = extractvalue { i64, i1 } [[TMP5888]], 1
 // CHECK-NEXT:    [[TMP5892:%.*]] = select i1 [[TMP5891]], double [[TMP5884]], double [[TMP5890]]
 // CHECK-NEXT:    store double [[TMP5892]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5893:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5894:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5895:%.*]] = bitcast double [[TMP5893]] to i64
@@ -25357,7 +24308,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5900:%.*]] = extractvalue { i64, i1 } [[TMP5897]], 1
 // CHECK-NEXT:    [[TMP5901:%.*]] = select i1 [[TMP5900]], double [[TMP5893]], double [[TMP5899]]
 // CHECK-NEXT:    store double [[TMP5901]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5902:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5903:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5904:%.*]] = bitcast double [[TMP5902]] to i64
@@ -25371,7 +24321,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5908]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT545]]
 // CHECK:       dx.atomic.exit545:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5910:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5911:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5912:%.*]] = bitcast double [[TMP5910]] to i64
@@ -25385,7 +24334,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    store double [[TMP5916]], ptr [[DV]], align 8
 // CHECK-NEXT:    br label [[DX_ATOMIC_EXIT547]]
 // CHECK:       dx.atomic.exit547:
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5918:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5919:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5920:%.*]] = bitcast double [[TMP5918]] to i64
@@ -25394,7 +24342,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5923:%.*]] = extractvalue { i64, i1 } [[TMP5922]], 1
 // CHECK-NEXT:    [[TMP5924:%.*]] = sext i1 [[TMP5923]] to i32
 // CHECK-NEXT:    store i32 [[TMP5924]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5925:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5926:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5927:%.*]] = bitcast double [[TMP5925]] to i64
@@ -25403,7 +24350,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5930:%.*]] = extractvalue { i64, i1 } [[TMP5929]], 1
 // CHECK-NEXT:    [[TMP5931:%.*]] = sext i1 [[TMP5930]] to i32
 // CHECK-NEXT:    store i32 [[TMP5931]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5932:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5933:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5934:%.*]] = bitcast double [[TMP5932]] to i64
@@ -25420,7 +24366,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5940:%.*]] = extractvalue { i64, i1 } [[TMP5936]], 1
 // CHECK-NEXT:    [[TMP5941:%.*]] = sext i1 [[TMP5940]] to i32
 // CHECK-NEXT:    store i32 [[TMP5941]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP5942:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP5943:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP5944:%.*]] = bitcast double [[TMP5942]] to i64
@@ -25437,7 +24382,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP5950:%.*]] = extractvalue { i64, i1 } [[TMP5946]], 1
 // CHECK-NEXT:    [[TMP5951:%.*]] = sext i1 [[TMP5950]] to i32
 // CHECK-NEXT:    store i32 [[TMP5951]], ptr [[IR]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    ret void
 //
 //
@@ -25478,29 +24422,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP22]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP23]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP24]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP25]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP26]], i8 [[TMP27]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i8, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i8 [[TMP29]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP30]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp slt i8 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i8 [[TMP30]], i8 [[TMP31]]
 // CHECK-NEXT:    store i8 [[TMP33]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP34]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i8 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i8 [[TMP34]], i8 [[TMP35]]
 // CHECK-NEXT:    store i8 [[TMP37]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP39:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP38]], i8 [[TMP39]] acq_rel acquire, align 1
@@ -25508,7 +24447,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i8, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i8 [[TMP38]], i8 [[TMP41]]
 // CHECK-NEXT:    store i8 [[TMP43]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP44]] acquire, align 1
 // CHECK-NEXT:    store i8 [[TMP45]], ptr [[CV]], align 1
@@ -25568,29 +24506,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP88]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP89]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP90]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP91]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP93:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP92]], i8 [[TMP93]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i8, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i8 [[TMP95]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP96]] release, align 1
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp slt i8 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i8 [[TMP96]], i8 [[TMP97]]
 // CHECK-NEXT:    store i8 [[TMP99]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP100]] release, align 1
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp sgt i8 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i8 [[TMP100]], i8 [[TMP101]]
 // CHECK-NEXT:    store i8 [[TMP103]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP105:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP104]], i8 [[TMP105]] release monotonic, align 1
@@ -25598,33 +24531,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i8, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i8 [[TMP104]], i8 [[TMP107]]
 // CHECK-NEXT:    store i8 [[TMP109]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP110]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP111]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP112]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP113]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP115:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP114]], i8 [[TMP115]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i8, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i8 [[TMP117]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min ptr [[CX]], i8 [[TMP118]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp slt i8 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i8 [[TMP118]], i8 [[TMP119]]
 // CHECK-NEXT:    store i8 [[TMP121]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max ptr [[CX]], i8 [[TMP122]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp sgt i8 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i8 [[TMP122]], i8 [[TMP123]]
 // CHECK-NEXT:    store i8 [[TMP125]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i8, ptr [[CE]], align 1
 // CHECK-NEXT:    [[TMP127:%.*]] = load i8, ptr [[CD]], align 1
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[CX]], i8 [[TMP126]], i8 [[TMP127]] seq_cst seq_cst, align 1
@@ -25632,7 +24559,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i8, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i8 [[TMP126]], i8 [[TMP129]]
 // CHECK-NEXT:    store i8 [[TMP131]], ptr [[CV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i8, ptr [[CV]], align 1
 // CHECK-NEXT:    ret i8 [[TMP132]]
 //
@@ -25674,29 +24600,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP22]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP23]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP24]] acq_rel, align 1
 // CHECK-NEXT:    store i8 [[TMP25]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP26]], i8 [[TMP27]] acq_rel acquire, align 1
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i8, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i8 [[TMP29]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP30]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i8 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i8 [[TMP30]], i8 [[TMP31]]
 // CHECK-NEXT:    store i8 [[TMP33]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP34]] acq_rel, align 1
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i8 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i8 [[TMP34]], i8 [[TMP35]]
 // CHECK-NEXT:    store i8 [[TMP37]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP39:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP38]], i8 [[TMP39]] acq_rel acquire, align 1
@@ -25704,7 +24625,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i8, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i8 [[TMP38]], i8 [[TMP41]]
 // CHECK-NEXT:    store i8 [[TMP43]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP44]] acquire, align 1
 // CHECK-NEXT:    store i8 [[TMP45]], ptr [[UCV]], align 1
@@ -25764,29 +24684,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP88]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP89]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP90]] release, align 1
 // CHECK-NEXT:    store i8 [[TMP91]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP93:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP92]], i8 [[TMP93]] release monotonic, align 1
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i8, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i8 [[TMP95]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP96]] release, align 1
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp ult i8 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i8 [[TMP96]], i8 [[TMP97]]
 // CHECK-NEXT:    store i8 [[TMP99]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP100]] release, align 1
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp ugt i8 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i8 [[TMP100]], i8 [[TMP101]]
 // CHECK-NEXT:    store i8 [[TMP103]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP105:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP104]], i8 [[TMP105]] release monotonic, align 1
@@ -25794,33 +24709,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i8, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i8 [[TMP104]], i8 [[TMP107]]
 // CHECK-NEXT:    store i8 [[TMP109]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP110]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP111]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP112]] seq_cst, align 1
 // CHECK-NEXT:    store i8 [[TMP113]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP115:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP114]], i8 [[TMP115]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i8, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i8 [[TMP117]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin ptr [[UCX]], i8 [[TMP118]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp ult i8 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i8 [[TMP118]], i8 [[TMP119]]
 // CHECK-NEXT:    store i8 [[TMP121]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax ptr [[UCX]], i8 [[TMP122]] seq_cst, align 1
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp ugt i8 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i8 [[TMP122]], i8 [[TMP123]]
 // CHECK-NEXT:    store i8 [[TMP125]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i8, ptr [[UCE]], align 1
 // CHECK-NEXT:    [[TMP127:%.*]] = load i8, ptr [[UCD]], align 1
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[UCX]], i8 [[TMP126]], i8 [[TMP127]] seq_cst seq_cst, align 1
@@ -25828,7 +24737,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i8, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i8 [[TMP126]], i8 [[TMP129]]
 // CHECK-NEXT:    store i8 [[TMP131]], ptr [[UCV]], align 1
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i8, ptr [[UCV]], align 1
 // CHECK-NEXT:    ret i8 [[TMP132]]
 //
@@ -25870,29 +24778,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP22]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP23]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP24]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP25]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP27:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP26]], i16 [[TMP27]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i16, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i16 [[TMP29]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP30]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp slt i16 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i16 [[TMP30]], i16 [[TMP31]]
 // CHECK-NEXT:    store i16 [[TMP33]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP34]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i16 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i16 [[TMP34]], i16 [[TMP35]]
 // CHECK-NEXT:    store i16 [[TMP37]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP39:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP38]], i16 [[TMP39]] acq_rel acquire, align 2
@@ -25900,7 +24803,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i16, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i16 [[TMP38]], i16 [[TMP41]]
 // CHECK-NEXT:    store i16 [[TMP43]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP44]] acquire, align 2
 // CHECK-NEXT:    store i16 [[TMP45]], ptr [[SV]], align 2
@@ -25960,29 +24862,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP88]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP89]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP90]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP91]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP93:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP92]], i16 [[TMP93]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i16, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i16 [[TMP95]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP96]] release, align 2
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp slt i16 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i16 [[TMP96]], i16 [[TMP97]]
 // CHECK-NEXT:    store i16 [[TMP99]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP100]] release, align 2
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp sgt i16 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i16 [[TMP100]], i16 [[TMP101]]
 // CHECK-NEXT:    store i16 [[TMP103]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP105:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP104]], i16 [[TMP105]] release monotonic, align 2
@@ -25990,33 +24887,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i16, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i16 [[TMP104]], i16 [[TMP107]]
 // CHECK-NEXT:    store i16 [[TMP109]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP110]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP111]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP112]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP113]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP115:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP114]], i16 [[TMP115]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i16, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i16 [[TMP117]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min ptr [[SX]], i16 [[TMP118]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp slt i16 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i16 [[TMP118]], i16 [[TMP119]]
 // CHECK-NEXT:    store i16 [[TMP121]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max ptr [[SX]], i16 [[TMP122]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp sgt i16 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i16 [[TMP122]], i16 [[TMP123]]
 // CHECK-NEXT:    store i16 [[TMP125]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i16, ptr [[SE]], align 2
 // CHECK-NEXT:    [[TMP127:%.*]] = load i16, ptr [[SD]], align 2
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[SX]], i16 [[TMP126]], i16 [[TMP127]] seq_cst seq_cst, align 2
@@ -26024,7 +24915,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i16, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i16 [[TMP126]], i16 [[TMP129]]
 // CHECK-NEXT:    store i16 [[TMP131]], ptr [[SV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i16, ptr [[SV]], align 2
 // CHECK-NEXT:    ret i16 [[TMP132]]
 //
@@ -26066,29 +24956,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP22]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP23]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP24]] acq_rel, align 2
 // CHECK-NEXT:    store i16 [[TMP25]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP27:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP26]], i16 [[TMP27]] acq_rel acquire, align 2
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i16, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i16 [[TMP29]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP30]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i16 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i16 [[TMP30]], i16 [[TMP31]]
 // CHECK-NEXT:    store i16 [[TMP33]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP34]] acq_rel, align 2
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i16 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i16 [[TMP34]], i16 [[TMP35]]
 // CHECK-NEXT:    store i16 [[TMP37]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP39:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP38]], i16 [[TMP39]] acq_rel acquire, align 2
@@ -26096,7 +24981,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i16, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i16 [[TMP38]], i16 [[TMP41]]
 // CHECK-NEXT:    store i16 [[TMP43]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP44]] acquire, align 2
 // CHECK-NEXT:    store i16 [[TMP45]], ptr [[USV]], align 2
@@ -26156,29 +25040,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP88]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP89]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP90]] release, align 2
 // CHECK-NEXT:    store i16 [[TMP91]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP93:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP92]], i16 [[TMP93]] release monotonic, align 2
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i16, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i16 [[TMP95]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP96]] release, align 2
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp ult i16 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i16 [[TMP96]], i16 [[TMP97]]
 // CHECK-NEXT:    store i16 [[TMP99]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP100]] release, align 2
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp ugt i16 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i16 [[TMP100]], i16 [[TMP101]]
 // CHECK-NEXT:    store i16 [[TMP103]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP105:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP104]], i16 [[TMP105]] release monotonic, align 2
@@ -26186,33 +25065,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i16, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i16 [[TMP104]], i16 [[TMP107]]
 // CHECK-NEXT:    store i16 [[TMP109]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP110]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP111]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP112]] seq_cst, align 2
 // CHECK-NEXT:    store i16 [[TMP113]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP115:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP114]], i16 [[TMP115]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i16, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i16 [[TMP117]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin ptr [[USX]], i16 [[TMP118]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp ult i16 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i16 [[TMP118]], i16 [[TMP119]]
 // CHECK-NEXT:    store i16 [[TMP121]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax ptr [[USX]], i16 [[TMP122]] seq_cst, align 2
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp ugt i16 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i16 [[TMP122]], i16 [[TMP123]]
 // CHECK-NEXT:    store i16 [[TMP125]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i16, ptr [[USE]], align 2
 // CHECK-NEXT:    [[TMP127:%.*]] = load i16, ptr [[USD]], align 2
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[USX]], i16 [[TMP126]], i16 [[TMP127]] seq_cst seq_cst, align 2
@@ -26220,7 +25093,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i16, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i16 [[TMP126]], i16 [[TMP129]]
 // CHECK-NEXT:    store i16 [[TMP131]], ptr [[USV]], align 2
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i16, ptr [[USV]], align 2
 // CHECK-NEXT:    ret i16 [[TMP132]]
 //
@@ -26262,29 +25134,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP22]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP23]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP24]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP25]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP26]], i32 [[TMP27]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i32, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i32 [[TMP29]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP30]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp slt i32 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i32 [[TMP30]], i32 [[TMP31]]
 // CHECK-NEXT:    store i32 [[TMP33]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP34]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i32 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 [[TMP34]], i32 [[TMP35]]
 // CHECK-NEXT:    store i32 [[TMP37]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP39:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP38]], i32 [[TMP39]] acq_rel acquire, align 4
@@ -26292,7 +25159,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i32, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i32 [[TMP38]], i32 [[TMP41]]
 // CHECK-NEXT:    store i32 [[TMP43]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP44]] acquire, align 4
 // CHECK-NEXT:    store i32 [[TMP45]], ptr [[IV]], align 4
@@ -26352,29 +25218,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP88]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP89]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP90]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP91]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP93:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP92]], i32 [[TMP93]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i32, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i32 [[TMP95]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP96]] release, align 4
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp slt i32 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i32 [[TMP96]], i32 [[TMP97]]
 // CHECK-NEXT:    store i32 [[TMP99]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP100]] release, align 4
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp sgt i32 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i32 [[TMP100]], i32 [[TMP101]]
 // CHECK-NEXT:    store i32 [[TMP103]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP105:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP104]], i32 [[TMP105]] release monotonic, align 4
@@ -26382,33 +25243,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i32, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i32 [[TMP104]], i32 [[TMP107]]
 // CHECK-NEXT:    store i32 [[TMP109]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP110]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP111]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP112]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP113]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP115:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP114]], i32 [[TMP115]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i32, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i32 [[TMP117]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min ptr [[IX]], i32 [[TMP118]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp slt i32 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i32 [[TMP118]], i32 [[TMP119]]
 // CHECK-NEXT:    store i32 [[TMP121]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max ptr [[IX]], i32 [[TMP122]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp sgt i32 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i32 [[TMP122]], i32 [[TMP123]]
 // CHECK-NEXT:    store i32 [[TMP125]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i32, ptr [[IE]], align 4
 // CHECK-NEXT:    [[TMP127:%.*]] = load i32, ptr [[ID]], align 4
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[IX]], i32 [[TMP126]], i32 [[TMP127]] seq_cst seq_cst, align 4
@@ -26416,7 +25271,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i32, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i32 [[TMP126]], i32 [[TMP129]]
 // CHECK-NEXT:    store i32 [[TMP131]], ptr [[IV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i32, ptr [[IV]], align 4
 // CHECK-NEXT:    ret i32 [[TMP132]]
 //
@@ -26458,29 +25312,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP22]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP23]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP24]] acq_rel, align 4
 // CHECK-NEXT:    store i32 [[TMP25]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP26]], i32 [[TMP27]] acq_rel acquire, align 4
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i32, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i32 [[TMP29]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP30]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i32 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i32 [[TMP30]], i32 [[TMP31]]
 // CHECK-NEXT:    store i32 [[TMP33]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP34]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i32 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 [[TMP34]], i32 [[TMP35]]
 // CHECK-NEXT:    store i32 [[TMP37]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP39:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP38]], i32 [[TMP39]] acq_rel acquire, align 4
@@ -26488,7 +25337,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i32, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i32 [[TMP38]], i32 [[TMP41]]
 // CHECK-NEXT:    store i32 [[TMP43]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP44]] acquire, align 4
 // CHECK-NEXT:    store i32 [[TMP45]], ptr [[UIV]], align 4
@@ -26548,29 +25396,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP88]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP89]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP90]] release, align 4
 // CHECK-NEXT:    store i32 [[TMP91]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP93:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP92]], i32 [[TMP93]] release monotonic, align 4
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i32, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i32 [[TMP95]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP96]] release, align 4
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp ult i32 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i32 [[TMP96]], i32 [[TMP97]]
 // CHECK-NEXT:    store i32 [[TMP99]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP100]] release, align 4
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp ugt i32 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i32 [[TMP100]], i32 [[TMP101]]
 // CHECK-NEXT:    store i32 [[TMP103]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP105:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP104]], i32 [[TMP105]] release monotonic, align 4
@@ -26578,33 +25421,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i32, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i32 [[TMP104]], i32 [[TMP107]]
 // CHECK-NEXT:    store i32 [[TMP109]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP110]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP111]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP112]] seq_cst, align 4
 // CHECK-NEXT:    store i32 [[TMP113]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP115:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP114]], i32 [[TMP115]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i32, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i32 [[TMP117]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin ptr [[UIX]], i32 [[TMP118]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp ult i32 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i32 [[TMP118]], i32 [[TMP119]]
 // CHECK-NEXT:    store i32 [[TMP121]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax ptr [[UIX]], i32 [[TMP122]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp ugt i32 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i32 [[TMP122]], i32 [[TMP123]]
 // CHECK-NEXT:    store i32 [[TMP125]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i32, ptr [[UIE]], align 4
 // CHECK-NEXT:    [[TMP127:%.*]] = load i32, ptr [[UID]], align 4
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[UIX]], i32 [[TMP126]], i32 [[TMP127]] seq_cst seq_cst, align 4
@@ -26612,7 +25449,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i32, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i32 [[TMP126]], i32 [[TMP129]]
 // CHECK-NEXT:    store i32 [[TMP131]], ptr [[UIV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i32, ptr [[UIV]], align 4
 // CHECK-NEXT:    ret i32 [[TMP132]]
 //
@@ -26654,29 +25490,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP22]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP23]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP24]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP25]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP26]], i64 [[TMP27]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i64 [[TMP29]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP30]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp slt i64 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i64 [[TMP30]], i64 [[TMP31]]
 // CHECK-NEXT:    store i64 [[TMP33]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP34]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i64 [[TMP34]], i64 [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP37]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP39:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP38]], i64 [[TMP39]] acq_rel acquire, align 8
@@ -26684,7 +25515,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i64, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 [[TMP38]], i64 [[TMP41]]
 // CHECK-NEXT:    store i64 [[TMP43]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP44]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP45]], ptr [[LV]], align 8
@@ -26744,29 +25574,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP88]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP89]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP90]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP91]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP93:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP92]], i64 [[TMP93]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i64, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i64 [[TMP95]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP96]] release, align 8
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp slt i64 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i64 [[TMP96]], i64 [[TMP97]]
 // CHECK-NEXT:    store i64 [[TMP99]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP100]] release, align 8
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp sgt i64 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i64 [[TMP100]], i64 [[TMP101]]
 // CHECK-NEXT:    store i64 [[TMP103]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP105:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP104]], i64 [[TMP105]] release monotonic, align 8
@@ -26774,33 +25599,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i64, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i64 [[TMP104]], i64 [[TMP107]]
 // CHECK-NEXT:    store i64 [[TMP109]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP110]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP111]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP112]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP113]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP115:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP114]], i64 [[TMP115]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i64, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i64 [[TMP117]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min ptr [[LX]], i64 [[TMP118]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp slt i64 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i64 [[TMP118]], i64 [[TMP119]]
 // CHECK-NEXT:    store i64 [[TMP121]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max ptr [[LX]], i64 [[TMP122]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp sgt i64 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i64 [[TMP122]], i64 [[TMP123]]
 // CHECK-NEXT:    store i64 [[TMP125]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i64, ptr [[LE]], align 8
 // CHECK-NEXT:    [[TMP127:%.*]] = load i64, ptr [[LD]], align 8
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[LX]], i64 [[TMP126]], i64 [[TMP127]] seq_cst seq_cst, align 8
@@ -26808,7 +25627,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i64, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i64 [[TMP126]], i64 [[TMP129]]
 // CHECK-NEXT:    store i64 [[TMP131]], ptr [[LV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i64, ptr [[LV]], align 8
 // CHECK-NEXT:    ret i64 [[TMP132]]
 //
@@ -26850,29 +25668,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP22]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP23]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP24]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP25]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP26]], i64 [[TMP27]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i64 [[TMP29]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP30]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i64 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i64 [[TMP30]], i64 [[TMP31]]
 // CHECK-NEXT:    store i64 [[TMP33]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP34]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i64 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i64 [[TMP34]], i64 [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP37]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP39:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP38]], i64 [[TMP39]] acq_rel acquire, align 8
@@ -26880,7 +25693,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i64, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 [[TMP38]], i64 [[TMP41]]
 // CHECK-NEXT:    store i64 [[TMP43]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP44]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP45]], ptr [[ULV]], align 8
@@ -26940,29 +25752,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP88]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP89]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP90]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP91]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP93:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP92]], i64 [[TMP93]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i64, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i64 [[TMP95]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP96]] release, align 8
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp ult i64 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i64 [[TMP96]], i64 [[TMP97]]
 // CHECK-NEXT:    store i64 [[TMP99]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP100]] release, align 8
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp ugt i64 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i64 [[TMP100]], i64 [[TMP101]]
 // CHECK-NEXT:    store i64 [[TMP103]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP105:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP104]], i64 [[TMP105]] release monotonic, align 8
@@ -26970,33 +25777,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i64, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i64 [[TMP104]], i64 [[TMP107]]
 // CHECK-NEXT:    store i64 [[TMP109]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP110]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP111]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP112]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP113]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP115:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP114]], i64 [[TMP115]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i64, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i64 [[TMP117]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin ptr [[ULX]], i64 [[TMP118]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp ult i64 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i64 [[TMP118]], i64 [[TMP119]]
 // CHECK-NEXT:    store i64 [[TMP121]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax ptr [[ULX]], i64 [[TMP122]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp ugt i64 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i64 [[TMP122]], i64 [[TMP123]]
 // CHECK-NEXT:    store i64 [[TMP125]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i64, ptr [[ULE]], align 8
 // CHECK-NEXT:    [[TMP127:%.*]] = load i64, ptr [[ULD]], align 8
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[ULX]], i64 [[TMP126]], i64 [[TMP127]] seq_cst seq_cst, align 8
@@ -27004,7 +25805,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i64, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i64 [[TMP126]], i64 [[TMP129]]
 // CHECK-NEXT:    store i64 [[TMP131]], ptr [[ULV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i64, ptr [[ULV]], align 8
 // CHECK-NEXT:    ret i64 [[TMP132]]
 //
@@ -27046,29 +25846,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP22]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP23]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP24]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP25]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP26]], i64 [[TMP27]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i64 [[TMP29]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP30]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp slt i64 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i64 [[TMP30]], i64 [[TMP31]]
 // CHECK-NEXT:    store i64 [[TMP33]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP34]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i64 [[TMP34]], i64 [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP37]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP39:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP38]], i64 [[TMP39]] acq_rel acquire, align 8
@@ -27076,7 +25871,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i64, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 [[TMP38]], i64 [[TMP41]]
 // CHECK-NEXT:    store i64 [[TMP43]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP44]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP45]], ptr [[LLV]], align 8
@@ -27136,29 +25930,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP88]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP89]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP90]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP91]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP93:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP92]], i64 [[TMP93]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i64, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i64 [[TMP95]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP96]] release, align 8
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp slt i64 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i64 [[TMP96]], i64 [[TMP97]]
 // CHECK-NEXT:    store i64 [[TMP99]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP100]] release, align 8
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp sgt i64 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i64 [[TMP100]], i64 [[TMP101]]
 // CHECK-NEXT:    store i64 [[TMP103]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP105:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP104]], i64 [[TMP105]] release monotonic, align 8
@@ -27166,33 +25955,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i64, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i64 [[TMP104]], i64 [[TMP107]]
 // CHECK-NEXT:    store i64 [[TMP109]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP110]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP111]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP112]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP113]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP115:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP114]], i64 [[TMP115]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i64, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i64 [[TMP117]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min ptr [[LLX]], i64 [[TMP118]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp slt i64 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i64 [[TMP118]], i64 [[TMP119]]
 // CHECK-NEXT:    store i64 [[TMP121]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max ptr [[LLX]], i64 [[TMP122]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp sgt i64 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i64 [[TMP122]], i64 [[TMP123]]
 // CHECK-NEXT:    store i64 [[TMP125]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i64, ptr [[LLE]], align 8
 // CHECK-NEXT:    [[TMP127:%.*]] = load i64, ptr [[LLD]], align 8
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[LLX]], i64 [[TMP126]], i64 [[TMP127]] seq_cst seq_cst, align 8
@@ -27200,7 +25983,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i64, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i64 [[TMP126]], i64 [[TMP129]]
 // CHECK-NEXT:    store i64 [[TMP131]], ptr [[LLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i64, ptr [[LLV]], align 8
 // CHECK-NEXT:    ret i64 [[TMP132]]
 //
@@ -27242,29 +26024,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP22]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP23]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP24]] acq_rel, align 8
 // CHECK-NEXT:    store i64 [[TMP25]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP26]], i64 [[TMP27]] acq_rel acquire, align 8
 // CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP28]], 0
 // CHECK-NEXT:    store i64 [[TMP29]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP30]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i64 [[TMP31]], [[TMP30]]
 // CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i64 [[TMP30]], i64 [[TMP31]]
 // CHECK-NEXT:    store i64 [[TMP33]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP34]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i64 [[TMP35]], [[TMP34]]
 // CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i64 [[TMP34]], i64 [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP37]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP38:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP39:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP40:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP38]], i64 [[TMP39]] acq_rel acquire, align 8
@@ -27272,7 +26049,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i64, i1 } [[TMP40]], 1
 // CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 [[TMP38]], i64 [[TMP41]]
 // CHECK-NEXT:    store i64 [[TMP43]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP44:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP45:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP44]] acquire, align 8
 // CHECK-NEXT:    store i64 [[TMP45]], ptr [[ULLV]], align 8
@@ -27332,29 +26108,24 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP88]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP89]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP90:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP91:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP90]] release, align 8
 // CHECK-NEXT:    store i64 [[TMP91]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP93:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP94:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP92]], i64 [[TMP93]] release monotonic, align 8
 // CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i64, i1 } [[TMP94]], 0
 // CHECK-NEXT:    store i64 [[TMP95]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP96:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP97:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP96]] release, align 8
 // CHECK-NEXT:    [[TMP98:%.*]] = icmp ult i64 [[TMP97]], [[TMP96]]
 // CHECK-NEXT:    [[TMP99:%.*]] = select i1 [[TMP98]], i64 [[TMP96]], i64 [[TMP97]]
 // CHECK-NEXT:    store i64 [[TMP99]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP100:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP101:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP100]] release, align 8
 // CHECK-NEXT:    [[TMP102:%.*]] = icmp ugt i64 [[TMP101]], [[TMP100]]
 // CHECK-NEXT:    [[TMP103:%.*]] = select i1 [[TMP102]], i64 [[TMP100]], i64 [[TMP101]]
 // CHECK-NEXT:    store i64 [[TMP103]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP104:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP105:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP106:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP104]], i64 [[TMP105]] release monotonic, align 8
@@ -27362,33 +26133,27 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP108:%.*]] = extractvalue { i64, i1 } [[TMP106]], 1
 // CHECK-NEXT:    [[TMP109:%.*]] = select i1 [[TMP108]], i64 [[TMP104]], i64 [[TMP107]]
 // CHECK-NEXT:    store i64 [[TMP109]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP110:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP111:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP110]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP111]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP112]] seq_cst, align 8
 // CHECK-NEXT:    store i64 [[TMP113]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP115:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP114]], i64 [[TMP115]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i64, i1 } [[TMP116]], 0
 // CHECK-NEXT:    store i64 [[TMP117]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP118:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin ptr [[ULLX]], i64 [[TMP118]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP120:%.*]] = icmp ult i64 [[TMP119]], [[TMP118]]
 // CHECK-NEXT:    [[TMP121:%.*]] = select i1 [[TMP120]], i64 [[TMP118]], i64 [[TMP119]]
 // CHECK-NEXT:    store i64 [[TMP121]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP122:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax ptr [[ULLX]], i64 [[TMP122]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP124:%.*]] = icmp ugt i64 [[TMP123]], [[TMP122]]
 // CHECK-NEXT:    [[TMP125:%.*]] = select i1 [[TMP124]], i64 [[TMP122]], i64 [[TMP123]]
 // CHECK-NEXT:    store i64 [[TMP125]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP126:%.*]] = load i64, ptr [[ULLE]], align 8
 // CHECK-NEXT:    [[TMP127:%.*]] = load i64, ptr [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP128:%.*]] = cmpxchg ptr [[ULLX]], i64 [[TMP126]], i64 [[TMP127]] seq_cst seq_cst, align 8
@@ -27396,7 +26161,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP130:%.*]] = extractvalue { i64, i1 } [[TMP128]], 1
 // CHECK-NEXT:    [[TMP131:%.*]] = select i1 [[TMP130]], i64 [[TMP126]], i64 [[TMP129]]
 // CHECK-NEXT:    store i64 [[TMP131]], ptr [[ULLV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP132:%.*]] = load i64, ptr [[ULLV]], align 8
 // CHECK-NEXT:    ret i64 [[TMP132]]
 //
@@ -27444,11 +26208,9 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP28:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP29:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP28]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP29]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP30]] acq_rel, align 4
 // CHECK-NEXT:    store float [[TMP31]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP32:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast float [[TMP32]] to i32
@@ -27457,19 +26219,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP37:%.*]] = extractvalue { i32, i1 } [[TMP36]], 0
 // CHECK-NEXT:    [[TMP38:%.*]] = bitcast i32 [[TMP37]] to float
 // CHECK-NEXT:    store float [[TMP38]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP39:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP40:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP39]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP41:%.*]] = fcmp olt float [[TMP40]], [[TMP39]]
 // CHECK-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], float [[TMP39]], float [[TMP40]]
 // CHECK-NEXT:    store float [[TMP42]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP43:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP44:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP43]] acq_rel, align 4
 // CHECK-NEXT:    [[TMP45:%.*]] = fcmp ogt float [[TMP44]], [[TMP43]]
 // CHECK-NEXT:    [[TMP46:%.*]] = select i1 [[TMP45]], float [[TMP43]], float [[TMP44]]
 // CHECK-NEXT:    store float [[TMP46]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP47:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP48:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP49:%.*]] = bitcast float [[TMP47]] to i32
@@ -27480,7 +26239,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP54:%.*]] = extractvalue { i32, i1 } [[TMP51]], 1
 // CHECK-NEXT:    [[TMP55:%.*]] = select i1 [[TMP54]], float [[TMP47]], float [[TMP53]]
 // CHECK-NEXT:    store float [[TMP55]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP56:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP57:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP56]] acquire, align 4
 // CHECK-NEXT:    store float [[TMP57]], ptr [[FV]], align 4
@@ -27552,11 +26310,9 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP112:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP112]] release, align 4
 // CHECK-NEXT:    store float [[TMP113]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP115:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP114]] release, align 4
 // CHECK-NEXT:    store float [[TMP115]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP116:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP117:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP118:%.*]] = bitcast float [[TMP116]] to i32
@@ -27565,19 +26321,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP121:%.*]] = extractvalue { i32, i1 } [[TMP120]], 0
 // CHECK-NEXT:    [[TMP122:%.*]] = bitcast i32 [[TMP121]] to float
 // CHECK-NEXT:    store float [[TMP122]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP123:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP124:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP123]] release, align 4
 // CHECK-NEXT:    [[TMP125:%.*]] = fcmp olt float [[TMP124]], [[TMP123]]
 // CHECK-NEXT:    [[TMP126:%.*]] = select i1 [[TMP125]], float [[TMP123]], float [[TMP124]]
 // CHECK-NEXT:    store float [[TMP126]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP127:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP128:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP127]] release, align 4
 // CHECK-NEXT:    [[TMP129:%.*]] = fcmp ogt float [[TMP128]], [[TMP127]]
 // CHECK-NEXT:    [[TMP130:%.*]] = select i1 [[TMP129]], float [[TMP127]], float [[TMP128]]
 // CHECK-NEXT:    store float [[TMP130]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP131:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP132:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP133:%.*]] = bitcast float [[TMP131]] to i32
@@ -27588,15 +26341,12 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP138:%.*]] = extractvalue { i32, i1 } [[TMP135]], 1
 // CHECK-NEXT:    [[TMP139:%.*]] = select i1 [[TMP138]], float [[TMP131]], float [[TMP137]]
 // CHECK-NEXT:    store float [[TMP139]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP140:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP141:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP140]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP141]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP142:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP143:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP142]] seq_cst, align 4
 // CHECK-NEXT:    store float [[TMP143]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP144:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP145:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP146:%.*]] = bitcast float [[TMP144]] to i32
@@ -27605,19 +26355,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP149:%.*]] = extractvalue { i32, i1 } [[TMP148]], 0
 // CHECK-NEXT:    [[TMP150:%.*]] = bitcast i32 [[TMP149]] to float
 // CHECK-NEXT:    store float [[TMP150]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP151:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP152:%.*]] = atomicrmw fmin ptr [[FX]], float [[TMP151]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP153:%.*]] = fcmp olt float [[TMP152]], [[TMP151]]
 // CHECK-NEXT:    [[TMP154:%.*]] = select i1 [[TMP153]], float [[TMP151]], float [[TMP152]]
 // CHECK-NEXT:    store float [[TMP154]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP155:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP156:%.*]] = atomicrmw fmax ptr [[FX]], float [[TMP155]] seq_cst, align 4
 // CHECK-NEXT:    [[TMP157:%.*]] = fcmp ogt float [[TMP156]], [[TMP155]]
 // CHECK-NEXT:    [[TMP158:%.*]] = select i1 [[TMP157]], float [[TMP155]], float [[TMP156]]
 // CHECK-NEXT:    store float [[TMP158]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP159:%.*]] = load float, ptr [[FE]], align 4
 // CHECK-NEXT:    [[TMP160:%.*]] = load float, ptr [[FD]], align 4
 // CHECK-NEXT:    [[TMP161:%.*]] = bitcast float [[TMP159]] to i32
@@ -27628,7 +26375,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP166:%.*]] = extractvalue { i32, i1 } [[TMP163]], 1
 // CHECK-NEXT:    [[TMP167:%.*]] = select i1 [[TMP166]], float [[TMP159]], float [[TMP165]]
 // CHECK-NEXT:    store float [[TMP167]], ptr [[FV]], align 4
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP168:%.*]] = load float, ptr [[FV]], align 4
 // CHECK-NEXT:    ret float [[TMP168]]
 //
@@ -27676,11 +26422,9 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP29:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP28]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP29]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP30:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP30]] acq_rel, align 8
 // CHECK-NEXT:    store double [[TMP31]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP32:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP33:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast double [[TMP32]] to i64
@@ -27689,19 +26433,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP37:%.*]] = extractvalue { i64, i1 } [[TMP36]], 0
 // CHECK-NEXT:    [[TMP38:%.*]] = bitcast i64 [[TMP37]] to double
 // CHECK-NEXT:    store double [[TMP38]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP39:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP40:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP39]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP41:%.*]] = fcmp olt double [[TMP40]], [[TMP39]]
 // CHECK-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], double [[TMP39]], double [[TMP40]]
 // CHECK-NEXT:    store double [[TMP42]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP43:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP44:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP43]] acq_rel, align 8
 // CHECK-NEXT:    [[TMP45:%.*]] = fcmp ogt double [[TMP44]], [[TMP43]]
 // CHECK-NEXT:    [[TMP46:%.*]] = select i1 [[TMP45]], double [[TMP43]], double [[TMP44]]
 // CHECK-NEXT:    store double [[TMP46]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP48:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP49:%.*]] = bitcast double [[TMP47]] to i64
@@ -27712,7 +26453,6 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP54:%.*]] = extractvalue { i64, i1 } [[TMP51]], 1
 // CHECK-NEXT:    [[TMP55:%.*]] = select i1 [[TMP54]], double [[TMP47]], double [[TMP53]]
 // CHECK-NEXT:    store double [[TMP55]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP56:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP57:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP56]] acquire, align 8
 // CHECK-NEXT:    store double [[TMP57]], ptr [[DV]], align 8
@@ -27784,11 +26524,9 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP112:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP112]] release, align 8
 // CHECK-NEXT:    store double [[TMP113]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP114:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP115:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP114]] release, align 8
 // CHECK-NEXT:    store double [[TMP115]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP116:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP117:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP118:%.*]] = bitcast double [[TMP116]] to i64
@@ -27797,19 +26535,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP121:%.*]] = extractvalue { i64, i1 } [[TMP120]], 0
 // CHECK-NEXT:    [[TMP122:%.*]] = bitcast i64 [[TMP121]] to double
 // CHECK-NEXT:    store double [[TMP122]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP123:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP124:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP123]] release, align 8
 // CHECK-NEXT:    [[TMP125:%.*]] = fcmp olt double [[TMP124]], [[TMP123]]
 // CHECK-NEXT:    [[TMP126:%.*]] = select i1 [[TMP125]], double [[TMP123]], double [[TMP124]]
 // CHECK-NEXT:    store double [[TMP126]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP127:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP128:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP127]] release, align 8
 // CHECK-NEXT:    [[TMP129:%.*]] = fcmp ogt double [[TMP128]], [[TMP127]]
 // CHECK-NEXT:    [[TMP130:%.*]] = select i1 [[TMP129]], double [[TMP127]], double [[TMP128]]
 // CHECK-NEXT:    store double [[TMP130]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP131:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP132:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP133:%.*]] = bitcast double [[TMP131]] to i64
@@ -27820,15 +26555,12 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP138:%.*]] = extractvalue { i64, i1 } [[TMP135]], 1
 // CHECK-NEXT:    [[TMP139:%.*]] = select i1 [[TMP138]], double [[TMP131]], double [[TMP137]]
 // CHECK-NEXT:    store double [[TMP139]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP140:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP141:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP140]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP141]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP142:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP143:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP142]] seq_cst, align 8
 // CHECK-NEXT:    store double [[TMP143]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP144:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP145:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP146:%.*]] = bitcast double [[TMP144]] to i64
@@ -27837,19 +26569,16 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP149:%.*]] = extractvalue { i64, i1 } [[TMP148]], 0
 // CHECK-NEXT:    [[TMP150:%.*]] = bitcast i64 [[TMP149]] to double
 // CHECK-NEXT:    store double [[TMP150]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP151:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP152:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP151]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP153:%.*]] = fcmp olt double [[TMP152]], [[TMP151]]
 // CHECK-NEXT:    [[TMP154:%.*]] = select i1 [[TMP153]], double [[TMP151]], double [[TMP152]]
 // CHECK-NEXT:    store double [[TMP154]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP155:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP156:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP155]] seq_cst, align 8
 // CHECK-NEXT:    [[TMP157:%.*]] = fcmp ogt double [[TMP156]], [[TMP155]]
 // CHECK-NEXT:    [[TMP158:%.*]] = select i1 [[TMP157]], double [[TMP155]], double [[TMP156]]
 // CHECK-NEXT:    store double [[TMP158]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP159:%.*]] = load double, ptr [[DE]], align 8
 // CHECK-NEXT:    [[TMP160:%.*]] = load double, ptr [[DD]], align 8
 // CHECK-NEXT:    [[TMP161:%.*]] = bitcast double [[TMP159]] to i64
@@ -27860,9 +26589,217 @@ double fail_dxevd() {
 // CHECK-NEXT:    [[TMP166:%.*]] = extractvalue { i64, i1 } [[TMP163]], 1
 // CHECK-NEXT:    [[TMP167:%.*]] = select i1 [[TMP166]], double [[TMP159]], double [[TMP165]]
 // CHECK-NEXT:    store double [[TMP167]], ptr [[DV]], align 8
-// CHECK-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1]])
 // CHECK-NEXT:    [[TMP168:%.*]] = load double, ptr [[DV]], align 8
 // CHECK-NEXT:    ret double [[TMP168]]
+//
+//
+// CHECK-LABEL: @fail_dxevd(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DX:%.*]] = alloca double, align 8
+// CHECK-NEXT:    [[DV:%.*]] = alloca double, align 8
+// CHECK-NEXT:    [[DE:%.*]] = alloca double, align 8
+// CHECK-NEXT:    [[DD:%.*]] = alloca double, align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP1]] to i64
+// CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP2]], i64 [[TMP3]] monotonic monotonic, align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+// CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[TMP5]] to double
+// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+// CHECK-NEXT:    br i1 [[TMP7]], label [[DX_ATOMIC_EXIT:%.*]], label [[DX_ATOMIC_CONT:%.*]]
+// CHECK:       dx.atomic.cont:
+// CHECK-NEXT:    store double [[TMP6]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT]]
+// CHECK:       dx.atomic.exit:
+// CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP8]] to i64
+// CHECK-NEXT:    [[TMP11:%.*]] = bitcast double [[TMP9]] to i64
+// CHECK-NEXT:    [[TMP12:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP10]], i64 [[TMP11]] acquire monotonic, align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i1 } [[TMP12]], 0
+// CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP13]] to double
+// CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { i64, i1 } [[TMP12]], 1
+// CHECK-NEXT:    br i1 [[TMP15]], label [[DX_ATOMIC_EXIT1:%.*]], label [[DX_ATOMIC_CONT2:%.*]]
+// CHECK:       dx.atomic.cont2:
+// CHECK-NEXT:    store double [[TMP14]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT1]]
+// CHECK:       dx.atomic.exit1:
+// CHECK-NEXT:    [[TMP16:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = bitcast double [[TMP16]] to i64
+// CHECK-NEXT:    [[TMP19:%.*]] = bitcast double [[TMP17]] to i64
+// CHECK-NEXT:    [[TMP20:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP18]], i64 [[TMP19]] release monotonic, align 8
+// CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { i64, i1 } [[TMP20]], 0
+// CHECK-NEXT:    [[TMP22:%.*]] = bitcast i64 [[TMP21]] to double
+// CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { i64, i1 } [[TMP20]], 1
+// CHECK-NEXT:    br i1 [[TMP23]], label [[DX_ATOMIC_EXIT3:%.*]], label [[DX_ATOMIC_CONT4:%.*]]
+// CHECK:       dx.atomic.cont4:
+// CHECK-NEXT:    store double [[TMP22]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT3]]
+// CHECK:       dx.atomic.exit3:
+// CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP26:%.*]] = bitcast double [[TMP24]] to i64
+// CHECK-NEXT:    [[TMP27:%.*]] = bitcast double [[TMP25]] to i64
+// CHECK-NEXT:    [[TMP28:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP26]], i64 [[TMP27]] acq_rel monotonic, align 8
+// CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP28]], 0
+// CHECK-NEXT:    [[TMP30:%.*]] = bitcast i64 [[TMP29]] to double
+// CHECK-NEXT:    [[TMP31:%.*]] = extractvalue { i64, i1 } [[TMP28]], 1
+// CHECK-NEXT:    br i1 [[TMP31]], label [[DX_ATOMIC_EXIT5:%.*]], label [[DX_ATOMIC_CONT6:%.*]]
+// CHECK:       dx.atomic.cont6:
+// CHECK-NEXT:    store double [[TMP30]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT5]]
+// CHECK:       dx.atomic.exit5:
+// CHECK-NEXT:    [[TMP32:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP33:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP34:%.*]] = bitcast double [[TMP32]] to i64
+// CHECK-NEXT:    [[TMP35:%.*]] = bitcast double [[TMP33]] to i64
+// CHECK-NEXT:    [[TMP36:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP34]], i64 [[TMP35]] seq_cst monotonic, align 8
+// CHECK-NEXT:    [[TMP37:%.*]] = extractvalue { i64, i1 } [[TMP36]], 0
+// CHECK-NEXT:    [[TMP38:%.*]] = bitcast i64 [[TMP37]] to double
+// CHECK-NEXT:    [[TMP39:%.*]] = extractvalue { i64, i1 } [[TMP36]], 1
+// CHECK-NEXT:    br i1 [[TMP39]], label [[DX_ATOMIC_EXIT7:%.*]], label [[DX_ATOMIC_CONT8:%.*]]
+// CHECK:       dx.atomic.cont8:
+// CHECK-NEXT:    store double [[TMP38]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT7]]
+// CHECK:       dx.atomic.exit7:
+// CHECK-NEXT:    [[TMP40:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP41:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP42:%.*]] = bitcast double [[TMP40]] to i64
+// CHECK-NEXT:    [[TMP43:%.*]] = bitcast double [[TMP41]] to i64
+// CHECK-NEXT:    [[TMP44:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP42]], i64 [[TMP43]] monotonic acquire, align 8
+// CHECK-NEXT:    [[TMP45:%.*]] = extractvalue { i64, i1 } [[TMP44]], 0
+// CHECK-NEXT:    [[TMP46:%.*]] = bitcast i64 [[TMP45]] to double
+// CHECK-NEXT:    [[TMP47:%.*]] = extractvalue { i64, i1 } [[TMP44]], 1
+// CHECK-NEXT:    br i1 [[TMP47]], label [[DX_ATOMIC_EXIT9:%.*]], label [[DX_ATOMIC_CONT10:%.*]]
+// CHECK:       dx.atomic.cont10:
+// CHECK-NEXT:    store double [[TMP46]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT9]]
+// CHECK:       dx.atomic.exit9:
+// CHECK-NEXT:    [[TMP48:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP49:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP50:%.*]] = bitcast double [[TMP48]] to i64
+// CHECK-NEXT:    [[TMP51:%.*]] = bitcast double [[TMP49]] to i64
+// CHECK-NEXT:    [[TMP52:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP50]], i64 [[TMP51]] acquire acquire, align 8
+// CHECK-NEXT:    [[TMP53:%.*]] = extractvalue { i64, i1 } [[TMP52]], 0
+// CHECK-NEXT:    [[TMP54:%.*]] = bitcast i64 [[TMP53]] to double
+// CHECK-NEXT:    [[TMP55:%.*]] = extractvalue { i64, i1 } [[TMP52]], 1
+// CHECK-NEXT:    br i1 [[TMP55]], label [[DX_ATOMIC_EXIT11:%.*]], label [[DX_ATOMIC_CONT12:%.*]]
+// CHECK:       dx.atomic.cont12:
+// CHECK-NEXT:    store double [[TMP54]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT11]]
+// CHECK:       dx.atomic.exit11:
+// CHECK-NEXT:    [[TMP56:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP57:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP58:%.*]] = bitcast double [[TMP56]] to i64
+// CHECK-NEXT:    [[TMP59:%.*]] = bitcast double [[TMP57]] to i64
+// CHECK-NEXT:    [[TMP60:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP58]], i64 [[TMP59]] release acquire, align 8
+// CHECK-NEXT:    [[TMP61:%.*]] = extractvalue { i64, i1 } [[TMP60]], 0
+// CHECK-NEXT:    [[TMP62:%.*]] = bitcast i64 [[TMP61]] to double
+// CHECK-NEXT:    [[TMP63:%.*]] = extractvalue { i64, i1 } [[TMP60]], 1
+// CHECK-NEXT:    br i1 [[TMP63]], label [[DX_ATOMIC_EXIT13:%.*]], label [[DX_ATOMIC_CONT14:%.*]]
+// CHECK:       dx.atomic.cont14:
+// CHECK-NEXT:    store double [[TMP62]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT13]]
+// CHECK:       dx.atomic.exit13:
+// CHECK-NEXT:    [[TMP64:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP65:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP66:%.*]] = bitcast double [[TMP64]] to i64
+// CHECK-NEXT:    [[TMP67:%.*]] = bitcast double [[TMP65]] to i64
+// CHECK-NEXT:    [[TMP68:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP66]], i64 [[TMP67]] acq_rel acquire, align 8
+// CHECK-NEXT:    [[TMP69:%.*]] = extractvalue { i64, i1 } [[TMP68]], 0
+// CHECK-NEXT:    [[TMP70:%.*]] = bitcast i64 [[TMP69]] to double
+// CHECK-NEXT:    [[TMP71:%.*]] = extractvalue { i64, i1 } [[TMP68]], 1
+// CHECK-NEXT:    br i1 [[TMP71]], label [[DX_ATOMIC_EXIT15:%.*]], label [[DX_ATOMIC_CONT16:%.*]]
+// CHECK:       dx.atomic.cont16:
+// CHECK-NEXT:    store double [[TMP70]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT15]]
+// CHECK:       dx.atomic.exit15:
+// CHECK-NEXT:    [[TMP72:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP73:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP74:%.*]] = bitcast double [[TMP72]] to i64
+// CHECK-NEXT:    [[TMP75:%.*]] = bitcast double [[TMP73]] to i64
+// CHECK-NEXT:    [[TMP76:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP74]], i64 [[TMP75]] seq_cst acquire, align 8
+// CHECK-NEXT:    [[TMP77:%.*]] = extractvalue { i64, i1 } [[TMP76]], 0
+// CHECK-NEXT:    [[TMP78:%.*]] = bitcast i64 [[TMP77]] to double
+// CHECK-NEXT:    [[TMP79:%.*]] = extractvalue { i64, i1 } [[TMP76]], 1
+// CHECK-NEXT:    br i1 [[TMP79]], label [[DX_ATOMIC_EXIT17:%.*]], label [[DX_ATOMIC_CONT18:%.*]]
+// CHECK:       dx.atomic.cont18:
+// CHECK-NEXT:    store double [[TMP78]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT17]]
+// CHECK:       dx.atomic.exit17:
+// CHECK-NEXT:    [[TMP80:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP81:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP82:%.*]] = bitcast double [[TMP80]] to i64
+// CHECK-NEXT:    [[TMP83:%.*]] = bitcast double [[TMP81]] to i64
+// CHECK-NEXT:    [[TMP84:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP82]], i64 [[TMP83]] monotonic seq_cst, align 8
+// CHECK-NEXT:    [[TMP85:%.*]] = extractvalue { i64, i1 } [[TMP84]], 0
+// CHECK-NEXT:    [[TMP86:%.*]] = bitcast i64 [[TMP85]] to double
+// CHECK-NEXT:    [[TMP87:%.*]] = extractvalue { i64, i1 } [[TMP84]], 1
+// CHECK-NEXT:    br i1 [[TMP87]], label [[DX_ATOMIC_EXIT19:%.*]], label [[DX_ATOMIC_CONT20:%.*]]
+// CHECK:       dx.atomic.cont20:
+// CHECK-NEXT:    store double [[TMP86]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT19]]
+// CHECK:       dx.atomic.exit19:
+// CHECK-NEXT:    [[TMP88:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP89:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP90:%.*]] = bitcast double [[TMP88]] to i64
+// CHECK-NEXT:    [[TMP91:%.*]] = bitcast double [[TMP89]] to i64
+// CHECK-NEXT:    [[TMP92:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP90]], i64 [[TMP91]] acquire seq_cst, align 8
+// CHECK-NEXT:    [[TMP93:%.*]] = extractvalue { i64, i1 } [[TMP92]], 0
+// CHECK-NEXT:    [[TMP94:%.*]] = bitcast i64 [[TMP93]] to double
+// CHECK-NEXT:    [[TMP95:%.*]] = extractvalue { i64, i1 } [[TMP92]], 1
+// CHECK-NEXT:    br i1 [[TMP95]], label [[DX_ATOMIC_EXIT21:%.*]], label [[DX_ATOMIC_CONT22:%.*]]
+// CHECK:       dx.atomic.cont22:
+// CHECK-NEXT:    store double [[TMP94]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT21]]
+// CHECK:       dx.atomic.exit21:
+// CHECK-NEXT:    [[TMP96:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP97:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP98:%.*]] = bitcast double [[TMP96]] to i64
+// CHECK-NEXT:    [[TMP99:%.*]] = bitcast double [[TMP97]] to i64
+// CHECK-NEXT:    [[TMP100:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP98]], i64 [[TMP99]] release seq_cst, align 8
+// CHECK-NEXT:    [[TMP101:%.*]] = extractvalue { i64, i1 } [[TMP100]], 0
+// CHECK-NEXT:    [[TMP102:%.*]] = bitcast i64 [[TMP101]] to double
+// CHECK-NEXT:    [[TMP103:%.*]] = extractvalue { i64, i1 } [[TMP100]], 1
+// CHECK-NEXT:    br i1 [[TMP103]], label [[DX_ATOMIC_EXIT23:%.*]], label [[DX_ATOMIC_CONT24:%.*]]
+// CHECK:       dx.atomic.cont24:
+// CHECK-NEXT:    store double [[TMP102]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT23]]
+// CHECK:       dx.atomic.exit23:
+// CHECK-NEXT:    [[TMP104:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP105:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP106:%.*]] = bitcast double [[TMP104]] to i64
+// CHECK-NEXT:    [[TMP107:%.*]] = bitcast double [[TMP105]] to i64
+// CHECK-NEXT:    [[TMP108:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP106]], i64 [[TMP107]] acq_rel seq_cst, align 8
+// CHECK-NEXT:    [[TMP109:%.*]] = extractvalue { i64, i1 } [[TMP108]], 0
+// CHECK-NEXT:    [[TMP110:%.*]] = bitcast i64 [[TMP109]] to double
+// CHECK-NEXT:    [[TMP111:%.*]] = extractvalue { i64, i1 } [[TMP108]], 1
+// CHECK-NEXT:    br i1 [[TMP111]], label [[DX_ATOMIC_EXIT25:%.*]], label [[DX_ATOMIC_CONT26:%.*]]
+// CHECK:       dx.atomic.cont26:
+// CHECK-NEXT:    store double [[TMP110]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT25]]
+// CHECK:       dx.atomic.exit25:
+// CHECK-NEXT:    [[TMP112:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP113:%.*]] = load double, ptr [[DV]], align 8
+// CHECK-NEXT:    [[TMP114:%.*]] = bitcast double [[TMP112]] to i64
+// CHECK-NEXT:    [[TMP115:%.*]] = bitcast double [[TMP113]] to i64
+// CHECK-NEXT:    [[TMP116:%.*]] = cmpxchg ptr [[DX]], i64 [[TMP114]], i64 [[TMP115]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP117:%.*]] = extractvalue { i64, i1 } [[TMP116]], 0
+// CHECK-NEXT:    [[TMP118:%.*]] = bitcast i64 [[TMP117]] to double
+// CHECK-NEXT:    [[TMP119:%.*]] = extractvalue { i64, i1 } [[TMP116]], 1
+// CHECK-NEXT:    br i1 [[TMP119]], label [[DX_ATOMIC_EXIT27:%.*]], label [[DX_ATOMIC_CONT28:%.*]]
+// CHECK:       dx.atomic.cont28:
+// CHECK-NEXT:    store double [[TMP118]], ptr [[DD]], align 8
+// CHECK-NEXT:    br label [[DX_ATOMIC_EXIT27]]
+// CHECK:       dx.atomic.exit27:
+// CHECK-NEXT:    [[TMP120:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP121:%.*]] = atomicrmw fmax ptr [[DX]], double [[TMP120]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP122:%.*]] = load double, ptr [[DE]], align 8
+// CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw fmin ptr [[DX]], double [[TMP122]] monotonic, align 8
+// CHECK-NEXT:    [[TMP124:%.*]] = load double, ptr [[DX]], align 8
+// CHECK-NEXT:    ret double [[TMP124]]
 //
 //
 // SIMD-ONLY0-LABEL: @foo(
@@ -62024,89 +60961,234 @@ double fail_dxevd() {
 // SIMD-ONLY0-NEXT:    [[TMP180:%.*]] = load double, ptr [[DV]], align 8
 // SIMD-ONLY0-NEXT:    ret double [[TMP180]]
 //
-// CHECK-LABEL: {{.+}}fail_dxevd{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:    {{.+}}cmpxchg ptr {{.+}} monotonic monotonic{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire monotonic{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} release monotonic{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel monotonic{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}}cmpxchg ptr {{.+}} seq_cst monotonic{{.+}}
-// CHECK:    {{.+}}__kmpc_flush{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} monotonic acquire{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire acquire{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} release acquire{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel acquire{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} seq_cst acquire{{.+}}
-// CHECK:    {{.+}}__kmpc_flush{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} monotonic seq_cst{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire seq_cst{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} release seq_cst{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel seq_cst{{.+}}
-// CHECK:       {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
-// CHECK:    {{.+}}cmpxchg ptr {{.+}} seq_cst seq_cst{{.+}}
-// CHECK:    call void {{.+}}__kmpc_flush{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} atomicrmw fmax {{.+}} seq_cst{{.+}}
-// CHECK-NEXT:  call void {{.+}}__kmpc_flush{{.+}}
-// CHECK-NEXT:  {{.+}} load double,{{.+}}
-// CHECK-NEXT:  {{.+}} atomicrmw fmin {{.+}} monotonic{{.+}}
-// CHECK:    ret double {{.+}}
+//
+// SIMD-ONLY0-LABEL: @fail_dxevd(
+// SIMD-ONLY0-NEXT:  entry:
+// SIMD-ONLY0-NEXT:    [[DX:%.*]] = alloca double, align 8
+// SIMD-ONLY0-NEXT:    [[DV:%.*]] = alloca double, align 8
+// SIMD-ONLY0-NEXT:    [[DE:%.*]] = alloca double, align 8
+// SIMD-ONLY0-NEXT:    [[DD:%.*]] = alloca double, align 8
+// SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP:%.*]] = fcmp oeq double [[TMP0]], [[TMP1]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+// SIMD-ONLY0:       if.then:
+// SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP2]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END:%.*]]
+// SIMD-ONLY0:       if.else:
+// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP3]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END]]
+// SIMD-ONLY0:       if.end:
+// SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP1:%.*]] = fcmp oeq double [[TMP4]], [[TMP5]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_ELSE3:%.*]]
+// SIMD-ONLY0:       if.then2:
+// SIMD-ONLY0-NEXT:    [[TMP6:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP6]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END4:%.*]]
+// SIMD-ONLY0:       if.else3:
+// SIMD-ONLY0-NEXT:    [[TMP7:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP7]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END4]]
+// SIMD-ONLY0:       if.end4:
+// SIMD-ONLY0-NEXT:    [[TMP8:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP9:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP5:%.*]] = fcmp oeq double [[TMP8]], [[TMP9]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP5]], label [[IF_THEN6:%.*]], label [[IF_ELSE7:%.*]]
+// SIMD-ONLY0:       if.then6:
+// SIMD-ONLY0-NEXT:    [[TMP10:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP10]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END8:%.*]]
+// SIMD-ONLY0:       if.else7:
+// SIMD-ONLY0-NEXT:    [[TMP11:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP11]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END8]]
+// SIMD-ONLY0:       if.end8:
+// SIMD-ONLY0-NEXT:    [[TMP12:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP13:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP9:%.*]] = fcmp oeq double [[TMP12]], [[TMP13]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP9]], label [[IF_THEN10:%.*]], label [[IF_ELSE11:%.*]]
+// SIMD-ONLY0:       if.then10:
+// SIMD-ONLY0-NEXT:    [[TMP14:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP14]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END12:%.*]]
+// SIMD-ONLY0:       if.else11:
+// SIMD-ONLY0-NEXT:    [[TMP15:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP15]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END12]]
+// SIMD-ONLY0:       if.end12:
+// SIMD-ONLY0-NEXT:    [[TMP16:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP17:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP13:%.*]] = fcmp oeq double [[TMP16]], [[TMP17]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP13]], label [[IF_THEN14:%.*]], label [[IF_ELSE15:%.*]]
+// SIMD-ONLY0:       if.then14:
+// SIMD-ONLY0-NEXT:    [[TMP18:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP18]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END16:%.*]]
+// SIMD-ONLY0:       if.else15:
+// SIMD-ONLY0-NEXT:    [[TMP19:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP19]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END16]]
+// SIMD-ONLY0:       if.end16:
+// SIMD-ONLY0-NEXT:    [[TMP20:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP21:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP17:%.*]] = fcmp oeq double [[TMP20]], [[TMP21]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP17]], label [[IF_THEN18:%.*]], label [[IF_ELSE19:%.*]]
+// SIMD-ONLY0:       if.then18:
+// SIMD-ONLY0-NEXT:    [[TMP22:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP22]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END20:%.*]]
+// SIMD-ONLY0:       if.else19:
+// SIMD-ONLY0-NEXT:    [[TMP23:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP23]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END20]]
+// SIMD-ONLY0:       if.end20:
+// SIMD-ONLY0-NEXT:    [[TMP24:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP25:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP21:%.*]] = fcmp oeq double [[TMP24]], [[TMP25]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP21]], label [[IF_THEN22:%.*]], label [[IF_ELSE23:%.*]]
+// SIMD-ONLY0:       if.then22:
+// SIMD-ONLY0-NEXT:    [[TMP26:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP26]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END24:%.*]]
+// SIMD-ONLY0:       if.else23:
+// SIMD-ONLY0-NEXT:    [[TMP27:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP27]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END24]]
+// SIMD-ONLY0:       if.end24:
+// SIMD-ONLY0-NEXT:    [[TMP28:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP29:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP25:%.*]] = fcmp oeq double [[TMP28]], [[TMP29]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP25]], label [[IF_THEN26:%.*]], label [[IF_ELSE27:%.*]]
+// SIMD-ONLY0:       if.then26:
+// SIMD-ONLY0-NEXT:    [[TMP30:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP30]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END28:%.*]]
+// SIMD-ONLY0:       if.else27:
+// SIMD-ONLY0-NEXT:    [[TMP31:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP31]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END28]]
+// SIMD-ONLY0:       if.end28:
+// SIMD-ONLY0-NEXT:    [[TMP32:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP33:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP29:%.*]] = fcmp oeq double [[TMP32]], [[TMP33]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP29]], label [[IF_THEN30:%.*]], label [[IF_ELSE31:%.*]]
+// SIMD-ONLY0:       if.then30:
+// SIMD-ONLY0-NEXT:    [[TMP34:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP34]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END32:%.*]]
+// SIMD-ONLY0:       if.else31:
+// SIMD-ONLY0-NEXT:    [[TMP35:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP35]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END32]]
+// SIMD-ONLY0:       if.end32:
+// SIMD-ONLY0-NEXT:    [[TMP36:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP37:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP33:%.*]] = fcmp oeq double [[TMP36]], [[TMP37]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP33]], label [[IF_THEN34:%.*]], label [[IF_ELSE35:%.*]]
+// SIMD-ONLY0:       if.then34:
+// SIMD-ONLY0-NEXT:    [[TMP38:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP38]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END36:%.*]]
+// SIMD-ONLY0:       if.else35:
+// SIMD-ONLY0-NEXT:    [[TMP39:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP39]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END36]]
+// SIMD-ONLY0:       if.end36:
+// SIMD-ONLY0-NEXT:    [[TMP40:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP41:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP37:%.*]] = fcmp oeq double [[TMP40]], [[TMP41]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP37]], label [[IF_THEN38:%.*]], label [[IF_ELSE39:%.*]]
+// SIMD-ONLY0:       if.then38:
+// SIMD-ONLY0-NEXT:    [[TMP42:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP42]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END40:%.*]]
+// SIMD-ONLY0:       if.else39:
+// SIMD-ONLY0-NEXT:    [[TMP43:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP43]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END40]]
+// SIMD-ONLY0:       if.end40:
+// SIMD-ONLY0-NEXT:    [[TMP44:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP45:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP41:%.*]] = fcmp oeq double [[TMP44]], [[TMP45]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP41]], label [[IF_THEN42:%.*]], label [[IF_ELSE43:%.*]]
+// SIMD-ONLY0:       if.then42:
+// SIMD-ONLY0-NEXT:    [[TMP46:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP46]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END44:%.*]]
+// SIMD-ONLY0:       if.else43:
+// SIMD-ONLY0-NEXT:    [[TMP47:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP47]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END44]]
+// SIMD-ONLY0:       if.end44:
+// SIMD-ONLY0-NEXT:    [[TMP48:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP49:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP45:%.*]] = fcmp oeq double [[TMP48]], [[TMP49]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP45]], label [[IF_THEN46:%.*]], label [[IF_ELSE47:%.*]]
+// SIMD-ONLY0:       if.then46:
+// SIMD-ONLY0-NEXT:    [[TMP50:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP50]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END48:%.*]]
+// SIMD-ONLY0:       if.else47:
+// SIMD-ONLY0-NEXT:    [[TMP51:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP51]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END48]]
+// SIMD-ONLY0:       if.end48:
+// SIMD-ONLY0-NEXT:    [[TMP52:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP53:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP49:%.*]] = fcmp oeq double [[TMP52]], [[TMP53]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP49]], label [[IF_THEN50:%.*]], label [[IF_ELSE51:%.*]]
+// SIMD-ONLY0:       if.then50:
+// SIMD-ONLY0-NEXT:    [[TMP54:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP54]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END52:%.*]]
+// SIMD-ONLY0:       if.else51:
+// SIMD-ONLY0-NEXT:    [[TMP55:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP55]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END52]]
+// SIMD-ONLY0:       if.end52:
+// SIMD-ONLY0-NEXT:    [[TMP56:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP57:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP53:%.*]] = fcmp oeq double [[TMP56]], [[TMP57]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP53]], label [[IF_THEN54:%.*]], label [[IF_ELSE55:%.*]]
+// SIMD-ONLY0:       if.then54:
+// SIMD-ONLY0-NEXT:    [[TMP58:%.*]] = load double, ptr [[DV]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP58]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END56:%.*]]
+// SIMD-ONLY0:       if.else55:
+// SIMD-ONLY0-NEXT:    [[TMP59:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    store double [[TMP59]], ptr [[DD]], align 8
+// SIMD-ONLY0-NEXT:    br label [[IF_END56]]
+// SIMD-ONLY0:       if.end56:
+// SIMD-ONLY0-NEXT:    [[TMP60:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP61:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP57:%.*]] = fcmp olt double [[TMP60]], [[TMP61]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP57]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// SIMD-ONLY0:       cond.true:
+// SIMD-ONLY0-NEXT:    [[TMP62:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    br label [[COND_END:%.*]]
+// SIMD-ONLY0:       cond.false:
+// SIMD-ONLY0-NEXT:    [[TMP63:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[COND_END]]
+// SIMD-ONLY0:       cond.end:
+// SIMD-ONLY0-NEXT:    [[COND:%.*]] = phi double [ [[TMP62]], [[COND_TRUE]] ], [ [[TMP63]], [[COND_FALSE]] ]
+// SIMD-ONLY0-NEXT:    store double [[COND]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP64:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP65:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    [[CMP58:%.*]] = fcmp ogt double [[TMP64]], [[TMP65]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP58]], label [[COND_TRUE59:%.*]], label [[COND_FALSE60:%.*]]
+// SIMD-ONLY0:       cond.true59:
+// SIMD-ONLY0-NEXT:    [[TMP66:%.*]] = load double, ptr [[DE]], align 8
+// SIMD-ONLY0-NEXT:    br label [[COND_END61:%.*]]
+// SIMD-ONLY0:       cond.false60:
+// SIMD-ONLY0-NEXT:    [[TMP67:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    br label [[COND_END61]]
+// SIMD-ONLY0:       cond.end61:
+// SIMD-ONLY0-NEXT:    [[COND62:%.*]] = phi double [ [[TMP66]], [[COND_TRUE59]] ], [ [[TMP67]], [[COND_FALSE60]] ]
+// SIMD-ONLY0-NEXT:    store double [[COND62]], ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP68:%.*]] = load double, ptr [[DX]], align 8
+// SIMD-ONLY0-NEXT:    ret double [[TMP68]]
+//

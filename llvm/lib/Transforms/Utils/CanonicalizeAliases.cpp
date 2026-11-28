@@ -71,5 +71,9 @@ PreservedAnalyses CanonicalizeAliasesPass::run(Module &M,
   if (!canonicalizeAliases(M))
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  // Only alias aliasees were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

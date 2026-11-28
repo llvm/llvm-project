@@ -6,7 +6,7 @@
 subroutine combined_do(x)
   integer :: x, i
   ! CHECK: omp.parallel {
-  ! CHECK: omp.wsloop{{.*}}reduction(mod: task, @add_reduction_i32
+  ! CHECK: omp.wsloop{{.*}}reduction(task @add_reduction_i32
   !$omp parallel do reduction(task, +: x)
   do i = 1, 4
     x = x + 1
@@ -18,7 +18,7 @@ end subroutine
 subroutine combined_sections(x)
   integer :: x
   ! CHECK: omp.parallel {
-  ! CHECK: omp.sections reduction(mod: task, @add_reduction_i32
+  ! CHECK: omp.sections reduction(task @add_reduction_i32
   !$omp parallel sections reduction(task, +: x)
   !$omp section
   x = x + 1
@@ -30,7 +30,7 @@ subroutine combined_target(x)
   integer :: x
   ! CHECK: omp.map.info{{.*}}map_clauses(tofrom)
   ! CHECK: omp.target{{.*}}map_entries
-  ! CHECK: omp.parallel reduction(mod: task, @add_reduction_i32
+  ! CHECK: omp.parallel reduction(task @add_reduction_i32
   !$omp target parallel reduction(task, +: x)
   x = x + 1
   !$omp end target parallel

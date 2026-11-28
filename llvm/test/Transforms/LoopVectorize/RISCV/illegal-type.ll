@@ -122,7 +122,7 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, <32 x ptr> [[STEP_ADD]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <32 x ptr> [[STEP_ADD]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <32 x ptr> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <32 x i1> [[TMP7]], i64 31
 ; CHECK-NEXT:    store i1 [[TMP8]], ptr [[DST:%.*]], align 1

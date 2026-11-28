@@ -28,3 +28,9 @@ bool MipsTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
          std::tie(C2.Insns, C2NumRegs, C2.AddRecCost, C2.NumIVMuls,
                   C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
+
+bool MipsTTIImpl::supportsTailCalls() const {
+  // The backend makes tail calls only with -mips-tail-calls, and never in
+  // MIPS16 code, so a call marked musttail would be a fatal error otherwise.
+  return ST->getCLOpts().tail_calls && !ST->inMips16Mode();
+}

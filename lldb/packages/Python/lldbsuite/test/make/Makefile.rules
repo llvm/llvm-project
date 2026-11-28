@@ -255,13 +255,17 @@ ifeq ($(CC_TYPE), clang)
 endif
 
 ifeq "$(MAKE_PDB)" "YES"
-	DEBUG_INFO_FLAG ?= -g -gcodeview
+	DEBUG_INFO_FLAG ?= -g -gcodeview -gcolumn-info
 endif
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
+# -debug:none -debug:dwarf is passed to the linker in that order to first 
+# overwrite the default -debug:full (added by clang) which would otherwise 
+# create a PDB and secondly -debug:dwarf to add a symbol table and include
+# dwarf chunks.
 ifeq "$(OS)" "Windows_NT"
-	DEBUG_INFO_FLAG ?= -gdwarf
+	DEBUG_INFO_FLAG ?= -gdwarf -Wl,-debug:none -Wl,-debug:dwarf
 endif
 
 DEBUG_INFO_FLAG ?= -g
@@ -682,17 +686,23 @@ $(PCH_OUTPUT) : $(PCH_CXX_SOURCE) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
 endif
 
+# The compiler can write $*.d after $@. Touch $@ so that it stays newer than
+# its $*.d prerequisite.
 %.o: %.c %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.cpp %.d $(PCH_OUTPUT) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.m %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 %.o: %.mm %.d $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(call TOUCH,$@)
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create

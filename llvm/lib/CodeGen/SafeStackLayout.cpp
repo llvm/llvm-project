@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SafeStackLayout.h"
+#include "CodeGenOptions.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -19,10 +19,6 @@ using namespace llvm;
 using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safestacklayout"
-
-static cl::opt<bool> ClLayout("safe-stack-layout",
-                              cl::desc("enable safe stack layout"), cl::Hidden,
-                              cl::init(true));
 
 LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
   OS << "Stack regions:\n";
@@ -49,7 +45,7 @@ static unsigned AdjustStackOffset(unsigned Offset, unsigned Size,
 }
 
 void StackLayout::layoutObject(StackObject &Obj) {
-  if (!ClLayout) {
+  if (!Opts.safe_stack_layout) {
     // If layout is disabled, just grab the next aligned address.
     // This effectively disables stack coloring as well.
     unsigned LastRegionEnd = Regions.empty() ? 0 : Regions.back().End;

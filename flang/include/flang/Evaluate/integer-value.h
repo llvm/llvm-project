@@ -14,6 +14,7 @@
 #include "flang/Evaluate/object-sizes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
@@ -42,11 +43,19 @@ public:
   struct PowerWithErrors;
 
   IntegerValue();
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
+  ~IntegerValue() = default;
+  IntegerValue(const IntegerValue &) = default;
+  IntegerValue(IntegerValue &&) = default;
+  IntegerValue &operator=(const IntegerValue &) = default;
+  IntegerValue &operator=(IntegerValue &&) = default;
+#else
   ~IntegerValue();
   IntegerValue(const IntegerValue &);
   IntegerValue(IntegerValue &&);
   IntegerValue &operator=(const IntegerValue &);
   IntegerValue &operator=(IntegerValue &&);
+#endif
 
   IntegerValue(int kind, const IntegerValue &x) : IntegerValue(x) {
     CHECK(x.kind() == kind);
@@ -337,15 +346,11 @@ private:
   static IntegerValue FromImpl(const IntegerValueImpl &x);
   static IntegerValue FromImpl(IntegerValueImpl &&x);
 
-  IntegerValueImpl &impl() {
-    return *reinterpret_cast<IntegerValueImpl *>(this);
-  }
-  const IntegerValueImpl &impl() const {
-    return *reinterpret_cast<const IntegerValueImpl *>(this);
-  }
+  IntegerValueImpl &impl();
+  const IntegerValueImpl &impl() const;
 
-  [[maybe_unused]] alignas(
-      detail::kIntegerObjectAlign) char opaque_[detail::kIntegerObjectSize];
+  alignas(detail::kIntegerObjectAlign)
+      std::byte opaque_[detail::kIntegerObjectSize];
 };
 
 struct IntegerValue::ValueWithOverflow {

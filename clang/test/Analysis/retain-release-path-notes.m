@@ -55,21 +55,21 @@ void creationViaCFCreate (void) {
 
 void acquisitionViaMethod (Foo *foo) {
   id leaked = [foo methodWithValue]; // expected-note{{Method returns an Objective-C object with a +0 retain count}}
-  [leaked retain]; // expected-note{{Reference count incremented. The object now has a +1 retain count}}
-  [leaked retain]; // expected-note{{Reference count incremented. The object now has a +2 retain count}}
-  [leaked release]; // expected-note{{Reference count decremented. The object now has a +1 retain count}}
+  [leaked retain]; // expected-note{{Reference count incremented; the object now has a +1 retain count}}
+  [leaked retain]; // expected-note{{Reference count incremented; the object now has a +2 retain count}}
+  [leaked release]; // expected-note{{Reference count decremented; the object now has a +1 retain count}}
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 void acquisitionViaProperty (Foo *foo) {
   id leaked = foo.propertyValue; // expected-note{{Property returns an Objective-C object with a +0 retain count}}
-  [leaked retain]; // expected-note{{Reference count incremented. The object now has a +1 retain count}}
+  [leaked retain]; // expected-note{{Reference count incremented; the object now has a +1 retain count}}
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 void acquisitionViaCFFunction (void) {
   CFTypeRef leaked = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type 'CFTypeRef' with a +0 retain count}}
-  CFRetain(leaked); // expected-note{{Reference count incremented. The object now has a +1 retain count}}
+  CFRetain(leaked); // expected-note{{Reference count incremented; the object now has a +1 retain count}}
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
@@ -112,7 +112,7 @@ CFTypeRef CFCopyRuleViolation (void) {
 
 CFTypeRef CFGetRuleViolation (void) {
   CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type 'CFTypeRef' with a +1 retain count}}
-  return object; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'object' is returned from a function whose name ('CFGetRuleViolation') does not contain 'Copy' or 'Create'.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation}}
+  return object; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'object' is returned from a function whose name ('CFGetRuleViolation') does not contain 'Copy' or 'Create'; violating the naming convention rules given in the Memory Management Guide for Core Foundation}}
 }
 
 @implementation Foo (FundamentalMemoryManagementRules)
@@ -133,7 +133,7 @@ CFTypeRef CFGetRuleViolation (void) {
 
 - (id)getViolation {
   id result = [[Foo alloc] init]; // expected-note{{Method returns an instance of Foo with a +1 retain count}}
-  return result; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'result' is returned from a method whose name ('getViolation') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'.  This violates the naming convention rules given in the Memory Management Guide for Cocoa}}
+  return result; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'result' is returned from a method whose name ('getViolation') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'; violating the naming convention rules given in the Memory Management Guide for Cocoa}}
 }
 
 - (id)copyAutorelease {
@@ -283,7 +283,7 @@ void CFAutoreleaseUnownedMixed(void) {
 
 - (void)testOverreleaseUnownedIvar {
   [_unownedProp retain]; // FIXME-note {{Object loaded from instance variable}}
-  // FIXME-note@-1 {{Reference count incremented. The object now has a +1 retain count}}
+  // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_unownedProp release]; // FIXME-note {{Reference count decremented}}
   [_unownedProp release]; // FIXME-note {{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
   // FIXME-warning@-1 {{not owned at this point by the caller}}
@@ -291,25 +291,25 @@ void CFAutoreleaseUnownedMixed(void) {
 
 - (void)testOverreleaseOwnedIvarUse {
   [_ownedProp retain]; // FIXME-note {{Object loaded from instance variable}}
-  // FIXME-note@-1 {{Reference count incremented. The object now has a +1 retain count}}
+  // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ownedProp release]; // FIXME-note {{Reference count decremented}}
-  [_ownedProp release]; // FIXME-note {{Strong instance variable relinquished. Object released}}
+  [_ownedProp release]; // FIXME-note {{Strong instance variable relinquished; object released}}
   [_ownedProp myMethod]; // FIXME-note {{Reference-counted object is used after it is released}}
   // FIXME-warning@-1 {{used after it is released}}
 }
 
 - (void)testOverreleaseIvarOnlyUse {
   [_ivarOnly retain]; // FIXME-note {{Object loaded from instance variable}}
-  // FIXME-note@-1 {{Reference count incremented. The object now has a +1 retain count}}
+  // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ivarOnly release]; // FIXME-note {{Reference count decremented}}
-  [_ivarOnly release]; // FIXME-note {{Strong instance variable relinquished. Object released}}
+  [_ivarOnly release]; // FIXME-note {{Strong instance variable relinquished; object released}}
   [_ivarOnly myMethod]; // FIXME-note {{Reference-counted object is used after it is released}}
   // FIXME-warning@-1 {{used after it is released}}
 }
 
 - (void)testOverreleaseOwnedIvarAutorelease {
   [_ownedProp retain]; // FIXME-note {{Object loaded from instance variable}}
-  // FIXME-note@-1 {{Reference count incremented. The object now has a +1 retain count}}
+  // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ownedProp release]; // FIXME-note {{Reference count decremented}}
   [_ownedProp autorelease]; // FIXME-note {{Object autoreleased}}
   [_ownedProp autorelease]; // FIXME-note {{Object autoreleased}}
@@ -318,7 +318,7 @@ void CFAutoreleaseUnownedMixed(void) {
 
 - (void)testOverreleaseIvarOnlyAutorelease {
   [_ivarOnly retain]; // FIXME-note {{Object loaded from instance variable}}
-  // FIXME-note@-1 {{Reference count incremented. The object now has a +1 retain count}}
+  // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ivarOnly release]; // FIXME-note {{Reference count decremented}}
   [_ivarOnly autorelease]; // FIXME-note {{Object autoreleased}}
   [_ivarOnly autorelease]; // FIXME-note {{Object autoreleased}}

@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHLASMAsmStreamer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Signals.h"
-#include <sstream>
+#include <tuple>
 
 using namespace llvm;
 
@@ -28,49 +31,41 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
   if (IsVerboseAsm)
     EmitComment();
 
-  std::istringstream Stream(Str);
-  SmallVector<std::string> Lines;
-  std::string Line;
-  while (std::getline(Stream, Line, '\n'))
-    Lines.push_back(Line);
+  // The continuation character is repeated at the start of the next line.
+  // If the last character of a line that is continued is a letter or a digit or
+  // one of _$@#, we reuse it as the continuation character by making the next
+  // substring start 1 character sooner, thus "duplicating" that character.
+  // Otherwise, we use an X as the continuation character, and the next line
+  // starts with an X followed by the remaining characters. Returns true if
+  // an X was used.
+  auto EmitContinued = [this](StringRef Chunk) {
+    char C = Chunk.back();
+    bool IsValid = isAlnum(C) || C == '_' || C == '$' || C == '@' || C == '#';
+    FOS << Chunk.drop_back() << (IsValid ? C : 'X');
+  };
 
-  for (auto S : Lines) {
-    if (LLVM_LIKELY(S.length() < ContIndicatorColumn)) {
-      FOS << S;
-      // Each line in HLASM must fill the full 80 characters.
-      FOS.PadToColumn(InstLimit);
-      FOS << "\n";
-    } else {
-      // If last character before end of the line is not a space
-      // we must insert an additional non-space character that
-      // is not part of the statement coding. We just reuse
-      // the existing character by making the new substring start
-      // 1 character sooner, thus "duplicating" that character
-      // If The last character is a space. We insert an X instead.
-      std::string TmpSubStr = S.substr(0, ContIndicatorColumn);
-      if (!TmpSubStr.compare(ContIndicatorColumn - 1, 1, " "))
-        TmpSubStr.replace(ContIndicatorColumn - 1, 1, "X");
+  StringRef Remaining(Str);
+  while (!Remaining.empty()) {
+    StringRef S;
+    std::tie(S, Remaining) = Remaining.split('\n');
+    if (LLVM_LIKELY(S.size() < ContIndicatorColumn)) {
+      FOS << S << '\n';
+      continue;
+    }
 
-      FOS << TmpSubStr;
-      FOS.PadToColumn(InstLimit);
-      FOS << "\n";
+    EmitContinued(S.take_front(ContIndicatorColumn));
+    FOS << '\n';
 
-      size_t Emitted = ContIndicatorColumn - 1;
-
-      while (Emitted < S.length()) {
-        if ((S.length() - Emitted) < ContLen)
-          TmpSubStr = S.substr(Emitted, S.length());
-        else {
-          TmpSubStr = S.substr(Emitted, ContLen);
-          if (!TmpSubStr.compare(ContLen - 1, 1, " "))
-            TmpSubStr.replace(ContLen - 1, 1, "X");
-        }
-        FOS.PadToColumn(ContStartColumn);
-        FOS << TmpSubStr;
-        FOS.PadToColumn(InstLimit);
-        FOS << "\n";
-        Emitted += ContLen - 1;
-      }
+    size_t Emitted = ContIndicatorColumn - 1;
+    while (Emitted < S.size()) {
+      StringRef Chunk = S.substr(Emitted, ContLen);
+      FOS.PadToColumn(ContStartColumn);
+      if (Chunk.size() < ContLen)
+        FOS << Chunk;
+      else
+        EmitContinued(Chunk);
+      FOS << '\n';
+      Emitted += ContLen - 1;
     }
   }
   Str.clear();
@@ -126,6 +121,7 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
 static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
                       GOFF::ESDAlignment Alignment,
                       GOFF::ESDLoadingBehavior LoadBehavior,
+                      GOFF::ESDTaskingBehavior TaskingBehavior,
                       GOFF::ESDExecutable Executable, bool IsReadOnly,
                       uint32_t SortKey, uint8_t FillByteValue,
                       StringRef PartName) {
@@ -138,6 +134,19 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     break;
   case GOFF::ESD_LB_NoLoad:
     OS << ",NOLOAD";
+    break;
+  default:
+    break;
+  }
+  switch (TaskingBehavior) {
+  case GOFF::ESD_TA_NonReus:
+    OS << ",NOTREUS";
+    break;
+  case GOFF::ESD_TA_Reus:
+    OS << ",REUS";
+    break;
+  case GOFF::ESD_TA_Rent:
+    OS << ",RENT";
     break;
   default:
     break;
@@ -207,9 +216,13 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
     changeSection(Sec.getParent(), Subsection);
     if (!Sec.isEmitted()) {
       GOFF::EDAttr ED = Sec.getEDAttributes();
+      GOFF::ESDTaskingBehavior TaskingBehavior =
+          static_cast<MCSectionGOFF *>(Sec.getParent())
+              ->getSDAttributes()
+              .TaskingBehavior;
       emitCATTR(OS, Sec.getName(), ED.Rmode, Sec.getEDAlignment(),
-                ED.LoadBehavior, GOFF::ESD_EXE_Unspecified, ED.IsReadOnly, 0,
-                ED.FillByteValue, StringRef());
+                ED.LoadBehavior, TaskingBehavior, GOFF::ESD_EXE_Unspecified,
+                ED.IsReadOnly, 0, ED.FillByteValue, StringRef());
       if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
         if (BeginSym->getADA()) {
           emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
@@ -228,11 +241,16 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
     MCSectionGOFF *ED = Sec.getParent();
     changeSection(ED->getParent(), Subsection);
     if (!Sec.isEmitted()) {
+      GOFF::ESDTaskingBehavior TaskingBehavior =
+          static_cast<MCSectionGOFF *>(ED->getParent())
+              ->getSDAttributes()
+              .TaskingBehavior;
       GOFF::EDAttr EDAttr = ED->getEDAttributes();
       GOFF::PRAttr PRAttr = Sec.getPRAttributes();
       emitCATTR(OS, ED->getName(), EDAttr.Rmode, ED->getEDAlignment(),
-                EDAttr.LoadBehavior, PRAttr.Executable, EDAttr.IsReadOnly,
-                PRAttr.SortKey, EDAttr.FillByteValue, Sec.getName());
+                EDAttr.LoadBehavior, TaskingBehavior, PRAttr.Executable,
+                EDAttr.IsReadOnly, PRAttr.SortKey, EDAttr.FillByteValue,
+                Sec.getName());
       MCSectionGOFF *ADA =
           Sec.getBeginSymbol() != nullptr
               ? static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())->getADA()
@@ -261,7 +279,7 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   if (!isPowerOf2_64(ByteAlignment))
     report_fatal_error("Only power-of-two alignments are supported ");
 
-  OS << " DS 0";
+  OS.indent(Indent) << "DS 0";
   switch (ValueSize) {
   default:
     llvm_unreachable("Invalid size for machine code value!");
@@ -339,25 +357,68 @@ void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDS(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+static bool isPrintableText(StringRef Text) {
+  return all_of(Text, [](char C) { return isPrint(C); });
+}
+
+// Emit Text inside a character constant, doubling the characters that HLASM
+// would otherwise treat as the delimiter or as a variable substitution.
+static void emitQuotedText(raw_ostream &OS, StringRef Text) {
+  for (char C : Text) {
+    if (C == '\'' || C == '&')
+      OS << C;
+    OS << C;
+  }
+}
+
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
-  if (Data.empty())
-    return;
 
-  OS << " DC ";
-  size_t Len = Data.size();
-  SmallVector<uint8_t> Chars;
-  Chars.resize(Len);
-  OS << "XL" << Len;
-  uint32_t Index = 0;
-  for (uint8_t C : Data) {
-    Chars[Index] = C;
-    Index++;
+  // Printable text is emitted as a character constant: CE for EBCDIC-1047
+  // (converted to ASCII for the output) or CA for ASCII.
+  auto EmitAsString = [this](StringRef Data) {
+    SmallString<MaxXLLen> EBCDICText;
+    ConverterEBCDIC::convertToUTF8(Data, EBCDICText);
+    if (isPrintableText(EBCDICText)) {
+      OS.indent(Indent) << "DC CE'";
+      emitQuotedText(OS, EBCDICText);
+      OS << '\'';
+      return true;
+    }
+    if (isPrintableText(Data)) {
+      OS.indent(Indent) << "DC CA'";
+      emitQuotedText(OS, Data);
+      OS << '\'';
+      return true;
+    }
+    return false;
+  };
+
+  for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
+    StringRef Chunk = Data.substr(I, MaxXLLen);
+    if (!(MayBeString && Chunk.size() > 1 && EmitAsString(Chunk)))
+      OS.indent(Indent) << "DC XL" << Chunk.size() << '\'' << toHex(Chunk)
+                        << '\'';
+    EmitEOL();
   }
+}
 
-  OS << '\'' << toHex(Chars) << '\'';
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/true);
+}
 
+void SystemZHLASMAsmStreamer::emitBinaryData(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/false);
+}
+
+void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  assert(1 <= Size && Size <= 8 && "Invalid size");
+  assert((isUIntN(8 * Size, Value) || isIntN(8 * Size, Value)) &&
+         "Invalid size");
+  OS.indent(Indent) << "DC XL" << Size << '\''
+                    << format_hex_no_prefix(Value, Size * 2, /*Upper=*/true)
+                    << '\'';
   EmitEOL();
 }
 
@@ -379,8 +440,8 @@ void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
   if (Count == 0)
     return;
 
-  OS << " DC " << Count << "XL1'"
-     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  OS.indent(Indent) << "DC " << Count << "XL1'"
+                    << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
   EmitEOL();
 }
 
@@ -483,6 +544,8 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   addEncodingComment(Inst, STI);
   EmitEOL();
 
+  // The instruction printer emits a single leading blank.
+  OS.indent(Indent - 1);
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
@@ -501,7 +564,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
         Sym->getName() !=
         static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
     if (EmitLabelAndEntry) {
-      OS << " ENTRY " << Sym->getName();
+      OS.indent(Indent) << "ENTRY " << Sym->getName();
       EmitEOL();
     }
 
@@ -627,8 +690,17 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
 
+  int64_t AbsValue;
+  const auto *Sec = static_cast<const MCSectionGOFF *>(getCurrentSectionOnly());
+  if (!Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr()) && Size != 8 &&
+      Sec->getParent() && Sec->getParent()->getName() == GOFF::CLASS_WSA) {
+    getContext().reportError(Loc, "address constant in C_WSA64 must be 8 bytes "
+                                  "(z/OS binder restriction IEW2572E)");
+    return;
+  }
+
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  OS << " DC ";
+  OS.indent(Indent) << "DC ";
   emitHLASMValueImpl(Value, Size, true);
   EmitEOL();
 }
@@ -643,7 +715,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
          << Sym.getName() << ")";
       EmitEOL();
     } else {
-      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      OS.indent(Indent) << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " "
+                        << Sym.getName();
       EmitEOL();
     }
     emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
@@ -654,6 +727,6 @@ void SystemZHLASMAsmStreamer::finishImpl() {
   }
 
   // Finish the assembly output.
-  OS << " END";
+  OS.indent(Indent) << "END";
   EmitEOL();
 }

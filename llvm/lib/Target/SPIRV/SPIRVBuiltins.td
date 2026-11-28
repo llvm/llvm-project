@@ -28,6 +28,7 @@ def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
 def NonSemantic_AuxData : InstructionSet<4>;
+def NonSemantic_DebugBreak : InstructionSet<5>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
@@ -209,6 +210,17 @@ class NonSemanticExtInst<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
+def NonSemanticDebugBreakExtInst : GenericEnum {
+  let FilterClass = "NonSemanticDebugBreakExtInst";
+  let NameField = "Name";
+  let ValueField = "Value";
+}
+class NonSemanticDebugBreakExtInst<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+def : NonSemanticDebugBreakExtInst<"DebugBreak", 1>;
+def : ExtendedBuiltin<"DebugBreak", NonSemantic_DebugBreak, 1>;
 // Multiclass used to define at the same time both a demangled builtin record
 // and a corresponding extended builtin record.
 multiclass DemangledExtendedBuiltin<string name, InstructionSet set, int number, bits<8> minNumArgs = 1, bits<8> maxNumArgs = 3> {

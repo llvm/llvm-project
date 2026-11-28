@@ -1,0 +1,272 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv75 -run-pass=global-sched \
+# RUN:   -debug-only=global_sched %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv75 -run-pass=global-sched \
+# RUN:   -enable-def-use-same-packet=false -debug-only=global_sched %s \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=OFF
+
+# A load is pulled up out of a packet in which another instruction redefines
+# its address register. The load reads the old value in that packet, so both
+# dependence checks on the way must allow it:
+#   1. canThisMIBeMoved, the in-packet sibling check for the candidate.
+#   2. canReorderMIs, the walk along the path home, which meets the source
+#      packet again.
+
+# CHECK-DAG: [canThisMIBeMoved] WAR_SameBundle, allow.
+# CHECK-DAG: [canReorderMIs] WAR_SameBundle, allow.
+# OFF-NOT: WAR_SameBundle
+
+--- |
+  target triple = "hexagon"
+
+  define i32 @f0(ptr noalias %p, ptr noalias %q, i32 %n) #0 {
+  entry:
+    %cmp = icmp sgt i32 %n, 0
+    br i1 %cmp, label %loop.preheader, label %exit
+
+  loop.preheader:                                   ; preds = %entry
+    %cgep = getelementptr i8, ptr %p, i32 8
+    br label %loop
+
+  loop:                                             ; preds = %loop.preheader, %loop
+    %lsr.iv = phi ptr [ %cgep, %loop.preheader ], [ %cgep6, %loop ]
+    %i = phi i32 [ %inext, %loop ], [ 0, %loop.preheader ]
+    %s = phi i32 [ %sn, %loop ], [ 0, %loop.preheader ]
+    %cgep4 = getelementptr i8, ptr %lsr.iv, i32 -8
+    %a = load i32, ptr %cgep4, align 4
+    %cgep5 = getelementptr i8, ptr %lsr.iv, i32 -4
+    %b = load i32, ptr %cgep5, align 4
+    %c = load i32, ptr %lsr.iv, align 4
+    %ab = add nsw i32 %a, %b
+    %abc = add nsw i32 %ab, %c
+    %sn = add nsw i32 %s, %abc
+    store i32 %sn, ptr %q, align 4
+    %inext = add nsw i32 %i, 8
+    %done = icmp sge i32 %inext, %n
+    %cgep6 = getelementptr i8, ptr %lsr.iv, i32 32
+    br i1 %done, label %exit, label %loop
+
+  exit:                                             ; preds = %loop, %entry
+    %r = phi i32 [ 0, %entry ], [ %sn, %loop ]
+    ret i32 %r
+  }
+
+  attributes #0 = { nounwind "target-cpu"="hexagonv75" }
+...
+---
+name:            f0
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.4(0x30000000)
+    liveins: $r0, $r1, $r2, $r7
+
+    BUNDLE implicit-def $r3, implicit-def dead $p1, implicit-def $r2, implicit-def $pc, implicit killed $r0, implicit $r2 {
+      renamable $r3 = A2_addi killed renamable $r0, 8
+      renamable $p1 = C2_cmpgti renamable $r2, 0
+      renamable $r2 = A2_padditnew internal $p1, renamable $r2, 7
+      J2_jumpfnew internal $p1, %bb.4, implicit-def $pc
+    }
+
+  bb.1.loop.preheader:
+    successors: %bb.5(0x40000000), %bb.2(0x40000000)
+    liveins: $r1, $r2, $r3, $r7, $r2
+
+    BUNDLE implicit-def $r2, implicit-def $r0, implicit killed $r2 {
+      renamable $r2 = S2_lsr_i_r killed renamable $r2, 3
+      renamable $r0 = A2_tfrsi 0
+    }
+    BUNDLE implicit-def $r4, implicit-def $r2, implicit killed $r2 {
+      renamable $r4 = S2_lsr_i_r renamable $r2, 2
+      renamable $r2 = A2_andir killed renamable $r2, 3
+    }
+    BUNDLE implicit-def $p1, implicit-def dead $p0, implicit-def $r7, implicit-def $pc, implicit $r4, implicit $r3 :: (load (s32) from %ir.lsr.iv) {
+      renamable $p1 = C2_cmpgtui renamable $r4, 1
+      renamable $p0 = C2_cmpgtui renamable $r4, 0
+      renamable $r7 = L2_ploadritnew_io internal $p0, renamable $r3, 0 :: (load (s32) from %ir.lsr.iv)
+      J2_jumptnewpt internal killed $p0, %bb.5, implicit-def $pc
+    }
+
+  bb.2:
+    successors: %bb.8(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r2 {
+      renamable $p0 = C2_cmpgtui renamable $r2, 0
+      J2_jumptnewpt internal $p0, %bb.8, implicit-def $pc
+    }
+
+  bb.3.exit (align 16):
+    liveins: $r0
+
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+
+  bb.4 (align 16):
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $r31 {
+      renamable $r0 = A2_tfrsi 0
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+
+  bb.5 (align 16):
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+    liveins: $p1, $r0, $r1, $r2, $r3, $r4, $r7, $r7
+
+    renamable $r5 = L2_loadri_io renamable $r3, -8 :: (load (s32) from %ir.cgep4)
+    BUNDLE implicit-def $r6, implicit-def $r9, implicit $r3 :: (load (s32) from %ir.cgep5), (load (s32) from %ir.lsr.iv + 32) {
+      renamable $r6 = L2_loadri_io renamable $r3, -4 :: (load (s32) from %ir.cgep5)
+      renamable $r9 = L2_loadri_io renamable $r3, 32 :: (load (s32) from %ir.lsr.iv + 32)
+    }
+    BUNDLE implicit-def $r5, implicit-def $r6, implicit-def $r8, implicit killed $r5, implicit killed $r6, implicit $r3 :: (load (s32) from %ir.cgep4 + 32), (load (s32) from %ir.cgep5 + 32) {
+      renamable $r5 = nsw A2_add killed renamable $r5, killed renamable $r6
+      renamable $r6 = L2_loadri_io renamable $r3, 24 :: (load (s32) from %ir.cgep4 + 32)
+      renamable $r8 = L2_loadri_io renamable $r3, 28 :: (load (s32) from %ir.cgep5 + 32)
+    }
+    BUNDLE implicit-def $r0, implicit-def $r12, implicit-def $r6, implicit killed $r0, implicit killed $r5, implicit killed $r7, implicit $r1, implicit $r3, implicit killed $r6, implicit killed $r8 :: (store (s32) into %ir.q), (load (s32) from %ir.cgep4 + 64) {
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r5, killed renamable $r7
+      S2_storerinew_io renamable $r1, 0, internal renamable $r0 :: (store (s32) into %ir.q)
+      renamable $r12 = L2_loadri_io renamable $r3, 56 :: (load (s32) from %ir.cgep4 + 64)
+      renamable $r6 = nsw A2_add killed renamable $r6, killed renamable $r8
+    }
+    BUNDLE implicit-def $r7, implicit-def $r5, implicit-def $r0, implicit $r3, implicit killed $r0, implicit killed $r6, implicit killed $r9 :: (load (s32) from %ir.lsr.iv + 64), (load (s32) from %ir.cgep5 + 64) {
+      renamable $r7 = L2_loadri_io renamable $r3, 64 :: (load (s32) from %ir.lsr.iv + 64)
+      renamable $r5 = L2_loadri_io renamable $r3, 60 :: (load (s32) from %ir.cgep5 + 64)
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r6, killed renamable $r9
+    }
+    BUNDLE implicit-def $r6, implicit-def $r5, implicit $r1, implicit $r0, implicit $r3, implicit killed $r12, implicit killed $r5 :: (store unknown-size into %ir.q, align 4), (load (s32) from %ir.cgep4 + 96) {
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      renamable $r6 = L2_loadri_io renamable $r3, 88 :: (load (s32) from %ir.cgep4 + 96)
+      renamable $r5 = nsw A2_add killed renamable $r12, killed renamable $r5
+    }
+    BUNDLE implicit-def $r15, implicit-def $r0, implicit-def $r5, implicit-def $r7, implicit $r3, implicit killed $r0, implicit killed $r5, implicit killed $r7, implicit killed $r4 :: (load (s32) from %ir.cgep5 + 96), (load (s32) from %ir.lsr.iv + 96) {
+      $r15 = L2_loadri_io renamable $r3, 92 :: (load (s32) from %ir.cgep5 + 96)
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r5, killed renamable $r7
+      renamable $r5 = L2_loadri_io renamable $r3, 96 :: (load (s32) from %ir.lsr.iv + 96)
+      $r7 = A2_addi killed renamable $r4, -1
+    }
+    BUNDLE implicit-def $r6, implicit-def $r3, implicit-def $lc0, implicit-def $sa0, implicit-def $usr, implicit killed $r6, implicit killed $r15, implicit $r1, implicit $r0, implicit killed $r3, implicit killed $r7 :: (store unknown-size into %ir.q, align 4) {
+      renamable $r6 = nsw A2_add killed renamable $r6, killed $r15
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      renamable $r3 = A2_addi killed renamable $r3, 128
+      J2_loop0r %bb.6, killed $r7, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    }
+    BUNDLE implicit-def $r0, implicit-def $pc, implicit killed $r0, implicit killed $r6, implicit killed $r5, implicit $p1 {
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r6, killed renamable $r5
+      J2_jumpf $p1, %bb.7, implicit-def $pc
+    }
+
+  bb.6 (align 16):
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def $r4, implicit-def $r6, implicit $r3 :: (load (s32) from %ir.cgep5 + 128), (load (s32) from %ir.lsr.iv + 128) {
+      renamable $r4 = L2_loadri_io renamable $r3, -4 :: (load (s32) from %ir.cgep5 + 128)
+      renamable $r6 = L2_loadri_io renamable $r3, 0 :: (load (s32) from %ir.lsr.iv + 128)
+    }
+    BUNDLE implicit-def $r5, implicit $r3, implicit $r1, implicit $r0 :: (load (s32) from %ir.cgep4 + 128), (store unknown-size into %ir.q, align 4) {
+      renamable $r5 = L2_loadri_io renamable $r3, -8 :: (load (s32) from %ir.cgep4 + 128)
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store unknown-size into %ir.q, align 4)
+    }
+    BUNDLE implicit-def $r4, implicit-def $r5, implicit-def $r7, implicit killed $r5, implicit killed $r4, implicit $r3 :: (load (s32) from %ir.cgep4 + 160), (load (s32) from %ir.cgep5 + 160) {
+      renamable $r4 = nsw A2_add killed renamable $r5, killed renamable $r4
+      renamable $r5 = L2_loadri_io renamable $r3, 24 :: (load (s32) from %ir.cgep4 + 160)
+      renamable $r7 = L2_loadri_io renamable $r3, 28 :: (load (s32) from %ir.cgep5 + 160)
+    }
+    BUNDLE implicit-def $r0, implicit-def $r4, implicit-def $r6, implicit-def $r5, implicit killed $r0, implicit killed $r4, implicit killed $r6, implicit $r3, implicit killed $r5, implicit killed $r7 :: (load (s32) from %ir.lsr.iv + 160), (load (s32) from %ir.cgep4 + 224) {
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r4, killed renamable $r6
+      renamable $r4 = L2_loadri_io renamable $r3, 32 :: (load (s32) from %ir.lsr.iv + 160)
+      renamable $r6 = L2_loadri_io renamable $r3, 88 :: (load (s32) from %ir.cgep4 + 224)
+      renamable $r5 = nsw A2_add killed renamable $r5, killed renamable $r7
+    }
+    BUNDLE implicit-def $r7, implicit-def $r0, implicit $r1, implicit killed $r0, implicit $r3, implicit killed $r5, implicit killed $r4 :: (store unknown-size into %ir.q, align 4), (load (s32) from %ir.cgep4 + 192) {
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      renamable $r7 = L2_loadri_io renamable $r3, 56 :: (load (s32) from %ir.cgep4 + 192)
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r5, killed renamable $r4
+    }
+    BUNDLE implicit-def $r9, implicit-def $r8, implicit $r3 :: (load (s32) from %ir.lsr.iv + 192), (load (s32) from %ir.cgep5 + 192) {
+      renamable $r9 = L2_loadri_io renamable $r3, 64 :: (load (s32) from %ir.lsr.iv + 192)
+      renamable $r8 = L2_loadri_io renamable $r3, 60 :: (load (s32) from %ir.cgep5 + 192)
+    }
+    BUNDLE implicit-def $r15, implicit-def $r4, implicit-def $r5, implicit-def $r7, implicit $r3, implicit killed $r7, implicit killed $r8, implicit $r0 :: (load (s32) from %ir.lsr.iv + 224), (load (s32) from %ir.cgep5 + 224) {
+      $r15 = L2_loadri_io renamable $r3, 96 :: (load (s32) from %ir.lsr.iv + 224)
+      renamable $r4 = L2_loadri_io renamable $r3, 92 :: (load (s32) from %ir.cgep5 + 224)
+      renamable $r5 = nsw A2_add killed renamable $r7, killed renamable $r8
+      $r7 = A2_tfr $r0
+    }
+    BUNDLE implicit-def $r3, implicit-def $r7, implicit-def $r4, implicit killed $r3, implicit $r1, implicit killed $r0, implicit killed $r7, implicit killed $r5, implicit killed $r9, implicit killed $r6, implicit killed $r4 :: (store unknown-size into %ir.q, align 4) {
+      renamable $r3 = A2_addi killed renamable $r3, 128
+      S2_storeri_io renamable $r1, 0, killed renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      renamable $r7 = nsw M2_acci killed renamable $r7, killed renamable $r5, killed renamable $r9
+      renamable $r4 = nsw A2_add killed renamable $r6, killed renamable $r4
+    }
+    BUNDLE implicit-def $r7, implicit $r1, implicit killed $r7, implicit killed $r4, implicit killed $r15 :: (store unknown-size into %ir.q, align 4) {
+      S2_storeri_io renamable $r1, 0, renamable $r7 :: (store unknown-size into %ir.q, align 4)
+      renamable $r7 = nsw M2_acci killed renamable $r7, killed renamable $r4, killed $r15
+    }
+    BUNDLE implicit-def $r0, implicit-def $pc, implicit-def $lc0, implicit killed $r7, implicit killed $sa0, implicit $lc0 {
+      $r0 = A2_tfr killed $r7
+      ENDLOOP0 %bb.6, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+    }
+
+  bb.7 (align 16):
+    successors: %bb.8(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r1, implicit $r0, implicit $r2 :: (store unknown-size into %ir.q, align 4) {
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      renamable $p0 = C2_cmpgtui renamable $r2, 0
+      J2_jumpfnewpt internal $p0, %bb.3, implicit-def $pc
+    }
+
+  bb.8.loop (align 16):
+    successors: %bb.9(0x40000000), %bb.10(0x40000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    BUNDLE implicit-def $r5, implicit-def $r4, implicit-def $p0, implicit-def $r2, implicit $r3, implicit killed $r2 :: (load (s32) from %ir.cgep4), (load (s32) from %ir.lsr.iv) {
+      renamable $r5 = L2_loadri_io renamable $r3, -8 :: (load (s32) from %ir.cgep4)
+      renamable $r4 = A2_addi renamable $r2, -1
+      renamable $p0 = C2_cmpgtui killed renamable $r2, 1
+      renamable $r2 = L2_loadri_io renamable $r3, 0 :: (load (s32) from %ir.lsr.iv)
+    }
+    BUNDLE implicit-def $r6, implicit-def $lc0, implicit-def $sa0, implicit-def $usr, implicit-def $r3, implicit killed $r3, implicit killed $r4 :: (load (s32) from %ir.cgep5) {
+      renamable $r6 = L2_loadri_io renamable $r3, -4 :: (load (s32) from %ir.cgep5)
+      J2_loop0r %bb.9, killed renamable $r4, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+      renamable $r3 = A2_addi killed renamable $r3, 32
+    }
+    BUNDLE implicit-def $r4, implicit-def $pc, implicit killed $r5, implicit killed $r6, implicit $p0 {
+      renamable $r4 = nsw A2_add killed renamable $r5, killed renamable $r6
+      J2_jumpf $p0, %bb.10, implicit-def $pc
+    }
+
+  bb.9.loop (align 16):
+    successors: %bb.10(0x04000000), %bb.9(0x7c000000)
+    liveins: $r0, $r1, $r2, $r3, $r4
+
+    BUNDLE implicit-def $r5, implicit-def $r0, implicit-def $r2, implicit $r3, implicit killed $r0, implicit killed $r4, implicit killed $r2 :: (load (s32) from %ir.cgep5 + 32), (load (s32) from %ir.lsr.iv + 32) {
+      renamable $r5 = L2_loadri_io renamable $r3, -4 :: (load (s32) from %ir.cgep5 + 32)
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r4, killed renamable $r2
+      renamable $r2 = L2_loadri_io renamable $r3, 0 :: (load (s32) from %ir.lsr.iv + 32)
+    }
+    BUNDLE implicit-def $r4, implicit-def $r3, implicit killed $r3, implicit $r1, implicit $r0 :: (load (s32) from %ir.cgep4 + 32), (store (s32) into %ir.q) {
+      renamable $r4 = L2_loadri_io renamable $r3, -8 :: (load (s32) from %ir.cgep4 + 32)
+      renamable $r3 = A2_addi killed renamable $r3, 32
+      S2_storeri_io renamable $r1, 0, renamable $r0 :: (store (s32) into %ir.q)
+    }
+    BUNDLE implicit-def $r4, implicit-def $pc, implicit-def $lc0, implicit killed $r4, implicit killed $r5, implicit killed $sa0, implicit $lc0 {
+      renamable $r4 = nsw A2_add killed renamable $r4, killed renamable $r5
+      ENDLOOP0 %bb.9, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit $lc0
+    }
+
+  bb.10 (align 16):
+    liveins: $r0, $r1, $r2, $r4
+
+    BUNDLE implicit-def dead $r0, implicit-def $pc, implicit killed $r0, implicit killed $r4, implicit killed $r2, implicit killed $r1, implicit killed $r31 :: (store unknown-size into %ir.q, align 4) {
+      renamable $r0 = nsw M2_acci killed renamable $r0, killed renamable $r4, killed renamable $r2
+      S2_storerinew_io killed renamable $r1, 0, internal renamable $r0 :: (store unknown-size into %ir.q, align 4)
+      PS_jmpret killed $r31, implicit-def $pc, implicit internal killed $r0
+    }
+...

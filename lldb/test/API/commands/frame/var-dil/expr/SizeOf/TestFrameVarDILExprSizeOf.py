@@ -17,8 +17,6 @@ class TestFrameVarDILExprSizeOf(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         frame = thread.GetFrameAtIndex(0)
         int_size = frame.GetValueForVariablePath("int_size").GetValue()
         short_size = frame.GetValueForVariablePath("short_size").GetValue()

@@ -11,8 +11,7 @@
 
 #include "RegisterInfoLinux_x86.h"
 
-class RegisterInfoLinux_i386
-    : public lldb_private::RegisterInfoLinux_x86 {
+class RegisterInfoLinux_i386 : public lldb_private::RegisterInfoLinux_x86 {
 public:
   RegisterInfoLinux_i386(const lldb_private::ArchSpec &target_arch);
 

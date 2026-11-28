@@ -1,8 +1,8 @@
 // Check various edge cases for truncf/extf ops involving f32 and the f4E2M1FN,
-// f8E4M3FN and f8E5M2 types.
+// f8E4M3FN, f8E5M2 and f8E8M0FNU types.
 
 // RUN: mlir-opt %s --convert-func-to-llvm \
-// RUN:             --arith-expand="include-f4e2m1=true include-f8e4m3fn=true include-f8e5m2=true" \
+// RUN:             --arith-expand="include-f4e2m1=true include-f8e4m3fn=true include-f8e5m2=true include-f8e8m0=true" \
 // RUN:             --convert-arith-to-llvm --convert-vector-to-llvm \
 // RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-runner -e entry --entry-point-result=void \
@@ -55,6 +55,14 @@ func.func @check_truncf_f8E5M2(%in : f32) -> () {
   %bitcast = arith.bitcast %trunc : f8E5M2 to i8
   %res = arith.extui %bitcast : i8 to i64
   vector.print %res : i64
+  return
+}
+
+// F8E8M0FNU has no zero; the all zeros encoding is 2^-127 and 0xff is NaN.
+func.func @check_extf_f8E8M0FNU(%in : i8) -> () {
+  %bitcast = arith.bitcast %in : i8 to f8E8M0FNU
+  %res = arith.extf %bitcast : f8E8M0FNU to f32
+  vector.print %res : f32
   return
 }
 
@@ -318,5 +326,23 @@ func.func @entry() {
   // CHECK: -inf
   %lowerE5m2 = arith.truncf %lowerThanMin : f32 to f8E5M2
   func.call @check_extf_f8E5M2(%lowerE5m2) : (f8E5M2) -> ()
+
+  // F8E8M0FNU checks. See the OCP MX spec for the representation.
+  %e8m0Min = arith.constant 0 : i8
+  %e8m0MinNormal = arith.constant 1 : i8
+  %e8m0One = arith.constant 127 : i8
+  %e8m0Max = arith.constant -2 : i8
+  %e8m0NaN = arith.constant -1 : i8
+
+  // CHECK: 5.87747e-39
+  func.call @check_extf_f8E8M0FNU(%e8m0Min) : (i8) -> ()
+  // CHECK: 1.17549e-38
+  func.call @check_extf_f8E8M0FNU(%e8m0MinNormal) : (i8) -> ()
+  // CHECK: 1
+  func.call @check_extf_f8E8M0FNU(%e8m0One) : (i8) -> ()
+  // CHECK: 1.70141e+38
+  func.call @check_extf_f8E8M0FNU(%e8m0Max) : (i8) -> ()
+  // CHECK: {{-?}}nan
+  func.call @check_extf_f8E8M0FNU(%e8m0NaN) : (i8) -> ()
   return
 }

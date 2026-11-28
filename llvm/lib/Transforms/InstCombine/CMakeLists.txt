@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS InstCombineCLOptions.td)
-tablegen(LLVM InstCombineCLOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(InstCombineCLOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(InstCombineCLOptionsTableGen)
 
 add_llvm_component_library(LLVMInstCombine

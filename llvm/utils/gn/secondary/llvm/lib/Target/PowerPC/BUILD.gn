@@ -30,6 +30,12 @@ tablegen("PPCGenRegisterBank") {
   td_file = "PPC.td"
 }
 
+tablegen("PPCOptions") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "PPCOptions.td"
+}
+
 tablegen("PPCGenSDNodeInfo") {
   visibility = [ ":LLVMPowerPCCodeGen" ]
   args = [ "-gen-sd-node-info" ]
@@ -44,6 +50,7 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenGlobalISel",
     ":PPCGenRegisterBank",
     ":PPCGenSDNodeInfo",
+    ":PPCOptions",
     "AsmParser:PPCGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
@@ -55,6 +62,7 @@ static_library("LLVMPowerPCCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

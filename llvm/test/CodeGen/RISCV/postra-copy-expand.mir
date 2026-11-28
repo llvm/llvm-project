@@ -3,17 +3,16 @@
 
 ---
 name:            copy
-tracksRegLiveness: false
 isSSA:           false
 noVRegs:         true
 liveins:
   - { reg: '$v0', virtual-reg: '' }
 body:             |
   bb.0:
-    liveins: $v0
+    liveins: $v0, $v14_v15_v16_v17_v18
 
     ; CHECK-LABEL: name: copy
-    ; CHECK: liveins: $v0
+    ; CHECK: liveins: $v0, $v14_v15_v16_v17_v18
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $v20m2 = VMV2R_V $v14m2, implicit $vtype, implicit $v14_v15_v16_v17_v18
     ; CHECK-NEXT: $v22m2 = VMV2R_V $v16m2, implicit $vtype, implicit $v14_v15_v16_v17_v18

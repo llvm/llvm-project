@@ -44,8 +44,13 @@ class NumberObjectConversionChecker : public Checker<check::ASTCodeBody> {
 public:
   bool Pedantic;
 
+  NumberObjectConversionChecker();
+
   void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
+
+private:
+  StatementMatcher Matcher;
 };
 
 class Callback : public MatchFinder::MatchCallback {
@@ -192,9 +197,7 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
       Conv->getSourceRange());
 }
 
-void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
-                                                     AnalysisManager &AM,
-                                                     BugReporter &BR) const {
+static StatementMatcher buildMatcher() {
   // Currently this matches CoreFoundation opaque pointer typedefs.
   auto CSuspiciousNumberObjectExprM = expr(ignoringParenImpCasts(
       expr(hasType(typedefType(
@@ -333,10 +336,19 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                            ConversionThroughExplicitNumberCastM,
                            ConversionThroughInitializerM)).bind("conv");
 
+  return traverse(TK_AsIs, stmt(forEachDescendant(FinalM)));
+}
+
+NumberObjectConversionChecker::NumberObjectConversionChecker()
+    : Matcher(buildMatcher()) {}
+
+void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
+                                                     AnalysisManager &AM,
+                                                     BugReporter &BR) const {
   MatchFinder F;
   Callback CB(this, BR, AM.getAnalysisDeclContext(D));
 
-  F.addMatcher(traverse(TK_AsIs, stmt(forEachDescendant(FinalM))), &CB);
+  F.addMatcher(Matcher, &CB);
   F.match(*D->getBody(), AM.getASTContext());
 }
 

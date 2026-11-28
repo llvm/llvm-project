@@ -158,6 +158,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is one of SWMMAC instructions.
   field bit IsSWMMAC = 0;
 
+  // A load or store pseudo of the VGPR "as memory" address space (13).
+  field bit VGPRAsMem = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -216,6 +219,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
+
+  let TSFlags{44} = VGPRAsMem;
 
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;

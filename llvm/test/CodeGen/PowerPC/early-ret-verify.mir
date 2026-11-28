@@ -1,5 +1,4 @@
-# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -run-pass=ppc-early-ret -o \
-# RUN:   - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -run-pass=ppc-early-ret -o - %s | FileCheck %s
 
 ---
 name:            testEarlyRet

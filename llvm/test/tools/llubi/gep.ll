@@ -46,6 +46,11 @@ define void @main() {
   %gep_inbounds_valid2 = getelementptr inbounds i8, ptr %alloc, i64 4
   %gep_inbounds_invalid1 = getelementptr inbounds i8, ptr %alloc, i64 -1
   %gep_inbounds_invalid2 = getelementptr inbounds i8, ptr %alloc, i64 5
+  %gep_oob_before = getelementptr i8, ptr %alloc, i64 -1
+  %gep_inbounds_oob_base1 = getelementptr inbounds i8, ptr %gep_oob_before, i64 1
+  %gep_oob_after = getelementptr i8, ptr %alloc, i64 5
+  %gep_inbounds_oob_base2 = getelementptr inbounds i8, ptr %gep_oob_after, i64 -1
+  %gep_inbounds_oob_zero = getelementptr inbounds i8, ptr %gep_oob_after, i64 0
   ; During the successive addition of offsets to the address, the resulting pointer
   ; must remain in bounds of the allocated object at each step.
   %gep_inbounds_invalid3 = getelementptr inbounds %struct, ptr %alloc_struct, i64 1, i32 1, i32 -2
@@ -119,6 +124,11 @@ define void @main() {
 ; CHECK-NEXT:   %gep_inbounds_valid2 = getelementptr inbounds i8, ptr %alloc, i64 4 => ptr 0xC [alloc + 4]
 ; CHECK-NEXT:   %gep_inbounds_invalid1 = getelementptr inbounds i8, ptr %alloc, i64 -1 => poison
 ; CHECK-NEXT:   %gep_inbounds_invalid2 = getelementptr inbounds i8, ptr %alloc, i64 5 => poison
+; CHECK-NEXT:   %gep_oob_before = getelementptr i8, ptr %alloc, i64 -1 => ptr 0x7 [alloc + -1]
+; CHECK-NEXT:   %gep_inbounds_oob_base1 = getelementptr inbounds i8, ptr %gep_oob_before, i64 1 => poison
+; CHECK-NEXT:   %gep_oob_after = getelementptr i8, ptr %alloc, i64 5 => ptr 0xD [alloc + 5]
+; CHECK-NEXT:   %gep_inbounds_oob_base2 = getelementptr inbounds i8, ptr %gep_oob_after, i64 -1 => poison
+; CHECK-NEXT:   %gep_inbounds_oob_zero = getelementptr inbounds i8, ptr %gep_oob_after, i64 0 => ptr 0xD [alloc + 5]
 ; CHECK-NEXT:   %gep_inbounds_invalid3 = getelementptr inbounds %struct, ptr %alloc_struct, i64 1, i32 1, i32 -2 => poison
 ; CHECK-NEXT: Entering function: dead_stack_object
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x2C [alloc]

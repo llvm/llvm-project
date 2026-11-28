@@ -9,7 +9,7 @@ end
 
 subroutine f01
   real :: x
-!ERROR: Invalid reduction operator in IN_REDUCTION clause.
+!ERROR: Invalid reduction operator in IN_REDUCTION clause
 !$omp target in_reduction(.not.: x)
 !$omp end target
 end

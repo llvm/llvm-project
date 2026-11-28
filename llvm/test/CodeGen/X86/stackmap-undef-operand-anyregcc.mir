@@ -55,7 +55,6 @@
 # CHECK-NEXT: .p2align	3
 ---
 name:  undef_anyregcc_patchpoint
-tracksRegLiveness: true
 frameInfo:
   hasPatchPoint:   true
   hasCalls:        true

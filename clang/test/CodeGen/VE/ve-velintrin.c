@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -emit-llvm -triple ve-unknown-linux-gnu \
 // RUN:   -ffreestanding %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple ve-unknown-linux-gnu   -ffreestanding %s -o - | FileCheck %s %}
 
 #include <velintrin.h>
 

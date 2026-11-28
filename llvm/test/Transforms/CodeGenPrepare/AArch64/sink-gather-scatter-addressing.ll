@@ -29,6 +29,35 @@ exit:
   ret <vscale x 4 x float> %ret
 }
 
+; Sink the GEPs of a struct field access, folding the field offset into the
+; scalar base, to make use of scalar+vector addressing modes.
+define <vscale x 4 x float> @gather_field_offsets_sink_gep(ptr %base, <vscale x 4 x i64> %indices, <vscale x 4 x i1> %mask, i1 %cond) {
+; CHECK-LABEL: define <vscale x 4 x float> @gather_field_offsets_sink_gep(
+; CHECK-SAME: ptr [[BASE:%.*]], <vscale x 4 x i64> [[INDICES:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr [12 x i8], ptr [[BASE]], <vscale x 4 x i64> [[INDICES]]
+; CHECK-NEXT:    [[FIELD_PTRS:%.*]] = getelementptr i8, <vscale x 4 x ptr> [[PTRS]], i64 8
+; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
+; CHECK:       cond.block:
+; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[FIELD_PTRS]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+entry:
+  %ptrs = getelementptr [12 x i8], ptr %base, <vscale x 4 x i64> %indices
+  %field.ptrs = getelementptr i8, <vscale x 4 x ptr> %ptrs, i64 8
+  br i1 %cond, label %cond.block, label %exit
+
+cond.block:
+  %load = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 %field.ptrs, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
+  br label %exit
+
+exit:
+  %ret = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %load, %cond.block ]
+  ret <vscale x 4 x float> %ret
+}
+
 ; Sink sext to make use of scalar+sxtw(vector) addressing modes.
 define <vscale x 4 x float> @gather_offsets_sink_sext(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask, i1 %cond) {
 ; CHECK-LABEL: define <vscale x 4 x float> @gather_offsets_sink_sext(

@@ -28,8 +28,27 @@ using namespace clang;
 typedef clang::analyze_format_string::SpecifierResult<ScanfSpecifier>
     ScanfSpecifierResult;
 
-static bool ParseScanList(FormatStringHandler &H, ScanfConversionSpecifier &CS,
-                          const char *&Beg, const char *E) {
+namespace {
+
+class ScanfFormatStringParser : analyze_format_string::FormatStringParser {
+public:
+  ScanfFormatStringParser(FormatStringHandler &H, const LangOptions &LO,
+                          const TargetInfo &Target)
+      : FormatStringParser(H, LO, Target, /*IsScanf=*/true) {}
+
+  ScanfSpecifierResult parseSpecifier(const char *&Beg, const char *E,
+                                      unsigned &argIndex) const;
+
+private:
+  bool parseScanList(ScanfConversionSpecifier &CS, const char *&Beg,
+                     const char *E) const;
+};
+
+} // namespace
+
+bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
+                                            const char *&Beg,
+                                            const char *E) const {
   const char *I = Beg;
   const char *start = I - 1;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
@@ -69,13 +88,11 @@ static bool ParseScanList(FormatStringHandler &H, ScanfConversionSpecifier &CS,
   return false;
 }
 
-// FIXME: Much of this is copy-paste from ParsePrintfSpecifier.
+// FIXME: Much of this is copy-paste from PrintfFormatStringParser.
 // We can possibly refactor.
-static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
-                                                const char *&Beg, const char *E,
-                                                unsigned &argIndex,
-                                                const LangOptions &LO,
-                                                const TargetInfo &Target) {
+ScanfSpecifierResult
+ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
+                                        unsigned &argIndex) const {
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_scanf;
   const char *I = Beg;
@@ -107,7 +124,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   ScanfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (parseArgPosition(FS, Start, I, E))
     return true;
 
   if (I == E) {
@@ -127,7 +144,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(I, E);
+  const OptionalAmount &Amt = parseAmount(I, E);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -140,7 +157,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, /*IsScanf=*/true) && I == E) {
+  if (parseLengthModifier(FS, I, E) && I == E) {
     // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
@@ -244,7 +261,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
   ScanfConversionSpecifier CS(conversionPosition, k);
   if (k == ScanfConversionSpecifier::ScanListArg) {
-    if (ParseScanList(H, CS, I, E))
+    if (parseScanList(CS, I, E))
       return true;
   }
   FS.setConversionSpecifier(CS);
@@ -257,7 +274,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   if (k == ScanfConversionSpecifier::InvalidSpecifier) {
     unsigned Len = I - Beg;
-    if (ParseUTF8InvalidSpecifier(Beg, E, Len)) {
+    if (parseUTF8InvalidSpecifier(Beg, E, Len)) {
       CS.setEndScanList(Beg + Len);
       FS.setConversionSpecifier(CS);
     }
@@ -618,9 +635,9 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
+  ScanfFormatStringParser P(H, LO, Target);
   while (I != E) {
-    const ScanfSpecifierResult &FSR =
-        ParseScanfSpecifier(H, I, E, argIndex, LO, Target);
+    const ScanfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())

@@ -5,7 +5,7 @@
 define void @func_4_8(<4 x i8> %param, ptr %p) {
 ; CHECK-LABEL: func_4_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %r = add <4 x i8> %param, <i8 1, i8 2, i8 3, i8 4>
@@ -16,7 +16,7 @@ define void @func_4_8(<4 x i8> %param, ptr %p) {
 define void @func_4_16(<4 x i16> %param, ptr %p) {
 ; CHECK-LABEL: func_4_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4,u,u,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %r = add <4 x i16> %param, <i16 1, i16 2, i16 3, i16 4>
@@ -27,7 +27,7 @@ define void @func_4_16(<4 x i16> %param, ptr %p) {
 define void @func_8_8(<8 x i8> %param, ptr %p) {
 ; CHECK-LABEL: func_8_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4,1,2,3,4,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %r = add <8 x i8> %param, <i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4>
@@ -38,7 +38,7 @@ define void @func_8_8(<8 x i8> %param, ptr %p) {
 define void @func_2_32(<2 x i32> %param, ptr %p) {
 ; CHECK-LABEL: func_2_32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %r = add <2 x i32> %param, <i32 1, i32 2>

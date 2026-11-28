@@ -20,8 +20,9 @@
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <__start>:
-# CHECK-NEXT:   20000:       balc     0x20030
+# CHECK-NEXT:   20000:       jal     0x20030
 #                                    ^-- 0x20030 gotplt[foo0]
+# CHECK-NEXT:   20004:       nop
 #
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
@@ -46,4 +47,4 @@
   .text
   .global __start
 __start:
-  balc foo0        # R_MIPS_26 against 'foo0' from DSO
+  jal foo0        # R_MIPS_26 against 'foo0' from DSO

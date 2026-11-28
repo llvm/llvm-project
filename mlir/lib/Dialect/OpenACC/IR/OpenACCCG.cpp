@@ -667,9 +667,12 @@ ComputeRegionOp::getKnownLaunchArg(GPUParallelDimAttr parDim) {
 std::optional<uint64_t>
 ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
   auto knownParWidth = getKnownLaunchArg(parDim);
-  if (knownParWidth.has_value())
-    return getConstantIntValue(knownParWidth.value());
-  return {};
+  if (!knownParWidth.has_value())
+    return {};
+  std::optional<int64_t> width = getConstantIntValue(knownParWidth.value());
+  if (!width || *width < 0)
+    return {};
+  return static_cast<uint64_t>(*width);
 }
 
 BlockArgument ComputeRegionOp::appendInputArg(Value value) {

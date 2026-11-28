@@ -1,0 +1,21 @@
+dsymutil --update cannot recompute the relocation map of a mergeable library,
+as the dSYM holds final addresses and no relocations. Check that it keeps the
+map of the dSYM, when updating it into a new bundle, onto itself, or in place.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: dsymutil -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/mergeable-libs/dwarf5/libfoo.dylib -o %t/libfoo.dylib.dSYM
+RUN: cp %t/libfoo.dylib.dSYM/Contents/Resources/Relocations/aarch64/libfoo.dylib.yml \
+RUN:   %t/map.yml
+
+RUN: dsymutil --update %t/libfoo.dylib.dSYM -o %t/updated.dSYM
+RUN: diff %t/map.yml \
+RUN:   %t/updated.dSYM/Contents/Resources/Relocations/aarch64/libfoo.dylib.yml
+
+RUN: dsymutil --update %t/libfoo.dylib.dSYM -o %t/libfoo.dylib.dSYM
+RUN: diff %t/map.yml \
+RUN:   %t/libfoo.dylib.dSYM/Contents/Resources/Relocations/aarch64/libfoo.dylib.yml
+
+RUN: dsymutil --update %t/libfoo.dylib.dSYM
+RUN: diff %t/map.yml \
+RUN:   %t/libfoo.dylib.dSYM/Contents/Resources/Relocations/aarch64/libfoo.dylib.yml

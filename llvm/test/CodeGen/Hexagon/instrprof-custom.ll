@@ -1,5 +1,11 @@
 ; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
 ; RUN: llc -mtriple=hexagon --mattr=+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -stop-after=post-ra-pseudos -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIR
+
+; MIR-LABEL: name: test1
+; MIR: $r0 = A2_tfrsi 999
+; MIR-NEXT: J2_call &my_instrprof_handler,
+; MIR-SAME: implicit $r0,
 
 ; CHECK-LABEL: test1:
 ; CHECK: {{call my_instrprof_handler|r0 = #999}}

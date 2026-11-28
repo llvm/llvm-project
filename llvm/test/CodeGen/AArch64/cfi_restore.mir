@@ -2,7 +2,6 @@
 ---
 name:            fun
 # CHECK: .cfi_startproc
-tracksRegLiveness: true
 frameInfo:
   stackSize:       16
   maxAlignment:    8

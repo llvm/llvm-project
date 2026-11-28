@@ -30,12 +30,6 @@ namespace Fortran::evaluate::value {
 // LOG10(2.)*1E12
 static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 
-// Ignore error about requesting a large alignment not being ABI compatible
-// with older AIX systems.
-#if defined(_AIX)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waix-compat"
-#endif
 // Models IEEE binary floating-point numbers (IEEE 754-2008,
 // ISO/IEC/IEEE 60559.2011).  The first argument to this
 // class template must be (or look like) an instance of Integer<>;
@@ -522,11 +516,20 @@ private:
   // Require alignment, in case code generation on x86_64 decides that our
   // Real object is suitable for SSE2 instructions and then gets surprised
   // by unaligned address.
-  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
-};
-#if defined(_AIX)
-#pragma GCC diagnostic pop
+  // On AIX, -Waix-compat diagnoses passing by value a struct with a 16-byte
+  // aligned member (here, word_ of a Real<Integer<128>>) as not binary
+  // compatible with IBM XL C/C++ for AIX 16.1.0 or older. Compatibility with
+  // those compilers is not a concern: they cannot compile this C++17 code.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Waix-compat"
 #endif
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+};
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format

@@ -17,11 +17,14 @@
 #include "AVRMachineFunctionInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
-
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
@@ -31,17 +34,23 @@ namespace {
 
 /// Expands "placeholder" instructions marked as pseudo into
 /// actual AVR instructions.
-class AVRExpandPseudo : public MachineFunctionPass {
+class AVRExpandPseudoLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AVRExpandPseudo() : MachineFunctionPass(ID) {}
+  AVRExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override { return AVR_EXPAND_PSEUDO_NAME; }
 
-private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class AVRExpandPseudoImpl {
   typedef MachineBasicBlock Block;
   typedef Block::iterator BlockIt;
 
@@ -102,11 +111,14 @@ private:
   bool expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM);
   // Common implementation of ROLBRdR1 and ROLBRdR17.
   bool expandROLBRd(Block &MBB, BlockIt MBBI);
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
 };
 
-char AVRExpandPseudo::ID = 0;
+char AVRExpandPseudoLegacy::ID = 0;
 
-bool AVRExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool AVRExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   BlockIt MBBI = MBB.begin(), E = MBB.end();
@@ -119,7 +131,7 @@ bool AVRExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+bool AVRExpandPseudoImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
 
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
@@ -146,8 +158,8 @@ bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-bool AVRExpandPseudo::expandArith(unsigned OpLo, unsigned OpHi, Block &MBB,
-                                  BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandArith(unsigned OpLo, unsigned OpHi, Block &MBB,
+                                      BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -180,7 +192,7 @@ bool AVRExpandPseudo::expandArith(unsigned OpLo, unsigned OpHi, Block &MBB,
   return true;
 }
 
-bool AVRExpandPseudo::expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -214,8 +226,8 @@ bool AVRExpandPseudo::expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::isLogicImmOpRedundant(unsigned Op,
-                                            unsigned ImmVal) const {
+bool AVRExpandPseudoImpl::isLogicImmOpRedundant(unsigned Op,
+                                                unsigned ImmVal) const {
 
   // ANDI Rd, 0xff is redundant.
   if (Op == AVR::ANDIRdK && ImmVal == 0xff)
@@ -228,7 +240,8 @@ bool AVRExpandPseudo::isLogicImmOpRedundant(unsigned Op,
   return false;
 }
 
-bool AVRExpandPseudo::isLogicRegOpUndef(unsigned Op, unsigned ImmVal) const {
+bool AVRExpandPseudoImpl::isLogicRegOpUndef(unsigned Op,
+                                            unsigned ImmVal) const {
   // ANDI Rd, 0x00 clears all input bits.
   if (Op == AVR::ANDIRdK && ImmVal == 0x00)
     return true;
@@ -240,7 +253,8 @@ bool AVRExpandPseudo::isLogicRegOpUndef(unsigned Op, unsigned ImmVal) const {
   return false;
 }
 
-bool AVRExpandPseudo::expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLogicImm(unsigned Op, Block &MBB,
+                                         BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -285,17 +299,17 @@ bool AVRExpandPseudo::expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ADDWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ADDWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::ADDRdRr, AVR::ADCRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ADCWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ADCWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::ADCRdRr, AVR::ADCRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ADIWRdKP>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ADIWRdKP>(Block &MBB, BlockIt MBBI) {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
@@ -327,12 +341,12 @@ bool AVRExpandPseudo::expand<AVR::ADIWRdKP>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SUBWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SUBWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::SUBRdRr, AVR::SBCRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SUBIWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SUBIWRdK>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -381,12 +395,12 @@ bool AVRExpandPseudo::expand<AVR::SUBIWRdK>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SBCWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SBCWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::SBCRdRr, AVR::SBCRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SBCIWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SBCIWRdK>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -426,32 +440,32 @@ bool AVRExpandPseudo::expand<AVR::SBCIWRdK>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ANDWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ANDWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandLogic(AVR::ANDRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ANDIWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ANDIWRdK>(Block &MBB, BlockIt MBBI) {
   return expandLogicImm(AVR::ANDIRdK, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ORWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ORWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandLogic(AVR::ORRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ORIWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ORIWRdK>(Block &MBB, BlockIt MBBI) {
   return expandLogicImm(AVR::ORIRdK, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::EORWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::EORWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandLogic(AVR::EORRdRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::COMWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::COMWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -483,7 +497,7 @@ bool AVRExpandPseudo::expand<AVR::COMWRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -522,7 +536,7 @@ bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::CPWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::CPWRdRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -555,7 +569,7 @@ bool AVRExpandPseudo::expand<AVR::CPWRdRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::CPCWRdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::CPCWRdRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -590,7 +604,7 @@ bool AVRExpandPseudo::expand<AVR::CPCWRdRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDIWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDIWRdK>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -641,7 +655,7 @@ bool AVRExpandPseudo::expand<AVR::LDIWRdK>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDSWRdK>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDSWRdK>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -687,7 +701,7 @@ bool AVRExpandPseudo::expand<AVR::LDSWRdK>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -731,7 +745,7 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDWRdPtrPi>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDWRdPtrPi>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -764,7 +778,7 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPi>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -797,7 +811,7 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
@@ -835,7 +849,7 @@ bool AVRExpandPseudo::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -902,7 +916,8 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
+bool AVRExpandPseudoImpl::expandLPMWELPMW(Block &MBB, BlockIt MBBI,
+                                          bool IsELPM) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1006,16 +1021,17 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMWELPMW(MBB, MBBI, false);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ELPMWRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ELPMWRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMWELPMW(MBB, MBBI, true);
 }
 
-bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM) {
+bool AVRExpandPseudoImpl::expandLPMBELPMB(Block &MBB, BlockIt MBBI,
+                                          bool IsELPM) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -1052,32 +1068,32 @@ bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMBELPMB(MBB, MBBI, true);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LPMBRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LPMBRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMBELPMB(MBB, MBBI, false);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
   llvm_unreachable("16-bit LPMPi is unimplemented");
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ELPMBRdZPi>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ELPMBRdZPi>(Block &MBB, BlockIt MBBI) {
   llvm_unreachable("8-bit ELPMPi is unimplemented");
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ELPMWRdZPi>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ELPMWRdZPi>(Block &MBB, BlockIt MBBI) {
   llvm_unreachable("16-bit ELPMPi is unimplemented");
 }
 
 template <typename Func>
-bool AVRExpandPseudo::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
+bool AVRExpandPseudoImpl::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
@@ -1101,8 +1117,8 @@ bool AVRExpandPseudo::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
 }
 
 template <typename Func>
-bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
-                                           BlockIt MBBI, Func f) {
+bool AVRExpandPseudoImpl::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
+                                               BlockIt MBBI, Func f) {
   return expandAtomic(MBB, MBBI, [&](MachineInstr &MI) {
     auto Op1 = MI.getOperand(0);
     auto Op2 = MI.getOperand(1);
@@ -1113,40 +1129,40 @@ bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
   });
 }
 
-bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
-                                           BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
+                                               BlockIt MBBI) {
   return expandAtomicBinaryOp(Opcode, MBB, MBBI, [](MachineInstr &MI) {});
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::AtomicLoad8>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::AtomicLoad8>(Block &MBB, BlockIt MBBI) {
   return expandAtomicBinaryOp(AVR::LDRdPtr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::AtomicLoad16>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::AtomicLoad16>(Block &MBB, BlockIt MBBI) {
   return expandAtomicBinaryOp(AVR::LDWRdPtr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::AtomicStore8>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::AtomicStore8>(Block &MBB, BlockIt MBBI) {
   return expandAtomicBinaryOp(AVR::STPtrRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::AtomicStore16>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::AtomicStore16>(Block &MBB, BlockIt MBBI) {
   return expandAtomicBinaryOp(AVR::STWPtrRr, MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::AtomicFence>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::AtomicFence>(Block &MBB, BlockIt MBBI) {
   // On AVR, there is only one core and so atomic fences do nothing.
   MBBI->eraseFromParent();
   return true;
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
@@ -1213,7 +1229,7 @@ bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -1263,7 +1279,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STWPtrPiRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STWPtrPiRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1298,7 +1314,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPiRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1333,7 +1349,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
@@ -1371,7 +1387,7 @@ bool AVRExpandPseudo::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
@@ -1443,7 +1459,7 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
@@ -1486,7 +1502,7 @@ bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::STDWSPQRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::STDWSPQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
@@ -1505,7 +1521,7 @@ bool AVRExpandPseudo::expand<AVR::STDWSPQRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   unsigned Imm = MI.getOperand(1).getImm();
@@ -1537,7 +1553,7 @@ bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
@@ -1569,7 +1585,7 @@ bool AVRExpandPseudo::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::PUSHWRr>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::PUSHWRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
   Register SrcReg = MI.getOperand(0).getReg();
@@ -1594,7 +1610,7 @@ bool AVRExpandPseudo::expand<AVR::PUSHWRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::POPWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::POPWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1610,7 +1626,7 @@ bool AVRExpandPseudo::expand<AVR::POPWRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandROLBRd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandROLBRd(Block &MBB, BlockIt MBBI) {
   // In AVR, the rotate instructions behave quite unintuitively. They rotate
   // bits through the carry bit in SREG, effectively rotating over 9 bits,
   // instead of 8. This is useful when we are dealing with numbers over
@@ -1649,17 +1665,17 @@ bool AVRExpandPseudo::expandROLBRd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ROLBRdR1>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ROLBRdR1>(Block &MBB, BlockIt MBBI) {
   return expandROLBRd(MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ROLBRdR17>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ROLBRdR17>(Block &MBB, BlockIt MBBI) {
   return expandROLBRd(MBB, MBBI);
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::RORBRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::RORBRd>(Block &MBB, BlockIt MBBI) {
   // In AVR, the rotate instructions behave quite unintuitively. They rotate
   // bits through the carry bit in SREG, effectively rotating over 9 bits,
   // instead of 8. This is useful when we are dealing with numbers over
@@ -1687,7 +1703,7 @@ bool AVRExpandPseudo::expand<AVR::RORBRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSLWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSLWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1721,7 +1737,7 @@ bool AVRExpandPseudo::expand<AVR::LSLWRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSLWHiRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSLWHiRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1744,7 +1760,7 @@ bool AVRExpandPseudo::expand<AVR::LSLWHiRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSLW4Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSLW4Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1802,7 +1818,7 @@ bool AVRExpandPseudo::expandLSLW4Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSLW8Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSLW8Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1829,7 +1845,7 @@ bool AVRExpandPseudo::expandLSLW8Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSLW12Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSLW12Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1871,7 +1887,7 @@ bool AVRExpandPseudo::expandLSLW12Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSLWNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSLWNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -1888,7 +1904,7 @@ bool AVRExpandPseudo::expand<AVR::LSLWNRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSRWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSRWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1920,7 +1936,7 @@ bool AVRExpandPseudo::expand<AVR::LSRWRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSRWLoRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSRWLoRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1942,7 +1958,7 @@ bool AVRExpandPseudo::expand<AVR::LSRWLoRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSRW4Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSRW4Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2000,7 +2016,7 @@ bool AVRExpandPseudo::expandLSRW4Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSRW8Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSRW8Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2027,7 +2043,7 @@ bool AVRExpandPseudo::expandLSRW8Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLSRW12Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSRW12Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2069,7 +2085,7 @@ bool AVRExpandPseudo::expandLSRW12Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSRWNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSRWNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -2086,19 +2102,19 @@ bool AVRExpandPseudo::expand<AVR::LSRWNRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::RORWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::RORWRd>(Block &MBB, BlockIt MBBI) {
   llvm_unreachable("RORW unimplemented");
   return false;
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ROLWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ROLWRd>(Block &MBB, BlockIt MBBI) {
   llvm_unreachable("ROLW unimplemented");
   return false;
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ASRWRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ASRWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2130,7 +2146,7 @@ bool AVRExpandPseudo::expand<AVR::ASRWRd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ASRWLoRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ASRWLoRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2152,7 +2168,7 @@ bool AVRExpandPseudo::expand<AVR::ASRWLoRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandASRW7Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRW7Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2199,7 +2215,7 @@ bool AVRExpandPseudo::expandASRW7Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandASRW8Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRW8Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2234,7 +2250,7 @@ bool AVRExpandPseudo::expandASRW8Rd(Block &MBB, BlockIt MBBI) {
   MI.eraseFromParent();
   return true;
 }
-bool AVRExpandPseudo::expandASRW14Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRW14Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2288,7 +2304,7 @@ bool AVRExpandPseudo::expandASRW14Rd(Block &MBB, BlockIt MBBI) {
   return false;
 }
 
-bool AVRExpandPseudo::expandASRW15Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRW15Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2327,7 +2343,7 @@ bool AVRExpandPseudo::expandASRW15Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ASRWNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ASRWNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -2345,7 +2361,7 @@ bool AVRExpandPseudo::expand<AVR::ASRWNRd>(Block &MBB, BlockIt MBBI) {
   }
 }
 
-bool AVRExpandPseudo::expandLSLB7Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSLB7Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
@@ -2383,7 +2399,7 @@ bool AVRExpandPseudo::expandLSLB7Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSLBNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSLBNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -2395,7 +2411,7 @@ bool AVRExpandPseudo::expand<AVR::LSLBNRd>(Block &MBB, BlockIt MBBI) {
   }
 }
 
-bool AVRExpandPseudo::expandLSRB7Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandLSRB7Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
@@ -2435,7 +2451,7 @@ bool AVRExpandPseudo::expandLSRB7Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::LSRBNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::LSRBNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -2447,7 +2463,7 @@ bool AVRExpandPseudo::expand<AVR::LSRBNRd>(Block &MBB, BlockIt MBBI) {
   }
 }
 
-bool AVRExpandPseudo::expandASRB6Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRB6Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
@@ -2485,7 +2501,7 @@ bool AVRExpandPseudo::expandASRB6Rd(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandASRB7Rd(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandASRB7Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
@@ -2517,7 +2533,7 @@ bool AVRExpandPseudo::expandASRB7Rd(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::ASRBNRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::ASRBNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
@@ -2531,7 +2547,8 @@ bool AVRExpandPseudo::expand<AVR::ASRBNRd>(Block &MBB, BlockIt MBBI) {
   }
 }
 
-template <> bool AVRExpandPseudo::expand<AVR::SEXT>(Block &MBB, BlockIt MBBI) {
+template <>
+bool AVRExpandPseudoImpl::expand<AVR::SEXT>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   // sext R17:R16, R17
@@ -2588,7 +2605,8 @@ template <> bool AVRExpandPseudo::expand<AVR::SEXT>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-template <> bool AVRExpandPseudo::expand<AVR::ZEXT>(Block &MBB, BlockIt MBBI) {
+template <>
+bool AVRExpandPseudoImpl::expand<AVR::ZEXT>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   // zext R25:R24, R20
@@ -2626,7 +2644,7 @@ template <> bool AVRExpandPseudo::expand<AVR::ZEXT>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
@@ -2664,7 +2682,7 @@ bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
@@ -2718,7 +2736,8 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
+template <>
+bool AVRExpandPseudoImpl::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   MachineFunction &MF = *MI.getMF();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -2754,7 +2773,7 @@ template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudoImpl::expandMI(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
 
@@ -2840,9 +2859,24 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(AVRExpandPseudo, "avr-expand-pseudo", AVR_EXPAND_PSEUDO_NAME,
-                false, false)
+INITIALIZE_PASS(AVRExpandPseudoLegacy, "avr-expand-pseudo",
+                AVR_EXPAND_PSEUDO_NAME, false, false)
 
-FunctionPass *llvm::createAVRExpandPseudoPass() {
-  return new AVRExpandPseudo();
+FunctionPass *llvm::createAVRExpandPseudoLegacyPass() {
+  return new AVRExpandPseudoLegacy();
+}
+
+bool AVRExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  AVRExpandPseudoImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+AVRExpandPseudoPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  AVRExpandPseudoImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

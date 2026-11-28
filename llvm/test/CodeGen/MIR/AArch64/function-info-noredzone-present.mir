@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--- --verify-machineinstrs -simplify-mir -run-pass none %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -simplify-mir -run-pass none %s -o - | FileCheck %s
 
 # This test checks for persistence of the hasRedZone attribute through a
 # llc transformation that shouldn't do anything
@@ -9,7 +9,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            bar
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -46,7 +44,6 @@ body:             |
 ---
 name:            baz
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0

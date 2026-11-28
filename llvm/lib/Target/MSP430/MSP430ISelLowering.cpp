@@ -183,6 +183,18 @@ bool MSP430TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
   return TargetLowering::isLegalICmpImmediate(Immed);
 }
 
+// The unwinder passes the exception pointer and the selector in R12 and R13,
+// as GCC's EH_RETURN_DATA_REGNO has it.
+Register MSP430TargetLowering::getExceptionPointerRegister(
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
+  return MSP430::R12;
+}
+
+Register MSP430TargetLowering::getExceptionSelectorRegister(
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
+  return MSP430::R13;
+}
+
 //===----------------------------------------------------------------------===//
 //                       MSP430 Inline Assembly Support
 //===----------------------------------------------------------------------===//
@@ -946,7 +958,7 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
 
 SDValue MSP430TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS   = Op.getOperand(2);
   SDValue RHS   = Op.getOperand(3);
   SDValue Dest  = Op.getOperand(4);
@@ -973,7 +985,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
                (LHS.getOpcode() == ISD::AND ||
                 (LHS.getOpcode() == ISD::TRUNCATE &&
                  LHS.getOperand(0).getOpcode() == ISD::AND));
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDValue TargetCC;
   SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);
 
@@ -1035,7 +1047,7 @@ SDValue MSP430TargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue RHS    = Op.getOperand(1);
   SDValue TrueV  = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc dl   (Op);
 
   SDValue TargetCC;

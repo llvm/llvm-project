@@ -22,8 +22,8 @@ namespace Fortran::semantics {
 
 template <typename T> class CaseValues {
 public:
-  CaseValues(SemanticsContext &c, const evaluate::DynamicType &t)
-      : context_{c}, caseExprType_{t} {}
+  CaseValues(int kind, SemanticsContext &c, const evaluate::DynamicType &t)
+      : kind_{kind}, context_{c}, caseExprType_{t} {}
 
   void Check(const std::list<parser::CaseConstruct::Case> &cases) {
     for (const parser::CaseConstruct::Case &c : cases) {
@@ -40,6 +40,20 @@ public:
 private:
   using Value = evaluate::Scalar<T>;
 
+  // operator< on the integer value type performs signed comparison.
+  // For unsigned types, we must explicitly use unsigned comparison (BLT).
+  static bool LessThan(const Value &x, const Value &y) {
+    if constexpr (T::category == TypeCategory::Unsigned) {
+      return x.BLT(y);
+    } else {
+      return x < y;
+    }
+  }
+
+  static bool GreaterThan(const Value &x, const Value &y) {
+    return LessThan(y, x);
+  }
+
   void AddCase(const parser::CaseConstruct::Case &c) {
     const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
     const parser::CaseStmt &caseStmt{stmt.statement};
@@ -49,7 +63,8 @@ private:
             [&](const std::list<parser::CaseValueRange> &ranges) {
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
-                if (pair.first && pair.second && *pair.first > *pair.second) {
+                if (pair.first && pair.second &&
+                    GreaterThan(*pair.first, *pair.second)) {
                   context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
                       "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
@@ -61,13 +76,13 @@ private:
                           "CASE range is not allowed for LOGICAL"_err_en_US);
                     }
                   }
-                  cases_.emplace_back(stmt);
+                  cases_.emplace_back(kind_, stmt);
                   cases_.back().lower = std::move(pair.first);
                   cases_.back().upper = std::move(pair.second);
                 }
               }
             },
-            [&](const parser::Default &) { cases_.emplace_front(stmt); },
+            [&](const parser::Default &) { cases_.emplace_front(kind_, stmt); },
         },
         selector.u);
   }
@@ -86,8 +101,10 @@ private:
             context_.foldingContext(), foldingMessages};
         auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
         if (auto converted{evaluate::Fold(foldingContext,
-                evaluate::ConvertToType(T::GetType(), SomeExpr{folded}))}) {
-          if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
+                evaluate::ConvertToType(
+                    {T::category, kind_}, SomeExpr{folded}))}) {
+          if (auto value{
+                  evaluate::GetScalarConstantValue<T>(kind_, *converted)}) {
             auto back{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(*type, SomeExpr{*converted}))};
             if (back == folded) {
@@ -143,22 +160,23 @@ private:
   }
 
   struct Case {
-    explicit Case(const parser::Statement<parser::CaseStmt> &s) : stmt{s} {}
+    explicit Case(int kind, const parser::Statement<parser::CaseStmt> &s)
+        : kind_{kind}, stmt{s} {}
     bool IsDefault() const { return !lower && !upper; }
     std::string AsFortran() const {
       std::string result;
       {
         llvm::raw_string_ostream bs{result};
         if (lower) {
-          evaluate::Constant<T>{*lower}.AsFortran(bs << '(');
+          evaluate::Constant<T>{kind_, *lower}.AsFortran(bs << '(');
           if (!upper) {
             bs << ':';
           } else if (*lower != *upper) {
-            evaluate::Constant<T>{*upper}.AsFortran(bs << ':');
+            evaluate::Constant<T>{kind_, *upper}.AsFortran(bs << ':');
           }
           bs << ')';
         } else if (upper) {
-          evaluate::Constant<T>{*upper}.AsFortran(bs << "(:") << ')';
+          evaluate::Constant<T>{kind_, *upper}.AsFortran(bs << "(:") << ')';
         } else {
           bs << "DEFAULT";
         }
@@ -166,6 +184,7 @@ private:
       return result;
     }
 
+    int kind_;
     const parser::Statement<parser::CaseStmt> &stmt;
     std::optional<Value> lower, upper;
   };
@@ -180,7 +199,7 @@ private:
       if (x.IsDefault()) {
         return !y.IsDefault();
       } else {
-        return x.upper && y.lower && *x.upper < *y.lower;
+        return x.upper && y.lower && LessThan(*x.upper, *y.lower);
       }
     }
   };
@@ -215,26 +234,11 @@ private:
     }
   }
 
+  int kind_;
   SemanticsContext &context_;
   const evaluate::DynamicType &caseExprType_;
   std::list<Case> cases_;
   bool hasErrors_{false};
-};
-
-template <TypeCategory CAT> struct TypeVisitor {
-  using Result = bool;
-  using Types = evaluate::CategoryTypes<CAT>;
-  template <typename T> Result Test() {
-    if (T::kind == exprType.kind()) {
-      CaseValues<T>(context, exprType).Check(caseList);
-      return true;
-    } else {
-      return false;
-    }
-  }
-  SemanticsContext &context;
-  const evaluate::DynamicType &exprType;
-  const std::list<parser::CaseConstruct::Case> &caseList;
 };
 
 // Convert a single enumeration CASE value to its __ordinal integer.
@@ -269,8 +273,8 @@ static bool ConvertEnumCaseValue(SemanticsContext &context,
   evaluate::FoldingContext foldingContext{
       context.foldingContext(), foldingMessages};
   auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
-  if (auto sc{
-          evaluate::GetScalarConstantValue<evaluate::SomeDerived>(folded)}) {
+  if (auto sc{evaluate::GetScalarConstantValue<
+          evaluate::Type<common::TypeCategory::Derived>>(folded)}) {
     if (auto ordExpr{sc->Find(ordSym)}) {
       x->v = std::move(*ordExpr);
       return true;
@@ -341,28 +345,31 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
         std::get<std::list<parser::CaseConstruct::Case>>(construct.t)};
     switch (exprType->category()) {
     case TypeCategory::Integer:
-      common::SearchTypes(
-          TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Integer>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Unsigned:
-      common::SearchTypes(
-          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Unsigned>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Logical:
-      CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
+      CaseValues<evaluate::Type<TypeCategory::Logical>>{1, context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:
-      common::SearchTypes(
-          TypeVisitor<TypeCategory::Character>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Character>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Derived:
       if (const auto *derived{evaluate::GetDerivedTypeSpec(*exprType)}) {
         if (derived->IsEnumerationType()) {
           if (ConvertEnumCaseValues(context_, caseList, *derived)) {
             evaluate::DynamicType intType{TypeCategory::Integer, 4};
-            CaseValues<evaluate::Type<TypeCategory::Integer, 4>>{
-                context_, intType}
+            CaseValues<evaluate::Type<TypeCategory::Integer>>{
+                4, context_, intType}
                 .Check(caseList);
           }
           return;

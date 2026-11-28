@@ -29,7 +29,6 @@ namespace {
 enum ChangeKind { None, UpdateHint, UpdateInst };
 
 class SIShrinkInstructions {
-  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
@@ -107,21 +106,33 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
     if (Reg.isVirtual()) {
       MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
-        MachineOperand &MovSrc = Def->getOperand(1);
+        const MachineOperand &MovSrc = Def->getOperand(1);
         bool ConstantFolded = false;
 
-        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm()) {
-            Src0.ChangeToImmediate(MovSrc.getImm());
-            ConstantFolded = true;
-          } else if (MovSrc.isFI()) {
-            Src0.ChangeToFrameIndex(MovSrc.getIndex());
-            ConstantFolded = true;
-          } else if (MovSrc.isGlobal()) {
-            Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
-                            MovSrc.getTargetFlags());
-            ConstantFolded = true;
+        if (MovSrc.isImm()) {
+          if (std::optional<int64_t> Imm = SIInstrInfo::extractSubregFromImm(
+                  MovSrc.getImm(), Src0.getSubReg())) {
+            MachineOperand ImmOp = MachineOperand::CreateImm(*Imm);
+            if (TII->isOperandLegal(MI, Src0Idx, &ImmOp)) {
+              Src0.ChangeToImmediate(*Imm);
+              ConstantFolded = true;
+            }
           }
+        } else if (MovSrc.isGlobal()) {
+          if (std::optional<unsigned> Flags =
+                  SIInstrInfo::extractSubregFromGlobalAddressFlags(
+                      MovSrc.getTargetFlags(), Src0.getSubReg())) {
+            MachineOperand GAOp = MachineOperand::CreateGA(
+                MovSrc.getGlobal(), MovSrc.getOffset(), *Flags);
+            if (TII->isOperandLegal(MI, Src0Idx, &GAOp)) {
+              Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(), *Flags);
+              ConstantFolded = true;
+            }
+          }
+        } else if (MovSrc.isFI() && !Src0.getSubReg() &&
+                   TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
+          Src0.ChangeToFrameIndex(MovSrc.getIndex());
+          ConstantFolded = true;
         }
 
         if (ConstantFolded) {
@@ -868,8 +879,6 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
 }
 
 bool SIShrinkInstructions::run(MachineFunction &MF) {
-
-  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();

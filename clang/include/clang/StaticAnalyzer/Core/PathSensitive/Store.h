@@ -301,9 +301,8 @@ inline StoreRef::StoreRef(Store store, StoreManager & smgr)
     mgr.incrementReferenceCount(store);
 }
 
-inline StoreRef::StoreRef(const StoreRef &sr)
-    : store(sr.store), mgr(sr.mgr)
-{
+inline StoreRef::StoreRef(const StoreRef &Other)
+    : store(Other.store), mgr(Other.mgr) {
   if (store)
     mgr.incrementReferenceCount(store);
 }
@@ -313,12 +312,23 @@ inline StoreRef::~StoreRef() {
     mgr.decrementReferenceCount(store);
 }
 
-inline StoreRef &StoreRef::operator=(StoreRef const &newStore) {
-  assert(&newStore.mgr == &mgr);
-  if (store != newStore.store) {
-    mgr.incrementReferenceCount(newStore.store);
+inline StoreRef &StoreRef::operator=(StoreRef const &Other) {
+  assert(&Other.mgr == &mgr);
+  if (store != Other.store) {
+    mgr.incrementReferenceCount(Other.store);
     mgr.decrementReferenceCount(store);
-    store = newStore.getStore();
+    store = Other.getStore();
+  }
+  return *this;
+}
+
+inline StoreRef &StoreRef::operator=(StoreRef &&Other) {
+  assert(&Other.mgr == &mgr);
+  if (store != Other.store) {
+    if (store)
+      mgr.decrementReferenceCount(store);
+    store = Other.store;
+    Other.store = nullptr;
   }
   return *this;
 }

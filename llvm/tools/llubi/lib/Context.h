@@ -112,6 +112,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemAllocKind AllocKind;
   bool IsConstant = false;
   bool IsIRGlobalValue = false;
+  bool IsInaccessible = false;
 
   // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
@@ -139,6 +140,8 @@ public:
   bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
+  bool isInaccessible() const { return IsInaccessible; }
+  void setIsInaccessible(bool V) { IsInaccessible = V; }
 
   bool inBounds(const APInt &NewAddr) const {
     return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
@@ -298,9 +301,6 @@ class Context {
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -419,10 +419,12 @@ public:
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there
-  /// are poison or undef bits in the value (i.e., padding bits are ignored).
+  /// are poison or undef bits in the value or in the padding bits that poison
+  /// value bits.
   AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      bool *ContainsUndefinedBits = nullptr);
-  /// Convert a value to byte sequence. Padding bits are set to zero.
+  /// Convert a value to byte sequence. If every non-padding bit in the padding
+  /// byte is poison, the padding bits are poison; otherwise, they are zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
   /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
   /// value of type \p Ty. The bit range must be within \p Src.
@@ -447,6 +449,13 @@ public:
                       function_ref<const AnyValue &(Value *V)> GetValue);
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
+  /// Sign extends or truncates the GEP index \p Idx to \p IndexBitWidth bits.
+  /// Returns poison if truncating it would violate \p Flags.
+  static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                                    GEPNoWrapFlags Flags);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

@@ -14,6 +14,7 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_CPPGENUTILITIES_H_
 #define MLIR_TOOLS_MLIRTBLGEN_CPPGENUTILITIES_H_
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -25,6 +26,12 @@ namespace tblgen {
 void emitSummaryAndDescComments(llvm::raw_ostream &os, llvm::StringRef summary,
                                 llvm::StringRef description,
                                 bool terminateComment = true);
+
+// Emit an `#include` directive for every header in `headers`, sorted
+// and without duplicates. Headers are emitted verbatim; a header that could
+// break out of the directive is a fatal error.
+void emitIncludes(llvm::raw_ostream &os,
+                  llvm::ArrayRef<llvm::StringRef> headers);
 } // namespace tblgen
 } // namespace mlir
 

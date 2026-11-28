@@ -120,3 +120,15 @@ func.func @test_custom_builtin_custom_type_conversion(%t: !test.test_tensor<[42]
   // CHECK: return %[[tensor]]
   return %tensor : !test.test_tensor<[42], f32>
 }
+
+// CHECK-LABEL: func @test_unshaped_type_conversion
+func.func @test_unshaped_type_conversion(%t: !test.test_unshaped<f32>)
+    -> !test.test_unshaped<f32> {
+  // CHECK: bufferization.to_buffer %{{.*}} : !test.test_unshaped<f32> to memref<?xf32>
+  %buffer = bufferization.to_buffer %t
+    : !test.test_unshaped<f32> to memref<?xf32>
+  // CHECK: bufferization.to_tensor %{{.*}} : memref<?xf32> to !test.test_unshaped<f32>
+  %tensor = bufferization.to_tensor %buffer
+    : memref<?xf32> to !test.test_unshaped<f32>
+  return %tensor : !test.test_unshaped<f32>
+}

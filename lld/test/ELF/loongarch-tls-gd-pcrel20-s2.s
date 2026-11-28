@@ -13,7 +13,7 @@
 ## LA32 GD
 # RUN: ld.lld -shared %t/a.32.o %t/bc.32.o -o %t/gd.32.so
 # RUN: llvm-readobj -r %t/gd.32.so | FileCheck --check-prefix=GD32-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
 
 ## LA32 GD -> LE
 # RUN: ld.lld %t/a.32.o %t/bc.32.o %t/tga.32.o -o %t/le.32
@@ -31,7 +31,7 @@
 ## LA64 GD
 # RUN: ld.lld -shared %t/a.64.o %t/bc.64.o -o %t/gd.64.so
 # RUN: llvm-readobj -r %t/gd.64.so | FileCheck --check-prefix=GD64-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
 
 ## LA64 GD -> LE
 # RUN: ld.lld %t/a.64.o %t/bc.64.o %t/tga.64.o -o %t/le.64

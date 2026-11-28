@@ -22,7 +22,10 @@ fmsub.s x14, x15, x16, x17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.s x18, x19, x20, x21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # Using 'Zdinx' instructions for an 'Zfinx'-only target
-# odd registers report incorrect registers
-fadd.d t0, t1, t2 # CHECK: :[[@LINE]]:8: error: double precision floating point operands must use even numbered X register
+fadd.d t0, t1, t2
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
+# CHECK: :[[@LINE-3]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer), RV64I Base Instruction Set{{$}}
+# CHECK: :[[@LINE-4]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 # even registers report the required extension
 fadd.d t3, t1, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}

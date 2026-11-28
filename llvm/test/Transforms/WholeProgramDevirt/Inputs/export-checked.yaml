@@ -1,0 +1,8 @@
+---
+GlobalValueMap:
+  0:
+    - Live: true
+      TypeCheckedLoadVCalls:
+        - GUID: 7004155349499253778  # _ZTS1A
+          Offset: 0
+...

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm < %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux-gnu -emit-llvm < %s | FileCheck %s %}
 
 // Test that __builtin_cpu_is emits the correct ABI value and field offset for
 // every vendor (field offset 0) in llvm/include/llvm/TargetParser/

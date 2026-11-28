@@ -15,15 +15,18 @@
 #include "BPSectionOrderer.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -257,15 +260,17 @@ void macho::PriorityBuilder::SymbolPriorityEntry::setPriority(
 
 int macho::PriorityBuilder::SymbolPriorityEntry::getPriority(
     const InputFile *f) const {
-  if (!f)
+  if (!f || objectFiles.empty())
     return anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
   // for object files, and we only want the basename.
   StringRef basename = path::filename(f->getName());
+  SmallString<128> buf;
   StringRef filename =
       f->archiveName.empty()
           ? basename
-          : saver().save(path::filename(f->archiveName) + "(" + basename + ")");
+          : (path::filename(f->archiveName) + "(" + basename + ")")
+                .toStringRef(buf);
   return std::min(objectFiles.lookup(filename), anyObjectFile);
 }
 
@@ -396,24 +401,42 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   if (priorities.empty())
     return sectionPriorities;
 
-  auto addSym = [&](const Defined *sym) {
-    std::optional<int> symbolPriority = getSymbolPriority(sym);
-    if (!symbolPriority)
-      return;
-    auto *isec = sym->isec();
-    int &priority = sectionPriorities[isec];
-    priority = std::min(priority, *symbolPriority);
-    // Order file takes precedence over cold partitioning.
-    isec->isCold = false;
-  };
+  // getSymbolPriority() is expensive, and there are many symbols, so call it
+  // in parallel and then process the matches serially.
+  // We get external symbols from the symbol table (in chunks) and iterate the
+  // object files for the local ones.
+  using Matches = std::vector<std::pair<InputSection *, int>>;
+  std::vector<std::pair<ArrayRef<Symbol *>, Matches>> work;
+  const size_t chunkSize = 4096;
+  for (ArrayRef<Symbol *> syms = symtab->getSymbols(); !syms.empty();
+       syms = syms.drop_front(std::min(chunkSize, syms.size())))
+    work.emplace_back(syms.take_front(chunkSize), Matches());
+  size_t numSymtabChunks = work.size();
+  for (const InputFile *file : inputFiles)
+    if (auto *obj = dyn_cast<ObjFile>(file))
+      work.emplace_back(obj->symbols, Matches());
+
+  // The symbol table chunks from the getSymbols() loop above contain most of
+  // the work in the first few items. Use parallelForEachFineGrained() to
+  // split them over more than one or two threads.
+  parallelForFineGrained(work.size(), [&](size_t i) {
+    auto &[syms, matches] = work[i];
+    bool external = i < numSymtabChunks;
+    for (Symbol *sym : syms)
+      if (auto *d = dyn_cast_or_null<Defined>(sym))
+        if (d->isExternal() == external)
+          if (std::optional<int> priority = getSymbolPriority(d))
+            matches.emplace_back(d->isec(), *priority);
+  });
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(d);
-  }
+  for (const auto &[_, matches] : work)
+    for (auto [isec, symbolPriority] : matches) {
+      int &priority = sectionPriorities[isec];
+      priority = std::min(priority, symbolPriority);
+      // Order file takes precedence over cold partitioning.
+      isec->isCold = false;
+    }
 
   return sectionPriorities;
 }

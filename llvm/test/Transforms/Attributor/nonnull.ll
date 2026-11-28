@@ -1637,6 +1637,69 @@ if.else:
   ret ptr null
 }
 
+; The definition of a linkonce_odr function might be replaced by another one,
+; e.g. one without the load or the assumption, so the attributes of its
+; arguments and return value must not be derived from its body.
+define linkonce_odr ptr @nonnull_return_from_load_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_return_from_load_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %v = load i32, ptr %p, align 4
+  ret ptr %p
+}
+
+define ptr @call_nonnull_return_from_load_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_load_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_load_non_exact(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @nonnull_return_from_load_non_exact(ptr %p)
+  ret ptr %r
+}
+
+define linkonce_odr ptr @nonnull_return_from_assume_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_return_from_assume_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p) ]
+  ret ptr %p
+}
+
+define ptr @call_nonnull_return_from_assume_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_assume_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_assume_non_exact(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @nonnull_return_from_assume_non_exact(ptr %p)
+  ret ptr %r
+}
+
+define linkonce_odr void @align_from_assume_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "align"(ptr [[A]], i64 16) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 16) ]
+  ret void
+}
+
+define void @call_align_from_assume_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@call_align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_assume_non_exact(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  call void @align_from_assume_non_exact(ptr %a)
+  ret void
+}
+
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
 ;.

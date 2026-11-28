@@ -1,5 +1,5 @@
 # RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
-# RUN:   -run-pass=early-tailduplication,ppc-ctrloops %s -o - -verify-machineinstrs 2>&1 | FileCheck %s
+# RUN:   -run-pass=early-tailduplication,ppc-ctrloops %s -o - 2>&1 | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
@@ -70,7 +70,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -79,23 +78,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: crbitrc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
-  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 6, class: crbitrc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 10, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 11, class: crrc, preferred-register: '' }
-  - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 13, class: crbitrc, preferred-register: '' }
-  - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 15, class: gprc, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

@@ -30,11 +30,11 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Padding.cpp
   PadTilingInterface.cpp
   Promotion.cpp
-  RuntimeOpVerification.cpp
+  RuntimeVerifiableOpInterfaceImpl.cpp
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp
-  SubsetInsertionOpInterfaceImpl.cpp
+  SubsetOpInterfaceImpl.cpp
   SwapExtractSliceWithFillPatterns.cpp
   Tiling.cpp
   TilingInterfaceImpl.cpp

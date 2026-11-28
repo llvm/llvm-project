@@ -482,6 +482,7 @@ def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
+def TargetHexagon : TargetArch<["hexagon"]>;
 def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
@@ -2577,7 +2578,7 @@ def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Subjects = SubjectList<[Record, Enum], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
   let LangOpts = [COnly];
 }
@@ -3694,6 +3695,14 @@ def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Documentation = [RISCVVLSCCDocs];
 }
 
+def HexagonHLXVectorStackLimit : InheritableAttr,
+                                 TargetSpecificAttr<TargetHexagon> {
+  let Spellings = [Clang<"hlx_vector_stack_limit">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [UnsignedArgument<"Limit">];
+  let Documentation = [HexagonHLXVectorStackLimitDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -4707,12 +4716,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }
@@ -5462,6 +5475,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
+}
+
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
 // layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
@@ -5496,19 +5517,19 @@ def VTablePointerAuthentication : InheritableAttr {
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [Undocumented];
   let StrictEnumParameters = 1;
-  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ false,
                 ["default_key", "no_authentication", "process_dependent",
                  "process_independent"],
                 ["DefaultKey", "NoKey", "ProcessDependent",
                  "ProcessIndependent"]>,
               EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_address_discrimination", "no_address_discrimination",
                  "address_discrimination"],
                 ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
                  "AddressDiscrimination"]>,
               EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_extra_discrimination", "no_extra_discrimination",
                  "type_discrimination", "custom_discrimination"],
                 ["DefaultExtraDiscrimination", "NoExtraDiscrimination",

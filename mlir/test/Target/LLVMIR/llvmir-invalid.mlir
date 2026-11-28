@@ -118,6 +118,30 @@ llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
 
 // -----
 
+llvm.func @powi_intr_vector_exp(%arg0 : vector<4xf32>, %arg1 : vector<4xi32>) -> vector<4xf32> {
+  // expected-error @below{{op operand #1 must be signless integer, but got 'vector<4xi32>'}}
+  %0 = "llvm.intr.powi"(%arg0, %arg1) : (vector<4xf32>, vector<4xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// -----
+
+llvm.func @ldexp_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
+  // expected-error @below{{op operand #1 must be signless integer or LLVM dialect-compatible vector of signless integer, but got 'f32'}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (f32, f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @ldexp_intr_vector_length_mismatch(%arg0 : vector<4xf32>, %arg1 : vector<8xi32>) -> vector<4xf32> {
+  // expected-error @below{{'llvm.intr.ldexp' op requires the same shape for all operands}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (vector<4xf32>, vector<8xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// -----
+
 llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
   "llvm.intr.memcpy"(%src, %dst, %len) <{isVolatile = false}> : (i64, i64, i64) -> ()
@@ -462,4 +486,69 @@ llvm.func @constant_resource_does_not_exist(%arg0: vector<4xi32>) {
   %0 = llvm.mlir.constant(dense_resource<missing> : vector<4xi32>) : vector<4xi32>
   %1 = llvm.icmp "sgt" %arg0, %0 : vector<4xi32>
   llvm.return
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an array for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_a_mib(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = [42]} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a dense i64 array for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_without_callsite(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an llvm.callsite attribute alongside llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.memprof = [#llvm.memprof_mib<call_stack = [7], alloc_type = "hot">]
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected at least one memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.callsite = array<i64: 7>,
+    llvm.memprof = []
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a non-empty call stack for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = array<i64>} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
 }

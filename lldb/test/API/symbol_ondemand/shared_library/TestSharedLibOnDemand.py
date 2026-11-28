@@ -39,26 +39,18 @@ class SharedLibTestCase(TestBase):
         self.build()
         self.common_setup()
 
-        lldbutil.run_break_set_by_file_and_line(
+        bkpt_id = lldbutil.run_break_set_by_file_and_line(
             self, "foo.c", 4, num_expected_locations=1, loc_exact=True
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = self.target.LaunchSimple(
-            None, self.environment, self.get_process_working_directory()
+        launch_info = self.target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(self.environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, self.target.FindBreakpointByID(bkpt_id), launch_info
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
-        thread = process.GetSelectedThread()
         stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
@@ -77,26 +69,18 @@ class SharedLibTestCase(TestBase):
         self.build()
         self.common_setup()
 
-        lldbutil.run_break_set_by_symbol(
+        bkpt_id = lldbutil.run_break_set_by_symbol(
             self, "foo", sym_exact=True, num_expected_locations=1
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = self.target.LaunchSimple(
-            None, self.environment, self.get_process_working_directory()
+        launch_info = self.target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(self.environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, self.target.FindBreakpointByID(bkpt_id), launch_info
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
-        thread = process.GetSelectedThread()
         stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
@@ -115,24 +99,17 @@ class SharedLibTestCase(TestBase):
         self.build()
         self.common_setup()
 
-        lldbutil.run_break_set_by_file_and_line(
+        bkpt_id = lldbutil.run_break_set_by_file_and_line(
             self, self.source, self.line, num_expected_locations=1, loc_exact=True
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = self.target.LaunchSimple(
-            None, self.environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        launch_info = self.target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(self.environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, self.target, self.target.FindBreakpointByID(bkpt_id), launch_info
         )
 
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.expect(

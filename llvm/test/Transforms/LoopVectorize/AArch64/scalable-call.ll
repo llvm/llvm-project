@@ -5,7 +5,7 @@
 ; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize -pass-remarks-analysis=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
-define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) {
+define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) vscale_range(1,16) {
 ; CHECK-LABEL: @vec_load
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
@@ -30,7 +30,7 @@ for.end:
   ret void
 }
 
-define void @vec_scalar(i64 %N, ptr nocapture %a) {
+define void @vec_scalar(i64 %N, ptr nocapture %a) vscale_range(1,16) {
 ; CHECK-LABEL: @vec_scalar
 ; CHECK: vector.body:
 ; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> splat (double 1.000000e+01))
@@ -52,7 +52,7 @@ for.end:
   ret void
 }
 
-define void @vec_ptr(i64 %N, ptr noalias %a, ptr readnone %b) {
+define void @vec_ptr(i64 %N, ptr noalias %a, ptr readnone %b) vscale_range(1,16) {
 ; CHECK-LABEL: @vec_ptr
 ; CHECK: for.body:
 ; CHECK: %[[LOAD:.*]] = load ptr, ptr
@@ -76,7 +76,7 @@ for.end:
   ret void
 }
 
-define void @vec_intrinsic(i64 %N, ptr nocapture readonly %a) {
+define void @vec_intrinsic(i64 %N, ptr nocapture readonly %a) vscale_range(1,16) {
 ; CHECK-LABEL: @vec_intrinsic
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
@@ -102,7 +102,7 @@ for.end:
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
-define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) vscale_range(1,16) {
 ; CHECK: @vec_sin_no_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
 ; CHECK-NOT: <vscale x
@@ -128,7 +128,7 @@ for.cond.cleanup:
 ; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): fadd
 ; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
-define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) vscale_range(1,16) {
 ; CHECK: @vec_sin_no_mapping_ite
 ; CHECK-NOT: <vscale x
 ; CHECK: ret
@@ -162,7 +162,7 @@ for.cond.cleanup:
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
-define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) vscale_range(1,16) {
 ; CHECK: @vec_sin_fixed_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
 ; CHECK-NOT: <vscale x
@@ -187,7 +187,7 @@ for.cond.cleanup:
 ; Even though there are no function mappings attached to the call
 ; in the loop below we can still vectorize the loop because SVE has
 ; hardware support in the form of the 'fqsrt' instruction.
-define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
+define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) vscale_range(1,16) {
 ; CHECK: @vec_sqrt_no_mapping
 ; CHECK: call fast <vscale x 2 x float> @llvm.sqrt.nxv2f32
 entry:

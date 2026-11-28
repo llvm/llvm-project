@@ -17,9 +17,10 @@
 #include <cassert>
 #include <functional>
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "../heap_helpers.h"
 #include "MoveOnly.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 template<class T, class Iter>
 TEST_CONSTEXPR_CXX20 bool test()
@@ -29,6 +30,7 @@ TEST_CONSTEXPR_CXX20 bool test()
     for (int n = 0; n < 15; ++n) {
         std::make_heap(Iter(work), Iter(work+n), std::greater<T>());
         assert(std::is_heap(work, work+n, std::greater<T>()));
+        assert(satisfies_heap_property(work, work + n, std::greater<T>()));
         assert(std::is_permutation(work, work+n, orig));
         std::copy(orig, orig+n, work);
     }
@@ -37,6 +39,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         T input[] = {3, 4, 1, 2, 5};
         std::make_heap(Iter(input), Iter(input + 5), std::greater<T>());
         assert(std::is_heap(input, input + 5, std::greater<T>()));
+        assert(satisfies_heap_property(input, input + 5, std::greater<T>()));
         std::pop_heap(input, input + 5, std::greater<T>()); assert(input[4] == 1);
         std::pop_heap(input, input + 4, std::greater<T>()); assert(input[3] == 2);
         std::pop_heap(input, input + 3, std::greater<T>()); assert(input[2] == 3);

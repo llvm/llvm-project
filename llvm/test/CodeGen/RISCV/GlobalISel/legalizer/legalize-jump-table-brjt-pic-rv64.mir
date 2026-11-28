@@ -40,7 +40,6 @@
 ...
 ---
 name:            jt_test
-tracksRegLiveness: true
 jumpTable:
   kind:            label-difference32
   entries:

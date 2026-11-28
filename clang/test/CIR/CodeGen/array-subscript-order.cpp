@@ -57,12 +57,12 @@ int test3(void) {
 // CIR-LABEL: cir.func{{.*}} @_Z5test3v
 // CIR:         %[[BASE:.*]] = cir.call @_Z6getArrv()
 // CIR-NEXT:    %[[IDX:.*]] = cir.call @_Z5idxFnv()
-// CIR:         cir.get_element %[[BASE]][{{.*}}]
+// CIR:         cir.get_element inbounds %[[BASE]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} i32 @_Z5test3v()
 // LLVM:         %[[BASE:.*]] = call {{.*}} ptr @_Z6getArrv()
 // LLVM-NEXT:    %[[IDX:.*]] = call {{.*}} i32 @_Z5idxFnv()
-// LLVM:         getelementptr {{.*}}[4 x i32], ptr %[[BASE]],
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[BASE]],
 
 int test_vec(void) {
   return getVec()[idxFn()];

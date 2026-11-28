@@ -35,7 +35,7 @@ def ArmSME_Dialect : Dialect {
   }];
   let dependentDialects = ["scf::SCFDialect", "vector::VectorDialect",
                            "memref::MemRefDialect"];
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//

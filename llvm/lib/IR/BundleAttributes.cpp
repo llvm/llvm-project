@@ -57,6 +57,13 @@ AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
   return {OBU.Inputs[0]};
 }
 
+AssumeRangeInfo llvm::getAssumeRangeInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagID() == LLVMContext::OB_Range && OBU.Inputs.size() == 3);
+  return {OBU.Inputs[0],
+          ConstantRange(cast<ConstantInt>(OBU.Inputs[1])->getValue(),
+                        cast<ConstantInt>(OBU.Inputs[2])->getValue())};
+}
+
 AssumeSeparateStorageInfo
 llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
   assert(OBU.getTagID() == LLVMContext::OB_SeparateStorage &&
@@ -98,6 +105,11 @@ bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
 
   case BundleAttr::NonNull:
     return getAssumeNonNullInfo(OBU).Ptr == Val;
+
+  case BundleAttr::Range: {
+    auto [V, Range] = getAssumeRangeInfo(OBU);
+    return V == Val && !Range.contains(APInt::getZero(Range.getBitWidth()));
+  }
 
   default:
     return false;

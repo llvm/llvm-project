@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -27,9 +28,6 @@ private:
   /// Is64Bit - Is the target 64-bits.
   ///
   bool Is64Bit;
-
-  /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
-  bool IsTarget64BitLP64;
 
   /// IsWin64 - Is the target on of win64 flavours
   ///
@@ -181,6 +179,11 @@ public:
   unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
   unsigned getCSRCostScale(const MachineFunction &MF) const override {
     return 30;
+  }
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &X86::VR128XRegClass;
   }
 };
 

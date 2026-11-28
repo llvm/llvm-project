@@ -16,7 +16,6 @@ class ValueMD5CrashTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// break here")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_with_run_command(self):
         """Verify that the hash computing logic for ValueObject's values can't crash us."""
         self.build()

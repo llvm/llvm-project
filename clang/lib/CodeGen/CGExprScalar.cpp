@@ -176,6 +176,15 @@ static bool MustVisitNullValue(const Expr *E) {
   return E->getType()->isNullPtrType();
 }
 
+/// Return true if conversion to \p T has the semantics of conversion to bool:
+/// \p T is bool or an enumeration with a fixed underlying type of bool
+/// (C23 6.7.3.3p16).
+static bool hasBoolConversionSemantics(QualType T) {
+  if (const auto *ED = T->getAsEnumDecl())
+    return ED->isFixed() && ED->getIntegerType()->isBooleanType();
+  return T->isBooleanType();
+}
+
 /// If \p E is a widened promoted integer, get its base (unpromoted) type.
 static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
                                                        const Expr *E) {
@@ -874,7 +883,8 @@ public:
       auto *RHSMatTy = dyn_cast<ConstantMatrixType>(
           BO->getRHS()->getType().getCanonicalType());
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
-      if (LHSMatTy && RHSMatTy)
+      // In HLSL, matrix * matrix is element-wise, so skip this block.
+      if (LHSMatTy && RHSMatTy && !CGF.getLangOpts().HLSL)
         return MB.CreateMatrixMultiply(Ops.LHS, Ops.RHS, LHSMatTy->getNumRows(),
                                        LHSMatTy->getNumColumns(),
                                        RHSMatTy->getNumColumns());
@@ -1643,7 +1653,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   // TODO(leonardchan): When necessary, add another if statement checking for
   // conversions to fixed point types from other types.
   if (SrcType->isFixedPointType()) {
-    if (DstType->isBooleanType())
+    if (hasBoolConversionSemantics(DstType))
       // It is important that we check this before checking if the dest type is
       // an integer because booleans are technically integer types.
       // We do not need to check the padding bit on unsigned types if unsigned
@@ -1679,7 +1689,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   llvm::Type *SrcTy = Src->getType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstType->isBooleanType())
+  if (hasBoolConversionSemantics(DstType))
     return EmitConversionToBool(Src, SrcType);
 
   llvm::Type *DstTy = ConvertType(DstType);
@@ -1887,7 +1897,7 @@ Value *ScalarExprEmitter::EmitComplexToScalarConversion(
   SrcTy = SrcTy->castAs<ComplexType>()->getElementType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstTy->isBooleanType()) {
+  if (hasBoolConversionSemantics(DstTy)) {
     //  Complex != 0  -> (Real != 0) | (Imag != 0)
     Src.first = EmitScalarConversion(Src.first, SrcTy, DstTy, Loc);
     Src.second = EmitScalarConversion(Src.second, SrcTy, DstTy, Loc);
@@ -2513,7 +2523,7 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isSignableType(getContext()));
+  assert(E->getType().getAtomicUnqualifiedType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
 
@@ -3041,7 +3051,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FixedPointToBoolean:
     assert(E->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
-    assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    assert(hasBoolConversionSemantics(DestTy) &&
+           "Expected dest type to be a boolean type");
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 
@@ -3353,7 +3364,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
   if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
     type = atomicTy->getValueType();
-    if (isInc && type->isBooleanType()) {
+    if (isInc && hasBoolConversionSemantics(type)) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
         Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
@@ -3369,7 +3380,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // Special case for atomic increment / decrement on integers, emit
     // atomicrmw instructions.  We skip this if we want to be doing overflow
     // checking, and fall into the slow path with the atomic cmpxchg loop.
-    if (!type->isBooleanType() && type->isIntegerType() &&
+    if (!hasBoolConversionSemantics(type) && type->isIntegerType() &&
         !(type->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
@@ -3425,7 +3436,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   //          -> bool = ((int)bool + 1 != 0)
   // An interesting aspect of this is that increment is always true.
   // Decrement does not have this property.
-  if (isInc && type->isBooleanType()) {
+  if (isInc && hasBoolConversionSemantics(type)) {
     value = Builder.getTrue();
 
   // Most common case by far: integer increment.
@@ -4342,7 +4353,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
   }
 
-  if (Ops.Ty->isConstantMatrixType()) {
+  // In HLSL, matrix / matrix is element-wise, so skip this block.
+  if (Ops.Ty->isConstantMatrixType() && !Ops.RHS->getType()->isVectorTy()) {
     llvm::MatrixBuilder MB(Builder);
     // We need to check the types of the operands of the operator to get the
     // correct matrix dimensions.

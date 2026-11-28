@@ -236,6 +236,16 @@ def vec_ins_or_scal_vec_v2f64 : PatFrags<(ops node:$src),
 def vec_ins_or_scal_vec_v4f32 : PatFrags<(ops node:$src),
                               [(vector_insert undef, node:$src, (i64 0)),
                                (scalar_to_vector_v4f32 node:$src)]>;
+                               
+// Only fold a shift into SSRA/USRA if it has no other users. Otherwise the
+// shift still has to be computed separately, and folding it can stop the
+// other operand of the add from being folded instead.
+let HasOneUse = 1 in {
+def AArch64vashr_oneuse : PatFrag<(ops node:$src, node:$amt),
+                                  (AArch64vashr node:$src, node:$amt)>;
+def AArch64vlshr_oneuse : PatFrag<(ops node:$src, node:$amt),
+                                  (AArch64vlshr node:$src, node:$amt)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Asm Operand Classes.
@@ -1638,9 +1648,6 @@ def gi_fpimm32 : GICustomOperandRenderer<"renderFPImm32">,
   GISDNodeXFormEquiv<fpimm32XForm>;
 def gi_fpimm64 : GICustomOperandRenderer<"renderFPImm64">,
   GISDNodeXFormEquiv<fpimm64XForm>;
-def gi_fpimm32SIMDModImmType4 :
-    GICustomOperandRenderer<"renderFPImm32SIMDModImmType4">,
-  GISDNodeXFormEquiv<fpimm32SIMDModImmType4XForm>;
 
 // Vector lane operands
 class AsmVectorIndex<int Min, int Max, string NamePrefix=""> : AsmOperandClass {

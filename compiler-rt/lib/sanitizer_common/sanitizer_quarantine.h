@@ -134,15 +134,15 @@ class Quarantine {
 
  private:
   // Read-only data.
-  char pad0_[kCacheLineSize];
+  [[maybe_unused]] char pad0_[kCacheLineSize];
   atomic_uintptr_t max_size_;
   atomic_uintptr_t min_size_;
   atomic_uintptr_t max_cache_size_;
-  char pad1_[kCacheLineSize];
+  [[maybe_unused]] char pad1_[kCacheLineSize];
   StaticSpinMutex cache_mutex_;
   StaticSpinMutex recycle_mutex_;
   Cache cache_;
-  char pad2_[kCacheLineSize];
+  [[maybe_unused]] char pad2_[kCacheLineSize];
 
   void NOINLINE Recycle(uptr min_size, Callback cb)
       SANITIZER_REQUIRES(recycle_mutex_) SANITIZER_RELEASE(recycle_mutex_) {

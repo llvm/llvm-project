@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass=global-sched \
+# RUN:   %s -o - | FileCheck %s
+
+# An HLX load/store pseudo expands to two instructions in its packet. Check
+# that the global scheduler does not pull the add from bb.1 into the packet
+# holding the store pseudo and the jump in bb.0. The add would become a
+# predicated add with a constant extender, exceeding the four-word packet
+# limit.
+
+# CHECK-LABEL: bb.0:
+# CHECK: LX_S16b_pseudo killed $r3, killed $l15
+# CHECK-NEXT: J2_jumpf
+# CHECK-NEXT: }
+# CHECK-NOT: A2_paddit
+
+--- |
+  define void @f() {
+    br label %b
+  b:
+    ret void
+  }
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r3, $r31, $l15, $p0
+
+    BUNDLE implicit-def $pc, implicit killed $r3, implicit killed $l15, implicit $p0 {
+      LX_S16b_pseudo killed $r3, killed $l15 :: (store (s32768))
+      J2_jumpf $p0, %bb.2, implicit-def $pc
+    }
+
+  bb.1:
+    liveins: $r0, $r31
+
+    renamable $r3 = A2_addi killed renamable $r0, 2048
+    PS_jmpret $r31, implicit-def $pc, implicit $r3
+
+  bb.2:
+    liveins: $r31
+
+    PS_jmpret $r31, implicit-def $pc
+...

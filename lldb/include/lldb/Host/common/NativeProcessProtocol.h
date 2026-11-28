@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
@@ -170,6 +171,14 @@ public:
                                    "Not implemented");
   }
 
+  /// Answers "jAcceleratorPluginGetDynamicLoaderLibraryInfo" on an accelerator
+  /// connection. std::nullopt if this process does not provide libraries.
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
   virtual bool HasPendingLibraryEvents() { return false; }
 
   virtual bool IsAlive() const;
@@ -306,8 +315,9 @@ public:
     libraries = (1u << 9),
     accelerator_plugins = (1u << 10),
     address_spaces = (1u << 11),
+    lldb_settings = (1u << 12),
 
-    LLVM_MARK_AS_BITMASK_ENUM(address_spaces)
+    LLVM_MARK_AS_BITMASK_ENUM(lldb_settings)
   };
 
   class Manager {

@@ -131,7 +131,7 @@ protected:
 
   MachineVerifierMode VerifyMode = MachineVerifierMode::End;
 
-  /// Default setting for -enable-tail-merge on this target.
+  /// Default setting for -tail-merge on this target.
   bool EnableTailMerge = true;
 
   /// Enable sinking of instructions in MachineSink where a computation can be
@@ -149,6 +149,9 @@ protected:
 
   /// Enable LoopTermFold immediately after LSR
   bool EnableLoopTermFold = false;
+
+  /// Run loop strength reduction on optimized builds.
+  bool EnableLoopStrengthReduce = true;
 
   /// Add the actual instruction selection passes. This does not include
   /// preparation passes on IR.
@@ -488,9 +491,9 @@ protected:
   virtual FunctionPass *createRegAllocPass(bool Optimized);
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting. \returns true if any passes were added.
-  virtual bool addRegAssignAndRewriteFast();
-  virtual bool addRegAssignAndRewriteOptimized();
+  /// and rewriting.
+  virtual void addRegAssignAndRewriteFast();
+  virtual void addRegAssignAndRewriteOptimized();
 };
 
 /// TargetPassConfig needs a TargetMachine; the pass registry cannot create one.

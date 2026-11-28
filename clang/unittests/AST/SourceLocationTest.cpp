@@ -230,6 +230,53 @@ TEST(TypeLoc, LongRange) {
   EXPECT_TRUE(Verifier.match("long a;", typeLoc()));
 }
 
+TEST(TypeLoc, VectorSourceInfo) {
+  llvm::Annotations Code(R"cpp(
+    typedef int (__attribute__(($Vector^vector_size($VectorSize[[8 * 2]]))) Vector);
+    typedef int (__attribute__(($Extended^ext_vector_type($ExtendedSize[[4]]))) Extended);
+    template <int N> struct V {
+      typedef int __attribute__((vector_size(N))) DependentVector;
+      typedef int __attribute__((ext_vector_type(N))) DependentExtended;
+    };
+  )cpp");
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
+  ASSERT_TRUE(AST);
+
+  ASTContext &Ctx = AST->getASTContext();
+  const SourceManager &SM = Ctx.getSourceManager();
+  auto Matches = match(
+      typedefNameDecl(hasAnyName("Vector", "Extended")).bind("decl"), Ctx);
+  ASSERT_EQ(Matches.size(), 2u);
+  for (const auto &Match : Matches) {
+    const auto *Decl = Match.getNodeAs<TypedefNameDecl>("decl");
+    std::string Name = Decl->getNameAsString();
+    auto TL = Decl->getTypeSourceInfo()->getTypeLoc().getAs<VectorTypeLoc>();
+    ASSERT_TRUE(TL) << Name;
+    ASSERT_TRUE(TL.getAttrNameLoc().isValid()) << Name;
+    EXPECT_EQ(SM.getFileOffset(TL.getAttrNameLoc()), Code.point(Name)) << Name;
+    ASSERT_TRUE(TL.getSizeExpr()) << Name;
+    auto Range = Lexer::getAsCharRange(TL.getSizeExpr()->getSourceRange(), SM,
+                                       Ctx.getLangOpts());
+    auto Expected = Code.range(Name + "Size");
+    EXPECT_EQ(SM.getFileOffset(Range.getBegin()), Expected.Begin) << Name;
+    EXPECT_EQ(SM.getFileOffset(Range.getEnd()), Expected.End) << Name;
+  }
+
+  auto DependentMatches =
+      match(typedefNameDecl(hasAnyName("DependentVector", "DependentExtended"))
+                .bind("decl"),
+            Ctx);
+  ASSERT_EQ(DependentMatches.size(), 2u);
+  for (const auto &Match : DependentMatches) {
+    const auto *Decl = Match.getNodeAs<TypedefNameDecl>("decl");
+    TypeLoc TL = Decl->getTypeSourceInfo()->getTypeLoc();
+    if (auto VTL = TL.getAs<DependentVectorTypeLoc>())
+      EXPECT_TRUE(VTL.getSizeExpr());
+    else
+      EXPECT_TRUE(TL.castAs<DependentSizedExtVectorTypeLoc>().getSizeExpr());
+  }
+}
+
 TEST(TypeLoc, DecltypeTypeLocRange) {
   llvm::Annotations Code(R"(
     $full1[[decltype(1)]] a;

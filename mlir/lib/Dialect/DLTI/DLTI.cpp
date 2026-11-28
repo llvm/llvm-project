@@ -13,7 +13,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectImplementation.h"
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -698,10 +697,6 @@ public:
 } // namespace
 
 void DLTIDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
-      >();
   addInterfaces<TargetDataLayoutInterface>();
   ModuleOp::attachInterface<ModuleDLTIQueryOpInterface>(*getContext());
 }

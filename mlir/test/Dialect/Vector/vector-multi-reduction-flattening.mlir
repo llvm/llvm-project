@@ -107,6 +107,39 @@ func.func @masked_multi_reduction(%arg0: vector<2x4xf32>, %acc: f32, %mask: vect
     return %0 : f32
 }
 
+// The flattened mask keeps the scalable dim of the input.
+// ALL-LABEL: func @masked_multi_reduction_scalable_trailing
+// ALL-SAME:    %[[INPUT:.+]]: vector<1x1x[4]xf32>
+// ALL-SAME:    %[[ACC:.+]]: vector<1x1xf32>
+// ALL-SAME:    %[[MASK:.+]]: vector<1x1x[4]xi1>
+func.func @masked_multi_reduction_scalable_trailing(%arg0: vector<1x1x[4]xf32>, %acc: vector<1x1xf32>, %mask: vector<1x1x[4]xi1>) -> vector<1x1xf32> {
+    // INNER_REDUCTION: %[[CASTED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x1x[4]xi1> to vector<1x[4]xi1>
+    // INNER_REDUCTION: %[[CASTED_INPUT:.+]] = vector.shape_cast %[[INPUT]] : vector<1x1x[4]xf32> to vector<1x[4]xf32>
+    // INNER_REDUCTION: %[[CASTED_ACC:.+]] = vector.shape_cast %[[ACC]] : vector<1x1xf32> to vector<1xf32>
+    // INNER_REDUCTION: vector.mask %[[CASTED_MASK]] { vector.multi_reduction <add>, %[[CASTED_INPUT]], %[[CASTED_ACC]] [1] : vector<1x[4]xf32> to vector<1xf32> } : vector<1x[4]xi1> -> vector<1xf32>
+    // INNER_PARALLEL-NOT: vector.shape_cast
+    %0 = vector.mask %mask {
+      vector.multi_reduction <add>, %arg0, %acc [2] : vector<1x1x[4]xf32> to vector<1x1xf32>
+    } : vector<1x1x[4]xi1> -> vector<1x1xf32>
+    return %0 : vector<1x1xf32>
+}
+
+// ALL-LABEL: func @masked_multi_reduction_scalable_leading
+// ALL-SAME:    %[[INPUT:.+]]: vector<[4]x1x1xf32>
+// ALL-SAME:    %[[ACC:.+]]: vector<1x1xf32>
+// ALL-SAME:    %[[MASK:.+]]: vector<[4]x1x1xi1>
+func.func @masked_multi_reduction_scalable_leading(%arg0: vector<[4]x1x1xf32>, %acc: vector<1x1xf32>, %mask: vector<[4]x1x1xi1>) -> vector<1x1xf32> {
+    // INNER_PARALLEL: %[[CASTED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<[4]x1x1xi1> to vector<[4]x1xi1>
+    // INNER_PARALLEL: %[[CASTED_INPUT:.+]] = vector.shape_cast %[[INPUT]] : vector<[4]x1x1xf32> to vector<[4]x1xf32>
+    // INNER_PARALLEL: %[[CASTED_ACC:.+]] = vector.shape_cast %[[ACC]] : vector<1x1xf32> to vector<1xf32>
+    // INNER_PARALLEL: vector.mask %[[CASTED_MASK]] { vector.multi_reduction <add>, %[[CASTED_INPUT]], %[[CASTED_ACC]] [0] : vector<[4]x1xf32> to vector<1xf32> } : vector<[4]x1xi1> -> vector<1xf32>
+    // INNER_REDUCTION-NOT: vector.shape_cast
+    %0 = vector.mask %mask {
+      vector.multi_reduction <add>, %arg0, %acc [0] : vector<[4]x1x1xf32> to vector<1x1xf32>
+    } : vector<[4]x1x1xi1> -> vector<1x1xf32>
+    return %0 : vector<1x1xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @innerreduction(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">

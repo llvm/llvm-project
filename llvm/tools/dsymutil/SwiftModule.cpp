@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/LLVMBitCodes.h"
-#include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 
 namespace {

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Region.h"
+#include "llvm/SandboxIR/BasicBlock.h"
+#include "llvm/SandboxIR/Instruction.h"
 
 namespace llvm::sandboxir {
 
@@ -15,12 +17,17 @@ Region::Region(Context &Ctx, RegionClassID ID) : Ctx(Ctx), ID(ID) {
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
 
+  // Note: We may have multiple Region callbacks with the same name, thus the
+  // *Region name with the '*' prefix.
   CreateInstCB = Ctx.registerCreateInstrCallback(
-      [this](Instruction *NewInst) { addRaw(NewInst); });
-  EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
-    remove(ErasedInst);
-    removeFromAux(ErasedInst);
-  });
+      [this](Instruction *NewInst) { addRaw(NewInst); }, "Region",
+      /*AllowDuplicateNames=*/true);
+  EraseInstCB = Ctx.registerEraseInstrCallback(
+      [this](Instruction *ErasedInst) {
+        remove(ErasedInst);
+        removeFromAux(ErasedInst);
+      },
+      "Region", /*AllowDuplicateNames=*/true);
 }
 
 Region::~Region() {
@@ -115,6 +122,15 @@ void Region::dump() const {
 SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
   return Region::createRegionsFromMD<Region>(
       F, [&F]() { return std::make_unique<Region>(F.getContext()); });
+}
+
+Function &Region::getParentFunction() const {
+  if (!Insts.empty())
+    return *Insts.front()->getParent()->getParent();
+  // Use the aux.
+  if (!Aux.empty())
+    return *Aux.front()->getParent()->getParent();
+  llvm_unreachable("Both instrs and aux are empty!");
 }
 
 } // namespace llvm::sandboxir

@@ -852,6 +852,109 @@ exit:
   ret void
 }
 
+define void @rewrite_zext_of_mul_ule(i32 %a, i32 %b) {
+; CHECK-LABEL: 'rewrite_zext_of_mul_ule'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_zext_of_mul_ule
+; CHECK-NEXT:    %mul = mul i32 %a, %b
+; CHECK-NEXT:    --> (%a * %b) U: full-set S: full-set
+; CHECK-NEXT:    %n = zext i32 %mul to i64
+; CHECK-NEXT:    --> (zext i32 (%a * %b) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %ph ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,16) S: [0,16) Exits: (-1 + (zext i32 (%a * %b) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,17) S: [1,17) Exits: (zext i32 (%a * %b) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_of_mul_ule
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 (%a * %b) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 15
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 (%a * %b) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %mul = mul i32 %a, %b
+  %pre.0 = icmp ne i32 %mul, 0
+  br i1 %pre.0, label %ph, label %exit
+
+ph:
+  %pre.1 = icmp ule i32 %mul, 16
+  %n = zext i32 %mul to i64
+  br i1 %pre.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %ph ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @rewrite_sext_of_mul_sgt(i32 %a) {
+; CHECK-LABEL: 'rewrite_sext_of_mul_sgt'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_sext_of_mul_sgt
+; CHECK-NEXT:    %mul = mul nsw i32 %a, 2
+; CHECK-NEXT:    --> (2 * %a)<nsw> U: [0,-1) S: [-2147483648,2147483647)
+; CHECK-NEXT:    %n = sext i32 %mul to i64
+; CHECK-NEXT:    --> (sext i32 (2 * %a)<nsw> to i64) U: [0,-1) S: [-2147483648,2147483647)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2147483648) S: [1,2147483648) Exits: (sext i32 (2 * %a)<nsw> to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_of_mul_sgt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483646
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2
+;
+entry:
+  %mul = mul nsw i32 %a, 2
+  %pre = icmp sgt i32 %mul, 0
+  %n = sext i32 %mul to i64
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @rewrite_sext_of_mul_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: 'rewrite_sext_of_mul_eq'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_sext_of_mul_eq
+; CHECK-NEXT:    %mul = mul nsw i32 %a, %b
+; CHECK-NEXT:    --> (%a * %b)<nsw> U: full-set S: full-set
+; CHECK-NEXT:    %n = sext i32 %mul to i64
+; CHECK-NEXT:    --> (sext i32 (%a * %b)<nsw> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: (sext i32 (%a * %b)<nsw> to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_of_mul_eq
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 7
+;
+entry:
+  %mul = mul nsw i32 %a, %b
+  %pre = icmp eq i32 %mul, 7
+  %n = sext i32 %mul to i64
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @use(i64)
 
 declare i32 @llvm.umin.i32(i32, i32)

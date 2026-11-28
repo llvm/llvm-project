@@ -61,3 +61,10 @@ add_custom_target(libcxx-generate-files
             libcxx-generate-width-estimation-table
             libcxx-indic-conjunct-break-table
     COMMENT "Create all the auto-generated files in libc++ and its tests.")
+
+file(GLOB LIBCXX_CONFORMANCE_CSV_FILES CONFIGURE_DEPENDS "${LIBCXX_SOURCE_DIR}/docs/Status/*.csv")
+add_custom_target(libcxx-validate-conformance-csvs
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${LIBCXX_SOURCE_DIR}/utils/conformance" csv validate ${LIBCXX_CONFORMANCE_CSV_FILES}
+    COMMENT "Validate the format of the conformance status CSV files.")

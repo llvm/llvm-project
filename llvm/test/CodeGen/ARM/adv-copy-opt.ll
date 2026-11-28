@@ -1,7 +1,7 @@
-; RUN: llc -O1 -mtriple=armv7s-apple-ios -mcpu=swift < %s -disable-adv-copy-opt=true | FileCheck -check-prefix=NOOPT --check-prefix=CHECK %s
-; RUN: llc -O1 -mtriple=armv7s-apple-ios -mcpu=swift < %s -disable-adv-copy-opt=false | FileCheck -check-prefix=OPT --check-prefix=CHECK %s
-; RUN: llc -O1 -mtriple=thumbv7s-apple-ios -mcpu=swift < %s -disable-adv-copy-opt=true | FileCheck -check-prefix=NOOPT --check-prefix=CHECK %s
-; RUN: llc -O1 -mtriple=thumbv7s-apple-ios -mcpu=swift < %s -disable-adv-copy-opt=false | FileCheck -check-prefix=OPT --check-prefix=CHECK %s
+; RUN: llc -O1 -mtriple=armv7s-apple-ios -mcpu=swift < %s -adv-copy-opt=false | FileCheck -check-prefix=NOOPT --check-prefix=CHECK %s
+; RUN: llc -O1 -mtriple=armv7s-apple-ios -mcpu=swift < %s -adv-copy-opt=true | FileCheck -check-prefix=OPT --check-prefix=CHECK %s
+; RUN: llc -O1 -mtriple=thumbv7s-apple-ios -mcpu=swift < %s -adv-copy-opt=false | FileCheck -check-prefix=NOOPT --check-prefix=CHECK %s
+; RUN: llc -O1 -mtriple=thumbv7s-apple-ios -mcpu=swift < %s -adv-copy-opt=true | FileCheck -check-prefix=OPT --check-prefix=CHECK %s
 
 ; CHECK-LABEL: simpleVectorDiv
 ; ABI: %A => r0, r1.

@@ -110,6 +110,10 @@ bool Status::exists() const {
   return isStatusKnown() && Type != file_type::file_not_found;
 }
 
+bool Status::isExecutable() const {
+  return (Perms & sys::fs::all_exe) != sys::fs::no_perms;
+}
+
 File::~File() = default;
 
 FileSystem::~FileSystem() = default;
@@ -192,12 +196,15 @@ class RealFile : public File {
 
   file_t FD;
   Status S;
-  std::string RealName;
+  std::string OriginalName;
+  // Resolved lazily, on first access: not every caller asks for it, and
+  // resolving is expensive on Windows.
+  std::optional<std::string> RealName;
 
-  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t RawFD, StringRef NewName, StringRef NewOriginalName)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()) {
+        OriginalName(NewOriginalName.str()) {
     assert(FD.isValid() && "Invalid or inactive file descriptor");
   }
 
@@ -232,7 +239,17 @@ ErrorOr<Status> RealFile::status() {
 }
 
 ErrorOr<std::string> RealFile::getName() {
-  return RealName.empty() ? S.getName().str() : RealName;
+  if (!RealName) {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    SmallString<256> Path;
+    std::error_code EC;
+    if (FD.isValid())
+      EC = sys::fs::getRealPathFromHandle(FD, Path);
+    if (!FD.isValid() || EC == errc::not_supported)
+      EC = sys::fs::real_path(OriginalName, Path);
+    RealName = EC ? std::string() : std::string(Path);
+  }
+  return RealName->empty() ? S.getName().str() : *RealName;
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
@@ -319,13 +336,12 @@ private:
 
   ErrorOr<std::unique_ptr<File>>
   openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
-    SmallString<256> RealName, Storage;
-    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-        adjustPath(Name, Storage), Flags, &RealName);
+    SmallString<256> Path, Storage;
+    adjustPath(Name, Storage).toVector(Path);
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(Path, Flags);
     if (!FDOrErr)
       return errorToErrorCode(FDOrErr.takeError());
-    return std::unique_ptr<File>(
-        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+    return std::unique_ptr<File>(new RealFile(*FDOrErr, Name.str(), Path));
   }
 
   struct WorkingDirectory {
@@ -435,6 +451,22 @@ std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
   sys::sandbox::violationIfEnabled();
 
   return std::make_unique<RealFileSystem>(false);
+}
+
+std::optional<std::string>
+vfs::findFileInParentDirectories(FileSystem &FS, StringRef Dir,
+                                 ArrayRef<StringRef> FileNames) {
+  SmallString<256> Path;
+  for (; !Dir.empty(); Dir = sys::path::parent_path(Dir)) {
+    for (StringRef FileName : FileNames) {
+      Path = Dir;
+      sys::path::append(Path, FileName);
+      ErrorOr<Status> S = FS.status(Path);
+      if (S && S->isRegularFile())
+        return std::string(Path);
+    }
+  }
+  return std::nullopt;
 }
 
 namespace {

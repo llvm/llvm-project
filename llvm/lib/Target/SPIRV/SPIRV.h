@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -41,6 +42,22 @@ public:
 };
 
 FunctionPass *createSPIRVStructurizerPass();
+
+class SPIRVLowerResourceNamesPass
+    : public RequiredPassInfoMixin<SPIRVLowerResourceNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVLowerResourceNamesLegacyPass();
+
+class SPIRVRemoveUnusedResourcesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveUnusedResourcesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveUnusedResourcesLegacyPass();
 
 class SPIRVCBufferAccessPass
     : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
@@ -87,6 +104,19 @@ public:
 };
 
 ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM);
+
+/// Lower dynamic local memory to a kernel argument.
+class SPIRVLowerDynamicLocalMemoryPass
+    : public RequiredPassInfoMixin<SPIRVLowerDynamicLocalMemoryPass> {
+  const SPIRVTargetMachine &TM;
+
+public:
+  SPIRVLowerDynamicLocalMemoryPass(const SPIRVTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *
+createSPIRVLowerDynamicLocalMemoryPass(const SPIRVTargetMachine &TM);
 
 class SPIRVFinalizeShaderLinkagePass
     : public RequiredPassInfoMixin<SPIRVFinalizeShaderLinkagePass> {
@@ -142,6 +172,10 @@ class SPIRVPostLegalizerPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  // Register classes are final from here, as there is no RegBankSelect.
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 
 FunctionPass *createSPIRVPostLegalizerLegacyPass();
@@ -197,6 +231,8 @@ void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareModuleAnalysisLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveUnusedResourcesLegacyPass(PassRegistry &);
+void initializeSPIRVLowerResourceNamesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
@@ -206,6 +242,7 @@ void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeResourceBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
+void initializeSPIRVLowerDynamicLocalMemoryLegacyPass(PassRegistry &);
 void initializeSPIRVFinalizeShaderLinkageLegacyPass(PassRegistry &);
 void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);
 } // namespace llvm

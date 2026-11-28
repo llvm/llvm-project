@@ -1,0 +1,26 @@
+add_entrypoint_object(
+  freeifaddrs
+  SRCS
+    freeifaddrs.cpp
+  HDRS
+    ../freeifaddrs.h
+  DEPENDS
+    libc.hdr.types.struct_ifaddrs
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  getifaddrs
+  SRCS
+    getifaddrs.cpp
+  HDRS
+    ../getifaddrs.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_ifaddrs
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -24,8 +25,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/type_traits.h"
 #include <utility>
 
 using namespace llvm;
@@ -109,6 +108,54 @@ public:
     return tmp;
   }
 };
+
+/// Returns the attributes of \p A that \p B does not have with the same value.
+static std::string getAttributesNotIn(AttributeSet A, AttributeSet B) {
+  SmallVector<std::string, 4> Result;
+  for (Attribute Attr : A) {
+    Attribute Other = Attr.isStringAttribute()
+                          ? B.getAttribute(Attr.getKindAsString())
+                          : B.getAttribute(Attr.getKindAsEnum());
+    if (Attr != Other)
+      Result.push_back(Attr.getAsString());
+  }
+  return join(Result, ", ");
+}
+
+/// Compares the function, return and parameter attributes of \p L and \p R.
+/// Logs the attributes that are on only one side if \p Complain is set.
+/// Returns true if they differ.
+static bool diffAttributes(DifferenceEngine &Engine, StringRef Prefix,
+                           AttributeList L, AttributeList R, unsigned NumParams,
+                           bool Complain) {
+  bool Differ = false;
+  auto DiffSlot = [&](const Twine &Slot, AttributeSet LS, AttributeSet RS) {
+    if (LS == RS)
+      return;
+    Differ = true;
+    if (!Complain)
+      return;
+    Engine.log((Prefix + Slot + " attributes differ:").str());
+    std::string LeftOnly = getAttributesNotIn(LS, RS);
+    std::string RightOnly = getAttributesNotIn(RS, LS);
+    if (!LeftOnly.empty())
+      Engine.log("  < " + LeftOnly);
+    if (!RightOnly.empty())
+      Engine.log("  > " + RightOnly);
+  };
+  DiffSlot("function", L.getFnAttrs(), R.getFnAttrs());
+  DiffSlot("return", L.getRetAttrs(), R.getRetAttrs());
+  for (unsigned I = 0; I != NumParams; ++I)
+    DiffSlot("parameter " + Twine(I), L.getParamAttrs(I), R.getParamAttrs(I));
+  return Differ;
+}
+
+/// Returns true if \p L and \p R, which have the same opcode, have different
+/// poison-generating flags.
+static bool hasDifferentFlags(const Instruction *L, const Instruction *R) {
+  return L->getRawSubclassOptionalData() != R->getRawSubclassOptionalData() ||
+         L->getFastMathFlagsOrNone() != R->getFastMathFlagsOrNone();
+}
 
 /// A function-scope difference engine.
 class FunctionDifferenceEngine {
@@ -341,7 +388,6 @@ class FunctionDifferenceEngine {
 
   bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain,
                      const AssumptionContext *AC) {
-    // FIXME: call attributes
     if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(), AC)) {
       if (Complain) Engine.log("called functions differ");
       return true;
@@ -357,7 +403,12 @@ class FunctionDifferenceEngine {
               << L.getArgOperand(I) << R.getArgOperand(I);
         return true;
       }
-    return false;
+    bool Differ = L.getCallingConv() != R.getCallingConv();
+    if (Differ && Complain)
+      Engine.log("calling conventions differ");
+    Differ |= diffAttributes(Engine, "call ", L.getAttributes(),
+                             R.getAttributes(), L.arg_size(), Complain);
+    return Differ;
   }
 
   // If AllowAssumptions is enabled, whenever we encounter a pair of values
@@ -373,6 +424,12 @@ class FunctionDifferenceEngine {
     // Different opcodes always imply different operations.
     if (L->getOpcode() != R->getOpcode()) {
       if (Complain) Engine.log("different instruction types");
+      return true;
+    }
+
+    if (hasDifferentFlags(L, R)) {
+      if (Complain)
+        Engine.log("different instruction flags");
       return true;
     }
 
@@ -946,9 +1003,11 @@ void DifferenceEngine::diff(const Function *L, const Function *R) {
   Context C(*this, L, R);
 
   // FIXME: types
-  // FIXME: attributes and CC
-  // FIXME: parameter attributes
-  
+  if (L->getCallingConv() != R->getCallingConv())
+    log("different calling conventions");
+  diffAttributes(*this, "", L->getAttributes(), R->getAttributes(),
+                 std::max(L->arg_size(), R->arg_size()), /*Complain=*/true);
+
   // If both are declarations, we're done.
   if (L->empty() && R->empty())
     return;

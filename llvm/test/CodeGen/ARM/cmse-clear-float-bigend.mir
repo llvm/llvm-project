@@ -31,7 +31,6 @@
 ---
 name:            secure_foo
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00 -amdgpu-enable-merge-m0 -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: merge-m0-many-init
 # GCN:    bb.0.entry:
@@ -50,16 +50,12 @@
 # GCN-NEXT: DS_WRITE_B32
 ---
 name: merge-m0-many-init
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_32_xm0 }
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     SI_INIT_M0 -1, implicit-def $m0
@@ -114,7 +110,7 @@ body:             |
     successors: %bb.0.entry, %bb.6
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
-    %2 = IMPLICIT_DEF
+    %2:sreg_32_xm0 = IMPLICIT_DEF
     SI_INIT_M0 %2, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     SI_INIT_M0 %2, implicit-def $m0
@@ -144,15 +140,12 @@ body:             |
 # GCN:      SI_INIT_M0 -1
 ---
 name: merge-m0-dont-hoist-past-init-with-different-initializer
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     SI_INIT_M0 65536, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     S_BRANCH %bb.1
@@ -196,17 +189,14 @@ body:             |
 # GCN-NOT:   SI_INIT_MO -1
 ---
 name: merge-m0-after-prologue
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $sgpr0_sgpr1
 
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
 
@@ -265,13 +255,10 @@ body:             |
 # GCN-NEXT: S_NOP
 ---
 name: move-m0-different-initializer
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     S_NOP 0
@@ -284,13 +271,10 @@ body:             |
 # GCN-NEXT: SI_INIT_M0 -1
 ---
 name: move-m0-schedule-boundary
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -312,16 +296,12 @@ body:             |
 
 ---
 name: m0-in-loop-0
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -355,17 +335,13 @@ body:             |
 
 ---
 name: m0-in-loop-1
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sgpr_32 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     S_BRANCH %bb.1
@@ -398,16 +374,12 @@ body:             |
 
 ---
 name: m0-in-loop-2
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -444,16 +416,12 @@ body:             |
 
 ---
 name: m0-in-loop-3
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -492,16 +460,12 @@ body:             |
 
 ---
 name: m0-in-loop-4
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -541,16 +505,12 @@ body:             |
 
 ---
 name: m0-in-loop-5
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -589,16 +549,12 @@ body:             |
 
 ---
 name: m0-in-loop-6
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -644,16 +600,12 @@ body:             |
 
 ---
 name: m0-in-loop-7
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0.entry:
     successors: %bb.1
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec

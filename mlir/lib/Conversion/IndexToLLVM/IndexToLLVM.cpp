@@ -8,12 +8,16 @@
 
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMIntegerIntrinsicOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -354,10 +358,12 @@ void ConvertIndexToLLVMPass::runOnOperation() {
   target.addLegalDialect<LLVM::LLVMDialect>();
 
   // Set LLVM lowering options.
-  LowerToLLVMOptions options(&getContext());
+  const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+  LowerToLLVMOptions options(&getContext(),
+                             dataLayoutAnalysis.getAtOrAbove(getOperation()));
   if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(indexBitwidth);
-  LLVMTypeConverter typeConverter(&getContext(), options);
+  LLVMTypeConverter typeConverter(&getContext(), options, &dataLayoutAnalysis);
 
   // Populate patterns and run the conversion.
   RewritePatternSet patterns(&getContext());

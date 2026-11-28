@@ -32,6 +32,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
@@ -75,9 +76,8 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-unroll"
 
 bool llvm::getForgetSCEVInLoopUnroll(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
-      .forget_scev_loop_unroll;
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<ScalarOptions>().forget_scev_loop_unroll;
 }
 
 /// A magic value for use with the Threshold parameter to indicate
@@ -97,31 +97,13 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   const ScalarOptions &Opts = getScalarOptions(*L);
   TargetTransformInfo::UnrollingPreferences UP;
 
-  // Set up the defaults
+  // Set up the defaults that depend on options. All other fields use the
+  // default member initializers of UnrollingPreferences.
   UP.Threshold = OptLevel > 2 ? Opts.unroll_threshold_aggressive
                               : Opts.unroll_threshold_default;
-  UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = Opts.unroll_optsize_threshold;
-  UP.PartialThreshold = 150;
   UP.PartialOptSizeThreshold = Opts.unroll_optsize_threshold;
-  UP.DefaultUnrollRuntimeCount = 8;
-  UP.MaxCount = std::numeric_limits<unsigned>::max();
-  UP.MaxUpperBound = 8;
-  UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
-  UP.BEInsns = 2;
-  UP.Partial = false;
-  UP.Runtime = false;
-  UP.AllowRemainder = true;
-  UP.UnrollRemainder = false;
-  UP.AllowExpensiveTripCount = false;
-  UP.Force = false;
-  UP.UpperBound = false;
-  UP.UnrollAndJam = false;
-  UP.UnrollAndJamInnerLoopThreshold = 60;
-  UP.MaxIterationsCountToAnalyze = 10;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
-  UP.RuntimeUnrollMultiExit = false;
-  UP.AddAdditionalAccumulators = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -653,20 +635,15 @@ static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
 }
 
 /// Returns true if the SCEV expression is uniform, i.e., all threads in a
-/// convergent execution agree on its value. Recursively checks operands.
+/// convergent execution agree on its value.
 /// Returns false if the SCEV could not be computed.
 static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
   if (isa<SCEVCouldNotCompute>(S))
     return false;
-  if (isa<SCEVConstant>(S))
-    return true;
-  if (auto *U = dyn_cast<SCEVUnknown>(S))
-    return UI.isUniformAtDef(U->getValue());
-  for (const SCEV *Op : S->operands()) {
-    if (!isSCEVUniform(Op, UI))
-      return false;
-  }
-  return true;
+  return !SCEVExprContains(S, [&](const SCEV *Node) {
+    const auto *U = dyn_cast<SCEVUnknown>(Node);
+    return U && !UI.isUniformAtDef(U->getValue());
+  });
 }
 
 // If loop has an unroll_count pragma return the (necessarily
@@ -1671,8 +1648,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   // will simplify all loops, regardless of whether anything end up being
   // unrolled.
   for (const auto &L : LI) {
-    Changed |=
-        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr,
+                            false /* PreserveLCSSA */, &TTI);
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
@@ -1680,6 +1657,14 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   // declaration.
   SmallPriorityWorklist<Loop *, 4> Worklist;
   appendLoopsToWorklist(LI, Worklist);
+
+  // Cache the number of loops in each top-level nest. The gated transforms
+  // never add loops to the worklist, so the counts stay a safe upper bound.
+  const unsigned MaxNestLoops = getScalarOptions(F).unroll_max_nest_loops;
+  DenseMap<const Loop *, unsigned> TopLevelNestSize;
+  if (MaxNestLoops)
+    for (const Loop *TopL : LI)
+      TopLevelNestSize[TopL] = TopL->getLoopsInPreorder().size();
 
   while (!Worklist.empty()) {
     // Because the LoopInfo stores the loops in RPO, we walk the worklist
@@ -1697,6 +1682,27 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     std::optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
       LocalAllowPeeling = false;
+
+    // Suppress heuristic runtime/partial unrolling and peeling for loops in a
+    // pathologically large nest, where each such transform forces a whole-nest
+    // SCEV invalidation (quadratic compile time). Explicit unroll pragmas still
+    // win: gatherUnrollingPreferences applies these overrides before
+    // computeUnrollCount re-enables unrolling for pragma-marked loops.
+    std::optional<bool> LocalAllowRuntime = UnrollOpts.AllowRuntime;
+    std::optional<bool> LocalAllowPartial = UnrollOpts.AllowPartial;
+    if (MaxNestLoops) {
+      unsigned NestSize = TopLevelNestSize.lookup(L.getOutermostLoop());
+      if (NestSize > MaxNestLoops) {
+        LocalAllowRuntime = false;
+        LocalAllowPartial = false;
+        LocalAllowPeeling = false;
+        LLVM_DEBUG(dbgs().indent(1)
+                   << "Disabling runtime/partial unroll and peeling: "
+                      "outermost nest has "
+                   << NestSize << " loops (> " << MaxNestLoops << ").\n");
+      }
+    }
+
     std::string LoopName = std::string(L.getName());
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
@@ -1705,8 +1711,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
                         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel,
                         /*OnlyFullUnroll*/ false, UnrollOpts.OnlyWhenForced,
                         UnrollOpts.ForgetSCEV, UnrollOpts.PrepareForLTO,
-                        /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
-                        UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound,
+                        /*Threshold*/ std::nullopt, LocalAllowPartial,
+                        LocalAllowRuntime, UnrollOpts.AllowUpperBound,
                         LocalAllowPeeling, UnrollOpts.AllowProfileBasedPeeling,
                         UnrollOpts.FullUnrollMaxCount, UI, &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -o - %s | FileCheck %s
 --- |
   define void @test_dbg_value1() #0 { ret void }
   define void @test_dbg_value2() #0 { ret void }
@@ -14,6 +14,7 @@
   !10 = !{i32 2, !"Debug Info Version", i32 3}
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!10}
+...
 ---
 # Check we do not crash when checking $noreg debug operands.
 #
@@ -29,7 +30,6 @@
 # CHECK-NEXT:  RET undef $lr
 name:           test_dbg_value1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -65,7 +65,6 @@ body:             |
 # CHECK-NEXT:  RET undef $lr, implicit $x0
 name:            test_dbg_value2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

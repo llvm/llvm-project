@@ -24,5 +24,4 @@ void StandaloneDialect::initialize() {
 #define GET_OP_LIST
 #include "Standalone/StandaloneOps.cpp.inc"
       >();
-  registerTypes();
 }

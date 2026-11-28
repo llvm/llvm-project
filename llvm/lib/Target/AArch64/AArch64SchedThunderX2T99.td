@@ -32,6 +32,8 @@ def ThunderX2T99Model : SchedMachineModel {
                                                      HasFPv2]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = ThunderX2T99Model in {

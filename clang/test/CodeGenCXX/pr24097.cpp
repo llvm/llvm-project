@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux -fvisibility=hidden -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-pc-linux -fvisibility=hidden -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s %}
 
 struct Filter {
   virtual void Foo();

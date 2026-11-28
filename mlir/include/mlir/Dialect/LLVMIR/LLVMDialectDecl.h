@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECTDECL_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseSet.h"
 

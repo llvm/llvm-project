@@ -91,50 +91,44 @@ define <4 x double> @uitofp_v16i8_v4f64(<16 x i8> %a) {
 define <5 x double> @uitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA32-LABEL: uitofp_v5i32_v5f64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a1, 16
-; LA32-NEXT:    ld.w $a3, $a1, 0
-; LA32-NEXT:    ld.w $a4, $a1, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 1
+; LA32-NEXT:    ld.w $a2, $a1, 4
+; LA32-NEXT:    fld.s $fa0, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    fld.s $fa1, $a1, 16
 ; LA32-NEXT:    ld.w $a2, $a1, 12
-; LA32-NEXT:    ld.w $a1, $a1, 8
-; LA32-NEXT:    vrepli.b $vr2, 0
-; LA32-NEXT:    vilvl.w $vr1, $vr2, $vr1
-; LA32-NEXT:    vffint.d.lu $vr1, $vr1
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr3, $a2, 1
-; LA32-NEXT:    vilvl.w $vr3, $vr2, $vr3
-; LA32-NEXT:    vffint.d.lu $vr3, $vr3
-; LA32-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA32-NEXT:    fld.s $fa2, $a1, 8
+; LA32-NEXT:    vrepli.b $vr3, 0
+; LA32-NEXT:    vilvl.w $vr0, $vr3, $vr0
 ; LA32-NEXT:    vffint.d.lu $vr0, $vr0
-; LA32-NEXT:    vstelm.d $vr0, $a0, 32, 0
-; LA32-NEXT:    vst $vr3, $a0, 16
-; LA32-NEXT:    vst $vr1, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr2, $a2, 1
+; LA32-NEXT:    vilvl.w $vr2, $vr3, $vr2
+; LA32-NEXT:    vffint.d.lu $vr2, $vr2
+; LA32-NEXT:    vilvl.w $vr1, $vr3, $vr1
+; LA32-NEXT:    vffint.d.lu $vr1, $vr1
+; LA32-NEXT:    vstelm.d $vr1, $a0, 32, 0
+; LA32-NEXT:    vst $vr2, $a0, 16
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: uitofp_v5i32_v5f64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.w $a2, $a1, 32
-; LA64-NEXT:    ld.w $a3, $a1, 0
-; LA64-NEXT:    ld.w $a4, $a1, 8
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 1
+; LA64-NEXT:    ld.w $a2, $a1, 8
+; LA64-NEXT:    fld.s $fa0, $a1, 0
+; LA64-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA64-NEXT:    fld.s $fa1, $a1, 32
 ; LA64-NEXT:    ld.w $a2, $a1, 24
-; LA64-NEXT:    ld.w $a1, $a1, 16
-; LA64-NEXT:    vrepli.b $vr2, 0
-; LA64-NEXT:    vilvl.w $vr1, $vr2, $vr1
-; LA64-NEXT:    vffint.d.lu $vr1, $vr1
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a1, 0
-; LA64-NEXT:    vinsgr2vr.w $vr3, $a2, 1
-; LA64-NEXT:    vilvl.w $vr3, $vr2, $vr3
-; LA64-NEXT:    vffint.d.lu $vr3, $vr3
-; LA64-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA64-NEXT:    fld.s $fa2, $a1, 16
+; LA64-NEXT:    vrepli.b $vr3, 0
+; LA64-NEXT:    vilvl.w $vr0, $vr3, $vr0
 ; LA64-NEXT:    vffint.d.lu $vr0, $vr0
-; LA64-NEXT:    vstelm.d $vr0, $a0, 32, 0
-; LA64-NEXT:    vst $vr3, $a0, 16
-; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    vinsgr2vr.w $vr2, $a2, 1
+; LA64-NEXT:    vilvl.w $vr2, $vr3, $vr2
+; LA64-NEXT:    vffint.d.lu $vr2, $vr2
+; LA64-NEXT:    vilvl.w $vr1, $vr3, $vr1
+; LA64-NEXT:    vffint.d.lu $vr1, $vr1
+; LA64-NEXT:    vstelm.d $vr1, $a0, 32, 0
+; LA64-NEXT:    vst $vr2, $a0, 16
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v = uitofp <5 x i32> %a to <5 x double>
   ret <5 x double> %v

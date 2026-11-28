@@ -64,7 +64,7 @@ struct WithPadding {
 
 template <int>
 class NTTP_ClassType_WithoutPadding {
-  int x;
+  [[maybe_unused]] int x;
 };
 
 void test() {

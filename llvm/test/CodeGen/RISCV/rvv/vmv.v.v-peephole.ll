@@ -257,3 +257,17 @@ define <vscale x 4 x float> @commute_vfmadd(<vscale x 4 x float> %passthru, <vsc
   %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl)
   ret <vscale x 4 x float> %w
 }
+
+; vlm.v has a mask destination (EEW=1). This test previously asserted in
+; getDestLog2EEW.
+define <vscale x 1 x i8> @vlm_vmv(ptr %p, iXLen %vl) {
+; CHECK-LABEL: vlm_vmv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vlm.v v8, (a0)
+; CHECK-NEXT:    ret
+  %m = call <vscale x 8 x i1> @llvm.riscv.vlm(ptr %p, iXLen %vl)
+  %b = bitcast <vscale x 8 x i1> %m to <vscale x 1 x i8>
+  %v = call <vscale x 1 x i8> @llvm.riscv.vmv.v.v(<vscale x 1 x i8> poison, <vscale x 1 x i8> %b, iXLen %vl)
+  ret <vscale x 1 x i8> %v
+}

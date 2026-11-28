@@ -16,7 +16,7 @@ struct S {
 
 // CHECK-LABEL: define spir_func void @_Z12call_virtualP1V(
 // CHECK: [[TOKEN:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK: call spir_func addrspace(10) void %{{[0-9]+}}(ptr noundef nonnull align 8 dereferenceable(8) %{{[0-9]+}}) [[CONVERGENT:#[0-9]+]] [ "convergencectrl"(token [[TOKEN]]) ]{{$}}
+// CHECK: call spir_func addrspace(10) void %{{[0-9]+}}(ptr noundef nonnull align 4 dereferenceable(4) %{{[0-9]+}}) [[CONVERGENT:#[0-9]+]] [ "convergencectrl"(token [[TOKEN]]) ]{{$}}
 void call_virtual(V *v) {
   [[clang::noconvergent]] v->f();
 }

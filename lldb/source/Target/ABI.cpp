@@ -247,7 +247,7 @@ void RegInfoBasedABI::AugmentRegisterInfo(
       continue;
 
     RegisterInfo abi_info;
-    if (!GetRegisterInfoByName(info.name.GetStringRef(), abi_info))
+    if (!GetRegisterInfoByName(info.name, abi_info))
       continue;
 
     if (info.regnum_ehframe == LLDB_INVALID_REGNUM)
@@ -263,14 +263,14 @@ void MCBasedABI::AugmentRegisterInfo(
     std::vector<DynamicRegisterInfo::Register> &regs) {
   for (DynamicRegisterInfo::Register &info : regs) {
     uint32_t eh, dwarf;
-    std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name.GetStringRef());
+    std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name);
 
     if (info.regnum_ehframe == LLDB_INVALID_REGNUM)
       info.regnum_ehframe = eh;
     if (info.regnum_dwarf == LLDB_INVALID_REGNUM)
       info.regnum_dwarf = dwarf;
     if (info.regnum_generic == LLDB_INVALID_REGNUM)
-      info.regnum_generic = GetGenericNum(info.name.GetStringRef());
+      info.regnum_generic = GetGenericNum(info.name);
   }
 }
 

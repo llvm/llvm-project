@@ -3,6 +3,7 @@
 // host one. The same allocation in host code is moved to the stack.
 
 // RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true stack-arrays=true" %s | FileCheck %s
 
 // CHECK-LABEL: func.func @dynamic_temp_in_host_code
 // CHECK: fir.alloca !fir.array<?xi32>, %{{.*}}

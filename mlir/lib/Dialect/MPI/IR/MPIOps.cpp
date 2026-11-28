@@ -9,8 +9,6 @@
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MPI/IR/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 
 using namespace mlir;
 using namespace mlir::mpi;

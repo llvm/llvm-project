@@ -900,7 +900,7 @@ define half @PR40273(half) #0 {
 ; CHECK-LIBCALL-NEXT:    movl $15360, %ecx # imm = 0x3C00
 ; CHECK-LIBCALL-NEXT:    cmovnel %ecx, %eax
 ; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %eax
-; CHECK-LIBCALL-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-LIBCALL-NEXT:    movd %eax, %xmm0
 ; CHECK-LIBCALL-NEXT:    popq %rax
 ; CHECK-LIBCALL-NEXT:    retq
 ;
@@ -913,7 +913,7 @@ define half @PR40273(half) #0 {
 ; BWON-F16C-NEXT:    movl $15360, %ecx # imm = 0x3C00
 ; BWON-F16C-NEXT:    cmovnel %ecx, %eax
 ; BWON-F16C-NEXT:    cmovpl %ecx, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vmovd %eax, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: PR40273:
@@ -931,7 +931,7 @@ define half @PR40273(half) #0 {
 ; CHECK-I686-NEXT:    movl $15360, %ecx # imm = 0x3C00
 ; CHECK-I686-NEXT:    cmovnel %ecx, %eax
 ; CHECK-I686-NEXT:    cmovpl %ecx, %eax
-; CHECK-I686-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-I686-NEXT:    movd %eax, %xmm0
 ; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %2 = fcmp une half %0, 0xH0000

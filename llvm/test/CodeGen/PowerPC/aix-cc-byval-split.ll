@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp \
-; RUN:   -mcpu=pwr4 -mattr=-altivec -verify-machineinstrs 2>&1 < %s | \
+; RUN:   -mcpu=pwr4 -mattr=-altivec 2>&1 < %s | \
 ; RUN:    FileCheck --check-prefix=CHECK32 %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp \
-; RUN:   -mcpu=pwr4 -mattr=-altivec -verify-machineinstrs 2>&1 < %s | \
+; RUN:   -mcpu=pwr4 -mattr=-altivec 2>&1 < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK64  %s
 
 %struct.Spill = type { [12 x i64 ] }

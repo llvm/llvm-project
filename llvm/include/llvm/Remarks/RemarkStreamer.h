@@ -78,7 +78,7 @@ public:
   LLVM_ABI bool matchesFilter(StringRef Str);
   /// Check if the remarks NEED to have metadata in an object section
   LLVM_ABI bool needsSection() const;
-  /// Check if the remarks should store associated metadata if suppported
+  /// Check if the remarks should store associated metadata if supported
   LLVM_ABI bool wantsSection() const;
 };
 } // end namespace remarks

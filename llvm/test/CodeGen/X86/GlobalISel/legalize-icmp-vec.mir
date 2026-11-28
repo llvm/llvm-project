@@ -6,7 +6,6 @@
 # PR86203
 ---
 name: test_icmp_v4i64
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_v4i64

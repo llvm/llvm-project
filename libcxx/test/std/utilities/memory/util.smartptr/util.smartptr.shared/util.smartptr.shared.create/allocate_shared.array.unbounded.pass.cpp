@@ -34,6 +34,7 @@
 
 #include "min_allocator.h"
 #include "operator_hijacker.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "types.h"
 
@@ -499,6 +500,42 @@ int main(int, char**) {
 
     // Also check with an allocator that isn't std::allocator
     check_size_overflow<int[]>(min_allocator<int[]>(), max);
+  }
+
+  // Check that we allocate enough memory for large objects
+  {
+    struct Large {
+      char data[1024 * 1024];
+    };
+    constexpr std::size_t n = 2;
+    test_allocator_statistics stats;
+    {
+      std::shared_ptr<Large[]> ptr = std::allocate_shared<Large[]>(test_allocator<void>(&stats), n);
+      assert(ptr != nullptr);
+      assert(stats.allocated_bytes >= n * sizeof(Large));
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 0);
+        assert(ptr[i].data[sizeof(Large) - 1] == 0);
+        ptr[i].data[0]                 = 1;
+        ptr[i].data[sizeof(Large) - 1] = 2;
+        assert(ptr[i].data[0] == 1);
+        assert(ptr[i].data[sizeof(Large) - 1] == 2);
+      }
+    }
+    assert(stats.allocated_bytes == 0);
+    {
+      auto init                     = std::make_unique<Large>();
+      init->data[0]                 = 3;
+      init->data[sizeof(Large) - 1] = 4;
+      std::shared_ptr<Large[]> ptr  = std::allocate_shared<Large[]>(test_allocator<void>(&stats), n, *init);
+      assert(ptr != nullptr);
+      assert(stats.allocated_bytes >= n * sizeof(Large));
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 3);
+        assert(ptr[i].data[sizeof(Large) - 1] == 4);
+      }
+    }
+    assert(stats.allocated_bytes == 0);
   }
 
   return 0;

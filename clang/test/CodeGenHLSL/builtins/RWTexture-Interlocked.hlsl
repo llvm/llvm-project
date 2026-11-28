@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Regression coverage for free-function interlocked operations on a texture
 // subscript (RWTexture2D<T>[i], RWTexture2DArray<T>[i]). This is the texture
 // counterpart of RWBuffer-Interlocked.hlsl: the atomicrmw or cmpxchg has to be

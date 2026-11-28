@@ -163,7 +163,7 @@ public:
 
   static lldb::StopInfoSP
   CreateStopReasonWithPlan(lldb::ThreadPlanSP &plan,
-                           lldb::ValueObjectSP return_valobj_sp,
+                           ThreadPlanReturnValue return_value,
                            lldb::ExpressionVariableSP expression_variable_sp);
 
   static lldb::StopInfoSP
@@ -180,6 +180,9 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonHistoryBoundary(Thread &thread, const char *description);
 
+  static lldb::StopInfoSP
+  CreateStopReasonDyld(Thread &thread, const char *description = nullptr);
+
   static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
                                                lldb::pid_t child_pid,
                                                lldb::tid_t child_tid);
@@ -190,8 +193,7 @@ public:
 
   static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
 
-  static lldb::ValueObjectSP
-  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
+  static ThreadPlanReturnValue GetReturnValue(lldb::StopInfoSP &stop_info_sp);
 
   static lldb::ExpressionVariableSP
   GetExpressionVariable(lldb::StopInfoSP &stop_info_sp);

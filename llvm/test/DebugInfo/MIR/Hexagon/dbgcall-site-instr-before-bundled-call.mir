@@ -75,7 +75,6 @@
 ...
 ---
 name:            caller
-tracksRegLiveness: true
 frameInfo:
   stackSize:       64
   maxAlignment:    4

@@ -14,35 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
-#include "orc-rt-internal/bedrock/sys/Memory.h"
+#include "orc-rt-internal/bedrock/host/Memory.h"
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/bedrock/Session.h"
 
 #include <optional>
 
 namespace orc_rt {
-
-Expected<std::unique_ptr<SimpleNativeMemoryMap>>
-SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
-                              const char *InstanceName,
-                              SimpleSymbolTable::MutatorFn AddInterface) {
-
-  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
-
-  SimpleSymbolTable SNMMST;
-  if (auto Err = AddInterface(SNMMST))
-    return Err;
-  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
-      {SymbolNameSpec::c(InstanceName),
-       static_cast<const void *>(Instance.get())}};
-  if (auto Err = SNMMST.addUnique(InstanceSym))
-    return std::move(Err);
-
-  if (auto Err = ST.addUnique(std::move(SNMMST)))
-    return std::move(Err);
-
-  return std::move(Instance);
-}
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
@@ -53,7 +31,7 @@ void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
             .str()));
   }
 
-  auto Addr = sys::reserveMemory(Size);
+  auto Addr = host::reserveMemory(Size);
   if (!Addr)
     return OnComplete(Addr.takeError());
 
@@ -90,7 +68,7 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   for (auto &[Addr, DAAs] : SI->DeallocActions)
     runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
 
-  OnComplete(sys::releaseMemory(Addr, SI->Size));
+  OnComplete(host::releaseMemory(Addr, SI->Size));
 }
 
 void SimpleNativeMemoryMap::releaseMultiple(OnReleaseCompleteFn &&OnComplete,
@@ -127,7 +105,7 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
     if (size_t ZeroFillSize = S.Size - S.Content.size())
       memset(S.Address + S.Content.size(), 0, ZeroFillSize);
 
-    if (auto Err = sys::protectMemory(S.Address, S.Size, S.AG.getMemProt()))
+    if (auto Err = host::protectMemory(S.Address, S.Size, S.AG.getMemProt()))
       return OnComplete(std::move(Err));
 
     switch (S.AG.getMemLifetime()) {

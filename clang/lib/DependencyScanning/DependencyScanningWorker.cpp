@@ -737,7 +737,8 @@ public:
       // Skip over prebuilt modules.
       if (HasPrebuiltModules && !HS.getPrebuiltModuleFileName(Name).empty())
         continue;
-      OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(Name);
+      OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(
+          Name, /*AllowExtraModuleMapSearch=*/true);
       // Skip over modules that didn't find a modulemap.
       if (!File)
         continue;
@@ -987,7 +988,8 @@ public:
     SmallVector<IdentifierLoc, 2> Path;
     IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
     Path.emplace_back(IDLocation, ModuleID);
-    auto ModResult = CI.loadModule(IDLocation, Path, Module::Hidden, false);
+    auto ModResult = CI.loadModule(IDLocation, Path, Module::Hidden,
+                                   /*IsInclusionDirective=*/false);
 
     assert(CB && "Must have PPCallbacks after module loading");
     CB->moduleImport(SourceLocation(), Path, ModResult);

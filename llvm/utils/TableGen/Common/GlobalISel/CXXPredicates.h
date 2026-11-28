@@ -70,10 +70,6 @@ public:
   const unsigned ID;
   const std::string BaseEnumName;
 
-  bool needsUnreachable() const {
-    return !StringRef(Code).starts_with("return");
-  }
-
   std::string getEnumNameWithPrefix(StringRef Prefix) const {
     return Prefix.str() + BaseEnumName;
   }

@@ -136,6 +136,18 @@ declare zeroext i32 @func_res_attr_zeroext()
 
 ; // -----
 
+; CHECK-LABEL: @func_res_attr_noext
+; CHECK-SAME:  i32 {llvm.noext}
+declare noext i32 @func_res_attr_noext()
+
+; // -----
+
+; CHECK-LABEL: @func_arg_attr_noext
+; CHECK-SAME:  i32 {llvm.noext}
+declare void @func_arg_attr_noext(i32 noext)
+
+; // -----
+
 ; CHECK-LABEL: @func_res_attr_align
 ; CHECK-SAME:  !llvm.ptr {llvm.align = 16 : i64}
 declare align(16) ptr @func_res_attr_align()

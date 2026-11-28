@@ -624,6 +624,10 @@ following requirements:
 The attribute shall be present on the first declaration of a function and
 may optionally be present on subsequent declarations.
 
+SYCL prohibits calls to a variadic function in device functions. Since there is
+little reason to emit a function that cannot be called, the attribute is ignored,
+with a warning, when applied to a variadic function.
+
 When compiling for a SYCL device target that does not support the generic
 address space, the function shall not specify a raw pointer or reference type
 as the return type or as a parameter type.
@@ -638,6 +642,8 @@ The following examples demonstrate the use of this attribute:
 [[clang::sycl_external]] extern void Baz(); // Ok.
 
 [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
+[[clang::sycl_external]] void Corge(int, ...); // warning: attribute ignored;  Corge() is variadic.
 ```
 
   }];
@@ -3073,6 +3079,58 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to a named enum, or an anonymous enum with
+a typedef name. A use of its enumerator is then treated like
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, BPF_ENUMVAL_VALUE)`,
+so it is not a constant expression, and if -g is specified, its value is
+relocated. An enum defined in a struct or union with the attribute does not
+get the attribute.
+
+Where a constant is required, e.g., in an array bound, an array designator, the
+initializer of a global, static local or constexpr variable or an `"i"` operand
+of inline asm, the enumerator is not relocated and its value in the local enum
+is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an error by default;
+`-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+
+A case label of a switch is relocated, so that `case A:` behaves like
+`if (cond == A)`: the switch condition is compared with the relocated values
+before the other case labels, in source order. A relocated case label is not
+checked for duplicates or overlaps, since its value is only known at load time,
+e.g., two `case A:` labels are not diagnosed, and the second one is never taken.
+The values in the local enum are used for the other checks, e.g., `-Wswitch`.
+Without -g, or in a nodebug function, the values in the local enum are compared
+in the same way.
+
+If an enumerator does not exist in the kernel, libbpf poisons the instruction
+that loads its relocated value, and the verifier rejects the program if that
+instruction is reachable. A relocated case label is compared before the switch,
+so the program is rejected if the switch is reachable. A case label cannot have
+an existence check, so compare an enumerator that may not exist in an `if`
+instead, e.g., with libbpf's `bpf_core_enum_value_exists()`:
+
+```c
+if (bpf_core_enum_value_exists(enum E, B) && x == B)
+  return 1;
+switch (x) {
+case A:
+  return 2;
+default:
+  return 0;
+}
+```
+
+The `default:` label handles the enumerators that the kernel has but the local
+enum does not. `-fbpf-no-enum-reloc=` below is not an alternative for an enum
+whose values differ between kernels, since it disables the relocation for all
+enumerators of the enum.
+
+`-fbpf-no-enum-reloc=<enum>[,<enum>...]` disables the relocation for the named
+enums, or the typedef names of anonymous enums: their enumerators are always
+constants, as if the enums did not have the attribute.
+
+The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
+attribute is supported on enum declarations.
   }];
 }
 
@@ -6957,6 +7015,22 @@ the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
 }
 
+def HexagonHLXVectorStackLimitDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hlx_vector_stack_limit`` attribute (Hexagon only) sets a limit, in bytes,
+on the HLX vector stack frame of a function. HLX vectors that are stored on the
+stack are placed on a separate stack in VTCM. If the function needs a larger
+vector stack frame, the compiler reports an error.
+
+The attribute overrides the limit set with ``-fhlx-vector-stack-limit=<bytes>``.
+
+.. code-block:: c
+
+  void foo(void) __attribute__((hlx_vector_stack_limit(8192)));
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -9746,6 +9820,40 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the `Location` SPIR-V decoration.
+  }];
+}
+
+def HLSLVkBuiltInDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Some Vulkan built-in variables have no equivalent in native HLSL, so no
+system-value semantic can express them. The `[[vk::builtin]]` attribute marks a
+stage input/output variable as a SPIR-V built-in variable, identified by name.
+Allowed on function parameters, function returns, and struct fields. This
+attribute has no effect when used outside of an entrypoint parameter/parameter
+field/return value.
+
+The attribute is only available when targeting SPIR-V. For any other target it
+is ignored with an "unknown attribute ignored" warning.
+
+The attribute takes a single string literal argument naming the built-in.
+Currently supported built-ins:
+
+* `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be a scalar
+  `float`, or a `half` when native 16-bit types are not enabled (it is then
+  treated as `float`). Can be used as a vertex or mesh shader output, or as a
+  hull, domain or geometry shader input or output. It cannot be used in a pixel
+  shader.
+
+A declaration annotated with `[[vk::builtin]]` does not take part in
+`vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.
+
+```c++
+struct VSOutput {
+  [[vk::location(0)]] float4 color : COLOR;
+  [[vk::builtin("PointSize")]] float size : PSIZE;
+};
+```
   }];
 }
 

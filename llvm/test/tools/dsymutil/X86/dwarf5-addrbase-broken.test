@@ -36,6 +36,7 @@
 # CHECK: 0x{{[0-9a-f]+}}:   NULL
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

@@ -193,8 +193,8 @@ if (TARGET llvm-calc-occupancy)
   list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
 endif ()
 
-if (TARGET CGTestPlugin)
-  list(APPEND LLVM_TEST_DEPENDS CGTestPlugin)
+if (TARGET Ciao)
+  list(APPEND LLVM_TEST_DEPENDS Ciao)
 endif()
 
 if (LLVM_ENABLE_ONDISK_CAS AND LLVM_ENABLE_PIC)

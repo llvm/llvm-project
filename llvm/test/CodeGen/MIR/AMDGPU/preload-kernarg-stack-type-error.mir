@@ -3,7 +3,6 @@
 ---
 # CHECK: error: {{.*}} firstKernArgPreloadReg must be a register, not a stack location
 name: kernarg_preload_stack_argument
-tracksRegLiveness: true
 machineFunctionInfo:
   explicitKernArgSize: 4
   maxKernArgAlign: 4

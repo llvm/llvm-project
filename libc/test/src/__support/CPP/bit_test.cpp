@@ -16,15 +16,19 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
-using UnsignedTypes = testing::TypeList<
+using UnsignedTypes = testing::Types<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif // LIBC_TYPES_HAS_INT128
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long, UInt<128>>;
 
+template <typename T> class LlvmLibcBitUnsignedTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcBitUnsignedTest, UnsignedTypes);
+
 #ifdef FAKE_MACRO_DISABLE
-TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, HasSingleBit) {
+  using T = TypeParam;
   constexpr auto ZERO = T(0);
   constexpr auto ALL_ONES = T(~ZERO);
   EXPECT_FALSE(has_single_bit<T>(ZERO));
@@ -48,35 +52,40 @@ TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
 }
 #endif
 
-TYPED_TEST(LlvmLibcBitTest, CountLZero, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, CountLZero) {
+  using T = TypeParam;
   EXPECT_EQ(countl_zero<T>(T(0)), cpp::numeric_limits<T>::digits);
   int expected = 0;
   for (T value = T(~0); value; value >>= 1, ++expected)
     EXPECT_EQ(countl_zero<T>(value), expected);
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountRZero, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, CountRZero) {
+  using T = TypeParam;
   EXPECT_EQ(countr_zero<T>(T(0)), cpp::numeric_limits<T>::digits);
   int expected = 0;
   for (T value = T(~0); value; value <<= 1, ++expected)
     EXPECT_EQ(countr_zero<T>(value), expected);
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountLOne, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, CountLOne) {
+  using T = TypeParam;
   EXPECT_EQ(countl_one<T>(T(0)), 0);
   int expected = cpp::numeric_limits<T>::digits;
   for (T value = T(~0); value; value <<= 1, --expected)
     EXPECT_EQ(countl_one<T>(value), expected);
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountROne, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, CountROne) {
+  using T = TypeParam;
   EXPECT_EQ(countr_one<T>(T(0)), 0);
   int expected = cpp::numeric_limits<T>::digits;
   for (T value = T(~0); value; value >>= 1, --expected)
     EXPECT_EQ(countr_one<T>(value), expected);
 }
 
-TYPED_TEST(LlvmLibcBitTest, BitWidth, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, BitWidth) {
+  using T = TypeParam;
   EXPECT_EQ(bit_width<T>(T(0)), 0);
   int one_index = 0;
   for (T value = 1; value; value <<= 1, ++one_index)
@@ -162,7 +171,8 @@ TEST(LlvmLibcBitTest, BitFloor) {
             bit_floor(uint64_t(0xffffffffffffffff)));
 }
 
-TYPED_TEST(LlvmLibcBitTest, RotateIsInvariantForZeroAndOne, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, RotateIsInvariantForZeroAndOne) {
+  using T = TypeParam;
   constexpr T all_zeros = T(0);
   constexpr T all_ones = T(~0);
   for (int i = 0; i < cpp::numeric_limits<T>::digits; ++i) {
@@ -225,7 +235,8 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitUnsignedTest, CountOnes) {
+  using T = TypeParam;
   EXPECT_EQ(popcount(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(
@@ -271,14 +282,18 @@ TEST(LlvmLibcBitTest, ByteswapSigned) {
   EXPECT_EQ(byteswap(int64_t(0x0123456789ABCDEF)), int64_t(0xEFCDAB8967452301));
 }
 
-using ByteswapTypes = testing::TypeList<
+using ByteswapTypes = testing::Types<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long, signed char, short, int, long, long long>;
 
-TYPED_TEST(LlvmLibcBitTest, ByteswapInvolution, ByteswapTypes) {
+template <typename T> class LlvmLibcBitByteswapTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcBitByteswapTest, ByteswapTypes);
+
+TYPED_TEST(LlvmLibcBitByteswapTest, ByteswapInvolution) {
+  using T = TypeParam;
   // Byteswap is its own inverse: byteswap(byteswap(x)) == x.
   EXPECT_EQ(byteswap(byteswap(T(0))), T(0));
   EXPECT_EQ(byteswap(byteswap(T(1))), T(1));

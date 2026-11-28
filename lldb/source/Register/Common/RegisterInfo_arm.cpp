@@ -22,27 +22,27 @@ using namespace lldb_private;
 #define GPR_OFFSET(idx) ((idx)*4)
 #define FPU_OFFSET(idx) ((idx)*4 + sizeof(RegisterInfo_arm::GPR))
 #define FPSCR_OFFSET                                                           \
-  (LLVM_EXTENSION offsetof(RegisterInfo_arm::FPU, fpscr) +                \
+  (LLVM_EXTENSION offsetof(RegisterInfo_arm::FPU, fpscr) +                     \
    sizeof(RegisterInfo_arm::GPR))
 #define TLS_OFFSET                                                             \
   (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU))
 #define EXC_OFFSET(idx)                                                        \
-  ((idx) * 4 + sizeof(RegisterInfo_arm::GPR) +                            \
-   sizeof(RegisterInfo_arm::FPU) + sizeof(RegisterInfo_arm::TLS))
+  ((idx) * 4 + sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) + \
+   sizeof(RegisterInfo_arm::TLS))
 #define DBG_OFFSET(reg)                                                        \
-  ((LLVM_EXTENSION offsetof(RegisterInfo_arm::DBG, reg) +                 \
-    sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +  \
+  ((LLVM_EXTENSION offsetof(RegisterInfo_arm::DBG, reg) +                      \
+    sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +            \
     sizeof(RegisterInfo_arm::TLS) + sizeof(RegisterInfo_arm::EXC)))
 
 #define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL, sizeof(((RegisterInfo_arm::DBG *) NULL)->reg[i]),           \
+  #reg, NULL, sizeof(((RegisterInfo_arm::DBG *) NULL)->reg[i]),                \
                       DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex,           \
                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   dbg_##reg##i },                              \
                                   NULL, NULL, NULL,
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +   \
+  (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +             \
    sizeof(RegisterInfo_arm::EXC))
 
 // Include RegisterInfos_arm to declare our g_register_infos_arm structure.
@@ -163,8 +163,8 @@ static const RegisterSet g_reg_sets_arm[k_num_register_sets_with_tls] = {
     {"Thread Local Storage Registers", "tls", k_num_tls_registers,
      g_tls_regnums_arm}};
 
-RegisterInfo_arm::RegisterInfo_arm(
-    const lldb_private::ArchSpec &target_arch, bool has_tls_reg)
+RegisterInfo_arm::RegisterInfo_arm(const lldb_private::ArchSpec &target_arch,
+                                   bool has_tls_reg)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),
@@ -178,8 +178,7 @@ size_t RegisterInfo_arm::GetFPRSize() const {
   return sizeof(struct RegisterInfo_arm::FPU);
 }
 
-const lldb_private::RegisterInfo *
-RegisterInfo_arm::GetRegisterInfo() const {
+const lldb_private::RegisterInfo *RegisterInfo_arm::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
@@ -188,8 +187,8 @@ size_t RegisterInfo_arm::GetRegisterSetCount() const {
                        : k_num_register_sets_without_tls;
 }
 
-size_t RegisterInfo_arm::GetRegisterSetFromRegisterIndex(
-    uint32_t reg_index) const {
+size_t
+RegisterInfo_arm::GetRegisterSetFromRegisterIndex(uint32_t reg_index) const {
   if (reg_index <= gpr_cpsr)
     return GPRegSet;
   if (reg_index <= fpu_q15)

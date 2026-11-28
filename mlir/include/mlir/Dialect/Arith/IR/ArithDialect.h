@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_ARITH_IR_ARITHDIALECT_H_
 #define MLIR_DIALECT_ARITH_IR_ARITHDIALECT_H_
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Arith/IR/ArithOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_ARITH_IR_ARITHDIALECT_H_

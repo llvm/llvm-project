@@ -2,20 +2,21 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCBindRoutine.cpp
   ACCCGToGPU.cpp
   ACCComputeLowering.cpp
-  ACCRoutineLowering.cpp
-  ACCRoutineToGPUFunc.cpp
   ACCDeclareCtorDtorConversion.cpp
   ACCDeclareGPUModuleInsertion.cpp
+  ACCEmitRemarksData.cpp
   ACCEmitRemarksLoop.cpp
   ACCEmitRemarksPrivate.cpp
-  ACCEmitRemarksData.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
-  ACCRecipeMaterialization.cpp
-  ACCLoopTiling.cpp
   ACCImplicitDeclare.cpp
   ACCImplicitRoutine.cpp
   ACCLegalizeSerial.cpp
+  ACCLoopCollapse.cpp
+  ACCLoopTiling.cpp
+  ACCRecipeMaterialization.cpp
+  ACCRoutineLowering.cpp
+  ACCRoutineToGPUFunc.cpp
   ACCSpecializeForDevice.cpp
   ACCSpecializeForHost.cpp
   LegalizeDataValues.cpp
@@ -35,6 +36,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
   MLIRAnalysisBase
   MLIRArithDialect
   MLIRArithUtils
@@ -52,6 +54,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIRNVVMDialect
   MLIRPass
   MLIRSCFDialect
+  MLIRSCFUtils
   MLIRSupport
   MLIRTransforms
 )

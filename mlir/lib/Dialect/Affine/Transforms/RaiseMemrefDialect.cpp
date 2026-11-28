@@ -75,14 +75,14 @@ static AffineExpr toAffineExpr(Value value,
   }
 
   Operation *definingOp = value.getDefiningOp();
-  if (llvm::isa_and_nonnull<arith::AddIOp>(definingOp) ||
-      llvm::isa_and_nonnull<arith::MulIOp>(definingOp)) {
+  if (llvm::isa_and_nonnull<arith::AddIOp, arith::SubIOp, arith::MulIOp>(
+          definingOp)) {
     // TODO: replace recursion with explicit stack.
     // For the moment this can be tolerated as we only recurse on
-    // arith.addi and arith.muli, so there cannot be any infinite
-    // recursion. The depth of these expressions should be in most
-    // cases very manageable, as affine expressions should be as
-    // simple as `a + b * c`.
+    // arith.addi, arith.subi and arith.muli, so there cannot be
+    // any infinite recursion. The depth of these expressions
+    // should be in most cases very manageable, as affine
+    // expressions should be as simple as `a + b * c`.
     AffineExpr lhsE =
         toAffineExpr(definingOp->getOperand(0), affineDims, affineSymbols);
     AffineExpr rhsE =
@@ -92,6 +92,9 @@ static AffineExpr toAffineExpr(Value value,
       AffineExprKind kind;
       if (isa<arith::AddIOp>(definingOp)) {
         kind = mlir::AffineExprKind::Add;
+      } else if (isa<arith::SubIOp>(definingOp)) {
+        kind = mlir::AffineExprKind::Add;
+        rhsE = -rhsE;
       } else {
         kind = mlir::AffineExprKind::Mul;
 

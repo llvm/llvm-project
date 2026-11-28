@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Extensions/AllExtensions.h"
-#include "mlir/Dialect/Bufferization/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Bufferization/Extensions/ShardingInterfaceImpl.h"
 
 using namespace mlir;
 

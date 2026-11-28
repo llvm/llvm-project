@@ -241,6 +241,7 @@ private:
   SDValue lowerFP_TO_SINT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerUINT_TO_FPToF32(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -275,6 +276,7 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
 
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;

@@ -17,8 +17,6 @@ class TestFrameVarDILAssignment(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         Is32Bit = False
         if self.target().GetAddressByteSize() == 4:
             Is32Bit = True

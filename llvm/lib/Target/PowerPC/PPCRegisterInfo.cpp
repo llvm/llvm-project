@@ -31,7 +31,6 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -49,48 +48,16 @@ using namespace llvm;
 STATISTIC(InflateGPRC, "Number of gprc inputs for getLargestLegalClass");
 STATISTIC(InflateGP8RC, "Number of g8rc inputs for getLargestLegalClass");
 
-static cl::opt<bool>
-EnableBasePointer("ppc-use-base-pointer", cl::Hidden, cl::init(true),
-         cl::desc("Enable use of a base pointer for complex stack frames"));
-
-static cl::opt<bool>
-AlwaysBasePointer("ppc-always-use-base-pointer", cl::Hidden, cl::init(false),
-         cl::desc("Force the use of a base pointer in every function"));
-
-static cl::opt<bool>
-EnableGPRToVecSpills("ppc-enable-gpr-to-vsr-spills", cl::Hidden, cl::init(false),
-         cl::desc("Enable spills from gpr to vsr rather than stack"));
-
-static cl::opt<bool>
-StackPtrConst("ppc-stack-ptr-caller-preserved",
-                cl::desc("Consider R1 caller preserved so stack saves of "
-                         "caller preserved registers can be LICM candidates"),
-                cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned>
-MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
-                  cl::desc("Maximum search distance for definition of CR bit "
-                           "spill on ppc"),
-                  cl::Hidden, cl::init(100));
-
-// Copies/moves of physical accumulators are expensive operations
-// that should be avoided whenever possible. MMA instructions are
-// meant to be used in performance-sensitive computational kernels.
-// This option is provided, at least for the time being, to give the
-// user a tool to detect this expensive operation and either rework
-// their code or report a compiler bug if that turns out to be the
-// cause.
-#ifndef NDEBUG
-static cl::opt<bool>
-ReportAccMoves("ppc-report-acc-moves",
-               cl::desc("Emit information about accumulator register spills "
-                        "and copies"),
-               cl::Hidden, cl::init(false));
-#endif
-
-extern cl::opt<bool> EnableAutoPairedVecSt;
-
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
+
+#ifndef NDEBUG
+static bool reportAccMoves(const MachineBasicBlock &MBB) {
+  return MBB.getParent()
+      ->getSubtarget<PPCSubtarget>()
+      .getCLOpts()
+      .report_acc_moves;
+}
+#endif
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
@@ -525,7 +492,8 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
     // uses the TOC). In functions where it isn't reserved (i.e. leaf functions
     // with no TOC access), we can't claim that it is preserved.
     return (getReservedRegs(MF).test(PhysReg));
-  if (StackPtrConst && PhysReg == Subtarget.getStackPointerRegister() &&
+  if (TM.getCLOpts().stack_ptr_caller_preserved &&
+      PhysReg == Subtarget.getStackPointerRegister() &&
       !MFI.hasVarSizedObjects() && !MFI.hasOpaqueSPAdjustment())
     // The value of the stack pointer does not change within a function after
     // the prologue and before the epilogue if there are no dynamic allocations
@@ -670,12 +638,12 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     // FIXME: Currently limited to spilling GP8RC. A follow on patch will add
     // support to spill GPRC.
     if (Subtarget.isELFv2ABI() || Subtarget.isAIXABI()) {
-      if (Subtarget.hasP9Vector() && EnableGPRToVecSpills &&
+      if (Subtarget.hasP9Vector() && TM.getCLOpts().enable_gpr_to_vsr_spills &&
           RC == &PPC::G8RCRegClass) {
         InflateGP8RC++;
         return &PPC::SPILLTOVSRRCRegClass;
       }
-      if (RC == &PPC::GPRCRegClass && EnableGPRToVecSpills)
+      if (RC == &PPC::GPRCRegClass && TM.getCLOpts().enable_gpr_to_vsr_spills)
         InflateGPRC++;
     }
 
@@ -1055,7 +1023,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     if (Ins->readsRegister(SrcReg, TRI))
       SeenUse = true;
     // Unable to find CR bit definition within maximum search distance.
-    if (CRBitSpillDistance == MaxCRBitSpillDist) {
+    if (CRBitSpillDistance == TM.getCLOpts().max_crbit_spill_dist) {
       Ins = MI;
       break;
     }
@@ -1201,7 +1169,7 @@ void PPCRegisterInfo::emitAccCopyInfo(MachineBasicBlock &MBB,
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     std::string Dest = PPC::ACCRCRegClass.contains(DestReg) ? "acc" : "uacc";
     std::string Src = PPC::ACCRCRegClass.contains(SrcReg) ? "acc" : "uacc";
     dbgs() << "Emitting copy from " << Src << " to " << Dest << ":\n";
@@ -1215,7 +1183,7 @@ static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     dbgs() << "Emitting " << (IsPrimed ? "acc" : "uacc") << " register "
            << (IsRestore ? "restore" : "spill") << ":\n";
     MBB.dump();
@@ -1251,12 +1219,12 @@ void PPCRegisterInfo::spillRegPair(MachineBasicBlock &MBB,
 /// STXV[X] instructions when paired vector stores are disabled.
 void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                                            unsigned FrameIndex) const {
-  assert(!EnableAutoPairedVecSt &&
-         "Expecting to do this only if paired vector stores are disabled.");
   MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  assert(!Subtarget.enableAutoPairedVecSt() &&
+         "Expecting to do this only if paired vector stores are disabled.");
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   Register SrcReg = MI.getOperand(0).getReg();
@@ -1274,7 +1242,7 @@ static void emitWAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsRestore) {
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     dbgs() << "Emitting wacc register " << (IsRestore ? "restore" : "spill")
            << ":\n";
     MBB.dump();
@@ -1309,7 +1277,7 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  if (!EnableAutoPairedVecSt) {
+  if (!Subtarget.enableAutoPairedVecSt()) {
     spillRegPair(MBB, II, DL, TII, FrameIndex, IsLittleEndian, IsKilled,
                  TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
                  IsLittleEndian ? 48 : 0);
@@ -1737,7 +1705,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     lowerACCRestore(II, FrameIndex);
     return true;
   case PPC::STXVP: {
-    if (!EnableAutoPairedVecSt) {
+    if (!Subtarget.enableAutoPairedVecSt()) {
       lowerOctWordSpilling(II, FrameIndex);
       return true;
     }
@@ -1932,9 +1900,9 @@ Register PPCRegisterInfo::getBaseRegister(const MachineFunction &MF) const {
 }
 
 bool PPCRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  if (!EnableBasePointer)
+  if (!TM.getCLOpts().use_base_pointer)
     return false;
-  if (AlwaysBasePointer)
+  if (TM.getCLOpts().always_use_base_pointer)
     return true;
 
   // If we need to realign the stack, then the stack pointer can no longer

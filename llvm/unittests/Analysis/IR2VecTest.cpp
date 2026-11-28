@@ -571,6 +571,10 @@ TEST(IR2VecVocabularyTest, SlotIdxMapping) {
   Argument *Arg = F->getArg(0);
   EXPECT_EQ(Vocabulary::getIndex(*Arg),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::VariableID));
+
+  // Test Label operand (basic block)
+  EXPECT_EQ(Vocabulary::getIndex(*BB),
+            EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::LabelID));
 #undef EXPECTED_VOCAB_OPERAND_SLOT
 
   // Test getIndex for predicates
@@ -636,7 +640,8 @@ TEST(IR2VecVocabularyTest, StringKeyGeneration) {
   X(FunctionID, "Function")                                                    \
   X(PointerID, "Pointer")                                                      \
   X(ConstantID, "Constant")                                                    \
-  X(VariableID, "Variable")
+  X(VariableID, "Variable")                                                    \
+  X(LabelID, "Label")
 
 #define EXPECT_OPERAND_KIND(EnumName, Str)                                     \
   EXPECT_EQ(Vocabulary::getStringKey(                                          \
@@ -1152,7 +1157,8 @@ protected:
     JSON += "\n  },\n  \"Arguments\": {\n";
 
     // Add all required argument types
-    const char *Args[] = {"Function", "Pointer", "Constant", "Variable"};
+    const char *Args[] = {"Function", "Pointer", "Constant", "Variable",
+                          "Label"};
 
     First = true;
     for (const char *Arg : Args) {

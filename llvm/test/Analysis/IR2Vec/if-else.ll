@@ -1,4 +1,5 @@
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<ir2vec>' -disable-output -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<ir2vec>' -disable-output -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_arg_vocab.json %s 2>&1 | FileCheck %s -check-prefix=ARG
 
 define dso_local i32 @abc(i32 noundef %a, i32 noundef %b) #0 {
 entry:
@@ -36,3 +37,13 @@ return:                                           ; preds = %if.else, %if.then
 ; CHECK-NEXT: [ 195.00  198.00  201.00 ]
 ; CHECK-NEXT: Basic block: return:
 ; CHECK-NEXT: [ 95.00  97.00  99.00 ]
+
+; ARG: Basic block vectors:
+; ARG-NEXT: Basic block: entry:
+; ARG-NEXT: [ 69.60  72.60  75.60 ]
+; ARG-NEXT: Basic block: if.then:
+; ARG-NEXT: [ 21.80  22.60  23.40 ]
+; ARG-NEXT: Basic block: if.else:
+; ARG-NEXT: [ 21.80  22.60  23.40 ]
+; ARG-NEXT: Basic block: return:
+; ARG-NEXT: [ 2.80  3.20  3.60 ]

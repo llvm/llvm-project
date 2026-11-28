@@ -30,9 +30,10 @@ define void @func_one() {
 ; CHECK-LABEL: define {{[^@]+}}@func_one() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2:![0-9]+]]
-; CHECK-NEXT:    [[ONE:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[ONE]], align 4
-; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[ONE:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[ONE]], align 4
+; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP3]], align 4
 ; CHECK-NEXT:    store i16 10, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4), align 4, !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -60,9 +61,11 @@ define void @func_two() {
 ; CHECK-LABEL: define {{[^@]+}}@func_two() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2]]
-; CHECK-NEXT:    [[TWO:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO]], align 4
-; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TWO:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; CHECK-NEXT:    [[TWO1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TWO]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO1]], align 4
+; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP3]], align 4
 ; CHECK-NEXT:    store i16 20, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4), align 4, !noalias [[META11]]
 ; CHECK-NEXT:    ret void
 ;
@@ -94,12 +97,15 @@ entry:
 define void @func_block_direct_allocation() {
 ; CHECK-LABEL: define {{[^@]+}}@func_block_direct_allocation() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[ONE:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[ONE]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr addrspace(3) [[TMP2]], align 4
-; CHECK-NEXT:    [[TWO:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO]], align 4
-; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr addrspace(3) [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[ONE:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[ONE]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr addrspace(3) [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TWO:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP4]]
+; CHECK-NEXT:    [[TWO1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TWO]], i64 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO1]], align 4
+; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr addrspace(3) [[TMP5]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2]]
 ; CHECK-NEXT:    store i16 30, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4), align 4, !noalias [[META11]]

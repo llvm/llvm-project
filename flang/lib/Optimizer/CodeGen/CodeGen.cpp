@@ -57,7 +57,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -378,7 +379,7 @@ public:
         // where that value is live. Spill the address to a slot and deref it.
         if (addr.getDefiningOp<mlir::LLVM::CallOp>()) {
           mlir::Value slot = this->genAllocaAndAddrCastWithType(
-              fusedLoc, addr.getType(), defaultAlign, rewriter);
+              addr.getType(), defaultAlign, rewriter);
           mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
           addr = slot;
           expr = mlir::LLVM::DIExpressionAttr::get(
@@ -1804,7 +1805,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::SymbolTableCollection *symbolTables) {
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>()) {
     auto fn = flc.getFilename().str() + '\0';
     std::string globalName = fir::factory::uniqueCGIdent("cl", fn);
 
@@ -1840,7 +1841,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
 
 static mlir::Value genSourceLine(mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>())
     return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
                                           flc.getLine());
   return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
@@ -2436,8 +2437,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
             loc, rewriter, mod, storage, firBox,
             this->options.cudaDescriptorFreeFunction, this->symbolTables);
     } else {
-      storage = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign,
-                                                   rewriter);
+      storage =
+          this->genAllocaAndAddrCastWithType(llvmBoxTy, defaultAlign, rewriter);
     }
     auto storeOp =
         mlir::LLVM::StoreOp::create(rewriter, loc, boxValue, storage);
@@ -3481,8 +3482,14 @@ struct CoordinateOpConversion
     // Complex type - basically, extract the real or imaginary part
     // FIXME: double check why this is done before the fir.box case below.
     if (fir::isa_complex(objectTy)) {
+      // A complex is two elements of the same type laid out contiguously, so a
+      // part index that is not constant can index the element type directly.
+      // Only an index into the struct itself has to be constant.
       mlir::Value gep =
-          genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1]);
+          fir::getIntIfConstant(operands[1])
+              ? genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1])
+              : genGEP(loc, convertType(getComplexEleTy(objectTy)), rewriter,
+                       base, operands[1]);
       rewriter.replaceOp(coor, gep);
       return mlir::success();
     }
@@ -4171,8 +4178,8 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
             this->options.cudaDescriptorFreeFunction, this->symbolTables);
       }
       if (!newBoxStorage)
-        newBoxStorage = genAllocaAndAddrCastWithType(loc, llvmLoadTy,
-                                                     defaultAlign, rewriter);
+        newBoxStorage =
+            genAllocaAndAddrCastWithType(llvmLoadTy, defaultAlign, rewriter);
 
       TypePair boxTypePair{boxTy, llvmLoadTy};
       mlir::Value boxSize =
@@ -4445,6 +4452,31 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
       // feed to the fir declare operation. Thus, during codegen, we can
       // simply erase is as it is no longer used.
       rewriter.eraseOp(undef);
+      return mlir::success();
+    }
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(undef.getType())) {
+      // A fir.box value is lowered as the address of its descriptor storage,
+      // and fir.load/fir.store of a box copy the descriptor through that
+      // address. An undefined box must therefore be valid storage holding an
+      // undefined descriptor, not an undefined address.
+      mlir::Location loc = undef.getLoc();
+      mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
+      mlir::Value storage =
+          genAllocaAndAddrCastWithType(llvmBoxTy, defaultAlign, rewriter);
+      if (boxTy.isAssumedRank()) {
+        // Copies of an assumed-rank descriptor are sized from its rank, which
+        // must therefore stay within the storage.
+        mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
+        mlir::LLVM::GEPOp rankAddr =
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0,
+                   static_cast<int32_t>(kRankPosInBox));
+        mlir::Value zero = mlir::LLVM::ConstantOp::create(
+            rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
+        auto storeOp =
+            mlir::LLVM::StoreOp::create(rewriter, loc, zero, rankAddr);
+        attachTBAATag(storeOp, boxTy, nullptr, rankAddr);
+      }
+      rewriter.replaceOp(undef, storage);
       return mlir::success();
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(

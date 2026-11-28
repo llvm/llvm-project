@@ -749,10 +749,10 @@ define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) #0 {
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
 ; GNU-NEXT:     r0 = memw(r29+#8)
-; GNU-NEXT:     r1 = memw(r29+#0)
+; GNU-NEXT:     r2 = memw(r29+#12)
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
-; GNU-NEXT:     r2 = memw(r29+#12)
+; GNU-NEXT:     r1 = memw(r29+#0)
 ; GNU-NEXT:     r3 = memw(r29+#4)
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {

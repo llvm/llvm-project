@@ -19,7 +19,7 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[UMAX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[TMP2]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SCEVGEP]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SCEVGEP]], i8 0, i64 range(i64 0, 513) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]

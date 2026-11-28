@@ -123,8 +123,8 @@ void foo() {
 // CIR-AFTER-FULL: %[[C_REAL:.*]] = cir.fsub %[[MUL_AR_BR]], %[[MUL_AI_BI]] : !cir.float
 // CIR-AFTER-FULL: %[[C_IMAG:.*]] = cir.fadd %[[MUL_AR_BI]], %[[MUL_AI_BR]] : !cir.float
 // CIR-AFTER-FULL: %[[COMPLEX:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.cmp ne %[[C_REAL]], %[[C_REAL]] : !cir.float
-// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.cmp ne %[[C_IMAG]], %[[C_IMAG]] : !cir.float
+// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.fcmp uno %[[C_REAL]], %[[C_REAL]] : !cir.float
+// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.fcmp uno %[[C_IMAG]], %[[C_IMAG]] : !cir.float
 // CIR-AFTER-FULL: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR-AFTER-FULL: %[[SELECT_CONDITION:.*]] = cir.select if %[[IS_C_REAL_NAN]] then %[[IS_C_IMAG_NAN]] else %[[CONST_FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 // CIR-AFTER-FULL: %[[RESULT:.*]] = cir.ternary(%[[SELECT_CONDITION]], true {
@@ -155,8 +155,8 @@ void foo() {
 // LLVM-FULL: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
 // LLVM-FULL: %[[MUL_A_B:.*]] = insertvalue { float, float } {{.*}}, float %[[C_REAL]], 0
 // LLVM-FULL: %[[COMPLEX:.*]] = insertvalue { float, float } %[[MUL_A_B]], float %[[C_IMAG]], 1
-// LLVM-FULL: %[[IS_C_REAL_NAN:.*]] = fcmp une float %[[C_REAL]], %[[C_REAL]]
-// LLVM-FULL: %[[IS_C_IMAG_NAN:.*]] = fcmp une float %[[C_IMAG]], %[[C_IMAG]]
+// LLVM-FULL: %[[IS_C_REAL_NAN:.*]] = fcmp uno float %[[C_REAL]], %[[C_REAL]]
+// LLVM-FULL: %[[IS_C_IMAG_NAN:.*]] = fcmp uno float %[[C_IMAG]], %[[C_IMAG]]
 // LLVM-FULL: %[[SELECT_CONDITION:.*]] = and i1 %[[IS_C_REAL_NAN]], %[[IS_C_IMAG_NAN]]
 // LLVM-FULL: br i1 %[[SELECT_CONDITION]], label %[[THEN_LABEL:.*]], label %[[ELSE_LABEL:.*]]
 // LLVM-FULL: [[THEN_LABEL]]:
@@ -472,7 +472,7 @@ void foo3() {
 // LLVM-IMPROVED:  %[[ADD_BR_MUL_DIV_BIBR_BI:.*]] = fadd float %[[B_REAL]], %[[MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AI_DIV_BIBR:.*]] = fmul float %[[A_IMAG]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[ADD_AR_MUL_AI_DIV_BIBR:.*]] = fadd float %[[A_REAL]], %[[MUL_AI_DIV_BIBR]]
-// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %16
+// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AR_DIV_BIBR:.*]] = fmul float %[[A_REAL]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[SUB_AI_MUL_AR_DIV_BIBR:.*]] = fsub float %[[A_IMAG]], %[[MUL_AR_DIV_BIBR]]
 // LLVM-IMPROVED:  %[[RESULT_IMAG:.*]] = fdiv float %[[SUB_AI_MUL_AR_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
@@ -973,7 +973,7 @@ void foo6() {
 // LLVM-IMPROVED:  %[[ADD_BR_MUL_DIV_BIBR_BI:.*]] = fadd float %[[B_REAL]], %[[MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AI_DIV_BIBR:.*]] = fmul float 0.000000e+00, %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[ADD_AR_MUL_AI_DIV_BIBR:.*]] = fadd float %[[TMP_A]], %[[MUL_AI_DIV_BIBR]]
-// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %16
+// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AR_DIV_BIBR:.*]] = fmul float %[[TMP_A]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[SUB_AI_MUL_AR_DIV_BIBR:.*]] = fsub float 0.000000e+00, %[[MUL_AR_DIV_BIBR]]
 // LLVM-IMPROVED:  %[[RESULT_IMAG:.*]] = fdiv float %[[SUB_AI_MUL_AR_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]

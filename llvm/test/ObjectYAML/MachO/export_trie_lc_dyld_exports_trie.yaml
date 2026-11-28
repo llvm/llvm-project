@@ -16,6 +16,7 @@
 # OVERLAP: error: export trie node '_' at offset 4 overlaps the previous node, which ends at offset 5
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

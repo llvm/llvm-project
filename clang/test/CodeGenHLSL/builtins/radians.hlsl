@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
+// RUN:   -emit-llvm -O1 -o - | FileCheck %s %}
 
 // Note: the 1.745610e-02 and f0x3C8EFA35 constants below equal Pi/180.
 

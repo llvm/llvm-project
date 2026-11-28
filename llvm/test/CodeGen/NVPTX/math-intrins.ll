@@ -367,6 +367,105 @@ define i64 @cpu_lround_i64_double(double %a) {
   ret i64 %b
 }
 
+; ---- lrint ----
+
+
+define i64 @lrint_i64_float(float %x) {
+; CHECK-LABEL: lrint_i64_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [lrint_i64_float_param_0];
+; CHECK-NEXT:    cvt.rni.f32.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.lrint.i64.f32(float %x)
+  ret i64 %r
+}
+
+define i64 @lrint_i64_double(double %x) {
+; CHECK-LABEL: lrint_i64_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [lrint_i64_double_param_0];
+; CHECK-NEXT:    cvt.rni.f64.f64 %rd2, %rd1;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.lrint.i64.f64(double %x)
+  ret i64 %r
+}
+
+define i32 @lrint_i32_double(double %x) {
+; CHECK-LABEL: lrint_i32_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [lrint_i32_double_param_0];
+; CHECK-NEXT:    cvt.rni.f64.f64 %rd2, %rd1;
+; CHECK-NEXT:    cvt.rzi.s32.f64 %r1, %rd2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
+  %r = call i32 @llvm.lrint.i32.f64(double %x)
+  ret i32 %r
+}
+
+define i32 @lrint_i32_float(float %x) {
+; CHECK-LABEL: lrint_i32_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [lrint_i32_float_param_0];
+; CHECK-NEXT:    cvt.rni.f32.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.rzi.s32.f32 %r3, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %r = call i32 @llvm.lrint.i32.f32(float %x)
+  ret i32 %r
+}
+
+; ---- llrint ----
+
+define i64 @llrint_i64_float(float %x) {
+; CHECK-LABEL: llrint_i64_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [llrint_i64_float_param_0];
+; CHECK-NEXT:    cvt.rni.f32.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.llrint.i64.f32(float %x)
+  ret i64 %r
+}
+
+define i64 @llrint_i64_double(double %x) {
+; CHECK-LABEL: llrint_i64_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [llrint_i64_double_param_0];
+; CHECK-NEXT:    cvt.rni.f64.f64 %rd2, %rd1;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.llrint.i64.f64(double %x)
+  ret i64 %r
+}
+
+
 ; ---- nearbyint ----
 
 define float @nearbyint_float(float %a) {

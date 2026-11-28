@@ -9,13 +9,14 @@
 
 typedef __attribute__(( ext_vector_type(2) )) int int2;
 typedef __attribute__(( ext_vector_type(4) )) int int4;
+typedef __attribute__(( ext_vector_type(4) )) unsigned int uint4;
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 
 int4 vec_ternary(int4 c, int4 a, int4 b) {
   return c ? a : c;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
@@ -45,7 +46,7 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
   return c ? a : b;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
@@ -72,12 +73,42 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
 // LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x float> %[[A:.*]], <4 x float> %[[B:.*]]
 // LLVM: ret <4 x float> %[[RESULT]]
 
+uint4 vec_ternary_u4(int4 c, uint4 a, uint4 b) {
+  return c ? a : b;
+}
+
+// CIR: cir.func {{.*}} @vec_ternary_u4
+// CIR: %[[C_CMP:.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[C_CMP_NOT:.*]] = cir.not %[[C_CMP]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B_VI4:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A_VI4:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %[[TMP_1:.*]] = cir.and %[[TMP_B_VI4]], %[[C_CMP_NOT]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_2:.*]] = cir.and %[[TMP_A_VI4]], %[[C_CMP]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_1_1_OR:.*]] = cir.or %[[TMP_1]], %[[TMP_2]] : !cir.vector<4 x !s32i>
+// CIR: %{{.*}} = cir.cast bitcast %[[TMP_1_1_OR]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !u32i>
+
+// LLVM: %[[IS_NEG:.*]] = icmp slt <4 x i32> %[[COND:.*]], zeroinitializer
+// LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> %[[B:.*]]
+// LLVM: ret <4 x i32> %[[RESULT]]
+
+uint4 vec_ternary_ucond(uint4 c, uint4 a, uint4 b) {
+  return c ? a : b;
+}
+
+// CIR: cir.func {{.*}} @vec_ternary_ucond
+// CIR: %[[C_S:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %{{.*}} = cir.vec.cmp(lt, %[[C_S]], %{{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[IS_NEG:.*]] = icmp slt <4 x i32> %[[COND:.*]], zeroinitializer
+// LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> %[[B:.*]]
+// LLVM: ret <4 x i32> %[[RESULT]]
+
 int4 vec_unary_inc(int4 a) {
   ++a;
   return a;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -94,7 +125,7 @@ int4 vec_unary_dec(int4 a) {
   return a;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -149,10 +180,10 @@ int4 vec_init_scalar_swizzles(int4 a, int c) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @vec_init_scalar_swizzles
-// CIR: %[[X:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
-// CIR: %[[Y:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
+// CIR: %[[X:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
+// CIR: %[[Y:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
 // CIR: %[[C:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
-// CIR: %[[W:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
+// CIR: %[[W:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
 // CIR: cir.vec.create(%[[X]], %[[Y]], %[[C]], %[[W]] : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @vec_init_scalar_swizzles
@@ -213,3 +244,44 @@ int4 vec_init_narrow_swizzle(int2 b) {
 // LLVM-LABEL: @vec_init_narrow_swizzle
 // LLVM: %[[RESULT:.*]] = shufflevector <2 x i32> %{{.*}}, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 // LLVM: ret <4 x i32> %[[RESULT]]
+
+int vec_volatile_swizzle_scalar(volatile int4 *p) {
+  return p->x;
+}
+
+// CIR-LABEL: cir.func {{.*}} @vec_volatile_swizzle_scalar
+// CIR: %[[V:.*]] = cir.load volatile {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.vec.extract %[[V]][%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
+
+// LLVM-LABEL: @vec_volatile_swizzle_scalar
+// LLVM: %[[V:.*]] = load volatile <4 x i32>, ptr %{{.*}}, align 16
+// LLVM: %[[X:.*]] = extractelement <4 x i32> %[[V]], i64 0
+// LLVM: ret i32 %[[X]]
+
+int2 vec_volatile_swizzle_multi(volatile int4 *p) {
+  return p->xy;
+}
+
+// CIR-LABEL: cir.func {{.*}} @vec_volatile_swizzle_multi
+// CIR: %[[V:.*]] = cir.load volatile {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.vec.shuffle(%[[V]], %{{.*}} : !cir.vector<4 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !s32i>
+
+// LLVM-LABEL: @vec_volatile_swizzle_multi
+// LLVM: %[[V:.*]] = load volatile <4 x i32>, ptr %{{.*}}, align 16
+// LLVM: %[[XY:.*]] = shufflevector <4 x i32> %[[V]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+// LLVM: ret <2 x i32> %[[XY]]
+
+void vec_volatile_swizzle_unused(volatile int4 *p) {
+  p->x;
+  p->xy;
+}
+
+// CIR-LABEL: cir.func {{.*}} @vec_volatile_swizzle_unused
+// CIR: cir.load volatile {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.load volatile {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.return
+
+// LLVM-LABEL: @vec_volatile_swizzle_unused
+// LLVM: load volatile <4 x i32>, ptr %{{.*}}, align 16
+// LLVM: load volatile <4 x i32>, ptr %{{.*}}, align 16
+// LLVM: ret void

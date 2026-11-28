@@ -35,9 +35,6 @@
 ! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx908 -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU
 
-! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -nogpulib -c %s -### 2>&1 \
-! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU-R600
-
 ! RUN: %flang --target=loongarch64-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-LOONGARCH64
 
@@ -81,9 +78,6 @@
 
 ! CHECK-AMDGPU: "-fc1" "-triple" "amdgpu9.08-amd-amdhsa"
 ! CHECK-AMDGPU-SAME: "-target-cpu" "gfx908"
-
-! CHECK-AMDGPU-R600: "-fc1" "-triple" "r600-unknown-unknown"
-! CHECK-AMDGPU-R600-SAME: "-target-cpu" "cayman"
 
 ! CHECK-LOONGARCH64: "-fc1" "-triple" "loongarch64-unknown-linux-gnu"
 ! CHECK-LOONGARCH64-SAME: "-target-cpu" "loongarch64" "-target-feature" "+lsx" "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"

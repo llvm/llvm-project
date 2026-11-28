@@ -1,5 +1,22 @@
 ; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %s | FileCheck %s
 
+; The resolver is emitted while emitting the function, whose instructions are
+; emitted afterwards.
+; CHECK: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x0, :got:global
+; CHECK-NEXT: ldr x0, [x0, :got_lo12:global]
+; CHECK-NEXT: mov x1, #0
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .text
+; CHECK-NEXT: .xword %funcinit([[FUNC]])
+; CHECK-NEXT: prefix_data:
+; CHECK-NEXT: .cfi_startproc
+; CHECK: ret
+define void @prefix_data() prefix ptr ptrauth (ptr @global, i32 2) {
+  ret void
+}
+
 ; CHECK: nullref:
 ; CHECK-NEXT: [[PLACE:.*]]:
 ; CHECK-NEXT: .section .text.startup

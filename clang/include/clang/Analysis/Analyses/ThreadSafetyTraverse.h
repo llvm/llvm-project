@@ -398,18 +398,11 @@ public:
 template <typename Self, typename StreamType>
 class PrettyPrinter {
 private:
-  // Print out additional information.
-  bool Verbose;
-
-  // Omit redundant decls.
-  bool Cleanup;
-
   // Print exprs in C-like syntax.
   bool CStyle;
 
 public:
-  PrettyPrinter(bool V = false, bool C = true, bool CS = true)
-      : Verbose(V), Cleanup(C), CStyle(CS) {}
+  PrettyPrinter(bool CS = true) : CStyle(CS) {}
 
   static void print(const SExpr *E, StreamType &SS) {
     Self printer;

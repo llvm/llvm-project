@@ -5,7 +5,6 @@
 ---
 name:            aix-prefixed-instruction-boundary
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '' }
 body:             |

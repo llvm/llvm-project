@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.Branch
@@ -82,6 +83,61 @@ spirv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @switch_default_only
+  spirv.func @switch_default_only(%selector: i32) "None" {
+    // CHECK: llvm.switch %{{.*}} : i32, ^bb1 [
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : i32, [
+      default: ^default
+    ]
+  ^default:
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @switch_signed_with_arguments
+  spirv.func @switch_signed_with_arguments(%selector: si32, %arg: i32) "None" {
+    // CHECK: llvm.switch %{{.*}} : i32, ^bb1(%{{.*}} : i32) [
+    // CHECK-NEXT: 0: ^bb2,
+    // CHECK-NEXT: -1: ^bb3(%{{.*}}, %{{.*}} : i32, i32)
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : si32, [
+      default: ^default(%arg : i32),
+      0: ^case0,
+      -1: ^case1(%arg, %arg : i32, i32)
+    ]
+  ^default(%d: i32):
+    spirv.Return
+  ^case0:
+    spirv.Return
+  ^case1(%a: i32, %b: i32):
+    spirv.Return
+  }
+}
+
+// -----
+
+// The verifier accepts targets without literals, but llvm.switch needs a case
+// value per target.
+spirv.module Logical GLSL450 {
+  spirv.func @switch_targets_no_literals(%selector: i32) "None" {
+    // expected-error@+1 {{failed to legalize operation 'spirv.Switch' that was explicitly marked illegal}}
+    "spirv.Switch"(%selector)[^default, ^target]
+      {case_operand_segments = array<i32: 0>,
+       operandSegmentSizes = array<i32: 1, 0, 0>} : (i32) -> ()
+  ^default:
+    spirv.Return
+  ^target:
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
 
@@ -124,6 +180,30 @@ spirv.module Logical GLSL450 {
     }
     spirv.Return
   }
+
+  // CHECK-LABEL: @loop_with_yielding_value
+  spirv.func @loop_with_yielding_value(%init : i32) -> i32 "None" {
+    // CHECK:   llvm.br ^[[HEADER:.*]](%{{.*}} : i32)
+    // CHECK: ^[[HEADER]](%[[I:.*]]: i32):
+    // CHECK:   llvm.cond_br %{{.*}}, ^[[BODY:.*]], ^[[MERGE:.*]](%[[I]] : i32)
+    // CHECK: ^[[MERGE]](%[[V:.*]]: i32):
+    // CHECK:   llvm.br ^[[END:.*]](%[[V]] : i32)
+    // CHECK: ^[[END]](%[[RES:.*]]: i32):
+    // CHECK:   llvm.return %[[RES]] : i32
+    %0 = spirv.mlir.loop -> i32 {
+      spirv.Branch ^header(%init : i32)
+    ^header(%i : i32):
+      %cond = spirv.Constant true
+      spirv.BranchConditional %cond, ^body, ^merge(%i : i32)
+    ^body:
+      spirv.Branch ^continue
+    ^continue:
+      spirv.Branch ^header(%i : i32)
+    ^merge(%v : i32):
+      spirv.mlir.merge %v : i32
+    }
+    spirv.ReturnValue %0 : i32
+  }
 }
 
 // -----
@@ -140,10 +220,17 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
 
-  spirv.func @selection_with_merge_block_only() -> () "None" {
+  // CHECK-LABEL: @selection_with_merge_block_only
+  spirv.func @selection_with_merge_block_only(%ptr: !spirv.ptr<i32, Function>, %val: i32) -> () "None" {
     %cond = spirv.Constant true
-    // CHECK: llvm.return
+    // CHECK: llvm.store
+    // CHECK: llvm.cond_br %{{.*}}, ^bb1, ^bb1
+    // CHECK: ^bb1:
+    // CHECK-NEXT: llvm.br ^bb2
+    // CHECK: ^bb2:
+    // CHECK-NEXT: llvm.return
     spirv.mlir.selection {
+      spirv.Store "Function" %ptr, %val : i32
       spirv.BranchConditional %cond, ^merge, ^merge
     ^merge:
       spirv.mlir.merge
@@ -168,6 +255,21 @@ spirv.module Logical GLSL450 {
     }
     // CHECK: ^bb3:
     // CHECK-NEXT: llvm.return
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @selection_with_header_ops
+  spirv.func @selection_with_header_ops(%cond: i1, %ptr: !spirv.ptr<i32, Function>, %val: i32) -> () "None" {
+    // CHECK: llvm.store
+    // CHECK: llvm.cond_br %{{.*}}, ^bb1, ^bb2
+    spirv.mlir.selection {
+      spirv.Store "Function" %ptr, %val : i32
+      spirv.BranchConditional %cond, ^true, ^merge
+    ^true:
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
     spirv.Return
   }
 

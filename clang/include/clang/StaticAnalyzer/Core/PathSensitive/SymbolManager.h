@@ -597,7 +597,7 @@ public:
   /// It might return null.
   const StackFrame *getStackFrame() const { return SF; }
 
-  bool isLive(SymbolRef sym);
+  bool isLive(SymbolRef Sym);
   bool isLiveRegion(const MemRegion *region);
   bool isLive(const Expr *ExprVal, const StackFrame *SF) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
@@ -607,7 +607,7 @@ public:
   /// This should never be
   /// used by checkers, only by the state infrastructure such as the store and
   /// environment. Checkers should instead use metadata symbols and markInUse.
-  void markLive(SymbolRef sym);
+  void markLive(SymbolRef Sym);
 
   /// Marks a symbol as important to a checker.
   ///
@@ -636,7 +636,7 @@ public:
 
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
-  void setReapedStore(StoreRef st) { reapedStore = st; }
+  void setReapedStore(StoreRef st) { reapedStore = std::move(st); }
 
 private:
   bool isLazilyCopiedRegion(const MemRegion *region) const;
@@ -645,8 +645,8 @@ private:
   // is readable.
   bool isReadableRegion(const MemRegion *region);
 
-  /// Mark the symbols dependent on the input symbol as live.
-  void markDependentsLive(SymbolRef sym);
+  /// Mark the symbols dependent on the live symbol \p LI as live.
+  void markDependentsLive(SymbolMapTy::iterator LI);
 };
 
 class SymbolVisitor {

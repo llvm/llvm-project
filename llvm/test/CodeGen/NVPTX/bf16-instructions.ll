@@ -1199,87 +1199,18 @@ define bfloat @test_uitofp_i8(i8 %a) {
 }
 
 define bfloat @test_uitofp_i1(i1 %a) {
-; SM70-LABEL: test_uitofp_i1(
-; SM70:       {
-; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<3>;
-; SM70-NEXT:    .reg .b32 %r<8>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
-; SM70-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM70-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; SM70-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; SM70-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM70-NEXT:    shr.u32 %r3, %r2, 16;
-; SM70-NEXT:    and.b32 %r4, %r3, 1;
-; SM70-NEXT:    add.s32 %r5, %r4, %r2;
-; SM70-NEXT:    add.s32 %r6, %r5, 32767;
-; SM70-NEXT:    shr.u32 %r7, %r6, 16;
-; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
-; SM70-NEXT:    ret;
-;
-; SM80-LABEL: test_uitofp_i1(
-; SM80:       {
-; SM80-NEXT:    .reg .pred %p<2>;
-; SM80-NEXT:    .reg .b16 %rs<4>;
-; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-EMPTY:
-; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
-; SM80-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM80-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; SM80-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; SM80-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM80-NEXT:    cvt.rn.bf16.f32 %rs3, %r2;
-; SM80-NEXT:    st.param.b16 [func_retval0], %rs3;
-; SM80-NEXT:    ret;
-;
-; SM80-FTZ-LABEL: test_uitofp_i1(
-; SM80-FTZ:       {
-; SM80-FTZ-NEXT:    .reg .pred %p<2>;
-; SM80-FTZ-NEXT:    .reg .b16 %rs<4>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<3>;
-; SM80-FTZ-EMPTY:
-; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
-; SM80-FTZ-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM80-FTZ-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; SM80-FTZ-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; SM80-FTZ-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %r2;
-; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs3;
-; SM80-FTZ-NEXT:    ret;
-;
-; SM90-FTZ-LABEL: test_uitofp_i1(
-; SM90-FTZ:       {
-; SM90-FTZ-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-NEXT:    .reg .b16 %rs<4>;
-; SM90-FTZ-NEXT:    .reg .b32 %r<2>;
-; SM90-FTZ-EMPTY:
-; SM90-FTZ-NEXT:  // %bb.0:
-; SM90-FTZ-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
-; SM90-FTZ-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM90-FTZ-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; SM90-FTZ-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; SM90-FTZ-NEXT:    cvt.rn.bf16.u32 %rs3, %r1;
-; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs3;
-; SM90-FTZ-NEXT:    ret;
-;
-; SM90-LABEL: test_uitofp_i1(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<4>;
-; SM90-NEXT:    .reg .b32 %r<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
-; SM90-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM90-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; SM90-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; SM90-NEXT:    cvt.rn.bf16.u32 %rs3, %r1;
-; SM90-NEXT:    st.param.b16 [func_retval0], %rs3;
-; SM90-NEXT:    ret;
+; CHECK-LABEL: test_uitofp_i1(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    selp.b16 %rs3, 0x3F80, 0x0000, %p1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-NEXT:    ret;
   %r = uitofp i1 %a to bfloat
   ret bfloat %r
 }

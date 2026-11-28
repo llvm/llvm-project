@@ -31,7 +31,6 @@
 ...
 ---
 name:            func_get_fpmode
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: func_get_fpmode
@@ -50,7 +49,6 @@ body:             |
 ...
 ---
 name:            func_set_fpmode
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -73,7 +71,6 @@ body:             |
 ...
 ---
 name:            func_reset
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: func_reset

@@ -25,7 +25,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __libcpp_timed_backoff_policy {
-  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
+  __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::milliseconds(128))
       __libcpp_thread_sleep_for(chrono::milliseconds(8));
     else if (__elapsed > chrono::microseconds(64))

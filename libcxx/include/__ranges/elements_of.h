@@ -14,14 +14,10 @@
 #include <__cstddef/byte.h>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
-#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 23
 
@@ -43,7 +39,5 @@ elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Alloc
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_ELEMENTS_OF_H

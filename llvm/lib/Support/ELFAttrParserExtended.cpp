@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace ELFAttrs;
 
-std::optional<unsigned>
+std::optional<uint64_t>
 ELFExtendedAttrParser::getAttributeValue(unsigned Tag) const {
   assert(
       0 &&
@@ -28,14 +28,14 @@ ELFExtendedAttrParser::getAttributeValue(unsigned Tag) const {
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<uint64_t>
 ELFExtendedAttrParser::getAttributeValue(StringRef BuildAttrSubsectionName,
                                          unsigned Tag) const {
   for (const auto &SubSection : SubSectionVec) {
     if (BuildAttrSubsectionName == SubSection.Name)
       for (const auto &BAItem : SubSection.Content) {
         if (Tag == BAItem.Tag)
-          return std::optional<unsigned>(BAItem.IntValue);
+          return std::optional<uint64_t>(BAItem.IntValue);
       }
   }
   return std::nullopt;

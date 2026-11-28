@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3| FileCheck %s --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefix=AVX512
 
-; FIXME: LHS is known to fit in 8 bits but RHS is unknown — should fold to
+; FIXME: LHS is known to fit in 8 bits but RHS is unknown - should fold to
 ; vpsubusb once Path B (OR-mask narrowing) is implemented.
 define <8 x i64> @usubsat_v8i64_i8_narrow(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; SSE2-LABEL: usubsat_v8i64_i8_narrow:
@@ -20,54 +20,54 @@ define <8 x i64> @usubsat_v8i64_i8_narrow(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; SSE2-NEXT:    pxor %xmm8, %xmm4
 ; SSE2-NEXT:    por %xmm8, %xmm9
 ; SSE2-NEXT:    movdqa %xmm9, %xmm10
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm10
-; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[1,1,3,3]
-; SSE2-NEXT:    pand %xmm11, %xmm9
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm9[0,0,2,2]
+; SSE2-NEXT:    pand %xmm10, %xmm11
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [0,4294967295,0,4294967295]
-; SSE2-NEXT:    pand %xmm4, %xmm10
-; SSE2-NEXT:    por %xmm9, %xmm10
-; SSE2-NEXT:    pand %xmm10, %xmm0
+; SSE2-NEXT:    pand %xmm4, %xmm9
+; SSE2-NEXT:    por %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm9, %xmm0
 ; SSE2-NEXT:    movdqa %xmm1, %xmm9
 ; SSE2-NEXT:    psubq %xmm5, %xmm1
 ; SSE2-NEXT:    pxor %xmm8, %xmm5
 ; SSE2-NEXT:    por %xmm8, %xmm9
 ; SSE2-NEXT:    movdqa %xmm9, %xmm10
-; SSE2-NEXT:    pcmpgtd %xmm5, %xmm10
-; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm5, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[1,1,3,3]
-; SSE2-NEXT:    pand %xmm11, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm10
-; SSE2-NEXT:    por %xmm5, %xmm10
-; SSE2-NEXT:    pand %xmm10, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm5, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[0,0,2,2]
+; SSE2-NEXT:    pand %xmm10, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm9
+; SSE2-NEXT:    por %xmm5, %xmm9
+; SSE2-NEXT:    pand %xmm9, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; SSE2-NEXT:    psubq %xmm6, %xmm2
 ; SSE2-NEXT:    pxor %xmm8, %xmm6
 ; SSE2-NEXT:    por %xmm8, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm9
-; SSE2-NEXT:    pcmpgtd %xmm6, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm9[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm6, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; SSE2-NEXT:    pand %xmm10, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm9
-; SSE2-NEXT:    por %xmm5, %xmm9
-; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm6, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm6, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
+; SSE2-NEXT:    pand %xmm9, %xmm6
+; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    por %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm5, %xmm2
 ; SSE2-NEXT:    movdqa %xmm7, %xmm5
 ; SSE2-NEXT:    pxor %xmm8, %xmm5
 ; SSE2-NEXT:    por %xmm3, %xmm8
 ; SSE2-NEXT:    movdqa %xmm8, %xmm6
-; SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm6[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm5, %xmm8
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm8[1,1,3,3]
-; SSE2-NEXT:    pand %xmm9, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    por %xmm5, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm5, %xmm8
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm8[0,0,2,2]
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm8
+; SSE2-NEXT:    por %xmm5, %xmm8
 ; SSE2-NEXT:    psubq %xmm7, %xmm3
-; SSE2-NEXT:    pand %xmm6, %xmm3
+; SSE2-NEXT:    pand %xmm8, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: usubsat_v8i64_i8_narrow:
@@ -133,7 +133,7 @@ define <8 x i64> @usubsat_v8i64_i8_narrow(<8 x i64> %x, <8 x i64> %y) nounwind {
   ret <8 x i64> %z
 }
 
-; FIXME: LHS is known to fit in 8 bits but RHS is unknown — should fold to
+; FIXME: LHS is known to fit in 8 bits but RHS is unknown - should fold to
 ; vpsubusb once Path B (OR-mask narrowing) is implemented.
 define <4 x i64> @usubsat_v4i64_i8_narrow(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; SSE2-LABEL: usubsat_v4i64_i8_narrow:
@@ -147,28 +147,28 @@ define <4 x i64> @usubsat_v4i64_i8_narrow(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm4, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm6
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[1,1,3,3]
-; SSE2-NEXT:    pand %xmm7, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [0,4294967295,0,4294967295]
-; SSE2-NEXT:    pand %xmm5, %xmm6
-; SSE2-NEXT:    por %xmm2, %xmm6
-; SSE2-NEXT:    pand %xmm6, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[0,0,2,2]
+; SSE2-NEXT:    pand %xmm6, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [0,4294967295,0,4294967295]
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm2, %xmm5
+; SSE2-NEXT:    pand %xmm5, %xmm0
 ; SSE2-NEXT:    movdqa %xmm3, %xmm2
 ; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm6
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pand %xmm7, %xmm2
-; SSE2-NEXT:    pand %xmm5, %xmm6
-; SSE2-NEXT:    por %xmm2, %xmm6
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[0,0,2,2]
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pand %xmm6, %xmm4
+; SSE2-NEXT:    por %xmm2, %xmm4
 ; SSE2-NEXT:    psubq %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: usubsat_v4i64_i8_narrow:
@@ -213,7 +213,7 @@ define <4 x i64> @usubsat_v4i64_i8_narrow(<4 x i64> %x, <4 x i64> %y) nounwind {
   ret <4 x i64> %z
 }
 
-; FIXME: LHS is known to fit in 8 bits but RHS is unknown — should fold to
+; FIXME: LHS is known to fit in 8 bits but RHS is unknown - should fold to
 ; vpsubusb once Path B (OR-mask narrowing) is implemented.
 define <8 x i32> @usubsat_v8i32_i8_narrow(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; SSE2-LABEL: usubsat_v8i32_i8_narrow:
@@ -265,7 +265,7 @@ define <8 x i32> @usubsat_v8i32_i8_narrow(<8 x i32> %x, <8 x i32> %y) nounwind {
   ret <8 x i32> %z
 }
 
-; FIXME: LHS is known to fit in 16 bits but RHS is unknown — should fold to
+; FIXME: LHS is known to fit in 16 bits but RHS is unknown - should fold to
 ; vpsubusw once Path B (OR-mask narrowing) is implemented.
 define <8 x i32> @usubsat_v8i32_i16_narrow(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; SSE2-LABEL: usubsat_v8i32_i16_narrow:

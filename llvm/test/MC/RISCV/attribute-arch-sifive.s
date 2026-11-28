@@ -32,3 +32,6 @@
 
 .attribute arch, "rv32i_xsfmmbase"
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmmbase0p6"
+
+.attribute arch, "rv32i_xsfvfofp4min0p1"
+# CHECK: .attribute     5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfvfofp4min0p1"

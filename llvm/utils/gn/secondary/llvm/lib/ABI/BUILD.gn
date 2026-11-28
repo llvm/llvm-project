@@ -13,6 +13,7 @@ static_library("ABI") {
     "Targets/AArch64.cpp",
     "Targets/AMDGPU.cpp",
     "Targets/BPF.cpp",
+    "Targets/SPIRV.cpp",
     "Targets/X86.cpp",
     "Types.cpp",
   ]

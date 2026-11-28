@@ -3,7 +3,7 @@
 ; RUN:   -tail-folding-policy=dont-fold-tail -S -disable-output 2>&1 | FileCheck %s
 target triple = "aarch64-linux-gnu"
 
-define void @loop_sve_i1(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_i1(ptr nocapture %ptr, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_sve_i1'
 ; CHECK: Cost of Invalid for VF vscale x 4: REPLICATE ir<%0> = load ir<%arrayidx>
 ; CHECK: Cost of Invalid for VF vscale x 4: REPLICATE store ir<%add>, ir<%arrayidx>

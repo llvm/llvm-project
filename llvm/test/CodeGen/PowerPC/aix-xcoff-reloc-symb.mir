@@ -6,7 +6,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 jumpTable:
   kind:            label-difference32
   entries:

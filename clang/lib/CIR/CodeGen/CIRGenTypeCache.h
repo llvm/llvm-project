@@ -51,6 +51,9 @@ struct CIRGenTypeCache {
   cir::FP80Type fP80Ty;
   cir::FP128Type fP128Ty;
 
+  // ClangIR floating-point types whose format is selected at run time
+  cir::MFloat8Type mFloat8Ty;
+
   /// ClangIR char
   mlir::Type uCharTy;
 

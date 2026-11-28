@@ -9,14 +9,13 @@
 ! Built without traps: the operation on a subnormal operand completes and the
 ! program exits normally.
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t.notrap
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t.notrap \
-! RUN:     | FileCheck --check-prefix=NOTRAP %s
+! RUN: %t.notrap | FileCheck --check-prefix=NOTRAP %s
 
 ! Built with -ffpe-trap=denormal: adding a subnormal operand raises the
 ! denormal-operand exception and halting terminates the program with SIGFPE
 ! (signal 8, i.e. shell exit 136).
 ! RUN: %flang %isysroot -L"%libdir" -ffpe-trap=denormal %s -o %t.trap
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" sh -c 'ulimit -c 0; %t.trap; test $? -eq 136'
+! RUN: sh -c 'ulimit -c 0; %t.trap; test $? -eq 136'
 
 program fpe_trap_denormal
   real :: x, y

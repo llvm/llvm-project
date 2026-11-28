@@ -83,7 +83,10 @@ public:
   }
   /// If this record (or any of its bases) contains a field of type PT_Ptr.
   bool hasPtrField() const { return HasPtrField; }
-
+  /// Whether this record has no fields, no bases and no virtual bases.
+  bool isEmpty() const {
+    return Fields.empty() && Bases.empty() && VirtualBases.empty();
+  }
   /// Returns true for anonymous unions and records
   /// with no destructor or for those with a trivial destructor.
   bool hasTrivialDtor() const;

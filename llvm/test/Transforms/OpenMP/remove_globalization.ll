@@ -258,7 +258,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK: attributes #[[ATTR1]] = { nosync nounwind }
-; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
+; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
@@ -266,7 +266,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
-; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
+; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }

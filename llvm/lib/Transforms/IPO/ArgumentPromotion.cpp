@@ -101,11 +101,8 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, int64_t Offset) {
-  if (Offset != 0) {
-    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset,
-                   /*isSigned=*/true);
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
-  }
+  if (Offset != 0)
+    Ptr = IRB.CreatePtrAddWithSignedOffset(Ptr, Offset);
   return Ptr;
 }
 

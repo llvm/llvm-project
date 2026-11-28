@@ -123,12 +123,12 @@ public:
 };
 
 /// Printer pass for ShaderFlagsAnalysis results.
-class ShaderFlagsAnalysisPrinter
-    : public OptionalPassInfoMixin<ShaderFlagsAnalysisPrinter> {
+class ShaderFlagsAnalysisPrinterPass
+    : public OptionalPassInfoMixin<ShaderFlagsAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit ShaderFlagsAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  explicit ShaderFlagsAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

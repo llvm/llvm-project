@@ -44,9 +44,8 @@ using namespace llvm;
 #define DEBUG_TYPE "cgscc-passmgr"
 
 unsigned
-llvm::getMaxDevirtIterations(const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<AnalysisOptions>(LibraryOptions)
-      .max_devirt_iterations;
+llvm::getMaxDevirtIterations(const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<AnalysisOptions>().max_devirt_iterations;
 }
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");

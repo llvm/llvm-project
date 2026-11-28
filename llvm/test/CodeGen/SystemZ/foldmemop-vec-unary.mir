@@ -20,10 +20,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
 frameInfo:
@@ -49,10 +45,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
 frameInfo:
@@ -79,10 +71,6 @@ body:             |
 ---
 name:            fun2
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
 frameInfo:
@@ -106,10 +94,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
 frameInfo:
@@ -135,10 +119,6 @@ body:             |
 ---
 name:            fun4
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
 frameInfo:
@@ -163,10 +143,6 @@ body:             |
 ---
 name:            fun5
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
 frameInfo:
@@ -192,10 +168,6 @@ body:             |
 ---
 name:            fun6
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
 frameInfo:

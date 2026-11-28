@@ -574,10 +574,6 @@ bool WindowsSecureHotPatching::runOnFunction(
     LoadValue = IRBuilderAtEntry.CreateLoad(RefGV->getValueType(), RefGV);
   }
 
-  const DISubprogram *Subprogram = F.getSubprogram();
-  DICompileUnit *Unit = Subprogram != nullptr ? Subprogram->getUnit() : nullptr;
-  DIBuilder DebugInfo{*F.getParent(), true, Unit};
-
   // Go back to the instructions and rewrite their uses of GlobalVariable.
   // Because a ConstantExpr can be a tree, it may reference more than one
   // GlobalVariable.

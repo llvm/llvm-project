@@ -1,0 +1,8 @@
+types:
+  struct utimbuf:
+    removed-in-posix-2024: ''
+  time_t:
+    removed-in-posix-2024: ''
+functions:
+  utime:
+    removed-in-posix-2024: ''

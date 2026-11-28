@@ -69,7 +69,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__init_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
-; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 1
+; CHECK-NEXT:    [[NEXT]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 8
 ; CHECK-NEXT:    [[END:%.*]] = icmp eq ptr addrspace(1) [[NEXT]], @__init_array_end
 ; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
 ; CHECK:       while.end:
@@ -85,7 +85,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ getelementptr inbounds (i8, ptr addrspace(1) @__fini_array_end, i64 -8), [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
-; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 -1
+; CHECK-NEXT:    [[NEXT]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 -8
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult ptr addrspace(1) [[NEXT]], @__fini_array_start
 ; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
 ; CHECK:       while.end:

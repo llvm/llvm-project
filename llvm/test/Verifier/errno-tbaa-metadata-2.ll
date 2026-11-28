@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: assembly parsed, but does not verify as correct!
 ; CHECK-NEXT: Malformed struct tag metadata: base and access-type should be non-null and point to Metadata nodes

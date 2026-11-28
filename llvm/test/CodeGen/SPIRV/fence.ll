@@ -6,10 +6,10 @@
 ; CHECK-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#Long]] 2{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#Long]]
 ; CHECK-DAG: %[[#ScopeInvocation:]] = OpConstant %[[#Long]] 4{{$}}
-; CHECK-DAG: %[[#Acquire:]] = OpConstant %[[#Long]] 2818
-; CHECK-DAG: %[[#Release:]] = OpConstant %[[#Long]] 2820
-; CHECK-DAG: %[[#AcqRel:]] = OpConstant %[[#Long]] 2824
-; CHECK-DAG: %[[#SeqCst:]] = OpConstant %[[#Long]] 2832
+; CHECK-DAG: %[[#Acquire:]] = OpConstant %[[#Long]] 770
+; CHECK-DAG: %[[#Release:]] = OpConstant %[[#Long]] 772
+; CHECK-DAG: %[[#AcqRel:]] = OpConstant %[[#Long]] 776
+; CHECK-DAG: %[[#SeqCst:]] = OpConstant %[[#Long]] 784
 ; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Long]] 3{{$}}
 ; CHECK-DAG: %[[#Const912:]] = OpConstant %[[#Long]] 912
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#Long]] 42

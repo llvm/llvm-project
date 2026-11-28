@@ -161,8 +161,6 @@ Operation *bufferization::getOwnerOfValue(Value value) {
   return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
 }
 
-// TODO: Properly support with options, for now it is hardcoded to builtin
-// Tensor/MemRef types based approach
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -170,10 +168,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     OpBuilder &b, Location loc, Value shapedValue,
     const BufferizationOptions &options, const BufferizationState &state,
     bool copy) {
-  Value tensor;
-  if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
-    tensor = shapedValue;
-  } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
+  Value tensor = shapedValue;
+  if (llvm::isa<MemRefType>(shapedValue.getType())) {
     tensor = ToTensorOp::create(
         b, loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
         shapedValue);
@@ -181,12 +177,13 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
     return getOwnerOfValue(shapedValue)
         ->emitError("copying of unranked tensors is not implemented");
-  } else {
-    llvm_unreachable("expected RankedTensorType or MemRefType");
   }
-  RankedTensorType tensorType = llvm::cast<RankedTensorType>(tensor.getType());
+  auto tensorType = llvm::cast<TensorLikeType>(tensor.getType());
   SmallVector<Value> dynamicSizes;
-  if (!copy) {
+  // Only a ranked tensor result takes sizes; any other result has the shape of
+  // its buffer type.
+  auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType);
+  if (!copy && rankedTensorType) {
     // Compute the dynamic part of the shape.
     // First try to query the shape via ReifyRankedShapedTypeOpInterface.
     bool reifiedShapes = false;
@@ -198,7 +195,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
         reifiedShapes = true;
         auto &shape =
             resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
-        for (const auto &dim : enumerate(tensorType.getShape())) {
+        for (const auto &dim : enumerate(rankedTensorType.getShape())) {
           if (ShapedType::isDynamic(dim.value())) {
             dynamicSizes.push_back(
                 getValueOrCreateConstantIndexOp(b, loc, shape[dim.index()]));
@@ -219,11 +216,13 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
   if (copy)
     return allocTensorOp.getResult();
-  auto copyBufferType =
-      detail::asMemRefType(getBufferType(tensor, options, state));
+  auto copyBufferType = getBufferType(tensor, options, state);
   if (failed(copyBufferType))
     return failure();
-  std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
+  // A buffer that is not a memref has no memory space to inherit.
+  std::optional<Attribute> memorySpace;
+  if (auto copyMemRefType = dyn_cast<BaseMemRefType>(*copyBufferType))
+    memorySpace = copyMemRefType.getMemorySpace();
   if (!memorySpace)
     memorySpace =
         options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType));
@@ -232,8 +231,6 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   return allocTensorOp.getResult();
 }
 
-// TODO: Properly support with options, for now it is hardcoded to builtin
-// Tensor/MemRef types based approach
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &analysisState,
     const BufferizationState &bufferizationState) {
@@ -247,7 +244,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   // Find all out-of-place OpOperands.
   for (OpOperand &opOperand : op->getOpOperands()) {
     Type operandType = opOperand.get().getType();
-    if (!llvm::isa<TensorType>(operandType))
+    if (!llvm::isa<TensorLikeType>(operandType))
       continue;
     if (analysisState.isInPlace(opOperand))
       continue;

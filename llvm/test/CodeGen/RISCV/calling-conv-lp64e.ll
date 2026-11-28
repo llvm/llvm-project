@@ -13,7 +13,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; RV64I-LP64E-FPELIM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-FPELIM-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-FPELIM-NEXT:    mv s0, a0
-; RV64I-LP64E-FPELIM-NEXT:    sext.w a0, a1
+; RV64I-LP64E-FPELIM-NEXT:    mv a0, a1
 ; RV64I-LP64E-FPELIM-NEXT:    call __fixsfdi
 ; RV64I-LP64E-FPELIM-NEXT:    add a0, s0, a0
 ; RV64I-LP64E-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -29,7 +29,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; RV64I-LP64E-WITHFP-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 24
 ; RV64I-LP64E-WITHFP-NEXT:    mv s1, a0
-; RV64I-LP64E-WITHFP-NEXT:    sext.w a0, a1
+; RV64I-LP64E-WITHFP-NEXT:    mv a0, a1
 ; RV64I-LP64E-WITHFP-NEXT:    call __fixsfdi
 ; RV64I-LP64E-WITHFP-NEXT:    add a0, s1, a0
 ; RV64I-LP64E-WITHFP-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
@@ -74,16 +74,9 @@ define i64 @caller_float_in_regs() nounwind {
 define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) nounwind {
 ; RV64I-LP64E-FPELIM-LABEL: callee_float_on_stack:
 ; RV64I-LP64E-FPELIM:       # %bb.0:
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -16
-; RV64I-LP64E-FPELIM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-LP64E-FPELIM-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-LP64E-FPELIM-NEXT:    addi s0, sp, 16
-; RV64I-LP64E-FPELIM-NEXT:    andi sp, sp, -16
-; RV64I-LP64E-FPELIM-NEXT:    lw a0, 16(s0)
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, s0, -16
-; RV64I-LP64E-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-LP64E-FPELIM-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-FPELIM-NEXT:    lw a0, 16(sp)
+; RV64I-LP64E-FPELIM-NEXT:    ld a1, 0(sp)
+; RV64I-LP64E-FPELIM-NEXT:    add a0, a1, a0
 ; RV64I-LP64E-FPELIM-NEXT:    ret
 ;
 ; RV64I-LP64E-WITHFP-LABEL: callee_float_on_stack:
@@ -92,9 +85,9 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-LP64E-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
-; RV64I-LP64E-WITHFP-NEXT:    andi sp, sp, -16
-; RV64I-LP64E-WITHFP-NEXT:    lw a0, 16(s0)
-; RV64I-LP64E-WITHFP-NEXT:    addi sp, s0, -16
+; RV64I-LP64E-WITHFP-NEXT:    lw a0, 32(sp)
+; RV64I-LP64E-WITHFP-NEXT:    ld a1, 16(sp)
+; RV64I-LP64E-WITHFP-NEXT:    add a0, a1, a0
 ; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 16
@@ -103,17 +96,14 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
   %2 = bitcast float %e to i32
   %3 = sext i32 %2 to i64
   %4 = add i64 %1, %3
-  ret i64 %3
+  ret i64 %4
 }
 
 define i64 @caller_float_on_stack() nounwind {
 ; RV64I-LP64E-FPELIM-LABEL: caller_float_on_stack:
 ; RV64I-LP64E-FPELIM:       # %bb.0:
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -48
-; RV64I-LP64E-FPELIM-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-LP64E-FPELIM-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-LP64E-FPELIM-NEXT:    addi s0, sp, 48
-; RV64I-LP64E-FPELIM-NEXT:    andi sp, sp, -16
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -32
+; RV64I-LP64E-FPELIM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-LP64E-FPELIM-NEXT:    li a1, 0
 ; RV64I-LP64E-FPELIM-NEXT:    li a3, 0
 ; RV64I-LP64E-FPELIM-NEXT:    li a5, 0
@@ -126,19 +116,16 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-LP64E-FPELIM-NEXT:    sd zero, 8(sp)
 ; RV64I-LP64E-FPELIM-NEXT:    sd a6, 16(sp)
 ; RV64I-LP64E-FPELIM-NEXT:    call callee_float_on_stack
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, s0, -48
-; RV64I-LP64E-FPELIM-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-LP64E-FPELIM-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 48
+; RV64I-LP64E-FPELIM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 32
 ; RV64I-LP64E-FPELIM-NEXT:    ret
 ;
 ; RV64I-LP64E-WITHFP-LABEL: caller_float_on_stack:
 ; RV64I-LP64E-WITHFP:       # %bb.0:
-; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -48
-; RV64I-LP64E-WITHFP-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-LP64E-WITHFP-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 48
-; RV64I-LP64E-WITHFP-NEXT:    andi sp, sp, -16
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -40
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 32(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 40
 ; RV64I-LP64E-WITHFP-NEXT:    li a1, 0
 ; RV64I-LP64E-WITHFP-NEXT:    li a3, 0
 ; RV64I-LP64E-WITHFP-NEXT:    li a5, 0
@@ -151,10 +138,9 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-LP64E-WITHFP-NEXT:    sd zero, 8(sp)
 ; RV64I-LP64E-WITHFP-NEXT:    sd a6, 16(sp)
 ; RV64I-LP64E-WITHFP-NEXT:    call callee_float_on_stack
-; RV64I-LP64E-WITHFP-NEXT:    addi sp, s0, -48
-; RV64I-LP64E-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-LP64E-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 48
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 32(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 40
 ; RV64I-LP64E-WITHFP-NEXT:    ret
   %1 = call i64 @callee_float_on_stack(i128 1, i128 2, i128 3, i128 4, float 5.0)
   ret i64 %1
@@ -210,4 +196,209 @@ define i64 @caller_tiny_scalar_ret() nounwind {
   %2 = bitcast float %1 to i32
   %3 = sext i32 %2 to i64
   ret i64 %3
+}
+
+; Check that on RV64, i128 is passed in a pair of registers. Unlike
+; the convention for varargs, this need not be an aligned pair.
+
+define i64 @callee_i128_in_regs(i32 %a, i128 %b) nounwind {
+; RV64I-LP64E-FPELIM-LABEL: callee_i128_in_regs:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    slli a0, a0, 32
+; RV64I-LP64E-FPELIM-NEXT:    srli a0, a0, 32
+; RV64I-LP64E-FPELIM-NEXT:    add a0, a0, a1
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: callee_i128_in_regs:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -16
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    slli a0, a0, 32
+; RV64I-LP64E-WITHFP-NEXT:    srli a0, a0, 32
+; RV64I-LP64E-WITHFP-NEXT:    add a0, a0, a1
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %b_trunc = trunc i128 %b to i64
+  %a_ext = zext i32 %a to i64
+  %1 = add i64 %a_ext, %b_trunc
+  ret i64 %1
+}
+
+define i64 @caller_i128_in_regs() nounwind {
+; RV64I-LP64E-FPELIM-LABEL: caller_i128_in_regs:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -8
+; RV64I-LP64E-FPELIM-NEXT:    sd ra, 0(sp) # 8-byte Folded Spill
+; RV64I-LP64E-FPELIM-NEXT:    li a0, 1
+; RV64I-LP64E-FPELIM-NEXT:    li a1, 2
+; RV64I-LP64E-FPELIM-NEXT:    li a2, 0
+; RV64I-LP64E-FPELIM-NEXT:    call callee_i128_in_regs
+; RV64I-LP64E-FPELIM-NEXT:    ld ra, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 8
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: caller_i128_in_regs:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -16
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    li a0, 1
+; RV64I-LP64E-WITHFP-NEXT:    li a1, 2
+; RV64I-LP64E-WITHFP-NEXT:    li a2, 0
+; RV64I-LP64E-WITHFP-NEXT:    call callee_i128_in_regs
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %1 = call i64 @callee_i128_in_regs(i32 1, i128 2)
+  ret i64 %1
+}
+
+; The i128 is split between a5 and the stack. The stack half is 8-byte aligned.
+define i64 @callee_i128_split(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i128 %f, i32 %g) nounwind {
+; RV64I-LP64E-FPELIM-LABEL: callee_i128_split:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    lwu a0, 8(sp)
+; RV64I-LP64E-FPELIM-NEXT:    add a0, a5, a0
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: callee_i128_split:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -16
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    lwu a0, 24(sp)
+; RV64I-LP64E-WITHFP-NEXT:    add a0, a5, a0
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %f_trunc = trunc i128 %f to i64
+  %g_ext = zext i32 %g to i64
+  %1 = add i64 %f_trunc, %g_ext
+  ret i64 %1
+}
+
+define i64 @caller_i128_split() nounwind {
+; RV64I-LP64E-FPELIM-LABEL: caller_i128_split:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -24
+; RV64I-LP64E-FPELIM-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
+; RV64I-LP64E-FPELIM-NEXT:    li a6, 7
+; RV64I-LP64E-FPELIM-NEXT:    li a0, 1
+; RV64I-LP64E-FPELIM-NEXT:    li a1, 2
+; RV64I-LP64E-FPELIM-NEXT:    li a2, 3
+; RV64I-LP64E-FPELIM-NEXT:    li a3, 4
+; RV64I-LP64E-FPELIM-NEXT:    li a4, 5
+; RV64I-LP64E-FPELIM-NEXT:    li a5, 6
+; RV64I-LP64E-FPELIM-NEXT:    sd zero, 0(sp)
+; RV64I-LP64E-FPELIM-NEXT:    sd a6, 8(sp)
+; RV64I-LP64E-FPELIM-NEXT:    call callee_i128_split
+; RV64I-LP64E-FPELIM-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 24
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: caller_i128_split:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -32
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 32
+; RV64I-LP64E-WITHFP-NEXT:    li a6, 7
+; RV64I-LP64E-WITHFP-NEXT:    li a0, 1
+; RV64I-LP64E-WITHFP-NEXT:    li a1, 2
+; RV64I-LP64E-WITHFP-NEXT:    li a2, 3
+; RV64I-LP64E-WITHFP-NEXT:    li a3, 4
+; RV64I-LP64E-WITHFP-NEXT:    li a4, 5
+; RV64I-LP64E-WITHFP-NEXT:    li a5, 6
+; RV64I-LP64E-WITHFP-NEXT:    sd zero, 0(sp)
+; RV64I-LP64E-WITHFP-NEXT:    sd a6, 8(sp)
+; RV64I-LP64E-WITHFP-NEXT:    call callee_i128_split
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 32
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %1 = call i64 @callee_i128_split(i32 1, i32 2, i32 3, i32 4, i32 5, i128 6, i32 7)
+  ret i64 %1
+}
+
+; The i128 is passed on the stack with only 8-byte alignment.
+define i64 @callee_i128_on_stack(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i128 %h) nounwind {
+; RV64I-LP64E-FPELIM-LABEL: callee_i128_on_stack:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    lwu a0, 0(sp)
+; RV64I-LP64E-FPELIM-NEXT:    ld a1, 8(sp)
+; RV64I-LP64E-FPELIM-NEXT:    add a0, a1, a0
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: callee_i128_on_stack:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -16
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    lwu a0, 16(sp)
+; RV64I-LP64E-WITHFP-NEXT:    ld a1, 24(sp)
+; RV64I-LP64E-WITHFP-NEXT:    add a0, a1, a0
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %h_trunc = trunc i128 %h to i64
+  %g_ext = zext i32 %g to i64
+  %1 = add i64 %h_trunc, %g_ext
+  ret i64 %1
+}
+
+define i64 @caller_i128_on_stack() nounwind {
+; RV64I-LP64E-FPELIM-LABEL: caller_i128_on_stack:
+; RV64I-LP64E-FPELIM:       # %bb.0:
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, -32
+; RV64I-LP64E-FPELIM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LP64E-FPELIM-NEXT:    li a6, 8
+; RV64I-LP64E-FPELIM-NEXT:    li a7, 7
+; RV64I-LP64E-FPELIM-NEXT:    li a0, 1
+; RV64I-LP64E-FPELIM-NEXT:    li a1, 2
+; RV64I-LP64E-FPELIM-NEXT:    li a2, 3
+; RV64I-LP64E-FPELIM-NEXT:    li a3, 4
+; RV64I-LP64E-FPELIM-NEXT:    li a4, 5
+; RV64I-LP64E-FPELIM-NEXT:    li a5, 6
+; RV64I-LP64E-FPELIM-NEXT:    sd a7, 0(sp)
+; RV64I-LP64E-FPELIM-NEXT:    sd a6, 8(sp)
+; RV64I-LP64E-FPELIM-NEXT:    sd zero, 16(sp)
+; RV64I-LP64E-FPELIM-NEXT:    call callee_i128_on_stack
+; RV64I-LP64E-FPELIM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LP64E-FPELIM-NEXT:    addi sp, sp, 32
+; RV64I-LP64E-FPELIM-NEXT:    ret
+;
+; RV64I-LP64E-WITHFP-LABEL: caller_i128_on_stack:
+; RV64I-LP64E-WITHFP:       # %bb.0:
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, -40
+; RV64I-LP64E-WITHFP-NEXT:    sd ra, 32(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
+; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 40
+; RV64I-LP64E-WITHFP-NEXT:    li a6, 8
+; RV64I-LP64E-WITHFP-NEXT:    li a7, 7
+; RV64I-LP64E-WITHFP-NEXT:    li a0, 1
+; RV64I-LP64E-WITHFP-NEXT:    li a1, 2
+; RV64I-LP64E-WITHFP-NEXT:    li a2, 3
+; RV64I-LP64E-WITHFP-NEXT:    li a3, 4
+; RV64I-LP64E-WITHFP-NEXT:    li a4, 5
+; RV64I-LP64E-WITHFP-NEXT:    li a5, 6
+; RV64I-LP64E-WITHFP-NEXT:    sd a7, 0(sp)
+; RV64I-LP64E-WITHFP-NEXT:    sd a6, 8(sp)
+; RV64I-LP64E-WITHFP-NEXT:    sd zero, 16(sp)
+; RV64I-LP64E-WITHFP-NEXT:    call callee_i128_on_stack
+; RV64I-LP64E-WITHFP-NEXT:    ld ra, 32(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
+; RV64I-LP64E-WITHFP-NEXT:    addi sp, sp, 40
+; RV64I-LP64E-WITHFP-NEXT:    ret
+  %1 = call i64 @callee_i128_on_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i128 8)
+  ret i64 %1
 }

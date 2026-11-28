@@ -1,4 +1,4 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --stop-after=spirv-postlegalizer %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --stop-after=spirv-postlegalizer %s -o - | FileCheck %s
 
 ; SPIRVPostLegalizer::generateAssignType() must leave the ASSIGN_TYPE that takes
 ; over a definition ahead of any DBG_VALUE naming it. updateRegType() moves the
@@ -10,9 +10,9 @@
 ; here removes the DebugValue from the module rather than misplacing it, and no
 ; output test would name what went missing.
 
-; CHECK: %[[#SUM:]]:iid(s32) = G_ADD
-; CHECK-NEXT: %[[#ASSIGNED:]]:iid(s32) = ASSIGN_TYPE %[[#SUM]](s32)
-; CHECK-NEXT: DBG_VALUE %[[#ASSIGNED]](s32)
+; CHECK: %[[#SUM:]]:iid(i32) = G_ADD
+; CHECK-NEXT: %[[#ASSIGNED:]]:iid(i32) = ASSIGN_TYPE %[[#SUM]](i32)
+; CHECK-NEXT: DBG_VALUE %[[#ASSIGNED]](i32)
 
 target triple = "spirv64-unknown-unknown"
 

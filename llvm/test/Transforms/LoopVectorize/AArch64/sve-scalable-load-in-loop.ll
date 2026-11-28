@@ -20,7 +20,7 @@
 
 ; CHECK-LABEL: @scalable_load_in_loop
 ; CHECK-NOT: vector.body
-define void @scalable_load_in_loop(i64 %n, ptr %x, ptr %y) {
+define void @scalable_load_in_loop(i64 %n, ptr %x, ptr %y) vscale_range(1,16) {
 entry:
   br label %for.body
 

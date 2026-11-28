@@ -79,8 +79,8 @@ function(llvm_ExternalProject_Add name source_dir)
   canonicalize_tool_name(${name} nameCanon)
 
   foreach(arg ${ARG_CMAKE_ARGS})
-    if(arg MATCHES "^-DCMAKE_SYSTEM_NAME=")
-      string(REGEX REPLACE "^-DCMAKE_SYSTEM_NAME=(.*)$" "\\1" _cmake_system_name "${arg}")
+    if(arg MATCHES "^-DCMAKE_SYSTEM_NAME(:[^=]*)?=")
+      string(REGEX REPLACE "^-DCMAKE_SYSTEM_NAME(:[^=]*)?=(.*)$" "\\2" _cmake_system_name "${arg}")
     endif()
   endforeach()
 
@@ -176,26 +176,35 @@ function(llvm_ExternalProject_Add name source_dir)
     set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
   endif ()
 
-  set(DEFAULT_PASSTHROUGH_VARIABLES
-    LibEdit_INCLUDE_DIRS
-    LibEdit_LIBRARIES
-    ZLIB_INCLUDE_DIR
-    ZLIB_LIBRARY
-    ZLIB_LIBRARY_RELEASE
-    ZLIB_LIBRARY_DEBUG
-    zstd_INCLUDE_DIR
-    zstd_LIBRARY
-    LIBXML2_LIBRARY
-    LIBXML2_INCLUDE_DIR
-    CURL_INCLUDE_DIR
-    CURL_LIBRARY
-    HTTPLIB_INCLUDE_DIR
-    HTTPLIB_HEADER_PATH
-    Python3_EXECUTABLE
-    Python3_LIBRARIES
-    Python3_INCLUDE_DIRS
-    Python3_RPATH
-    )
+  set(DEFAULT_PASSTHROUGH_VARIABLES Python3_EXECUTABLE)
+
+  # Add only if the target matches.
+  # Otherwise LLVMConfig.cmake dependency finding will short-circuit to almost
+  # certainly incompatible host system libraries.
+  # LLVM target triple and the passed triple are assumed to be of the same form
+  # as semantically comparing triples in CMake would be an ordeal.
+  if("${target_triple}" STREQUAL "${LLVM_TARGET_TRIPLE}")
+    list(APPEND DEFAULT_PASSTHROUGH_VARIABLES
+      LibEdit_INCLUDE_DIRS
+      LibEdit_LIBRARIES
+      ZLIB_INCLUDE_DIR
+      ZLIB_LIBRARY
+      ZLIB_LIBRARY_RELEASE
+      ZLIB_LIBRARY_DEBUG
+      zstd_INCLUDE_DIR
+      zstd_LIBRARY
+      LIBXML2_LIBRARY
+      LIBXML2_INCLUDE_DIR
+      CURL_INCLUDE_DIR
+      CURL_LIBRARY
+      HTTPLIB_INCLUDE_DIR
+      HTTPLIB_HEADER_PATH
+      Python3_LIBRARIES
+      Python3_INCLUDE_DIRS
+      Python3_RPATH
+      )
+  endif()
+
   foreach(variable ${DEFAULT_PASSTHROUGH_VARIABLES})
     get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
     if(${is_value_set})
@@ -359,10 +368,10 @@ function(llvm_ExternalProject_Add name source_dir)
       endforeach()
       string(REPLACE ";" "|" flag_string "${flag_types}")
       foreach(arg ${ARG_CMAKE_ARGS})
-        if(arg MATCHES "^-DCMAKE_(${flag_string})_FLAGS")
+        if(arg MATCHES "^-DCMAKE_(${flag_string})_FLAGS(:[^=]*)?=")
           foreach(type ${flag_types})
-            if(arg MATCHES "^-DCMAKE_${type}_FLAGS")
-              string(REGEX REPLACE "^-DCMAKE_${type}_FLAGS=(.*)$" "\\1" flag_value "${arg}")
+            if(arg MATCHES "^-DCMAKE_${type}_FLAGS(:[^=]*)?=")
+              string(REGEX REPLACE "^-DCMAKE_${type}_FLAGS(:[^=]*)?=(.*)$" "\\2" flag_value "${arg}")
               set(${type}_flag "${${type}_flag} ${flag_value}")
             endif()
           endforeach()

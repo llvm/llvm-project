@@ -32,6 +32,9 @@ void HexagonHazardRecognizer::Reset() {
   DotCurPNum = -1;
   UsesLoad = false;
   PrefVectorStoreNew = nullptr;
+  Weight = nullptr;
+  Activate = nullptr;
+  HMXPartner = nullptr;
   RegDefs.clear();
 }
 
@@ -66,7 +69,46 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
     return Hazard;
   }
 
+  if (mustWaitForHMXPartner(SU)) {
+    LLVM_DEBUG(dbgs() << "*** HMX pair hazard in cycle " << PacketNum << ", "
+                      << *MI);
+    return Hazard;
+  }
+
   return NoHazard;
+}
+
+SUnit *HexagonHazardRecognizer::findHMXPartner(SUnit *SU) const {
+  const MachineInstr &MI = *SU->getInstr();
+  bool IsActivate = TII->isHMXActivateInstr(MI);
+  SUnit *Partner = nullptr;
+  // The pair is formed by the nearest following instruction of the opposite
+  // kind (see HexagonSubtarget::HMXActivateWeightMutation). Both instructions
+  // have side effects, so they are always connected by a dependence edge.
+  for (const SDep &D : SU->Succs) {
+    SUnit *S = D.getSUnit();
+    if (!S->isInstr())
+      continue;
+    const MachineInstr &SI = *S->getInstr();
+    bool Matches =
+        IsActivate ? TII->isHMXWeightInstr(SI) : TII->isHMXActivateInstr(SI);
+    if (Matches && (!Partner || S->NodeNum < Partner->NodeNum))
+      Partner = S;
+  }
+  return Partner;
+}
+
+bool HexagonHazardRecognizer::mustWaitForHMXPartner(SUnit *SU) const {
+  // Nothing to wait for unless exactly one half of a pair has been emitted.
+  if (!!Activate == !!Weight)
+    return false;
+  if (SU == HMXPartner)
+    return false;
+  // Delaying other instructions only helps if the partner can become ready
+  // without them. If the partner still depends on unscheduled instructions
+  // (e.g. a store or another side-effecting instruction between the two),
+  // or no partner was found, waiting would deadlock the scheduler.
+  return HMXPartner && HMXPartner->NumPredsLeft == 0;
 }
 
 void HexagonHazardRecognizer::AdvanceCycle() {
@@ -78,6 +120,11 @@ void HexagonHazardRecognizer::AdvanceCycle() {
   }
   UsesLoad = false;
   PrefVectorStoreNew = nullptr;
+  if (Weight != nullptr && Activate != nullptr) {
+    Weight = nullptr;
+    Activate = nullptr;
+    HMXPartner = nullptr;
+  }
   PacketNum++;
   RegDefs.clear();
 }
@@ -91,8 +138,16 @@ void HexagonHazardRecognizer::AdvanceCycle() {
 /// to a .new store. The packetizer will not generate the .new store if the
 /// store doesn't have resources to fit in the packet (but the .new store may
 /// have resources). We attempt to schedule the store as soon as possible to
-/// help packetize the two instructions together.
+/// help packetize the two instructions together. Case 4 - when no HMX
+/// activation/weight pair is in progress, we prefer other instructions over
+/// starting a new pair.
 bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
+
+  if (Weight == nullptr && Activate == nullptr)
+    if (TII->isHMXWeightInstr(*SU->getInstr()) ||
+        TII->isHMXActivateInstr(*SU->getInstr()))
+      return true;
+
   if (PrefVectorStoreNew != nullptr && PrefVectorStoreNew != SU)
     return true;
   if (UsesLoad && SU->isInstr() && SU->getInstr()->mayLoad())
@@ -167,4 +222,14 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
         PrefVectorStoreNew = S.getSUnit();
         break;
       }
+  bool IsWeight = TII->isHMXWeightInstr(*MI);
+  bool IsActivate = TII->isHMXActivateInstr(*MI);
+  if (IsWeight || IsActivate) {
+    bool IsFirstHalf = !Weight && !Activate;
+    if (IsWeight)
+      Weight = SU;
+    if (IsActivate)
+      Activate = SU;
+    HMXPartner = IsFirstHalf ? findHMXPartner(SU) : nullptr;
+  }
 }

@@ -17,7 +17,6 @@
 #include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -53,9 +52,6 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // make the right decision when generating code for different targets.
   const GCNSubtarget *Subtarget;
 
-  // Default FP mode for the current function.
-  SIModeRegisterDefaults Mode;
-
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
   bool fp16SrcZerosHighBits(unsigned Opc) const;
@@ -71,6 +67,9 @@ public:
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
@@ -92,6 +91,7 @@ private:
 
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
+  bool isVRegIdxFoldableAdd(const SDNode *N, unsigned NumDwords) const;
 
   MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                     const SDLoc &DL) const;
@@ -206,7 +206,8 @@ private:
                   bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned) const;
+  bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned,
+                         bool IsSMEM = false) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
@@ -226,6 +227,7 @@ private:
                                        SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,

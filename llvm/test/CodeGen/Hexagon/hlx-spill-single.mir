@@ -1,0 +1,118 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=greedy -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s --check-prefix=RA
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=prolog-epilog \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=PEI
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=post-ra-pseudos \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=POSTRA
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s --check-prefix=ASM
+
+# Keep 17 single HLX vectors live across the load sequence. The HlxLR register
+# class has 16 physical registers, so register allocation must spill and reload
+# at least one value through the VTCM stack.
+
+# RA-LABEL: name: spill_single
+# RA: PS_storerl %stack.{{[0-9]+}}, 0
+# RA: %{{[0-9]+}}:hlxlr = PS_loadrl %stack.{{[0-9]+}}, 0
+
+# PEI-LABEL: name: spill_single
+# PEI: frame-setup V2_vallocframe_imm 2
+# PEI: $[[BASE:r[0-9]+]] = A2_tfrcrr $vsp
+# PEI: PS_storerl killed $[[BASE]], 0
+# PEI: $[[BASE2:r[0-9]+]] = A2_tfrcrr $vsp
+# PEI: ${{l[0-9]+}} = PS_loadrl killed $[[BASE2]], 0
+# PEI: V2_vdeallocframe_imm 2
+
+# POSTRA-LABEL: name: spill_single
+# POSTRA: frame-setup V2_vallocframe_imm 2
+# POSTRA-NOT: PS_storerl
+# POSTRA-NOT: PS_loadrl
+# POSTRA: $[[BASE:r[0-9]+]] = A2_tfrcrr $vsp
+# POSTRA-NEXT: $[[BASE]] = A2_addi killed $[[BASE]], 0
+# POSTRA-NEXT: LX_S16b_pseudo killed $[[BASE]]
+# POSTRA: $[[BASE2:r[0-9]+]] = A2_tfrcrr $vsp
+# POSTRA: $[[BASE2]] = A2_addi killed $[[BASE2]], 0
+# POSTRA-NEXT: ${{l[0-9]+}} = LX_L16b_pseudo killed $[[BASE2]]
+# POSTRA: V2_vdeallocframe_imm 2
+
+# ASM-LABEL: spill_single:
+# ASM: L15.tmp = mem(r0)
+# ASM: vdeallocframe(#2)
+
+--- |
+  define void @spill_single() {
+    ret void
+  }
+...
+---
+name:            spill_single
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+registers:
+  - { id: 0, class: hlxlr }
+  - { id: 1, class: hlxlr }
+  - { id: 2, class: hlxlr }
+  - { id: 3, class: hlxlr }
+  - { id: 4, class: hlxlr }
+  - { id: 5, class: hlxlr }
+  - { id: 6, class: hlxlr }
+  - { id: 7, class: hlxlr }
+  - { id: 8, class: hlxlr }
+  - { id: 9, class: hlxlr }
+  - { id: 10, class: hlxlr }
+  - { id: 11, class: hlxlr }
+  - { id: 12, class: hlxlr }
+  - { id: 13, class: hlxlr }
+  - { id: 14, class: hlxlr }
+  - { id: 15, class: hlxlr }
+  - { id: 16, class: hlxlr }
+  - { id: 17, class: intregs }
+  - { id: 18, class: intregs }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %17:intregs = COPY $r0
+    %18:intregs = COPY $r1
+    %0:hlxlr = LX_L16b_pseudo %17
+    %1:hlxlr = LX_L16b_pseudo %17
+    %2:hlxlr = LX_L16b_pseudo %17
+    %3:hlxlr = LX_L16b_pseudo %17
+    %4:hlxlr = LX_L16b_pseudo %17
+    %5:hlxlr = LX_L16b_pseudo %17
+    %6:hlxlr = LX_L16b_pseudo %17
+    %7:hlxlr = LX_L16b_pseudo %17
+    %8:hlxlr = LX_L16b_pseudo %17
+    %9:hlxlr = LX_L16b_pseudo %17
+    %10:hlxlr = LX_L16b_pseudo %17
+    %11:hlxlr = LX_L16b_pseudo %17
+    %12:hlxlr = LX_L16b_pseudo %17
+    %13:hlxlr = LX_L16b_pseudo %17
+    %14:hlxlr = LX_L16b_pseudo %17
+    %15:hlxlr = LX_L16b_pseudo %17
+    %16:hlxlr = LX_L16b_pseudo %17
+    LX_S16b_pseudo %18, %0
+    LX_S16b_pseudo %18, %1
+    LX_S16b_pseudo %18, %2
+    LX_S16b_pseudo %18, %3
+    LX_S16b_pseudo %18, %4
+    LX_S16b_pseudo %18, %5
+    LX_S16b_pseudo %18, %6
+    LX_S16b_pseudo %18, %7
+    LX_S16b_pseudo %18, %8
+    LX_S16b_pseudo %18, %9
+    LX_S16b_pseudo %18, %10
+    LX_S16b_pseudo %18, %11
+    LX_S16b_pseudo %18, %12
+    LX_S16b_pseudo %18, %13
+    LX_S16b_pseudo %18, %14
+    LX_S16b_pseudo %18, %15
+    LX_S16b_pseudo %18, %16
+    PS_jmpret $r31, implicit-def dead $pc
+...

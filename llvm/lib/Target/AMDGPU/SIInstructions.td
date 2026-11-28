@@ -10,7 +10,10 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl,
+                              GISelFlags {
+  let GIIgnoreCopies = 1;
+}
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -566,7 +569,9 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let isMeta = 1;
 }
 
-def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
+// The scheduler may append immediate operands after $mask to keep results of
+// the pre-RA IGLP analysis for later scheduling phases.
+def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask, variable_ops),
   [(int_amdgcn_iglp_opt (i32 timm:$mask))]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
@@ -1054,6 +1059,126 @@ def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
+
+//===----------------------------------------------------------------------===//
+// VGPR "as memory" indexed load/store pseudos (address space 13)
+//===----------------------------------------------------------------------===//
+
+// An entry in the VLdStIdxOpcodeInfo searchable table.
+class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bits<12> BitWidth = size;
+  bit IsStore = isStore;
+  bit IsGPRIdx = isGPRIdx;
+}
+
+// $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
+// _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
+// takes it in an SGPR and clobbers M0. The storage is the whole register
+// file, which no operand can name, so these are memory accesses with an MMO.
+let UseNamedOperandTable = 1, hasSideEffects = 0, Uses = [M0, EXEC],
+    VGPRAsMem = 1 in
+foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
+              VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
+              VReg_512, VReg_1024] in {
+  let mayLoad = 1, IsNeverUniform = 1 in {
+    def V_LOAD_IDX_B#rc.Size
+        : VPseudoInstSI<(outs rc:$data), (ins i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 0, 0>;
+    let Defs = [M0] in
+    def V_LOAD_IDX_GPR_IDX_B#rc.Size
+        : VPseudoInstSI<(outs rc:$data), (ins SReg_32:$idx, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 0, 1>;
+  }
+  let mayStore = 1 in {
+    def V_STORE_IDX_B#rc.Size
+        : VPseudoInstSI<(outs), (ins rc:$data, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 1, 0>;
+    let Defs = [M0] in
+    def V_STORE_IDX_GPR_IDX_B#rc.Size
+        : VPseudoInstSI<(outs), (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 1, 1>;
+  }
+}
+
+// The moves the movrel pseudos expand into. A real v_movrel[sd]_b32 must carry
+// implicit operands for the register tuple it indexes, but these index the
+// whole register file, so they have their own opcodes, which
+// AMDGPUMCInstLower encodes as the real movrel. The registers they touch are
+// not operands, so they are loads and stores, kept in order by their memory
+// operands. AMDGPULowerVGPREncoding needs their named operand table.
+let VOP1 = 1, SubtargetPredicate = HasMovrel, Uses = [M0, EXEC],
+    hasSideEffects = 0, UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
+  let mayLoad = 1 in
+  def V_MOVRELS_B32_as_mem
+      : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
+  let mayStore = 1 in
+  def V_MOVRELD_B32_as_mem
+      : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
+}
+
+// The constant of an (add_like idx, imm) index becomes the base register the
+// move adds the index to. It folds only if that register stays within the
+// VGPRs the function can address and the addition cannot wrap, as the
+// hardware's does not.
+class VRegIdxFoldableAdd<int NumDwords> : PatFrag<
+  (ops node:$idx, node:$offset), (add_like node:$idx, node:$offset), [{
+  return isVRegIdxFoldableAdd(N, }] # NumDwords # [{);
+}]>;
+
+// The movrel patterns take the index as an M0 input, so selection itself
+// writes M0.
+multiclass VRegIdxLoadStorePat<ValueType vt> {
+  defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
+  defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);
+  defvar gpr_idx_load_inst = !cast<Instruction>("V_LOAD_IDX_GPR_IDX_B"#vt.Size);
+  defvar gpr_idx_store_inst =
+      !cast<Instruction>("V_STORE_IDX_GPR_IDX_B"#vt.Size);
+  defvar foldable_add = VRegIdxFoldableAdd<!div(vt.Size, 32)>;
+
+  let OtherPredicates = [NotUseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (foldable_add M0, (i32 imm:$offset)))),
+      (load_inst imm:$offset)>;
+
+    def : GCNPat<
+      (vt (SIreg_load M0)),
+      (load_inst 0)>;
+
+    def : GCNPat<
+      (SIreg_store vt:$data, (foldable_add M0, (i32 imm:$offset))),
+      (store_inst $data, imm:$offset)>;
+
+    def : GCNPat<
+      (SIreg_store vt:$data, M0),
+      (store_inst $data, 0)>;
+  }
+
+  let OtherPredicates = [UseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (foldable_add i32:$idx, (i32 imm:$offset)))),
+      (gpr_idx_load_inst $idx, imm:$offset)>;
+
+    def : GCNPat<
+      (vt (SIreg_load i32:$idx)),
+      (gpr_idx_load_inst $idx, 0)>;
+
+    def : GCNPat<
+      (SIreg_store vt:$data, (foldable_add i32:$idx, (i32 imm:$offset))),
+      (gpr_idx_store_inst $data, $idx, imm:$offset)>;
+
+    def : GCNPat<
+      (SIreg_store vt:$data, i32:$idx),
+      (gpr_idx_store_inst $data, $idx, 0)>;
+  }
+}
+
+foreach vt = !listconcat(
+    Reg32Types.types, Reg64Types.types, Reg96Types.types, Reg128Types.types,
+    Reg160Types.types, Reg192Types.types, Reg224Types.types, Reg256Types.types,
+    Reg288Types.types, Reg320Types.types, Reg352Types.types, Reg384Types.types,
+    Reg512Types.types, Reg1024Types.types) in
+defm : VRegIdxLoadStorePat<vt>;
 
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this
@@ -2384,8 +2509,13 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
-  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
-                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+  (REG_SEQUENCE VReg_128,
+      (i32 (EXTRACT_SUBREG VReg_128:$src, sub0)), sub0,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_128:$src, sub1)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub1,
+      (i32 (EXTRACT_SUBREG VReg_128:$src, sub2)), sub2,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_128:$src, sub3)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub3)
 > {
   let SubtargetPredicate = HasPackedFP64SingleSGPROps;
 }
@@ -2820,7 +2950,7 @@ def BFIImm32 : PatFrag<
 
 // Definition from ISA doc:
 // 32-bit: (y & x) | (z & ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
@@ -2828,26 +2958,26 @@ def : AMDGPUPatIgnoreCopies <
 >;
 
 // 32-bit: (y & C) | (z & ~C)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
 
 // 32-bit: (z & ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, (i32 0), VSrc_b32:$z)
 >;
 
 // 32-bit: (y | ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> i32:$y, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, (i32 -1))
 >;
 
 // SHA-256 Ch function
 // 32-bit: z ^ (x & (y ^ z))
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
@@ -2860,7 +2990,7 @@ foreach vt = [i64, v2i32] in {
   defvar not_oneuse_frag = !if(!eq(vt, i64), not_oneuse, vnot_oneuse);
 
   // (y & x) | (z & ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<or> (and vt:$y, vt:$x), (and vt:$z, (not_frag vt:$x))),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -2872,7 +3002,7 @@ foreach vt = [i64, v2i32] in {
   >;
 
   // (z & ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<and> vt:$z, (not_oneuse_frag vt:$x)),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
@@ -2882,7 +3012,7 @@ foreach vt = [i64, v2i32] in {
   >;
 
   // (y | ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<or> vt:$y, (not_oneuse_frag vt:$x)),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -2893,7 +3023,7 @@ foreach vt = [i64, v2i32] in {
 
   // SHA-256 Ch function
   // z ^ (x & (y ^ z))
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -3383,64 +3513,6 @@ def : GCNPat <
       (V_NOT_B32_e32 (i32 (EXTRACT_SUBREG i64:$src0, sub0))), sub0,
       (V_NOT_B32_e32 (i32 (EXTRACT_SUBREG i64:$src0, sub1))), sub1
     )
->;
-
-let SubtargetPredicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
->;
-
-let True16Predicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
 >;
 
 def : GCNPat <
@@ -3938,9 +4010,9 @@ let SubtargetPredicate = isGFX10Plus in {
 // better to select fma instead of fmac.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f32:$src0)),
+       (f16 (VOP3NoOpSelMods f32:$src1)),
+       (f16 (VOP3NoOpSelMods f32:$src2))),
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -3954,9 +4026,9 @@ def : GCNPat <
 >;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f16:$src0)),
-       (f16 (VOP3NoMods f16:$src1)),
-       (f16 (VOP3NoMods f16:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f16:$src0)),
+       (f16 (VOP3NoOpSelMods f16:$src1)),
+       (f16 (VOP3NoOpSelMods f16:$src2))),
   (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -4268,25 +4340,36 @@ def : GCNPat <
 }
 
 let True16Predicate = UseRealTrue16Insts in {
+foreach vecTy = [v2i16, v2f16] in {
+defvar Ty = vecTy.ElementType;
+
 def : GCNPat <
-  (v2f16 (scalar_to_vector f16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (lo16_to_vgpr32 VGPR_16:$src0)
+>;
+
+// A uniform 16-bit value lives in the low 16 bits of a 32-bit SGPR, so it
+// cannot be used as the lo16 operand of a VGPR_32 REG_SEQUENCE.
+def : GCNPat <
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (COPY SReg_32:$src0)
+>;
+}
+
+foreach vecTy = [v4i16, v4f16] in {
+defvar Ty = vecTy.ElementType;
+
+def : GCNPat <
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (REG_SEQUENCE VReg_64, VGPR_16:$src0, lo16, (Ty (IMPLICIT_DEF)), hi16,
+                         (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat <
-  (v2i16 (scalar_to_vector i16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (REG_SEQUENCE SReg_64, SReg_32:$src0, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
-
-def : GCNPat <
-  (v4i16 (scalar_to_vector i16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
-
-def : GCNPat <
-  (v4f16 (scalar_to_vector f16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
+}
 
 def : GCNPat <
   (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
@@ -4459,7 +4542,7 @@ def : AMDGPUPat <
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i32:$x, i32:$z),
                         (and i32:$y, (or i32:$x, i32:$z))),
   (V_BFI_B32_e64 (V_XOR_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
@@ -4468,7 +4551,7 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
 >;
 
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i64:$x, i64:$z),
                         (and i64:$y, (or i64:$x, i64:$z))),
   (REG_SEQUENCE VReg_64,
@@ -4833,6 +4916,20 @@ def G_AMDGPU_BUFFER_STORE_FORMAT : BufferStoreGenericInstruction;
 def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
+
+def G_AMDGPU_REG_LOAD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_REG_STORE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$data, type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
 
 def G_AMDGPU_FMIN_LEGACY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ResourcePriorityQueue.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -32,35 +33,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scheduler"
 
-static cl::opt<bool>
-    DisableDFASched("disable-dfa-sched", cl::Hidden,
-                    cl::desc("Disable use of DFA during scheduling"));
-
-static cl::opt<int> RegPressureThreshold(
-    "dfa-sched-reg-pressure-threshold", cl::Hidden, cl::init(5),
-    cl::desc("Track reg pressure and switch priority to in-depth"));
-
 ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
     : Picker(this), InstrItins(IS->MF->getSubtarget().getInstrItineraryData()) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   TRI = STI.getRegisterInfo();
   TLI = IS->TLI;
   TII = STI.getInstrInfo();
+  Opts = &IS->CurDAG->getSelectionDAGOptions();
   ResourcesModel.reset(TII->CreateTargetScheduleState(STI));
   // This hard requirement could be relaxed, but for now
   // do not let it proceed.
   assert(ResourcesModel && "Unimplemented CreateTargetScheduleState.");
 
+  MF = IS->MF;
+
   unsigned NumRC = TRI->getNumRegClasses();
   RegLimit.resize(NumRC);
   RegPressure.resize(NumRC);
-  llvm::fill(RegLimit, 0);
-  llvm::fill(RegPressure, 0);
-  for (const TargetRegisterClass &RC : TRI->regclasses())
-    RegLimit[RC.getID()] = TRI->getRegPressureLimit(&RC, *IS->MF);
-
-  ParallelLiveRanges = 0;
-  HorizontalVerticalBalance = 0;
 }
 
 ResourcePriorityQueue::~ResourcePriorityQueue() = default;
@@ -164,7 +153,16 @@ static unsigned numberCtrlPredInSU(SUnit *SU) {
 ///
 void ResourcePriorityQueue::initNodes(std::vector<SUnit> &sunits) {
   SUnits = &sunits;
-  NumNodesSolelyBlocking.resize(SUnits->size(), 0);
+  NumNodesSolelyBlocking.assign(SUnits->size(), 0);
+  // The limits depend on function state that can change between blocks, e.g.
+  // whether a frame pointer is needed.
+  for (const TargetRegisterClass &RC : TRI->regclasses())
+    RegLimit[RC.getID()] = TRI->getRegPressureLimit(&RC, *MF);
+  llvm::fill(RegPressure, 0);
+  ParallelLiveRanges = 0;
+  HorizontalVerticalBalance = 0;
+  ResourcesModel->clearResources();
+  Packet.clear();
 
   for (SUnit &SU : *SUnits) {
     initNumRegDefsLeft(&SU);
@@ -401,7 +399,7 @@ int ResourcePriorityQueue::SUSchedulingCost(SUnit *SU) {
   // Adaptable scheduling
   // A small, but very parallel
   // region, where reg pressure is an issue.
-  if (HorizontalVerticalBalance > RegPressureThreshold) {
+  if (HorizontalVerticalBalance > Opts->dfa_sched_reg_pressure_threshold) {
     // Critical path first
     ResCount += (SU->getHeight() * ScaleTwo);
     // If resources are available for it, multiply the
@@ -588,7 +586,7 @@ SUnit *ResourcePriorityQueue::pop() {
     return nullptr;
 
   std::vector<SUnit *>::iterator Best = Queue.begin();
-  if (!DisableDFASched) {
+  if (!Opts->disable_dfa_sched) {
     int BestCost = SUSchedulingCost(*Best);
     for (auto I = std::next(Queue.begin()), E = Queue.end(); I != E; ++I) {
 

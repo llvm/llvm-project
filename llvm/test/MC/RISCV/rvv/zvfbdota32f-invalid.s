@@ -13,9 +13,9 @@ vfbdota.vv v8, v16, v12, 4
 vfbdota.vv v8, v16, v12, 64
 
 # Invalid vs2
-# CHECK-ERROR: invalid operand for instruction{{$}}
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 vfbdota.vv v8, v17, v12, 8
 
 # Invalid vs2 and ci
-# CHECK-ERROR: :[[@LINE+1]]:16: error: invalid operand for instruction{{$}}
+# CHECK-ERROR: :[[@LINE+1]]:16: error: operand must be the start of a valid M8 vector register group{{$}}
 vfbdota.vv v8, v17, v12, 4

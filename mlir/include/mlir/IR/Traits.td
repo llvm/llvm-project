@@ -20,13 +20,23 @@ include "mlir/IR/Constraints.td"
 //===----------------------------------------------------------------------===//
 
 // Trait represents a trait regarding an attribute, operation, or type.
-class Trait;
+class Trait {
+  // The C++ headers declaring this trait, as written in an `#include`
+  // directive (e.g. "mlir/Interfaces/SideEffectInterfaces.h"). Generated
+  // declarations of any entity using this trait include these headers.
+  list<string> cppIncludes = [];
+}
 
 // Define a Trait corresponding to a list of Traits, this allows for specifying
 // a list of traits as trait. Avoids needing to do `[Traits, ...] # ListOfTraits
 // # [Others, ...]` while still allowing providing convenient groupings.
 class TraitList<list<Trait> props> : Trait {
   list<Trait> traits = props;
+  // The headers of all traits in the list, without duplicates.
+  // Note: Technically unused by the generator but nevertheless put here for
+  //       convenience.
+  let cppIncludes = !foldl([]<string>, props, includes, trait,
+      !listconcat(includes, !listremove(trait.cppIncludes, includes)));
 }
 
 // NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap

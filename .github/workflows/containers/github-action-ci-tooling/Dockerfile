@@ -132,7 +132,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/resolute/ llvm-toolchain-resolute-${LLVM_VERSION%%.*} main" | tee /etc/apt/sources.list.d/llvm.list && \
     apt-get update && \
-    apt-get install -y clang-${LLVM_VERSION%%.*} lld-${LLVM_VERSION%%.*} ninja-build libclang-${LLVM_VERSION%%.*}-dev
+    apt-get install -y clang-${LLVM_VERSION%%.*} lld-${LLVM_VERSION%%.*} ninja-build llvm-${LLVM_VERSION%%.*}-dev libclang-${LLVM_VERSION%%.*}-dev
 
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
 RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \

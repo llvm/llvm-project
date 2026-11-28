@@ -264,13 +264,12 @@ cas::ondisk::UniqueTempFile::createAndCopyFrom(StringRef ParentPath,
   // for \c clonefile to write to.
   // FIXME: Instead of creating a dummy file, add a new file system API for
   // copying to a unique path that can loop while checking EEXIST.
-  SmallString<256> UniqueTmpPath;
   SmallString<256> Model;
   Model += ParentPath;
   sys::path::append(Model, "%%%%%%%.tmp");
   if (std::error_code EC = sys::fs::createUniqueFile(Model, UniqueTmpPath))
     return createFileError(Model, EC);
-  TmpPath = std::move(UniqueTmpPath);
+  TmpPath = UniqueTmpPath;
   TmpPath += ".tmp"; // modify so that there's no file at that path.
   // \c copy_file will use \c clonefile when applicable.
   if (std::error_code EC = sys::fs::copy_file(CopyFromPath, TmpPath))

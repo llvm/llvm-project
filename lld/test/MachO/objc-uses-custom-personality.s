@@ -45,6 +45,7 @@ nop
 
 #--- combined.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

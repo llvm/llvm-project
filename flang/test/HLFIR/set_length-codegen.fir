@@ -19,15 +19,18 @@ func.func @test_cst_len(%str : !fir.boxchar<1>) {
 
 func.func @test_dyn_len(%str : !fir.ref<!fir.char<1,10>>, %len : index) {
   %0 = hlfir.set_length %str len %len : (!fir.ref<!fir.char<1,10>>, index) -> !hlfir.expr<!fir.char<1,?>>
+  hlfir.destroy %0 : !hlfir.expr<!fir.char<1,?>>
   return
 }
 // CHECK-LABEL:   func.func @test_dyn_len(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.char<1,10>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: index) {
-// CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_1]] : index) <{bindc_name = ".tmp"}>
-// CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_1]] uniq_name(".tmp") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:  %[[VAL_2:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_1]] : index) <{bindc_name = ".tmp", uniq_name = ""}>
+// CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_1]] uniq_name(".tmp") : (!fir.heap<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.heap<!fir.char<1,?>>)
 // CHECK:  hlfir.assign %[[VAL_0]] to %[[VAL_3]]#0 temporary_lhs : !fir.ref<!fir.char<1,10>>, !fir.boxchar<1>
-// CHECK:  %[[VAL_4:.*]] = arith.constant false
+// CHECK:  %[[VAL_4:.*]] = arith.constant true
 // CHECK:  %[[VAL_5:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_4]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
+// CHECK:  %[[VAL_8:.*]] = fir.box_addr %[[VAL_3]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:  fir.freemem %[[VAL_8]] : !fir.heap<!fir.char<1,?>>

@@ -21,6 +21,7 @@ include "mlir/IR/OpBase.td"
 
 def TypedAttrInterface : AttrInterface<"TypedAttr"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
 
   let description = [{
     This interface is used for attributes that have a type. The type of an
@@ -40,6 +41,7 @@ def TypedAttrInterface : AttrInterface<"TypedAttr"> {
 
 def BlobAttrInterface : AttrInterface<"BlobAttr"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
   let description = [{
     This interface allows an attribute to expose a blob of data without more
     information. The data must be stored so that it can be accessed as a
@@ -58,6 +60,7 @@ def BlobAttrInterface : AttrInterface<"BlobAttr"> {
 
 def ElementsAttrInterface : AttrInterface<"ElementsAttr", [TypedAttrInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
   let description = [{
     This interface is used for attributes that contain the constant elements of
     a tensor or vector type. It allows for opaquely interacting with the
@@ -471,6 +474,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr", [TypedAttrInterface]> 
 
 def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
 
   let description = [{
     This interface is used for attributes that can represent the MemRef type's

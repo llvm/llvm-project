@@ -12,7 +12,7 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/SmallVector.h"

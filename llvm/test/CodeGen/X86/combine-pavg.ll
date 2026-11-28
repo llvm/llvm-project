@@ -44,6 +44,9 @@ define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 ; SSE-NEXT:    pand %xmm4, %xmm2
 ; SSE-NEXT:    pand %xmm4, %xmm3
 ; SSE-NEXT:    pavgw %xmm2, %xmm3
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    packuswb %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;

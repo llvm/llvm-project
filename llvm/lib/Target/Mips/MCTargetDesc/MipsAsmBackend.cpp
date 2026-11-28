@@ -22,6 +22,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/EndianStream.h"
@@ -575,6 +576,32 @@ MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Endian == llvm::endianness::little)
     return LittleEndianInfos[Kind - FirstTargetFixupKind];
   return BigEndianInfos[Kind - FirstTargetFixupKind];
+}
+
+bool MipsAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                       ArrayRef<MCOperand> Operands,
+                                       const MCSubtargetInfo &STI) const {
+  return Opcode == Mips::PseudoGOTLoadGlobal;
+}
+
+// PseudoGOTLoadGlobal is emitted for a symbol that was not defined when the
+// instruction was parsed. Once the whole file has been parsed we know whether
+// the symbol is local, in which case it must use the local GOT sequence
+// rather than a global GOT entry or %call16. This mirrors the IsLocalSym
+// check in MipsAsmParser::loadAndAddSymbolAddress.
+bool MipsAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                  const MCFixup &,
+                                                  const MCValue &Target,
+                                                  uint64_t, bool) const {
+  const auto *Sym = static_cast<const MCSymbolELF *>(Target.getAddSym());
+  return Sym && Sym->isInSection() && Sym->getBinding() == ELF::STB_LOCAL;
+}
+
+void MipsAsmBackend::relaxInstruction(MCInst &Inst,
+                                      const MCSubtargetInfo &STI) const {
+  assert(Inst.getOpcode() == Mips::PseudoGOTLoadGlobal &&
+         "unexpected instruction to relax");
+  Inst.setOpcode(Mips::PseudoGOTLoadLocal);
 }
 
 /// WriteNopData - Write an (optimal) nop sequence of Count bytes

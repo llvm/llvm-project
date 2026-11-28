@@ -400,7 +400,6 @@ public:
   int getHwModeIdx() const { return HwModeIdx; }
 
   void addRequiredSimplePredicate(StringRef PredName);
-  const std::vector<std::string> &getRequiredSimplePredicates();
 
   /// Attempts to mark \p ID as erased (GIR_EraseFromParent called on it).
   /// If \p ID has already been erased, returns false and GIR_EraseFromParent
@@ -527,7 +526,6 @@ public:
 
   iterator_range<RootsTy::iterator> roots() { return Roots; }
   bool roots_empty() const { return Roots.empty(); }
-  void roots_pop_front();
 };
 
 template <class PredicateTy> class PredicateListMatcher {
@@ -777,12 +775,18 @@ public:
 class LLTOperandMatcher : public OperandPredicateMatcher {
 protected:
   LLTCodeGen Ty;
+  /// If set, the type depends on the HwMode and Ty is unused.
+  std::optional<LLTByHwMode> HwModeTy;
 
   LLTOperandMatcher(PredicateKind Kind, unsigned InsnVarID, unsigned OpIdx,
                     const LLTCodeGen &Ty)
       : OperandPredicateMatcher(Kind, InsnVarID, OpIdx), Ty(Ty) {
     KnownTypes.insert(Ty);
   }
+
+  LLTOperandMatcher(PredicateKind Kind, unsigned InsnVarID, unsigned OpIdx,
+                    const LLTByHwMode &Ty)
+      : OperandPredicateMatcher(Kind, InsnVarID, OpIdx), HwModeTy(Ty) {}
 
 public:
   static std::map<LLTCodeGen, unsigned> TypeIDValues;
@@ -797,6 +801,8 @@ public:
 
   LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
       : LLTOperandMatcher(OPM_LLT, InsnVarID, OpIdx, Ty) {}
+  LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTByHwMode &Ty)
+      : LLTOperandMatcher(OPM_LLT, InsnVarID, OpIdx, Ty) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
@@ -804,13 +810,16 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
-           Ty == cast<LLTOperandMatcher>(&B)->Ty;
+           Ty == cast<LLTOperandMatcher>(&B)->Ty &&
+           HwModeTy == cast<LLTOperandMatcher>(&B)->HwModeTy;
   }
 
   RecordAndValue getValue() const override;
   bool hasValue() const override;
 
+  /// Returns the type. Returns an invalid LLT if the type depends on HwMode.
   LLTCodeGen getTy() const { return Ty; }
+  bool isHwModeDependent() const { return HwModeTy.has_value(); }
 
   void emitPredicateOpcodes(MatchTable &Table) const override;
 };
@@ -834,9 +843,17 @@ public:
     return P->getKind() == OPM_LLTShape;
   }
 
+  LLTOperandShapeMatcher(unsigned InsnVarID, unsigned OpIdx,
+                         const LLTByHwMode &Ty)
+      : LLTOperandMatcher(OPM_LLTShape, InsnVarID, OpIdx, Ty) {}
+
   bool isIdentical(const PredicateMatcher &B) const override {
-    return OperandPredicateMatcher::isIdentical(B) &&
-           getShapeElementCount(Ty.get()) ==
+    if (!OperandPredicateMatcher::isIdentical(B))
+      return false;
+    if (isHwModeDependent() ||
+        cast<LLTOperandShapeMatcher>(&B)->isHwModeDependent())
+      return HwModeTy == cast<LLTOperandShapeMatcher>(&B)->HwModeTy;
+    return getShapeElementCount(Ty.get()) ==
                getShapeElementCount(
                    cast<LLTOperandShapeMatcher>(&B)->Ty.get()) &&
            getShapeScalarSizeInBits(Ty.get()) ==
@@ -857,13 +874,20 @@ public:
 /// subtarget.
 class PointerToAnyOperandMatcher : public OperandPredicateMatcher {
 protected:
-  unsigned SizeInBits;
+  unsigned SizeInBits = 0;
+  /// If set, the pointer size is the size of this type for the HwMode and
+  /// SizeInBits is unused.
+  std::optional<LLTByHwMode> HwModeTy;
 
 public:
   PointerToAnyOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
                              unsigned SizeInBits)
       : OperandPredicateMatcher(OPM_PointerToAny, InsnVarID, OpIdx),
         SizeInBits(SizeInBits) {}
+  PointerToAnyOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             const LLTByHwMode &Ty)
+      : OperandPredicateMatcher(OPM_PointerToAny, InsnVarID, OpIdx),
+        HwModeTy(Ty) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_PointerToAny;
@@ -871,7 +895,8 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
-           SizeInBits == cast<PointerToAnyOperandMatcher>(&B)->SizeInBits;
+           SizeInBits == cast<PointerToAnyOperandMatcher>(&B)->SizeInBits &&
+           HwModeTy == cast<PointerToAnyOperandMatcher>(&B)->HwModeTy;
   }
 
   void emitPredicateOpcodes(MatchTable &Table) const override;
@@ -1186,8 +1211,6 @@ public:
 
   bool recordsOperand() const;
 
-  std::string getOperandExpr(unsigned InsnVarID) const;
-
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
   Error addTypeCheckPredicate(const TypeSetByHwMode &VTy,
@@ -1298,7 +1321,6 @@ public:
   StringRef getOpcode() const;
   ArrayRef<const CodeGenInstruction *> getAlternativeOpcodes() { return Insts; }
   bool isVariadicNumOperands() const;
-  StringRef getOperandType(unsigned OpIdx) const;
 };
 
 class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
@@ -1691,8 +1713,6 @@ public:
   }
   bool operands_empty() const { return Operands.empty(); }
 
-  void pop_front() { Operands.erase(Operands.begin()); }
-
   void optimize();
 
   bool recordsOperand() const;
@@ -1857,8 +1877,6 @@ public:
     return R->getKind() == OR_CopyPhysReg;
   }
 
-  const Record *getPhysReg() const { return PhysReg; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1890,8 +1908,6 @@ public:
     return R->getKind() == OR_CopyOrAddZeroReg;
   }
 
-  StringRef getSymbolicName() const { return SymbolicName; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1918,8 +1934,6 @@ public:
     return R->getKind() == OR_CopyConstantAsImm;
   }
 
-  StringRef getSymbolicName() const { return SymbolicName; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1944,8 +1958,6 @@ public:
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyFConstantAsFPImm;
   }
-
-  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
@@ -1976,8 +1988,6 @@ public:
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopySubReg;
   }
-
-  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table) const override;
 };

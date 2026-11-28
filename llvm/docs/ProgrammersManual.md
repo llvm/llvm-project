@@ -1504,10 +1504,10 @@ construct those elements actually used).
 
 #### llvm/ADT/TinyPtrVector.h
 
-`TinyPtrVector<Type>` is a highly specialized collection class that is
-optimized to avoid allocation in the case when a vector has zero or one
-elements.  It has two major restrictions: 1) it can only hold values of pointer
-type, and 2) it cannot hold a null pointer.
+`TinyPtrVector<Type>` is a highly specialized collection class: it is
+basically equivalent to `SmallVector<Type, 1>`, except it uses less memory
+in the case where it doesn't allocate. In exchange, operations on it are
+slightly slower. It can only hold pointer-like types.
 
 Since this container is highly specialized, it is rarely used.
 

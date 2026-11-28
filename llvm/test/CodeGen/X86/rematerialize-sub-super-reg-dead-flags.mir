@@ -7,7 +7,6 @@
 # the copy destination is used, so the def is dead.
 ---
 name: remat_def_units_equal_copy_dst
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remat_def_units_equal_copy_dst
   ; CHECK: {{^}}    dead $rax = MOV64ri32 -11, implicit-def $eax{{$}}
@@ -37,7 +36,6 @@ body:             |
 # Def covers fewer units than the copy destination.
 ---
 name: remat_def_units_subset_of_copy_dst
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remat_def_units_subset_of_copy_dst
   ; CHECK: {{^}}    $al = MOV8ri 11, implicit-def $rax{{$}}
@@ -67,7 +65,6 @@ body:             |
 # Def covers units the copy destination does not, and nothing uses them.
 ---
 name: remat_def_units_superset_of_copy_dst
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remat_def_units_superset_of_copy_dst
   ; CHECK: {{^}}    $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi{{$}}

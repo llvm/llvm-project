@@ -29,15 +29,9 @@ def CUFDialect : Dialect {
     the FIR types and are tightly coupled with FIR and HLFIR.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
   let cppNamespace = "::cuf";
   let dependentDialects = ["fir::FIROpsDialect"];
-
-  let extraClassDeclaration = [{
-  private:
-    // Register the CUF Attributes.
-    void registerAttributes();
-  }];
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUFDIALECT

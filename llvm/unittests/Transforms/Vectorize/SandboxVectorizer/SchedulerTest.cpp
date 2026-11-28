@@ -68,10 +68,10 @@ static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
 
 TEST_F(SchedulerTest, SchedBundle) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
-  store i8 %v0, ptr %ptr
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr0
   %other = add i8 %v0, %v1
-  store i8 %v1, ptr %ptr
+  store i8 %v1, ptr %ptr1
   ret void
 }
 )IR");
@@ -967,7 +967,7 @@ define void @foo(i8 %v0) {
   EXPECT_FALSE(ReadyList.contains(DAG.getNode(Add0)));
 }
 
-// When erasing a non-mem instruction we must not touch the UnscheduledSuccs
+// When erasing a non-mem instruction we must not touch the UnscheduledDeps
 // of an already-scheduled predecessor, since that counter is set to
 // std::nullopt once a node is scheduled.
 TEST_F(SchedulerTest, NotifyEraseInst_NonMemWithScheduledPred) {
@@ -991,15 +991,18 @@ define void @foo(i8 %v0) {
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
                              sandboxir::SchedDirection::BottomUp);
   auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
-  DAG.extend({PredSched, N});
+  DAG.extend({PredSched});
   auto *PredSchedN = DAG.getNode(PredSched);
-  auto *PredUnschedN = DAG.getNode(PredUnsched);
-  EXPECT_EQ(PredSchedN->getNumUnscheduledDeps(), 1u);
-  EXPECT_EQ(PredUnschedN->getNumUnscheduledDeps(), 1u);
-
   // Mark one of N's predecessors as scheduled. Its UnscheduledSuccs becomes
   // std::nullopt.
   PredSchedN->setScheduled();
+#ifndef NDEBUG
+  EXPECT_FALSE(PredSchedN->validUnscheduledDeps());
+#endif
+
+  DAG.extend({N});
+  auto *PredUnschedN = DAG.getNode(PredUnsched);
+  EXPECT_EQ(PredUnschedN->getNumUnscheduledDeps(), 1u);
 
   // Erase N, which is *not* scheduled. This must not attempt to decrement
   // the (now invalid) UnscheduledSuccs of PredSchedN, but should still
@@ -1347,4 +1350,40 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
 #ifndef NDEBUG
   EXPECT_DEATH(Sched.trySchedule(Ret), ".*Wrong scheduling direction.*");
 #endif
+}
+
+// Creating an instr will add it to the DAG, but trySchedule() used to miss it.
+// This test makes sure that the scheduler handles such cases correctly.
+TEST_F(SchedulerTest, TryScheduleAfterInstrCreation) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr0) {
+  %ptr1 = getelementptr i8, ptr %ptr0, i32 1
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  store i8 %ld1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *Gep = &*It++;
+  auto *L0 = &*It++;
+  auto *L1 = &*It++;
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  Sched.trySchedule({L0, L1});
+  // Create a new vector load just before the store.
+  sandboxir::Type *VecTy = sandboxir::FixedVectorType::get(L0->getType(), 2);
+  [[maybe_unused]] auto *VecL = sandboxir::LoadInst::create(
+      VecTy, Gep, Align(1), S0->getIterator(), Ctx, "VecL");
+  // Now try to schedule the stores.
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
 }

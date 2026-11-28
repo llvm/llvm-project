@@ -23,7 +23,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -44,22 +44,61 @@ public:
 };
 } // namespace
 
-PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
-  Module &M = *F.getParent();
-  if (!M.getModuleFlag("kcfi"))
-    return PreservedAnalyses::all();
+static void lowerTrapCheck(CallInst *CI, const Triple &T, IntegerType *Int32Ty,
+                           MDNode *VeryUnlikelyWeights) {
+  // Get the expected hash value.
+  const uint32_t ExpectedHash =
+      cast<ConstantInt>(CI->getOperandBundle(LLVMContext::OB_kcfi)->Inputs[0])
+          ->getZExtValue();
 
+  // Drop the KCFI operand bundle.
+  CallBase *Call = CallBase::removeOperandBundle(CI, LLVMContext::OB_kcfi,
+                                                 CI->getIterator());
+  assert(Call != CI);
+  Call->copyMetadata(*CI);
+  CI->replaceAllUsesWith(Call);
+  CI->eraseFromParent();
+
+  if (!Call->isIndirectCall())
+    return;
+
+  // Emit a check and trap if the target hash doesn't match.
+  IRBuilder<> Builder(Call);
+  Builder.disableGEPCanonicalization();
+  Value *FuncPtr = Call->getCalledOperand();
+  // ARM uses the least significant bit of the function pointer to select
+  // between ARM and Thumb modes for the callee. Instructions are always
+  // at least 16-bit aligned, so clear the LSB before we compute the hash
+  // location.
+  if (T.isARM() || T.isThumb()) {
+    FuncPtr = Builder.CreateIntToPtr(
+        Builder.CreateAnd(Builder.CreatePtrToInt(FuncPtr, Int32Ty),
+                          ConstantInt::getSigned(Int32Ty, -2)),
+        FuncPtr->getType());
+  }
+  Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(Int32Ty, FuncPtr, -1);
+  Value *Test = Builder.CreateICmpNE(Builder.CreateLoad(Int32Ty, HashPtr),
+                                     ConstantInt::get(Int32Ty, ExpectedHash));
+  Instruction *ThenTerm =
+      SplitBlockAndInsertIfThen(Test, Call, false, VeryUnlikelyWeights);
+  Builder.SetInsertPoint(ThenTerm);
+  Builder.CreateIntrinsic(Intrinsic::debugtrap, {});
+  ++NumKCFIChecks;
+}
+
+static bool lowerTrapBundles(Function &F) {
   // Find call instructions with KCFI operand bundles.
-  SmallVector<CallInst *> KCFICalls;
+  SmallVector<CallInst *> TrapCalls;
   for (Instruction &I : instructions(F)) {
     if (auto *CI = dyn_cast<CallInst>(&I))
       if (CI->getOperandBundle(LLVMContext::OB_kcfi))
-        KCFICalls.push_back(CI);
+        TrapCalls.push_back(CI);
   }
 
-  if (KCFICalls.empty())
-    return PreservedAnalyses::all();
+  if (TrapCalls.empty())
+    return false;
 
+  Module &M = *F.getParent();
   LLVMContext &Ctx = M.getContext();
   // patchable-function-prefix emits nops between the KCFI type identifier
   // and the function start. As we don't know the size of the emitted nops,
@@ -73,45 +112,16 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
   MDNode *VeryUnlikelyWeights = MDBuilder(Ctx).createUnlikelyBranchWeights();
   Triple T(M.getTargetTriple());
 
-  for (CallInst *CI : KCFICalls) {
-    // Get the expected hash value.
-    const uint32_t ExpectedHash =
-        cast<ConstantInt>(CI->getOperandBundle(LLVMContext::OB_kcfi)->Inputs[0])
-            ->getZExtValue();
+  for (CallInst *CI : TrapCalls)
+    lowerTrapCheck(CI, T, Int32Ty, VeryUnlikelyWeights);
+  return true;
+}
 
-    // Drop the KCFI operand bundle.
-    CallBase *Call = CallBase::removeOperandBundle(CI, LLVMContext::OB_kcfi,
-                                                   CI->getIterator());
-    assert(Call != CI);
-    Call->copyMetadata(*CI);
-    CI->replaceAllUsesWith(Call);
-    CI->eraseFromParent();
+PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
+  if (!F.getParent()->getModuleFlag("kcfi"))
+    return PreservedAnalyses::all();
 
-    if (!Call->isIndirectCall())
-      continue;
-
-    // Emit a check and trap if the target hash doesn't match.
-    IRBuilder<> Builder(Call);
-    Value *FuncPtr = Call->getCalledOperand();
-    // ARM uses the least significant bit of the function pointer to select
-    // between ARM and Thumb modes for the callee. Instructions are always
-    // at least 16-bit aligned, so clear the LSB before we compute the hash
-    // location.
-    if (T.isARM() || T.isThumb()) {
-      FuncPtr = Builder.CreateIntToPtr(
-          Builder.CreateAnd(Builder.CreatePtrToInt(FuncPtr, Int32Ty),
-                            ConstantInt::getSigned(Int32Ty, -2)),
-          FuncPtr->getType());
-    }
-    Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(Int32Ty, FuncPtr, -1);
-    Value *Test = Builder.CreateICmpNE(Builder.CreateLoad(Int32Ty, HashPtr),
-                                       ConstantInt::get(Int32Ty, ExpectedHash));
-    Instruction *ThenTerm =
-        SplitBlockAndInsertIfThen(Test, Call, false, VeryUnlikelyWeights);
-    Builder.SetInsertPoint(ThenTerm);
-    Builder.CreateIntrinsic(Intrinsic::debugtrap, {});
-    ++NumKCFIChecks;
-  }
-
+  if (!lowerTrapBundles(F))
+    return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

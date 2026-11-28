@@ -98,7 +98,7 @@ FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
 FUNCTION_PASS_WITH_PARAMS(
     "amdgpu-atomic-optimizer",
     "AMDGPUAtomicOptimizerPass",
-    [=](ScanOptions Strategy) {
+    [=](AMDGPU::ScanOptions Strategy) {
       return AMDGPUAtomicOptimizerPass(*this, Strategy);
     },
     parseAMDGPUAtomicOptimizerStrategy, "strategy=dpp|iterative|none")
@@ -147,6 +147,8 @@ MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
 MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
+MACHINE_FUNCTION_PASS("si-insert-async-barrier-arrive-workaround",
+                      SIInsertAsyncBarrierArriveWorkaroundPass())
 MACHINE_FUNCTION_PASS("si-insert-hard-clauses", SIInsertHardClausesPass())
 MACHINE_FUNCTION_PASS("si-insert-waitcnts", SIInsertWaitcntsPass())
 MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())

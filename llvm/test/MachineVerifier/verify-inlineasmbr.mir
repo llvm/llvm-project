@@ -74,7 +74,7 @@ body: |
     %10:g8rc = ANDI8_rec %2, 1, implicit-def $cr0
     %3:crbitrc = COPY $cr0gt
     %4:gprc = COPY %1.sub_32
-    %5:crrc = CMPWI killed %4, 0
+    %5:crrc = CMPWI %4, 0
     %0:crbitrc = COPY %5.sub_eq
 
   bb.1.for.cond:

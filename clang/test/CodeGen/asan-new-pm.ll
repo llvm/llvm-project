@@ -1,6 +1,8 @@
 ; Test that ASan runs with the new pass manager
 ; RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - -fsanitize=address %s | FileCheck %s
+; RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm -o - -fsanitize=address %s | FileCheck %s %}
 ; RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - -O1 -fsanitize=address %s | FileCheck %s
+; RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm -o - -O1 -fsanitize=address %s | FileCheck %s %}
 
 ; CHECK-DAG: @llvm.global_ctors = {{.*}}@asan.module_ctor
 

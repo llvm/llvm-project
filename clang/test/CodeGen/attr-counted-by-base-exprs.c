@@ -360,7 +360,7 @@ int test_index_enum_count(struct e *a, int i) {
 
 // Index types narrower and wider than the count.
 // CHECK-LABEL: define dso_local i32 @test_index_char(
-// CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]], i8 noundef signext [[I:%.*]]) local_unnamed_addr #[[ATTR8]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]], i8 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR8]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i32

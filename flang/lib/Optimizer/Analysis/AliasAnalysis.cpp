@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -861,7 +862,6 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     }
   }
 
-  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
@@ -872,8 +872,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
 
-  // A null address aliases nothing. Same-value pairs already returned
-  // MustAlias above.
+  return aliasSources(std::move(lhsSrc), std::move(rhsSrc), lhs, rhs);
+}
+
+AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
+                                        mlir::Value lhs, mlir::Value rhs) {
+  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
+
+  // A null address aliases nothing. alias() returns MustAlias for a pair of
+  // the same values before getting here.
   if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
     LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
     return AliasResult::NoAlias;
@@ -1146,6 +1153,79 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
+static bool isMainProgram(mlir::func::FuncOp func) {
+  return func.getSymName() == fir::NameUniquer::doProgramEntry();
+}
+
+/// Whether \p func is the function of the main program or of the procedure
+/// that owns the saved local variable whose global is named \p varName. The
+/// procedure is identified by the name of the function, or by its
+/// fir.internal_name if the function was renamed. The BLOCK construct of the
+/// variable, if any, does not matter.
+static bool isOwnerOf(mlir::func::FuncOp func, llvm::StringRef varName) {
+  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
+  if (varKind != fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+  // The variables of the main program are named as if the main program was a
+  // procedure with an empty name.
+  if (isMainProgram(func))
+    return varParts.modules.empty() && varParts.procs.size() == 1 &&
+           varParts.procs.front().empty();
+  llvm::StringRef funcName = func.getSymName();
+  if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
+          fir::getInternalFuncNameAttrName()))
+    funcName = internalName.getValue();
+  auto [funcKind, funcParts] = fir::NameUniquer::deconstruct(funcName);
+  if (funcKind != fir::NameUniquer::NameKind::PROCEDURE ||
+      varParts.modules != funcParts.modules ||
+      varParts.procs.size() != funcParts.procs.size() + 1)
+    return false;
+  return llvm::equal(funcParts.procs,
+                     llvm::ArrayRef(varParts.procs).drop_back()) &&
+         varParts.procs.back() == funcParts.name;
+}
+
+/// Whether \p call cannot access the saved local variable \p src, other than
+/// through its arguments. All the instances of the procedure that owns the
+/// variable share it, so this requires that the call cannot invoke that
+/// procedure. Returns false if this cannot be proven.
+static bool callCannotReachSavedLocal(fir::CallOp call,
+                                      const fir::AliasAnalysis::Source &src) {
+  // A pure procedure only references pure procedures, and a pure procedure
+  // has no saved local variables (F2023 C1598, C15105).
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(
+          call.getOperation()))
+    return true;
+  // A NON_RECURSIVE procedure cannot invoke itself, directly or indirectly
+  // (F2023 15.6.2.1), so a call in the func.func lowered from the procedure
+  // cannot invoke it. A call in another func.func that the procedure was
+  // inlined into may invoke it. For example, after work is inlined into
+  // caller, the call to g may invoke work and modify x, because no instance
+  // of work is active when g is called:
+  //
+  //   non_recursive subroutine work()
+  //     integer, save :: x = 0
+  //     x = x + 1
+  //   end subroutine
+  //   subroutine caller()
+  //     call work()  ! inlined: x = x + 1
+  //     call g()     ! may call work()
+  //     call work()  ! inlined: x = x + 1
+  //   end subroutine
+  //
+  // The main program cannot be referenced (F2023 14.1), so a call in its
+  // func.func cannot invoke it either.
+  auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
+      call->getParentOfType<mlir::FunctionOpInterface>().getOperation());
+  if (!func ||
+      (!isMainProgram(func) &&
+       !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
+           func.getOperation())))
+    return false;
+  auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u);
+  return symRef && isOwnerOf(func, symRef.getLeafReference().getValue());
+}
+
 bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   fir::CallOp call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -1173,6 +1253,45 @@ bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
           return true;
   }
   return false;
+}
+
+bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                             const Source &varSrc) {
+  // getSource() does not see that a pointer reachable from arg, e.g. a
+  // pointer component, may be associated with var.
+  if (varSrc.isTargetOrPointer())
+    return true;
+  if (!alias(arg, var).isNo())
+    return true;
+  if (!fir::isBoxAddress(arg.getType()))
+    return false;
+  // The callee may also access the data that the descriptor describes, e.g.
+  // through an allocatable or pointer dummy. Build the source of this data as
+  // getSource() does for a fir.box_addr of a fir.load of arg: the source of
+  // the descriptor followed by a dereference. Compare it with the source of
+  // var through aliasSources(): alias() would decide from the type of arg, a
+  // descriptor address, that it does not alias data.
+  Source dataSrc = getSource(arg, /*getLastInstantiationPoint=*/false,
+                             /*collectScopedOrigins=*/false);
+  auto boxTy = mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()));
+  bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
+  if (isPointerBox)
+    dataSrc.attributes.set(Attribute::Pointer);
+  Source::PathStep derefStep;
+  derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
+                                : Source::PathStep::Kind::AllocDeref;
+  dataSrc.accessPath.steps.push_back(derefStep);
+  dataSrc.origin.isData = true;
+  // Compare with a source of var built like dataSrc.
+  Source fullVarSrc = getSource(var, /*getLastInstantiationPoint=*/false,
+                                /*collectScopedOrigins=*/false);
+  LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::mayAccessThroughArgument\n";
+             llvm::dbgs() << "  arg: " << arg << "\n";
+             llvm::dbgs() << "  described data: " << dataSrc << "\n";
+             llvm::dbgs() << "  var: " << var << "\n";
+             llvm::dbgs() << "  varSrc: " << fullVarSrc << "\n";);
+  return !aliasSources(std::move(dataSrc), std::move(fullVarSrc), arg, var)
+              .isNo();
 }
 
 ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
@@ -1221,22 +1340,24 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::HostAssoc ||
       varSrc.isCapturedInInternalProcedure)
     return ModRefResult::getModAndRef();
-  // At that stage, it has been ruled out that local (including the saved ones)
-  // and dummy cannot be indirectly accessed in the call.
+  // At that stage, it has been ruled out that locals and dummies can be
+  // accessed indirectly in the call, except that a saved local may be
+  // accessed by another instance of its procedure.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
       varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
-        !isSavedLocal(varSrc))
+        !isSavedLocal(varSrc) || !callCannotReachSavedLocal(call, varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments. A dummy with a
-  // declared intent is a read, a write, or both. intent(out) is a write for
-  // a trivial non-pointer, non-allocatable dummy, and a read and a write
-  // otherwise. An argument with no visible intent stays ModAndRef. The
-  // callee is resolved through the cached symbol table. Intent is a
-  // signature attribute, so a declaration is enough and the callee body is
-  // not inspected.
+  // 2. Check if the variable is passed via the arguments. An argument that
+  // is the address of a descriptor also passes the data that the descriptor
+  // describes. A dummy with a declared intent is a read, a write, or both.
+  // intent(out) is a write for a trivial non-pointer, non-allocatable dummy,
+  // and a read and a write otherwise. An argument with no visible intent
+  // stays ModAndRef. The callee is resolved through the cached symbol table.
+  // Intent is a signature attribute, so a declaration is enough and the
+  // callee body is not inspected.
   mlir::func::FuncOp callee;
   if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
     if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
@@ -1248,7 +1369,8 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       callee && args.size() == callee.getNumArguments();
   ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
-    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+    if (!fir::conformsWithPassByRef(arg.getType()) ||
+        !mayAccessThroughArgument(arg, var, varSrc))
       continue;
     if (!intentsAvailable)
       return ModRefResult::getModAndRef();
@@ -1502,6 +1624,15 @@ AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // TODO: remove the check for stacksave/stackrestore once these operations
+  // are updated with proper effects.
+  if (mlir::isa<mlir::LLVM::StackSaveOp, mlir::LLVM::StackRestoreOp>(op))
+    return ModRefResult::getNoModRef();
+  // TODO: remove the check once fir.unreachable is updated with proper
+  // effects.
+  if (mlir::isa<fir::UnreachableOp>(op))
+    return ModRefResult::getNoModRef();
+
   // If this AliasAnalysis is linked with a cache, route ops with
   // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
   // the inline path below; the cache eventually delegates back to

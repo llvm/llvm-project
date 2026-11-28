@@ -15,6 +15,8 @@
 #ifndef OPENACCCG_ATTRIBUTES
 #define OPENACCCG_ATTRIBUTES
 
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
+
 def OpenACC_GPUParallelDimAttr : OpenACC_Attr<"GPUParallelDim", "par_dim"> {
   let summary = "GPU parallel dimension for use in OpenACC parallelism assignment.";
   let description = [{
@@ -125,6 +127,23 @@ def OpenACC_ActiveParDimsAttr
   }];
   let parameters = (ins ArrayRefParameter<"::mlir::acc::GPUParallelDimAttr">:$array);
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.offload_packager
+//===----------------------------------------------------------------------===//
+
+def OpenACC_OffloadPackagerAttr
+    : OpenACC_Attr<"OffloadPackager", "offload_packager",
+                   [OffloadingTranslationAttrTrait]> {
+  let summary = "Offloading handler that embeds the device image in the host";
+  let description = [{
+    Offloading handler for `gpu.module` and `gpu.binary` operations.  The LLVM
+    IR translation wraps each object of a `gpu.binary` in an LLVM offloading
+    binary of kind OpenACC and places it in the `.llvm.offloading` section of
+    the host object. This format is supported by the  offloading linker wrapper
+    which inserts the registration with the OpenACC runtime libacctarget.
+  }];
 }
 
 #endif // OPENACCCG_ATTRIBUTES

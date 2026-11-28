@@ -19,7 +19,7 @@ def WasmSSA_Dialect : Dialect {
     The `wasmssa` dialect is intended to represent WebAssembly
     modules in SSA form for easier manipulation.
   }];
-  let useDefaultTypePrinterParser = true;
+  let hasTypes = 1;
 }
 
 #endif //WasmSSA_BASE

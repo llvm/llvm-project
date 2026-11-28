@@ -233,6 +233,49 @@ def UdotOp : ArmSVE_Op<"udot", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
+// FmlaOp
+//===----------------------------------------------------------------------===//
+
+def FmlaOp : ArmSVE_Op<"fmla", [Pure,
+                                AllTypesMatch<["src1", "src2"]>,
+                                AllTypesMatch<["acc", "dst"]>]> {
+  let summary = "Floating-point fused multiply-add by indexed element";
+  let description = [{
+    FMLA: Floating-point fused multiply-add by indexed element
+
+    Below is a summary from the official documentation for the corresponding
+    [SVE instruction](https://support.arm.com/documentation/111108/2026-09/SVE-Instructions/FMLA--indexed---Floating-point-fused-multiply-add-by-indexed-element-)
+
+    ```
+    This instruction multiplies all floating-point elements within each 128-bit
+    segment of the first source vector by the specified element in the
+    corresponding second source vector segment. The products are then
+    destructively added without intermediate rounding to the corresponding
+    elements of the addend and destination vector.
+
+    The elements within the second source vector are specified using an immediate
+    index that selects the same element position within each 128-bit vector
+    segment. The index range is from 0 to one less than the number of elements per
+    128-bit segment. This instruction is unpredicated.
+    ```
+
+    TODO: When adding support for the "vector" variant of FMLA, rename this Op to
+    better differentiate the two.
+  }];
+
+  // Supports (vector<[4]xi32>, vector<[4]xi32>, i32) -> (vector<[4]xi32>)
+  let arguments = (ins
+          ScalableVectorOfLengthAndType<[4], [F32]>:$acc,
+          ScalableVectorOfLengthAndType<[4], [F32]>:$src1,
+          ScalableVectorOfLengthAndType<[4], [F32]>:$src2,
+          I32:$lane
+  );
+  let results = (outs ScalableVectorOfLengthAndType<[4], [F32]>:$dst);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 `,` $lane attr-dict `:` type($src1) `to` type($dst)";
+}
+
+//===----------------------------------------------------------------------===//
 // SmmlaOp
 //===----------------------------------------------------------------------===//
 
@@ -676,6 +719,10 @@ def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
 //===----------------------------------------------------------------------===//
 //  Intrinsic ops
 //===----------------------------------------------------------------------===//
+
+def FmlaIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fmla.lane">,
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnySignlessInteger)>;
 
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,

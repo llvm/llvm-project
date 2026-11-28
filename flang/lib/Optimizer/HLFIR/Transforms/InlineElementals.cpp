@@ -83,6 +83,10 @@ getReadDependencies(hlfir::ElementalOp elemental,
           return mlir::WalkResult::advance();
         }
 
+        // The walk visits nested effects, including yield_element cleanup.
+        if (op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>())
+          return mlir::WalkResult::advance();
+
         // Fail-safe: For operations without the interface, conservatively
         // assume we cannot reason about the dependency.
         return mlir::WalkResult::interrupt();
@@ -367,10 +371,39 @@ public:
     assert(elemental.getRegion().hasOneBlock() &&
            "expect elemental region to have one block");
 
+    auto sourceYield =
+        mlir::cast<hlfir::YieldElementOp>(elemental.getBody()->getTerminator());
+    auto consumer = mlir::dyn_cast<hlfir::ElementalOp>(apply->getParentOp());
+    // Keep scalar cleanup in the apply's block so its lifetime does not cross
+    // control-flow boundaries.
+    if (!sourceYield.getCleanup().empty() && !consumer &&
+        (!destroy || destroy->getBlock() != apply->getBlock() ||
+         !apply->isBeforeInBlock(destroy)))
+      return rewriter.notifyMatchFailure(
+          elemental, "cannot preserve element cleanup when inlining");
+
     fir::FirOpBuilder builder{rewriter, elemental.getOperation()};
     builder.setInsertionPointAfter(apply);
     hlfir::YieldElementOp yield = hlfir::inlineElementalOp(
         elemental.getLoc(), builder, elemental, apply.getIndices());
+
+    if (!yield.getCleanup().empty()) {
+      mlir::Block &cleanup = yield.getCleanup().front();
+      rewriter.eraseOp(cleanup.getTerminator());
+      if (consumer) {
+        // The consumer's result may use the inlined element's storage. Keep
+        // its cleanup until after the consumer's value has itself been used.
+        auto consumerYield = mlir::cast<hlfir::YieldElementOp>(
+            consumer.getBody()->getTerminator());
+        auto &destination = consumerYield.getCleanup();
+        hlfir::YieldElementOp::ensureTerminator(destination, rewriter,
+                                                consumer.getLoc());
+        rewriter.inlineBlockBefore(&cleanup,
+                                   destination.front().getTerminator());
+      } else {
+        rewriter.inlineBlockBefore(&cleanup, destroy);
+      }
+    }
 
     // remove the old elemental and all of the bookkeeping
     rewriter.replaceOp(apply, {yield.getElementValue()});

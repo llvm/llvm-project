@@ -64,7 +64,8 @@ define private void @call_store_A() {
 define private void @store_A() {
 ; CHECK-LABEL: define private void @store_A() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [4 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[A1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[A]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) [[A1]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP3]], ptr null, align 8
@@ -77,7 +78,8 @@ define private void @store_A() {
 define private ptr @get_B_ptr() {
 ; CHECK-LABEL: define private ptr @get_B_ptr() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [4 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[B1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[B]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) [[B1]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP3]]

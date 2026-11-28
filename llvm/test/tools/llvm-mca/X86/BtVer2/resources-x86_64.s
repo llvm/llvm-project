@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -1329,6 +1332,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      28    25.00   *             U     divl	(%rax)
 # CHECK-NEXT:  2      41    41.00                 U     divq	%rcx
 # CHECK-NEXT:  2      44    41.00   *             U     divq	(%rax)
+# CHECK-NEXT:  1      1     0.50                  U     endbr32
+# CHECK-NEXT:  1      1     0.50                  U     endbr64
 # CHECK-NEXT:  1      100   0.50                  U     enter	$7, $4095
 # CHECK-NEXT:  1      12    12.00                 U     idivb	%dil
 # CHECK-NEXT:  1      15    12.00   *             U     idivb	(%rax)
@@ -1966,7 +1971,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 718.50 768.50 380.00  -      -      -      -     992.00 80.00  893.00  -      -      -      -
+# CHECK-NEXT: 719.50 769.50 380.00  -      -      -      -     992.00 80.00  893.00  -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -2265,6 +2270,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -     1.00   25.00   -      -      -      -     1.00    -      -      -      -      -      -     divl	(%rax)
 # CHECK-NEXT:  -     1.00   41.00   -      -      -      -      -      -      -      -      -      -      -     divq	%rcx
 # CHECK-NEXT:  -     1.00   41.00   -      -      -      -     1.00    -      -      -      -      -      -     divq	(%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     endbr32
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     endbr64
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     enter	$7, $4095
 # CHECK-NEXT:  -     1.00   12.00   -      -      -      -      -      -      -      -      -      -      -     idivb	%dil
 # CHECK-NEXT:  -     1.00   12.00   -      -      -      -     1.00    -      -      -      -      -      -     idivb	(%rax)

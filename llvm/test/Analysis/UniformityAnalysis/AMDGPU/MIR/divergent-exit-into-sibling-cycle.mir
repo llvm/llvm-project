@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=amdgpu7.00-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu7.00-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+
+---
+# CHECK-LABEL: MachineUniformityInfo for function: @exit_into_next_loop
+# CHECK: CYCLES WITH DIVERGENT EXIT:
+# CHECK-NEXT: depth=1: entries(bb.1) bb.2 bb.3
+# CHECK: DIVERGENT: G_BRCOND %div_cond:_(s1), %bb.4
+# CHECK: DIVERGENT: %outer_use: %outer_use:_(s32) = G_ADD %o:_, %zero:_
+name:            exit_into_next_loop
+body:             |
+  bb.0:
+    %zero:_(s32) = G_CONSTANT i32 0
+    %one:_(s32) = G_CONSTANT i32 1
+    %n:_(s32) = G_IMPLICIT_DEF
+    %c:_(s1) = G_IMPLICIT_DEF
+    %tid:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+
+  bb.1:
+    %o:_(s32) = G_PHI %zero(s32), %bb.0, %o_next(s32), %bb.2
+    %o_next:_(s32) = G_ADD %o, %one
+
+  bb.2:
+    %i:_(s32) = G_PHI %zero(s32), %bb.1, %i_next(s32), %bb.3
+    %uni_cond:_(s1) = G_ICMP intpred(slt), %i(s32), %n
+    G_BRCOND %uni_cond(s1), %bb.3
+    G_BR %bb.1
+
+  bb.3:
+    %i_next:_(s32) = G_ADD %i, %one
+    %div_cond:_(s1) = G_ICMP intpred(eq), %o(s32), %tid
+    G_BRCOND %div_cond(s1), %bb.4
+    G_BR %bb.2
+
+  bb.4:
+    %outer_use:_(s32) = G_ADD %o, %zero
+    G_BRCOND %c(s1), %bb.4
+    G_BR %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+
+...

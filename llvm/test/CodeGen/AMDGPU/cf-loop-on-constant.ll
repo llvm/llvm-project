@@ -12,8 +12,8 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
 ; GCN-NEXT:    s_mov_b32 m0, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB0_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_lshl_b32 s2, s1, 2
@@ -117,8 +117,8 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
 ; GCN-NEXT:    s_mov_b32 m0, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB1_1: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_lshl_b32 s2, s1, 2

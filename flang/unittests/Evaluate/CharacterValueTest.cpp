@@ -250,21 +250,30 @@ TEST_P(CharacterValueKind, ToAscii) {
   // conversion to possible kinds
   CharacterValue v{kind, "abc"};
   for (int to : std::initializer_list<int> FORTRAN_CHARACTER_KINDS) {
-    CharacterValue converted{v.ToAscii(to)};
-    EXPECT_EQ(to, converted.kind());
-    EXPECT_CHARS_EQ("abc", converted);
+    std::optional<CharacterValue> converted{v.ToAscii(to)};
+    ASSERT_TRUE(converted.has_value());
+    EXPECT_EQ(to, converted->kind());
+    EXPECT_CHARS_EQ("abc", *converted);
   }
 
   // Conversion between kinds is defined only for 7-bit ASCII; anything else
-  // yields an empty string.
+  // fails.
   CharacterValue nonascii{4, std::u32string{U"a\u0100b"}};
-  EXPECT_TRUE(nonascii.ToAscii(kind).empty());
-  EXPECT_EQ(kind, nonascii.ToAscii(kind).kind());
+  EXPECT_FALSE(nonascii.ToAscii(kind).has_value());
+  CharacterValue latin1{4, std::u32string{U"\u00e9"}};
+  EXPECT_FALSE(latin1.ToAscii(kind).has_value());
 
   // Converting a null state yields an empty string of the target kind.
-  CharacterValue empty{CharacterValue{}.ToAscii(kind)};
-  EXPECT_EQ(kind, empty.kind());
-  EXPECT_TRUE(empty.empty());
+  std::optional<CharacterValue> empty{CharacterValue{}.ToAscii(kind)};
+  ASSERT_TRUE(empty.has_value());
+  EXPECT_EQ(kind, empty->kind());
+  EXPECT_TRUE(empty->empty());
+
+  // An empty string is a valid conversion, distinct from failure.
+  std::optional<CharacterValue> emptyStr{CharacterValue{kind, ""}.ToAscii(4)};
+  ASSERT_TRUE(emptyStr.has_value());
+  EXPECT_EQ(4, emptyStr->kind());
+  EXPECT_TRUE(emptyStr->empty());
 }
 
 //===----------------------------------------------------------------------===//

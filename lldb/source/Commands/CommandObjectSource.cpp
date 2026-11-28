@@ -369,7 +369,7 @@ protected:
   // the option.
   bool DumpLinesInFunctions(CommandReturnObject &result) {
     SymbolContextList sc_list_funcs;
-    ConstString name(m_options.symbol_name);
+    llvm::StringRef name = m_options.symbol_name;
     SymbolContextList sc_list_lines;
     Target *target = GetTarget();
     assert(target && "target guaranteed by eCommandRequiresTarget");
@@ -851,7 +851,7 @@ protected:
   // these somewhere, there should probably be a module-filter-list that can be
   // passed to the various ModuleList::Find* calls, which would either be a
   // vector of string names or a ModuleSpecList.
-  void FindMatchingFunctions(Target &target, ConstString name,
+  void FindMatchingFunctions(Target &target, llvm::StringRef name,
                              SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
     if (m_options.num_lines == 0)
@@ -881,7 +881,7 @@ protected:
     }
   }
 
-  void FindMatchingFunctionSymbols(Target &target, ConstString name,
+  void FindMatchingFunctionSymbols(Target &target, llvm::StringRef name,
                                    SymbolContextList &sc_list) {
     const size_t num_modules = m_options.modules.size();
     if (num_modules > 0) {
@@ -907,7 +907,7 @@ protected:
     assert(target && "target guaranteed by eCommandRequiresTarget");
     if (!m_options.symbol_name.empty()) {
       SymbolContextList sc_list;
-      ConstString name(m_options.symbol_name);
+      llvm::StringRef name = m_options.symbol_name;
 
       // Displaying the source for a symbol. Search for function named name.
       FindMatchingFunctions(*target, name, sc_list);

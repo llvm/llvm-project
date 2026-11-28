@@ -44,3 +44,4 @@ body:             |
   bb.0 (%ir-block.0):
     renamable $x8 = LOADgot target-flags(aarch64-got) @_ZNSt3__16vectorINS_10unique_ptrIN4llvm13ErrorInfoBaseENS_14default_deleteIS3_EEEENS_9allocatorIS6_EEE3endB8nn180100Ev, debug-instr-number 1
     DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !25
+...

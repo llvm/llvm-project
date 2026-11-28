@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
@@ -199,23 +200,25 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
+static ArrayRef<PassPlugin *> getPassPlugins(const Config &Conf) {
+  // lto::LTO::run() loaded plugins requested by file. Direct callers must pass
+  // them pre-loaded.
+  assert(Conf.PassPluginFilenames.empty() &&
+         "Pass-plugins must be loaded before running LTO backends");
+  return Conf.LoadedPassPlugins;
+}
+
+// Call pass builder registration callbacks for all pass-plugins
 static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
+  // Static built-in plugins
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::load(PluginFN);
-    if (!PassPlugin)
-      reportFatalUsageError(PassPlugin.takeError());
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
-
-  // Register already loaded plugins
-  for (auto *LoadedPlugin : Conf.LoadedPassPlugins)
-    LoadedPlugin->registerPassBuilderCallbacks(PB);
+  // Dynamic plugins
+  for (const PassPlugin *Plugin : getPassPlugins(Conf))
+    Plugin->registerPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -239,8 +242,6 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  assert(!Conf.Options.MCOptions.LibraryOptions &&
-         "set Config::LibraryOptions instead");
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
@@ -453,27 +454,13 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
 
-  std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
   if (!Conf.DwoDir.empty()) {
-    std::error_code EC;
-    if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
-                         ": " + EC.message());
-
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
     TM->Options.MCOptions.SplitDwarfFile = std::string(DwoFile);
   } else
     TM->Options.MCOptions.SplitDwarfFile = Conf.SplitDwarfFile;
-
-  if (!DwoFile.empty()) {
-    std::error_code EC;
-    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
-    if (EC)
-      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
-                         EC.message());
-  }
 
   Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
       AddStream(Task, Mod.getModuleIdentifier());
@@ -482,36 +469,44 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  // Create the codegen pipeline in its own scope so it gets deleted before
-  // Stream->commit() is called. The commit function of CacheStream deletes
-  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
-  // keep the pointer and may use it until their destruction. See #138194.
-  {
-    legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
-    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+  std::unique_ptr<ToolOutputFile> DwoOut;
+  if (!DwoFile.empty()) {
+    if (!Conf.DwoDir.empty())
+      if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
+        report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                           ": " + EC.message());
 
-    // No need to make index available if the module is empty.
-    // In theory these passes should not use the index for an empty
-    // module, however, this guards against doing any unnecessary summary-based
-    // analysis in the case of a ThinLTO build where this might be an empty
-    // regular LTO combined module, with a large combined index from ThinLTO.
-    if (!isEmptyModule(Mod))
-      CodeGenPasses.add(
-          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-    if (Conf.PreCodeGenPassesHook)
-      Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                                DwoOut ? &DwoOut->os() : nullptr,
-                                Conf.CGFileType))
-      report_fatal_error("Failed to setup codegen");
-    CodeGenPasses.run(Mod);
-
-    if (DwoOut)
-      DwoOut->keep();
+    std::error_code EC;
+    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
+    if (EC)
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
+
+  const ModuleSummaryIndex *MSI =
+      !isEmptyModule(Mod) ? &CombinedIndex : nullptr;
+
+  // Allow plugins to handle or even take over code generation entirely.
+  for (const PassPlugin *Plugin : getPassPlugins(Conf)) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, Mod, *Stream->OS, DwoOut ? &DwoOut->os() : nullptr,
+            Conf.CGFileType, /*DisableVerify=*/true,
+            /*DisableSimplifyLibCalls=*/false, MSI, vfs::getRealFileSystem())) {
+      if (DwoOut)
+        DwoOut->keep();
+      if (Error Err = Stream->commit())
+        report_fatal_error(std::move(Err));
+      return;
+    }
+  }
+
+  if (runCodeGenPipeline(*TM, Mod, *Stream->OS,
+                         DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
+                         /*DisableVerify=*/true,
+                         /*DisableSimplifyLibCalls=*/false, MSI))
+    report_fatal_error("Failed to run codegen");
+  if (DwoOut)
+    DwoOut->keep();
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));
@@ -781,7 +776,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
+  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility(),
+                            CombinedIndex.withSpeculativeDevirt());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

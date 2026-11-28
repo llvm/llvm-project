@@ -138,7 +138,8 @@ public:
 /// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
 /// rest of the list by adjusting the compared constant. InstCombine also
 /// canonicalizes icmp ne (and X, 1), 0 to trunc X to i1, such lanes are
-/// treated as the original comparison or as icmp eq (and X, 1), 1.
+/// treated as the original comparison or as icmp eq (and X, 1), 1. An i1
+/// constant lane is the comparison of constants with any predicate.
 class CmpSamePredicateHelper {
   using MaskType = std::uint16_t;
   /// Bit i represents predicate ICMP_EQ + i.
@@ -162,14 +163,14 @@ class CmpSamePredicateHelper {
   static APInt getFamilyConstant(bool IsComplement, const APInt &K,
                                  CmpInst::Predicate Pred);
   /// Returns the mask of the predicates that can express the comparison
-  /// lane \p I, or 0 if \p I is not a comparison lane.
-  static MaskType getLaneMask(const Instruction *I);
+  /// lane \p V, or 0 if \p V is not a comparison lane.
+  static MaskType getLaneMask(const Value *V);
 
 public:
-  /// Intersects the convertible predicate set of the comparison lane \p I
-  /// (an icmp or a trunc to i1) with the running set. Returns false when the
-  /// intersection becomes empty.
-  bool add(const Instruction *I);
+  /// Intersects the convertible predicate set of the comparison lane \p V
+  /// (an icmp, a trunc to i1 or an i1 constant) with the running set.
+  /// Returns false when the intersection becomes empty.
+  bool add(const Value *V);
   /// Returns the shared predicate, preferring the predicate of
   /// \p Preferred when the whole list can use it, or BAD_ICMP_PREDICATE
   /// when the list cannot share a natively present predicate.
@@ -182,18 +183,27 @@ public:
   /// and A, B != 0 or and A, B == 0, or trunc X to i1, which is
   /// and X, 1 != 0.
   static bool isBitTest(const Instruction *I);
-  /// Checks if the comparison lane \p I can be expressed with the predicate
+  /// Checks if the comparison lane \p V can be expressed with the predicate
   /// \p Pred by adjusting its constant operand.
-  static bool canConvertTo(const Instruction *I, CmpInst::Predicate Pred);
+  static bool canConvertTo(const Value *V, CmpInst::Predicate Pred);
   /// Returns the adjusted constant operand expressing the comparison lane
   /// \p I with the predicate \p Pred, or nullptr if not convertible or if
   /// \p I is a compare already using \p Pred.
   static Constant *getAdjustedConstant(const Instruction *I,
                                        CmpInst::Predicate Pred);
+  /// Returns the constant operands expressing the i1 constant lane \p V as
+  /// the comparison \p Cmp.
+  static SmallVector<Value *> getConstantLaneOperands(const Value *V,
+                                                      const ICmpInst *Cmp);
 };
 
 /// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
 bool isFMAOrFMulAdd(const Instruction *I);
+
+/// How the FP identity ops of the copyable lanes produce the lane values:
+/// exactly, inexactly (a NaN may be quieted and a subnormal flushed, so the
+/// vector is valid only for FP math) or with the original values blended in.
+enum class FPCopyables { Exact, Inexact, Blended };
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
@@ -230,6 +240,8 @@ class InstructionsState {
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
   /// computing and gathering its result.
   bool AbsorbCopyableFMulOrFAdd = false;
+  /// How the FP identity ops produce the values of the copyable lanes.
+  FPCopyables FPCopyablesKind = FPCopyables::Exact;
 
 public:
   Instruction *getMainOp() const {
@@ -346,6 +358,15 @@ public:
   void setAbsorbCopyableFMulOrFAdd(bool Absorb) {
     AbsorbCopyableFMulOrFAdd = Absorb;
   }
+
+  /// Returns how the FP identity ops produce the values of the copyable lanes.
+  FPCopyables getFPCopyables() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return FPCopyablesKind;
+  }
+
+  /// Sets how the FP identity ops produce the values of the copyable lanes.
+  void setFPCopyables(FPCopyables Kind) { FPCopyablesKind = Kind; }
 };
 
 /// Checks if \p V is a single-use fmul/fadd with operands outside \p VL.
@@ -387,6 +408,39 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
     const InstructionsState &S, const TargetLibraryInfo &TLI,
     ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
     SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes);
+
+/// Returns main/alternate instructions for the given \p VL. Unlike
+/// getSameOpcode supports non-compatible instructions for better SplitVectorize
+/// node support.
+/// \returns first main/alt instructions, if only poisons and instruction with
+/// only 2 opcodes exists. Returns pair of nullptr otherwise.
+std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL);
+
+/// Detects an extractvalue bundle that can be widened by vectorizing the
+/// underlying struct-returning calls.
+///
+/// \p VL is a bundle whose state \p S is Instruction::ExtractValue. The
+/// bundle is acceptable for widening into one struct-of-vectors call only
+/// when:
+///   - every element of \p VL is an ExtractValueInst,
+///   - every ExtractValueInst extracts the same struct field (its
+///     getIndices() matches the main op's indices),
+///   - the aggregate operands form a uniform set of CallInsts (per
+///     getSameOpcode) that is not an alt-shuffle and whose return type is
+///     a literal struct, and
+///   - every user of every such call is itself an ExtractValueInst, so the
+///     external-use extraction code can rebuild scalars via extractvalue +
+///     extractelement without needing an insertvalue chain.
+///
+/// On success returns true and fills \p Indices with the common field
+/// index path and \p Calls with the per-lane aggregate calls (in VL order),
+/// for the caller to feed as the operand of the new tree entry. Otherwise
+/// returns false and leaves the output parameters untouched.
+bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<unsigned> &Indices,
+                         SmallVectorImpl<Value *> &Calls);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H

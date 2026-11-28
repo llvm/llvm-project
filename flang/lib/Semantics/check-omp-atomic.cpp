@@ -59,8 +59,7 @@ template <typename...> struct IsIntegral {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsIntegral<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsIntegral<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
       C == common::TypeCategory::Unsigned};
@@ -72,8 +71,7 @@ template <typename...> struct IsFloatingPoint {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsFloatingPoint<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsFloatingPoint<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
 };
@@ -88,8 +86,7 @@ template <typename...> struct IsLogical {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsLogical<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsLogical<evaluate::Type<C>> {
   static constexpr bool value{C == common::TypeCategory::Logical};
 };
 
@@ -160,7 +157,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
     using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
-        evaluate::LogicalOperation<T::kind>>;
+        evaluate::LogicalOperation>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -205,6 +202,7 @@ private:
   evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
       evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
     using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    const int kindS{op.kind()};
     // This function has to be semantically correct for all possible types
     // of S even though at runtime s will only be one of the matched types.
     // Limit the construction to the operation types that we tried to match
@@ -212,8 +210,10 @@ private:
     if constexpr (!common::HasMember<TypeS, MatchTypes>) {
       return evaluate::Expr<T>(TypeS(op));
     } else if constexpr (is_logical_v<T>) {
-      constexpr int K{T::kind};
-      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+      CHECK(op1.kind() == op2.kind());
+      const int K{op1.kind()};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation>) {
+        CHECK(K == kindS);
         // Logical operators take an extra argument in their constructor,
         // so they need their own reconstruction code.
         common::LogicalOperator opCode{op.logicalOperator};
@@ -224,9 +224,9 @@ private:
       }
     } else {
       // Generic reconstruction.
-      return evaluate::Expr<T>(TypeS( //
+      return evaluate::Expr<T>(TypeS(kindS, //
           std::move(atom),
-          evaluate::Expr<T>(TypeS( //
+          evaluate::Expr<T>(TypeS(kindS, //
               std::move(op1), std::move(op2)))));
     }
   }
@@ -538,7 +538,8 @@ private:
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
 void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
-    parser::CharBlock source, std::string_view name, bool checkTypeOnPointer) {
+    parser::CharBlock source, std::string_view what, std::string_view name,
+    bool checkTypeOnPointer) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -548,11 +549,11 @@ void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
     using Category = DeclTypeSpec::Category;
     Category cat{typeSpec->category()};
     if (cat == Category::Character) {
-      context_.Say(source,
-          "Atomic variable %s cannot have CHARACTER type"_err_en_US, name);
+      context_.Say(
+          source, "%s %s cannot have CHARACTER type"_err_en_US, what, name);
     } else if (cat != Category::Numeric && cat != Category::Logical) {
-      context_.Say(source,
-          "Atomic variable %s should have an intrinsic type"_err_en_US, name);
+      context_.Say(
+          source, "%s %s should have an intrinsic type"_err_en_US, what, name);
     }
     return;
   }
@@ -560,7 +561,7 @@ void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
   // Variable is a pointer.
   if (typeSpec->IsPolymorphic()) {
     context_.Say(source,
-        "Atomic variable %s cannot be a pointer to a polymorphic type"_err_en_US,
+        "%s %s cannot be a pointer to a polymorphic type"_err_en_US, what,
         name);
     return;
   }
@@ -589,37 +590,47 @@ void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
           return entry.second.isLen() && !entry.second.isExplicit();
         })) {
       context_.Say(source,
-          "Atomic variable %s is a pointer to a type with non-constant length parameter"_err_en_US,
-          name);
+          "%s %s is a pointer to a type with non-constant length parameter"_err_en_US,
+          what, name);
     }
   }
 }
 
-void OmpStructureChecker::CheckAtomicVariable(
-    const SomeExpr &atom, parser::CharBlock source, bool checkTypeOnPointer) {
+void OmpStructureChecker::CheckAtomicVariable(const SomeExpr &atom,
+    parser::CharBlock source, bool checkTypeOnPointer, bool isCapture) {
+  std::string_view what{isCapture ? "Capture variable" : "Atomic variable"};
   if (atom.Rank() != 0) {
-    context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
-        atom.AsFortran());
+    context_.Say(
+        source, "%s %s should be a scalar"_err_en_US, what, atom.AsFortran());
   }
 
-  std::vector<SomeExpr> dsgs{GetTopLevelDesignators(atom)};
-
-  // Procedure references are valid if they return a pointer to a scalar.
-  // Just return if we don't have exactly one designator - other checks will
-  // diagnose any actual errors.
-  if (dsgs.size() != 1) {
+  // For a function reference, check the type of the function result, not the
+  // types of the arguments.
+  if (const auto *procRef{evaluate::UnwrapProcedureRef(atom)}) {
+    if (const Symbol *proc{procRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}) {
+        CheckAtomicType(
+            *result, source, what, atom.AsFortran(), checkTypeOnPointer);
+      }
+    }
     return;
   }
 
-  SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
-  if (syms.empty()) {
+  const Symbol *sym{evaluate::GetLastSymbol(atom)};
+  if (!sym) {
     return;
   }
+  // A variable in an OpenMP region can have a symbol made for that region,
+  // which doesn't have attributes like POINTER and ALLOCATABLE. Check the
+  // ultimate symbol instead.
+  const Symbol &ultimate{sym->GetUltimate()};
 
-  CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
+  CheckAtomicType(ultimate, source, what, atom.AsFortran(), checkTypeOnPointer);
 
-  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
-    if (IsAllocatable(syms.back())) {
+  // [6.0:194:25]
+  // x must not have the ALLOCATABLE attribute. This doesn't apply to v.
+  if (!isCapture && !IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(ultimate)) {
       context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
           atom.AsFortran());
     }
@@ -831,9 +842,10 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     const evaluate::Assignment &capture, const SomeExpr &atom,
     parser::CharBlock source) {
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
-  (void)lsrc;
   const SomeExpr &cap{capture.lhs};
 
+  CheckAtomicVariable(cap, lsrc,
+      /*checkTypeOnPointer=*/!IsPointerAssignment(capture), /*isCapture=*/true);
   if (!IsVarOrFunctionRef(atom)) {
     ErrorShouldBeVariable(atom, rsrc);
   } else {
@@ -853,8 +865,9 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
 void OmpStructureChecker::CheckAtomicReadAssignment(
     const evaluate::Assignment &read, parser::CharBlock source) {
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
-  (void)lsrc;
 
+  CheckAtomicVariable(read.lhs, lsrc,
+      /*checkTypeOnPointer=*/!IsPointerAssignment(read), /*isCapture=*/true);
   if (auto maybe{GetConvertInput(read.rhs)}) {
     const SomeExpr &atom{*maybe};
 
@@ -1745,6 +1758,7 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
   template <typename T>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const evaluate::FunctionRef<T> &f) {
+    const int kind{f.kind()};
     const evaluate::ProcedureDesignator &proc = f.proc();
     if (!IsMinMax(proc) || f.arguments().size() <= 2) {
       return Id::operator()(std::move(x), f);
@@ -1800,10 +1814,10 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
     }
 
     SomeExpr tmp = evaluate::AsGenericExpr(
-        evaluate::FunctionRef<T>(AsRvalue(proc), AsRvalue(nonAtoms)));
+        evaluate::FunctionRef<T>{kind, AsRvalue(proc), AsRvalue(nonAtoms)});
 
-    return evaluate::Expr<T>(evaluate::FunctionRef<T>(
-        AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}));
+    return evaluate::Expr<T>{evaluate::FunctionRef<T>{
+        kind, AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}}};
   }
 
 private:

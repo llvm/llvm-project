@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +sse2 < %s | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm  -target-feature +sse2 < %s | FileCheck %s --check-prefixes=CHECK %}
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +sse2 -fexperimental-abi-lowering < %s | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm  -target-feature +sse2 -fexperimental-abi-lowering < %s | FileCheck %s --check-prefixes=CHECK %}
 
 struct bfloat1 {
   __bf16 a;

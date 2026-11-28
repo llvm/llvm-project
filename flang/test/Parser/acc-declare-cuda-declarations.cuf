@@ -1,0 +1,89 @@
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/function.cuf
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/subroutine.cuf
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/managed.cuf
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/colon.cuf
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/name.cuf
+! RUN: %flang_fc1 -fopenacc -ffixed-form -fsyntax-only %t/fixed.cuf
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/global.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=global.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/device.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=device.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/host-device.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=host-device.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/no-args.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=no-args.cuf --implicit-check-not="error:"
+
+! CUDA ATTRIBUTES statements are specification statements, including when ::
+! is omitted and an object name starts with FUNCTION or SUBROUTINE.
+! Genuine CUDA procedure headers must still expose a misplaced DECLARE.
+
+! CHECK: error: Could not parse
+! CHECK: [[FILE]]:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
+! CHECK-NEXT: !$acc declare create(x)
+! CHECK-NEXT: {{^  \^$}}
+
+!--- function.cuf
+!$acc declare create(x)
+attributes(device) functionx
+real :: functionx, x
+x = 1.0
+end
+
+!--- subroutine.cuf
+!$acc declare create(x)
+attributes(device) subroutinex
+real :: subroutinex, x
+x = 1.0
+end
+
+!--- managed.cuf
+!$acc declare create(x)
+attributes(managed) functionx
+real :: functionx, x
+x = 1.0
+end
+
+!--- colon.cuf
+!$acc declare create(x)
+attributes(device) :: functionx
+real :: functionx, x
+x = 1.0
+end
+
+!--- name.cuf
+!$acc declare create(x)
+attributes(device) payload
+real :: payload, x
+x = 1.0
+end
+
+!--- fixed.cuf
+c$acc declare create(x)
+      attributes(device) functionx
+      real :: functionx, x
+      x = 1.0
+      end
+
+!--- global.cuf
+!$acc declare create(x)
+attributes(global) subroutine kernel(a)
+real, value :: a
+real :: x
+end subroutine
+
+!--- device.cuf
+!$acc declare create(x)
+attributes(device) real function f(a)
+real :: a, x
+f = a
+end function
+
+!--- host-device.cuf
+!$acc declare create(x)
+attributes(host,device) real function f(a)
+real :: a, x
+f = a
+end function
+
+!--- no-args.cuf
+!$acc declare create(x)
+attributes(device) subroutine s
+real :: x
+end subroutine

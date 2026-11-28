@@ -173,12 +173,12 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      8     0.50    *                   movq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        movq	%mm0, %rcx
 # CHECK-NEXT:  1      1     1.00           *            movq	%mm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                        packsswb	%mm0, %mm2
-# CHECK-NEXT:  1      8     0.50    *                   packsswb	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        packssdw	%mm0, %mm2
-# CHECK-NEXT:  1      8     0.50    *                   packssdw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        packuswb	%mm0, %mm2
-# CHECK-NEXT:  1      8     0.50    *                   packuswb	(%rax), %mm2
+# CHECK-NEXT:  1      2     0.50                        packsswb	%mm0, %mm2
+# CHECK-NEXT:  1      9     0.50    *                   packsswb	(%rax), %mm2
+# CHECK-NEXT:  1      2     0.50                        packssdw	%mm0, %mm2
+# CHECK-NEXT:  1      9     0.50    *                   packssdw	(%rax), %mm2
+# CHECK-NEXT:  1      2     0.50                        packuswb	%mm0, %mm2
+# CHECK-NEXT:  1      9     0.50    *                   packuswb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.25                        paddb	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   paddb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.25                        paddd	%mm0, %mm2

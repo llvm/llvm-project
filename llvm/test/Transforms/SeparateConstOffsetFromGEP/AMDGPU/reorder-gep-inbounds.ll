@@ -285,7 +285,7 @@ define void @addrspace3(ptr addrspace(3) %in.ptr, i64 %in.idx1) {
 ;
 entry:
   %in.idx1.nneg = and i64 %in.idx1, 9223372036854775807
-  %const1 = getelementptr inbounds i8, ptr addrspace(3) %in.ptr, i64 1024
+  %const1 = getelementptr inbounds i8, ptr addrspace(3) %in.ptr, i32 1024
   %idx1 = getelementptr inbounds i128, ptr addrspace(3) %const1, i64 %in.idx1.nneg
   ret void
 }
@@ -302,7 +302,7 @@ define void @addrspace7(ptr addrspace(7) %in.ptr, i64 %in.idx1) {
 ;
 entry:
   %in.idx1.nneg = and i64 %in.idx1, 9223372036854775807
-  %const1 = getelementptr inbounds i8, ptr addrspace(7) %in.ptr, i64 1024
+  %const1 = getelementptr inbounds i8, ptr addrspace(7) %in.ptr, i32 1024
   %idx1 = getelementptr inbounds i128, ptr addrspace(7) %const1, i64 %in.idx1.nneg
   ret void
 }

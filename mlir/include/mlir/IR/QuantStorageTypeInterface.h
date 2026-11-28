@@ -9,8 +9,6 @@
 #ifndef MLIR_IR_QuantStorageTypeInterface_H
 #define MLIR_IR_QuantStorageTypeInterface_H
 
-#include "mlir/IR/Types.h"
-
 //===----------------------------------------------------------------------===//
 // Tablegen Interface Declarations
 //===----------------------------------------------------------------------===//

@@ -46,6 +46,19 @@ void mlir::populatePromotableAliasMap(PromotableAliaserInterface aliaser,
 std::optional<MemorySlot>
 mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
                      const PromotableAliasMap &aliasMap) {
+  // An op owning its wrapped blocking uses (e.g., `vector.mask`) reaches the
+  // slot only through the wrapped operation, so inspect that one instead.
+  if (auto memOp = dyn_cast<PromotableMemOpInterface>(op);
+      memOp && memOp.ownsWrappedBlockingUses()) {
+    assert(op->getNumRegions() == 1 && op->getRegion(0).hasOneBlock() &&
+           op->getRegion(0).front().getOperations().size() == 2 &&
+           isa<PromotableMemOpInterface>(op->getRegion(0).front().front()) &&
+           "an op owning wrapped blocking uses must have one single-block "
+           "region holding a wrapped PromotableMemOpInterface op and a "
+           "terminator");
+    op = &op->getRegion(0).front().front();
+  }
+
   for (Value operand : op->getOperands())
     if (std::optional<MemorySlot> slot =
             getParentSlot(operand, rootSlot, aliasMap))
@@ -56,6 +69,18 @@ mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
 bool mlir::referencesAtMostOneAliasOfSlot(Operation *op,
                                           const MemorySlot &rootSlot,
                                           const PromotableAliasMap &aliasMap) {
+  // As in `getOpAliasSlot`, inspect the wrapped operation instead.
+  if (auto memOp = dyn_cast<PromotableMemOpInterface>(op);
+      memOp && memOp.ownsWrappedBlockingUses()) {
+    assert(op->getNumRegions() == 1 && op->getRegion(0).hasOneBlock() &&
+           op->getRegion(0).front().getOperations().size() == 2 &&
+           isa<PromotableMemOpInterface>(op->getRegion(0).front().front()) &&
+           "an op owning wrapped blocking uses must have one single-block "
+           "region holding a wrapped PromotableMemOpInterface op and a "
+           "terminator");
+    op = &op->getRegion(0).front().front();
+  }
+
   Value uniqueAliasPtr;
   for (Value operand : op->getOperands()) {
     std::optional<MemorySlot> slot = getParentSlot(operand, rootSlot, aliasMap);

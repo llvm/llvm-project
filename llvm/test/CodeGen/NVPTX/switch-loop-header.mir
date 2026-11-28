@@ -58,19 +58,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 3, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 4, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 5, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 6, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 7, class: b1, preferred-register: '', flags: [  ] }
-  - { id: 8, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 9, class: b1, preferred-register: '', flags: [  ] }
-  - { id: 10, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 11, class: b1, preferred-register: '', flags: [  ] }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

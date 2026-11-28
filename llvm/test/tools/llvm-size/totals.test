@@ -68,6 +68,7 @@ Sections:
     Size:    32
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -137,6 +138,7 @@ LoadCommands:
         version:         68157696
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

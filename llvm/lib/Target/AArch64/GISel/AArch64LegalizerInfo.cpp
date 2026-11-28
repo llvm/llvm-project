@@ -983,13 +983,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Handle types larger than i64 by scalarizing/lowering.
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
-      // The range of a fp16 value fits into an i17, so we can lower the width
-      // to i64.
-      .narrowScalarIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[1] == f16 && Query.Types[0].getSizeInBits() > 64;
-          },
-          changeTo(0, i64))
+      // NOTE: narrowScalarIf is invalid for the saturating conversions,
+      // infinities need the full width of the target integer type.
       .lowerIf(::any(scalarWiderThan(0, 64), scalarWiderThan(1, 64)), 0)
       .moreElementsToNextPow2(0)
       .widenScalarToNextPow2(0, /*MinSize=*/32)
@@ -2244,14 +2239,22 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     AtomicOrdering Ordering = (*MI.memoperands_begin())->getSuccessOrdering();
     bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
     bool IsLoadAcquire = IsLoad && Ordering == AtomicOrdering::Acquire;
-    bool IsStoreRelease = !IsLoad && Ordering == AtomicOrdering::Release;
+    bool IsLoadAcquireOrStronger = IsLoad && isAcquireOrStronger(Ordering);
+    bool IsStoreRelease = !IsLoad && isReleaseOrStronger(Ordering);
     bool IsRcpC3 =
         ST->hasLSE2() && ST->hasRCPC3() && (IsLoadAcquire || IsStoreRelease);
+    bool IsLSCP = ST->hasLSE2() && ST->hasLSCP() &&
+                  (IsLoadAcquireOrStronger || IsStoreRelease);
 
     LLT s64 = LLT::integer(64);
 
     unsigned Opcode;
-    if (IsRcpC3) {
+    if (IsLSCP) {
+      if (IsLoad)
+        Opcode = IsLoadAcquire ? AArch64::LDAPPi : AArch64::LDAPi;
+      else
+        Opcode = AArch64::STLPi;
+    } else if (IsRcpC3) {
       Opcode = IsLoad ? AArch64::LDIAPPX : AArch64::STILPX;
     } else {
       // For LSE2, loads/stores should have been converted to monotonic and had
@@ -2274,7 +2277,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
           Opcode, {}, {Split->getOperand(0), Split->getOperand(1)});
     }
 
-    if (IsRcpC3) {
+    if (IsRcpC3 || IsLSCP) {
       NewI.addUse(MI.getOperand(1).getReg());
     } else {
       Register Base;

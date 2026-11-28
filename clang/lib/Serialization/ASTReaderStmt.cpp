@@ -2541,9 +2541,12 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  // The NumClauses field was read in ReadStmtFromStream.
+  // The NumVariants field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setHasImplicitOtherwise(Record.readBool());
+  for (OMPTraitInfo *&TI : D->getTrailingTraitInfos())
+    TI = Record.readOMPTraitInfo();
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
@@ -2972,6 +2975,11 @@ void ASTStmtReader::VisitOMPParallelGenericLoopDirective(
 
 void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void ASTStmtReader::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
@@ -4241,6 +4249,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTargetParallelGenericLoopDirective::CreateEmpty(
           Context, NumClauses, CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TARGET_GENERIC_LOOP_DIRECTIVE: {
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTargetGenericLoopDirective::CreateEmpty(Context, NumClauses,
+                                                     CollapsedNum, Empty);
       break;
     }
 

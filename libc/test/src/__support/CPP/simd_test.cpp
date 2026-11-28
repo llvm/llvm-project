@@ -71,6 +71,27 @@ TEST(LlvmLibcSIMDTest, MaskOperations) {
   EXPECT_EQ(cpp::popcount(mask), 2);
 }
 
+TEST(LlvmLibcSIMDTest, ToBitmask) {
+  cpp::simd<bool, 1> m1_false{false};
+  cpp::simd<bool, 1> m1_true{true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m1_false)), uint64_t{0});
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m1_true)), uint64_t{1});
+
+  cpp::simd<bool, 2> m2{false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m2)), uint64_t{0b10});
+
+  cpp::simd<bool, 4> m4{true, false, true, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m4)), uint64_t{0b1101});
+
+  cpp::simd<bool, 8> m8{true, false, true, false, false, false, false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m8)), uint64_t{0b10000101});
+
+  cpp::simd<bool, 16> m16{true,  false, false, false, false, false,
+                          false, false, false, false, false, false,
+                          false, false, false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m16)), uint64_t{0x8001});
+}
+
 TEST(LlvmLibcSIMDTest, SplitConcat) {
   cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
   auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);

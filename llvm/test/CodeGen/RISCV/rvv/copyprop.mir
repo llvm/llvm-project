@@ -30,7 +30,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%1' }
   - { reg: '$x11', virtual-reg: '%2' }

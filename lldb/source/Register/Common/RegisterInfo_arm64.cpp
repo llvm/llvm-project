@@ -22,7 +22,7 @@
 
 #define FPU_OFFSET(idx) ((idx)*16 + sizeof(RegisterInfo_arm64::GPR))
 #define FPU_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::FPU, reg) +                \
+  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::FPU, reg) +                     \
    sizeof(RegisterInfo_arm64::GPR))
 
 // This information is based on AArch64 with SVE architecture reference manual.
@@ -44,26 +44,23 @@
 #define SVE_OFFSET_VG SVE_REGS_DEFAULT_OFFSET_LINUX
 
 #define EXC_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::EXC, reg) +                \
-   sizeof(RegisterInfo_arm64::GPR) +                                      \
-   sizeof(RegisterInfo_arm64::FPU))
+  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::EXC, reg) +                     \
+   sizeof(RegisterInfo_arm64::GPR) + sizeof(RegisterInfo_arm64::FPU))
 #define DBG_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::DBG, reg) +                \
-   sizeof(RegisterInfo_arm64::GPR) +                                      \
-   sizeof(RegisterInfo_arm64::FPU) +                                      \
+  (LLVM_EXTENSION offsetof(RegisterInfo_arm64::DBG, reg) +                     \
+   sizeof(RegisterInfo_arm64::GPR) + sizeof(RegisterInfo_arm64::FPU) +         \
    sizeof(RegisterInfo_arm64::EXC))
 
 #define DEFINE_DBG(reg, i)                                                     \
   #reg, NULL,                                                                  \
-      sizeof(((RegisterInfo_arm64::DBG *) NULL)->reg[i]),                 \
+      sizeof(((RegisterInfo_arm64::DBG *) NULL)->reg[i]),                      \
               DBG_OFFSET_NAME(reg[i]), lldb::eEncodingUint, lldb::eFormatHex,  \
                               {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                dbg_##reg##i },                                 \
                                NULL, NULL, NULL,
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfo_arm64::GPR) +                                      \
-   sizeof(RegisterInfo_arm64::FPU) +                                      \
+  (sizeof(RegisterInfo_arm64::GPR) + sizeof(RegisterInfo_arm64::FPU) +         \
    sizeof(RegisterInfo_arm64::EXC))
 
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
@@ -318,8 +315,7 @@ size_t RegisterInfo_arm64::GetFPRSize() const {
   return sizeof(struct RegisterInfo_arm64::FPU);
 }
 
-const lldb_private::RegisterInfo *
-RegisterInfo_arm64::GetRegisterInfo() const {
+const lldb_private::RegisterInfo *RegisterInfo_arm64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
@@ -327,8 +323,8 @@ size_t RegisterInfo_arm64::GetRegisterSetCount() const {
   return m_register_set_count;
 }
 
-size_t RegisterInfo_arm64::GetRegisterSetFromRegisterIndex(
-    uint32_t reg_index) const {
+size_t
+RegisterInfo_arm64::GetRegisterSetFromRegisterIndex(uint32_t reg_index) const {
   for (const auto &regset_range : m_per_regset_regnum_range) {
     if (reg_index >= regset_range.second.first &&
         reg_index < regset_range.second.second)
@@ -599,13 +595,11 @@ bool RegisterInfo_arm64::IsSMERegZT(unsigned reg) const {
 }
 
 bool RegisterInfo_arm64::IsGPR(unsigned reg) const {
-  return GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfo_arm64::GPRegSet;
+  return GetRegisterSetFromRegisterIndex(reg) == RegisterInfo_arm64::GPRegSet;
 }
 
 bool RegisterInfo_arm64::IsFPR(unsigned reg) const {
-  return GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfo_arm64::FPRegSet;
+  return GetRegisterSetFromRegisterIndex(reg) == RegisterInfo_arm64::FPRegSet;
 }
 
 bool RegisterInfo_arm64::IsPAuthReg(unsigned reg) const {

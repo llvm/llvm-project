@@ -1,0 +1,15 @@
+add_libc_test(
+  getifaddrs_test
+  SUITE
+    libc-ifaddrs-tests
+  SRCS
+    getifaddrs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_ifaddrs
+    libc.hdr.types.struct_sockaddr
+    libc.src.ifaddrs.freeifaddrs
+    libc.src.ifaddrs.getifaddrs
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

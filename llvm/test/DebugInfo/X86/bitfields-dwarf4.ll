@@ -2,7 +2,7 @@
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; RUN: llc -mtriple x86_64-gnu-linux -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
-; RUN: llc -mtriple x86_64-gnu-linux -O0 -debugger-tune=gdb -filetype=obj -o - %s \
+; RUN: llc -mtriple x86_64-gnu-linux -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
 ; Generated from:

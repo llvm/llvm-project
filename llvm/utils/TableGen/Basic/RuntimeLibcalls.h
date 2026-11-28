@@ -143,35 +143,9 @@ public:
     return TheDef->getValueAsString("LibCallFuncName");
   }
 
-  const Record *getCallingConv() const {
-    return TheDef->getValueAsOptionalDef("CallingConv");
-  }
-
-  void emitQuotedLibcallFuncName(raw_ostream &OS) const {
-    OS << '\"' << getLibcallFuncName() << '\"';
-  }
-
   void emitEnumEntry(raw_ostream &OS) const {
     OS << "RTLIB::impl_" << this->getName();
   }
-
-  void emitSetImplCall(raw_ostream &OS) const {
-    OS << "setLibcallImpl(";
-    Provides->emitEnumEntry(OS);
-    OS << ", ";
-    emitEnumEntry(OS);
-    OS << "); // " << getLibcallFuncName() << '\n';
-  }
-
-  void emitTableEntry(raw_ostream &OS) const {
-    OS << '{';
-    Provides->emitEnumEntry(OS);
-    OS << ", ";
-    emitEnumEntry(OS);
-    OS << "}, // " << getLibcallFuncName() << '\n';
-  }
-
-  void emitSetCallingConv(raw_ostream &OS) const {}
 };
 
 struct LibcallsWithCC {

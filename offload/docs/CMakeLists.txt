@@ -4,7 +4,7 @@ if(LLVM_ENABLE_SPHINX)
     # Generate offload-api.rst from OffloadAPI.td
     set(LLVM_TARGET_DEFINITIONS
       ${OFFLOAD_SOURCE_DIR}/liboffload/API/OffloadAPI.td)
-    tablegen(OFFLOAD source/offload-api.rst -gen-doc
+    offload_tablegen(source/offload-api.rst -gen-doc
       EXTRA_INCLUDES ${OFFLOAD_SOURCE_DIR}/liboffload/API)
     add_public_tablegen_target(OffloadDocsGenerate)
 

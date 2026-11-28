@@ -11,6 +11,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 0
 ; CSKY-NEXT:    jsri32 [.LCPI0_0]
@@ -20,10 +21,9 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI0_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
   ret void
 }
@@ -37,6 +37,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 2
 ; CSKY-NEXT:    jsri32 [.LCPI1_0]
@@ -46,10 +47,9 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI1_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire monotonic
   ret void
 }
@@ -63,6 +63,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 2
 ; CSKY-NEXT:    jsri32 [.LCPI2_0]
@@ -72,10 +73,9 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI2_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire acquire
   ret void
 }
@@ -89,6 +89,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 3
 ; CSKY-NEXT:    jsri32 [.LCPI3_0]
@@ -98,10 +99,9 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI3_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release monotonic
   ret void
 }
@@ -115,6 +115,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 3
 ; CSKY-NEXT:    jsri32 [.LCPI4_0]
@@ -124,10 +125,9 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI4_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release acquire
   ret void
 }
@@ -141,6 +141,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 4
 ; CSKY-NEXT:    jsri32 [.LCPI5_0]
@@ -150,10 +151,9 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI5_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel monotonic
   ret void
 }
@@ -167,6 +167,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 4
 ; CSKY-NEXT:    jsri32 [.LCPI6_0]
@@ -176,10 +177,9 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI6_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel acquire
   ret void
 }
@@ -193,6 +193,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI7_0]
@@ -202,10 +203,9 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI7_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst monotonic
   ret void
 }
@@ -219,6 +219,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI8_0]
@@ -228,10 +229,9 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI8_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst acquire
   ret void
 }
@@ -245,6 +245,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    st32.b a1, (sp, 7)
 ; CSKY-NEXT:    movi16 a1, 5
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zextb16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 7
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI9_0]
@@ -254,10 +255,9 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI9_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
-;
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst seq_cst
   ret void
 }
@@ -271,6 +271,7 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 0
 ; CSKY-NEXT:    jsri32 [.LCPI10_0]
@@ -280,10 +281,9 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI10_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
   ret void
 }
@@ -297,6 +297,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 2
 ; CSKY-NEXT:    jsri32 [.LCPI11_0]
@@ -306,10 +307,9 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI11_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire monotonic
   ret void
 }
@@ -323,6 +323,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 2
 ; CSKY-NEXT:    jsri32 [.LCPI12_0]
@@ -332,10 +333,9 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI12_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire acquire
   ret void
 }
@@ -349,6 +349,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 3
 ; CSKY-NEXT:    jsri32 [.LCPI13_0]
@@ -358,10 +359,9 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI13_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release monotonic
   ret void
 }
@@ -375,6 +375,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 3
 ; CSKY-NEXT:    jsri32 [.LCPI14_0]
@@ -384,10 +385,9 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI14_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release acquire
   ret void
 }
@@ -401,6 +401,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 4
 ; CSKY-NEXT:    jsri32 [.LCPI15_0]
@@ -410,10 +411,9 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI15_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel monotonic
   ret void
 }
@@ -427,6 +427,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 4
 ; CSKY-NEXT:    jsri32 [.LCPI16_0]
@@ -436,10 +437,9 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI16_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel acquire
   ret void
 }
@@ -453,6 +453,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 0
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI17_0]
@@ -462,10 +463,9 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI17_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst monotonic
   ret void
 }
@@ -479,6 +479,7 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 2
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI18_0]
@@ -488,10 +489,9 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI18_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst acquire
   ret void
 }
@@ -505,6 +505,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    st32.h a1, (sp, 6)
 ; CSKY-NEXT:    movi16 a1, 5
 ; CSKY-NEXT:    st16.w a1, (sp, 0)
+; CSKY-NEXT:    zexth16 a2, a2
 ; CSKY-NEXT:    addi32 a1, sp, 6
 ; CSKY-NEXT:    movi16 a3, 5
 ; CSKY-NEXT:    jsri32 [.LCPI19_0]
@@ -514,10 +515,9 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI19_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
-;
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst seq_cst
   ret void
 }
@@ -540,10 +540,9 @@ define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounw
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI20_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
   ret void
 }
@@ -566,10 +565,9 @@ define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI21_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire monotonic
   ret void
 }
@@ -592,10 +590,9 @@ define void @cmpxchg_i32_acquire_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI22_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire acquire
   ret void
 }
@@ -618,10 +615,9 @@ define void @cmpxchg_i32_release_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI23_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release monotonic
   ret void
 }
@@ -644,10 +640,9 @@ define void @cmpxchg_i32_release_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI24_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release acquire
   ret void
 }
@@ -670,10 +665,9 @@ define void @cmpxchg_i32_acq_rel_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI25_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel monotonic
   ret void
 }
@@ -696,10 +690,9 @@ define void @cmpxchg_i32_acq_rel_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI26_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel acquire
   ret void
 }
@@ -722,10 +715,9 @@ define void @cmpxchg_i32_seq_cst_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI27_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst monotonic
   ret void
 }
@@ -748,10 +740,9 @@ define void @cmpxchg_i32_seq_cst_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI28_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst acquire
   ret void
 }
@@ -774,10 +765,9 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI29_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
-;
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
   ret void
 }
@@ -804,10 +794,9 @@ define void @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounw
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI30_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
   ret void
 }
@@ -835,10 +824,9 @@ define void @cmpxchg_i64_acquire_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI31_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire monotonic
   ret void
 }
@@ -865,10 +853,9 @@ define void @cmpxchg_i64_acquire_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI32_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire acquire
   ret void
 }
@@ -896,10 +883,9 @@ define void @cmpxchg_i64_release_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI33_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release monotonic
   ret void
 }
@@ -927,10 +913,9 @@ define void @cmpxchg_i64_release_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI34_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release acquire
   ret void
 }
@@ -958,10 +943,9 @@ define void @cmpxchg_i64_acq_rel_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI35_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel monotonic
   ret void
 }
@@ -989,10 +973,9 @@ define void @cmpxchg_i64_acq_rel_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI36_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel acquire
   ret void
 }
@@ -1020,10 +1003,9 @@ define void @cmpxchg_i64_seq_cst_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI37_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst monotonic
   ret void
 }
@@ -1051,10 +1033,9 @@ define void @cmpxchg_i64_seq_cst_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI38_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst acquire
   ret void
 }
@@ -1081,10 +1062,9 @@ define void @cmpxchg_i64_seq_cst_seq_cst(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ; CSKY-NEXT:    rts16
 ; CSKY-NEXT:    .p2align 1
 ; CSKY-NEXT:  # %bb.1:
-; CSKY-NEXT:    .p2align 2
+; CSKY-NEXT:    .p2align 2, 0x0
 ; CSKY-NEXT:  .LCPI39_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
-;
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst seq_cst
   ret void
 }

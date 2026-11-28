@@ -1810,10 +1810,26 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+
+      // The shared::cluster form additionally carries a 32-bit CTA mask.
+      defvar is_mc_space = !eq(space, "space_cluster");
+
       def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
+                           asm_str,
+                           !if(is_mc_space,
+                               [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)],
+                               [(intr addr:$addr, i32:$tx_count)])>,
                            Requires<[PTX80, SM90]>;
+
+      if is_mc_space then {
+        def mbar_ # suffix # "_MC" : NVPTXInst<(outs),
+                              (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                              !subst(".b64", ".multicast::cluster::32b.b64", asm_str)
+                                # " [$addr], $tx_count, $mc;",
+                              [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                              Requires<[hasRubinFamilySupport]>;
+      }
     } // space
   } // scope
 } // op
@@ -1842,8 +1858,14 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
   def _CLUSTER : NVPTXInst<(outs),
                  (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+  def _CLUSTER_MC : NVPTXInst<(outs),
+                    (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                    !subst(".b64", ".multicast::cluster::32b.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
@@ -2457,6 +2479,27 @@ foreach rnd = FPRoundingModes in {
            (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
              (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def FMA_ # !toupper(rnd # "_f32x2_" # t.PtxType # "_f32x2_f32x2") :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b, B64:$c),
+          "fma." # rnd # ".f32x2." # t.PtxType # ".f32x2.f32x2">;
+
+      defvar Inst = !cast<Instruction>("FMA_" # !toupper(rnd # "_f32x2_" # t.PtxType #
+                                                         "_f32x2_f32x2"));
+
+      def : Pat<(v2f32 (int_nvvm_fma (fpextend_v2f32_from_packed t.Ty:$a),
+                                     v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst $a, $b, $c)>;
+
+      def : Pat<(v2f32 (int_nvvm_fma
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+    }
+  }
 }
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
@@ -2466,6 +2509,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), (f32 (fpextend bf16:$b)), f32:$c)),
             (FMA_RN_F32_BF16 B16:$a, B16:$b, B32:$c)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("FMA_RN_F32X2_" # !toupper(t.PtxType) # "_F32X2_F32X2");
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b, v2f32:$c)),
+              (Inst $a, $b, $c)>;
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                     t.Ty.ElementType:$a1),
+                          v2f32:$b, v2f32:$c)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+  }
 
 foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {
@@ -7330,14 +7386,32 @@ class TensormapReplaceInst_3<string state_space, string field_name,
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
     [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
+defvar TensormapAllocClasses = ["alloc_small", "alloc_large", "alloc_same"];
+
+class TensormapReplaceGlobalAddressInst<string state_space,
+  string alloc_class_str, int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, I64RT.RegOrImm:$val),
+    "tensormap.replace.tile.global_address" # alloc_class_str # "." # state_space
+      # ".b1024.b64",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_global_address, as>
+        addr:$addr, i64:$val, (i32 alloc_class))]>;
+
+class TensormapReplaceAllocClassInst<string state_space, string qualifier,
+  int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs), (ins ADDR:$addr),
+    "tensormap.replace.tile" # qualifier # "." # state_space # ".b1024",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_alloc_class, as>
+        addr:$addr, (i32 alloc_class))]>;
+
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
-  let Predicates = [hasTensormapReplaceSupport] in {
+  let Predicates = [hasTensormapReplaceSupport, PredNot<PTX95>] in
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
-        int_nvvm_tensormap_replace_global_address, as>;
+      TensormapReplaceGlobalAddressInst<ss_ptx, "", 0, as>;
 
+  let Predicates = [hasTensormapReplaceSupport] in {
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
@@ -7369,4 +7443,32 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
+
+  let Predicates = [hasTensormapAllocClassSupport] in {
+    foreach alloc_class = [0, 1, 2] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceGlobalAddressInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+
+    foreach alloc_class = [0, 1] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceAllocClassInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+  }
 } // state_space
+
+class TensormapQueryAllocClassLargeInst<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs B1:$res), (ins ADDR:$addr),
+      "tensormap.query.alloc_class_large"
+        # !if(!eq(as.Name, "shared"), ".shared::cta", as.Suffix) # ".b1024",
+      [(set i1:$res,
+         (IntrinsicInAS<int_nvvm_tensormap_query_alloc_class_large, as>
+            addr:$addr))]>,
+    Requires<[hasTensormapAllocClassSupport]>;
+
+foreach as = [AddrSpaceGeneric, AddrSpaceGlobal, AddrSpaceShared,
+              AddrSpaceConst, AddrSpaceParam] in
+  def TENSORMAP_QUERY_ALLOC_CLASS_LARGE_ # !toupper(as.Name) :
+    TensormapQueryAllocClassLargeInst<as>;

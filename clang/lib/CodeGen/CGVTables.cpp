@@ -213,6 +213,18 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
   // Ensure that the value mapper does not encounter any of them.
   resolveTopLevelMetadata(BaseFn, VMap);
   llvm::Function *NewFn = llvm::CloneFunction(BaseFn, VMap);
+
+  // The clone inherited the callee's attributes. Keep its function attributes,
+  // which describe the cloned body, but take the return and parameter
+  // attributes from the thunk declaration.
+  llvm::AttributeList ThunkAttrs = Fn->getAttributes();
+  SmallVector<llvm::AttributeSet, 8> ParamAttrs;
+  for (unsigned I = 0, N = NewFn->arg_size(); I != N; ++I)
+    ParamAttrs.push_back(ThunkAttrs.getParamAttrs(I));
+  NewFn->setAttributes(llvm::AttributeList::get(
+      getLLVMContext(), NewFn->getAttributes().getFnAttrs(),
+      ThunkAttrs.getRetAttrs(), ParamAttrs));
+
   Fn->replaceAllUsesWith(NewFn);
   NewFn->takeName(Fn);
   Fn->eraseFromParent();
@@ -584,7 +596,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     OldThunkFn->setName(StringRef());
     ThunkFn = llvm::Function::Create(ThunkFnTy, llvm::Function::ExternalLinkage,
                                      Name.str(), &CGM.getModule());
-    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
+    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/true);
 
     if (!OldThunkFn->use_empty()) {
       OldThunkFn->replaceAllUsesWith(ThunkFn);

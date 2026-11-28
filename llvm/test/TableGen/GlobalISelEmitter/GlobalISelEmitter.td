@@ -84,6 +84,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
+// CHECK-NEXT:    LLT getLLTForHwMode(unsigned Index) const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
@@ -1312,3 +1313,8 @@ def BR : I<(outs), (ins unknown:$target),
 // NOOPT-NEXT:    GIM_Reject,
 // NOOPT-NEXT:  }; // Size: 1497 bytes
 // NOOPT-NEXT:  return MatchTable0;
+
+// There are no HwMode dependent types so getLLTForHwMode is never called.
+// CHECK-LABEL: LLT MyTargetInstructionSelector::getLLTForHwMode(unsigned Index) const {
+// CHECK-NEXT:    llvm_unreachable("Unexpected index");
+// CHECK-NEXT:  }

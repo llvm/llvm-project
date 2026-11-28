@@ -36,4 +36,5 @@ add_llvm_target_unittest(AMDGPUTests
   UniformityAnalysisTest.cpp
   MFMACoExecRules.cpp
   PkF32OpSelCommute.cpp
+  VGPRAsMemory.cpp
   )

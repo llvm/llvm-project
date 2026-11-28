@@ -57,10 +57,6 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -126,9 +122,8 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // case, we only hoist from a loop header (which covers a reasonable number
   // of cases) where we are guaranteed to not run into problems.
   SmallVector<unsigned, 1> ProfileMetadataToPreserve;
-  if (!ProfcheckDisableMetadataFixes)
-    if (OriginalParent == getHeader())
-      ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
+  if (OriginalParent == getHeader())
+    ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
 
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this

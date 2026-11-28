@@ -101,7 +101,7 @@ for.body:
   br i1 %exitcond.not, label %exit, label %for.body
 }
 
-define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src) {
+define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_extra_cmp_user'
 ; CHECK: Cost of 4 for VF 8: ir<%indvars.iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<{{.*}}>
 ; CHECK: Cost of 4 for VF 8: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>

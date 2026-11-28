@@ -151,6 +151,54 @@ end:
   ret void
 }
 
+define void @remove_tautological_stores_via_trunc_nuw_dom_condition(ptr %x) {
+; CHECK-LABEL: define void @remove_tautological_stores_via_trunc_nuw_dom_condition(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw i32 [[VAL]] to i1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret void
+;
+  %val = load i32, ptr %x, align 4
+  %cmp = trunc nuw i32 %val to i1
+  br i1 %cmp, label %then, label %else
+
+then:
+  store i32 1, ptr %x, align 4
+  ret void
+
+else:
+  store i32 0, ptr %x, align 4
+  ret void
+}
+
+define void @remove_tautological_stores_via_trunc_nuw_nsw_dom_condition(ptr %x) {
+; CHECK-LABEL: define void @remove_tautological_stores_via_trunc_nuw_nsw_dom_condition(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw nsw i32 [[VAL]] to i1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret void
+;
+  %val = load i32, ptr %x, align 4
+  %cmp = trunc nuw nsw i32 %val to i1
+  br i1 %cmp, label %then, label %else
+
+then:
+  store i32 1, ptr %x, align 4
+  ret void
+
+else:
+  store i32 0, ptr %x, align 4
+  ret void
+}
+
 ; Negative tests.
 
 ; There exists a dominating condition in the entry block, however,
@@ -274,6 +322,32 @@ join:
   br label %end
 
 end:
+  ret void
+}
+
+define void @neg_remove_tautological_stores_via_trunc_nsw_dom_condition(ptr %x) {
+; CHECK-LABEL: define void @neg_remove_tautological_stores_via_trunc_nsw_dom_condition(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nsw i32 [[VAL]] to i1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    store i32 1, ptr [[X]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
+; CHECK-NEXT:    ret void
+;
+  %val = load i32, ptr %x, align 4
+  %cmp = trunc nsw i32 %val to i1
+  br i1 %cmp, label %then, label %else
+
+then:
+  store i32 1, ptr %x, align 4
+  ret void
+
+else:
+  store i32 0, ptr %x, align 4
   ret void
 }
 

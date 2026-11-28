@@ -6567,7 +6567,8 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                       CandidateSet,
                                       /*ExplicitArgs=*/nullptr,
                                       /*SuppressUserConversions=*/false,
-                                      /*PartialOverloading=*/true);
+                                      /*PartialOverloading=*/true,
+                                      /*FirstArgumentIsBase=*/true);
       }
     } else {
       // Lastly we check whether expression's type is function pointer or
@@ -8542,7 +8543,7 @@ void SemaCodeCompletion::CodeCompleteObjCSuperMessage(
       id.setIdentifier(Super, SuperLoc);
       ExprResult SuperExpr =
           SemaRef.ActOnIdExpression(S, SS, TemplateKWLoc, id,
-                                    /*HasTrailingLParen=*/false,
+                                    /*IsCall=*/false,
                                     /*IsAddressOfOperand=*/false);
       return CodeCompleteObjCInstanceMessage(S, (Expr *)SuperExpr.get(),
                                              SelIdents, AtArgumentExpression);

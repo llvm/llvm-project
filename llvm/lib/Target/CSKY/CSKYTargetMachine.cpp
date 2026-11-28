@@ -16,6 +16,7 @@
 #include "CSKYSubtarget.h"
 #include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -49,29 +50,39 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
 
 const CSKYSubtarget *
 CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const CSKYSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.FloatABI = M->getFloatABI();
 
-  FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
+  if (const CSKYSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
-  std::string Key = CPU + TuneCPU + FS;
-  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
-  auto &I = SubtargetMap[Key];
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : StringRef(TargetCPU);
+  StringRef TuneCPU =
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString() : CPU;
+  StringRef FS =
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : StringRef(TargetFS);
+
+  SmallString<256> Key({CPU, TuneCPU, FS});
+  Key +=
+      Attrs.FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+  std::unique_ptr<CSKYSubtarget> &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS,
-                                        FloatABI, *this);
+                                        Attrs.FloatABI, *this);
     if (I->useHardFloat() && !I->hasAnyFloatExt())
       errs() << "Hard-float can't be used with current CPU,"
                 " set to Soft-float\n";
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 

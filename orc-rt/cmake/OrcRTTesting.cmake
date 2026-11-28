@@ -61,3 +61,34 @@ foreach(tool clang llvm-jitlink llvm-mc)
     list(APPEND ORC_RT_TEST_DEPS ${tool})
   endif()
 endforeach()
+
+# The sysroot that the regression tests' default compilers build against: the
+# one the runtime is built against, so that tests see the same system headers.
+# A clang built from source doesn't find the SDK on its own on Darwin.
+if (APPLE)
+  set(ORC_RT_TEST_SYSROOT "${CMAKE_OSX_SYSROOT}")
+  # CMake treats a CMAKE_OSX_SYSROOT containing "/" as a path, and resolves
+  # anything else to one itself, except under the Xcode generator. It's empty
+  # if not set (since CMake 4.0 the compiler picks its default SDK). Ask xcrun
+  # for the path in the remaining cases.
+  if (NOT ORC_RT_TEST_SYSROOT MATCHES "/")
+    set(orc_rt_xcrun_sdk_args)
+    if (ORC_RT_TEST_SYSROOT)
+      set(orc_rt_xcrun_sdk_args --sdk "${ORC_RT_TEST_SYSROOT}")
+    endif()
+    execute_process(COMMAND xcrun ${orc_rt_xcrun_sdk_args} --show-sdk-path
+      OUTPUT_VARIABLE ORC_RT_TEST_SYSROOT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      RESULT_VARIABLE orc_rt_xcrun_result)
+    if (NOT orc_rt_xcrun_result EQUAL 0 OR
+        NOT IS_DIRECTORY "${ORC_RT_TEST_SYSROOT}")
+      message(WARNING "orc-rt: could not find an SDK for the regression tests; "
+                      "tests that include system headers will fail. Set "
+                      "CMAKE_OSX_SYSROOT to choose one.")
+      set(ORC_RT_TEST_SYSROOT "")
+    endif()
+  endif()
+else()
+  set(ORC_RT_TEST_SYSROOT "${CMAKE_SYSROOT}")
+endif()

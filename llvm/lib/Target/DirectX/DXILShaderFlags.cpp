@@ -79,7 +79,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // case Intrinsic::dx_wave_match:
   // case Intrinsic::dx_wavemulti.*:
   // case Intrinsic::dx_wavemulti.ballot:
-  // case Intrinsic::dx_quad.vote:
   switch (IID) {
   default:
     return false;
@@ -111,7 +110,16 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+  case Intrinsic::dx_wave_multi_prefix_bit_or:
+  case Intrinsic::dx_wave_multi_prefix_bit_xor:
+  case Intrinsic::dx_wave_multi_prefix_bit_count:
+  case Intrinsic::dx_wave_multi_prefix_product:
+  case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
     // Quad Op Variants
+  case Intrinsic::dx_quad_all:
   case Intrinsic::dx_quad_read_across_x:
   case Intrinsic::dx_quad_read_across_y:
   case Intrinsic::dx_quad_read_across_diagonal:
@@ -188,6 +196,15 @@ bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
   }
 
   return false;
+}
+
+/// Returns true if the LOD clamp argument of \p II is neither constant zero
+/// nor undef.
+static bool hasLODClamp(const IntrinsicInst &II) {
+  const Value *Clamp = II.getArgOperand(II.arg_size() - 1);
+  if (const auto *C = dyn_cast<ConstantFP>(Clamp))
+    return !C->isZero();
+  return !isa<UndefValue>(Clamp);
 }
 
 /// Update the shader flags mask based on the given instruction.
@@ -314,6 +331,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
+    case Intrinsic::dx_resource_sample_clamp:
+    case Intrinsic::dx_resource_samplebias_clamp:
+    case Intrinsic::dx_resource_samplegrad_clamp:
+      // DXIL validator 1.7 does not expect TiledResources for LOD clamps.
+      if (!CSF.TiledResources && MMDI.ValidatorVersion >= VersionTuple(1, 8))
+        CSF.TiledResources = hasLODClamp(*II);
+      break;
     case Intrinsic::dx_resource_atomic_binop:
     case Intrinsic::dx_resource_atomic_compare_exchange: {
       if (II->getType()->isIntegerTy(64)) {
@@ -459,6 +483,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
           return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
         });
+        CSF.StencilRef |= llvm::any_of(Sig->Outputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::StencilRef;
+        });
         // Unallocated elements do not occupy signature registers. Their type
         // requirements come from the instructions that access them.
         auto HasLowPrecision = [](const auto &Elements) {
@@ -549,8 +576,8 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   return MSFI;
 }
 
-PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ShaderFlagsAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
   // Print description of combined shader flags for all module functions
   OS << "; Combined Shader Flags for Module\n";

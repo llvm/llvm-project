@@ -84,3 +84,4 @@ body: |
   ; CHECK: bb.8:
     ; CHECK:      %1:i32 = CONST_I32 0, implicit-def $arguments
     ; CHECK-NEXT: BR %bb.6, implicit-def $arguments
+...

@@ -20,7 +20,7 @@
 # 13   u1[dtid.x] = my_var;
 # 14 }
 
-# RUN: llvm-mc %s --mcpu=gfx1100 -triple=amdgcn-amd-amdpal -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple=amdgpu11.00-amd-amdpal -filetype=obj -o - | \
 # RUN: llvm-debuginfo-analyzer --attribute=all \
 # RUN:                         --print=all \
 # RUN:                         --output-sort=offset \

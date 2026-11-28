@@ -15,7 +15,6 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -38,6 +37,10 @@ bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
 bool onlyScalarValuesUsed(const VPValue *Def);
+
+/// Returns true if only scalar values of \p Def are used by all users, either
+/// directly or by extracting a constant lane.
+bool onlyScalarValuesOrLanesUsed(const VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
@@ -147,8 +150,8 @@ VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
-template <typename PredT>
-inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+template <typename RecipeTy, typename PredT>
+inline RecipeTy *findUserRecursively(VPValue *Start, PredT Pred) {
   SetVector<VPValue *> Worklist;
   Worklist.insert(Start);
   for (unsigned I = 0; I != Worklist.size(); ++I) {
@@ -157,7 +160,7 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
     if (!R)
       continue;
     if (Pred(R))
-      return R;
+      return cast<RecipeTy>(R);
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
         Worklist.insert(V);
@@ -245,6 +248,12 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
+/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
+inline Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
+  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
+  return (IsLoad ? R : R->getOperand(0))->getScalarType();
+}
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
@@ -290,9 +299,17 @@ class VPSCEVExpander {
       InsertedExpressions;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
-  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
-  /// if none is found.
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, an in-IR
+  /// VPExpandSCEVRecipe if reuse requires dropping flags, or nullptr if none
+  /// is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
+  bool canExpandInIR(const SCEV *S);
+
+  /// Expand the sum of \p Operands, with \p WrapFlags on the adds.
+  VPValue *expandAddOps(ArrayRef<const SCEV *> Operands,
+                        VPIRFlags::WrapFlagsTy WrapFlags);
 
   /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
   VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
@@ -446,11 +463,7 @@ public:
   /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
   /// \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-    return map_range(
-        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+    return map_range(Range, CastTo<BlockTy>);
   }
 
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB

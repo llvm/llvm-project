@@ -15,6 +15,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -22,10 +23,26 @@ namespace cir {
 
 /// Map a target triple to the ABI target that drives CallConvLowering.
 /// Returns None for targets whose calling convention is not yet implemented.
-static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
+static CallConvTarget
+getCallConvTarget(const llvm::Triple &triple,
+                  cir::LoweringOptionsAttr loweringLangOpts) {
   // Windows is not supported.  UEFI shares its convention.
   if (triple.getArch() == llvm::Triple::x86_64 && !triple.isOSWindowsOrUEFI())
     return CallConvTarget::X86_64;
+  if (triple.isAMDGPU())
+    return CallConvTarget::AMDGPU;
+  if (triple.isAArch64() && !triple.isOSWindows() &&
+      triple.getArch() != llvm::Triple::aarch64_32)
+    return CallConvTarget::AArch64;
+  bool isHLSL = loweringLangOpts && loweringLangOpts.getHlsl();
+  bool isOpenMPDevice =
+      loweringLangOpts && loweringLangOpts.getOpenmpIsTargetDevice();
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
+  // promotion rules and resource types are not modeled yet.
+  // FIXME: Lower OpenMP device code once MLIR can translate it afterwards.
+  if (triple.isSPIRV() && triple.getVendor() != llvm::Triple::AMD && !isHLSL &&
+      !isOpenMPDevice)
+    return CallConvTarget::SPIRV;
   return CallConvTarget::None;
 }
 
@@ -67,6 +84,11 @@ getX86ABICompatInfo(const llvm::Triple &triple,
       compat > clang::LangOptions::ClangABI::Ver20 && !triple.isPS();
   abiCompat.Clang11Compat =
       compat <= clang::LangOptions::ClangABI::Ver11 || triple.isPS();
+  // Match the classic CodeGen default of -msmall-int-abi-compat.
+  assert(!cir::MissingFeatures::smallIntABICompatOption());
+  abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
+                                    ? llvm::abi::SmallIntABICompatKind::Clang23
+                                    : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }
 
@@ -78,13 +100,11 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  auto tripleAttr = theModule->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr)
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(theModule);
+  if (!triple)
     return theModule.emitError()
            << "missing '" << cir::CIRDialect::getTripleAttrName()
            << "' attribute";
-  llvm::Triple triple(tripleAttr.getValue());
 
   auto abiAttr = theModule->getAttrOfType<mlir::StringAttr>(
       cir::CIRDialect::getTargetABIAttrName());
@@ -126,25 +146,24 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
-    // records the classifier can handle.  Only the x86_64 System V classifier
-    // is implemented; other targets are left unchanged.
-    CallConvTarget target = getCallConvTarget(triple);
+    // records the classifier can handle.
+    auto loweringLangOpts = theModule->getAttrOfType<cir::LoweringOptionsAttr>(
+        cir::CIRDialect::getLoweringOptionsAttrName());
+    CallConvTarget target = getCallConvTarget(*triple, loweringLangOpts);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
-      // #cir.lowering_lang_options so a reloaded .cir classifies the same way
+      // #cir.lowering_options so a reloaded .cir classifies the same way
       // it was compiled, without a live clang::LangOptions. CIRGen sets this
       // attribute at module construction; if it is absent fall back to the
       // LangOptions default, matching how LowerModule reads the same attribute.
       auto compat = clang::LangOptions::ClangABI::Latest;
-      if (auto loweringLangOpts =
-              theModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))
+      if (loweringLangOpts)
         compat = static_cast<clang::LangOptions::ClangABI>(
             loweringLangOpts.getClangAbiCompat());
       pm.addPass(mlir::createCallConvLoweringPass(
           target, getX86AVXABILevel(abiAttr.getValue()),
-          allowsX86TargetAttrAvx(triple, compat),
-          getX86ABICompatInfo(triple, compat)));
+          allowsX86TargetAttrAvx(*triple, compat),
+          getX86ABICompatInfo(*triple, compat)));
     }
   }
 
@@ -162,6 +181,7 @@ void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createCIRFlattenCFGPass());
   pm.addPass(createCIREHABILoweringPass());
   pm.addPass(createGotoSolverPass());
+  pm.addPass(createCIRFoldEmptyBranchesPass());
 }
 
 } // namespace mlir

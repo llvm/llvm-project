@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -162,12 +163,24 @@ private:
   /// Currently valid only for bottom-up scheduling.
   unsigned IssueCount = 0u;
 
-  /// LiveRegDefs - A set of physical registers and their definition
-  /// that are "live". These nodes must be scheduled before any other nodes that
-  /// modifies the registers can be scheduled.
-  unsigned NumLiveRegs = 0u;
-  std::unique_ptr<SUnit*[]> LiveRegDefs;
-  std::unique_ptr<SUnit*[]> LiveRegGens;
+  /// A physical register, or the special call resource, that is "live": Def
+  /// must be scheduled before any other node that modifies the register.
+  struct LiveReg {
+    unsigned Reg;
+    /// The nearest definition of the register.
+    SUnit *Def = nullptr;
+    /// The use that made the register live.
+    SUnit *Gen = nullptr;
+
+    explicit LiveReg(unsigned Reg) : Reg(Reg) {}
+    unsigned getSparseSetIndex() const { return Reg; }
+  };
+
+  /// The live registers, indexed by register number. TRI->getNumRegs() is a
+  /// special register that tracks the virtual resource of a calling sequence.
+  /// Few registers are live at once, and most blocks have none, so this avoids
+  /// allocating and clearing an array of all registers for every block.
+  SparseSet<LiveReg> LiveRegs;
 
   // Collect interferences between physical register use/defs.
   // Each interference is an SUnit and set of physical registers.
@@ -204,6 +217,38 @@ public:
   }
 
   void Schedule() override;
+
+  LiveReg *findLiveReg(unsigned Reg) {
+    // The universe is only set once a register becomes live.
+    if (LiveRegs.empty())
+      return nullptr;
+    auto I = LiveRegs.find(Reg);
+    return I == LiveRegs.end() ? nullptr : &*I;
+  }
+
+  SUnit *getLiveRegDef(unsigned Reg) {
+    LiveReg *LR = findLiveReg(Reg);
+    return LR ? LR->Def : nullptr;
+  }
+
+  SUnit *getLiveRegGen(unsigned Reg) {
+    LiveReg *LR = findLiveReg(Reg);
+    return LR ? LR->Gen : nullptr;
+  }
+
+  /// Return the entry for Reg, adding one with a null Def and Gen if it isn't
+  /// live. The reference is invalidated by adding another register.
+  LiveReg &addLiveReg(unsigned Reg) {
+    // setUniverse requires an empty set.
+    if (LiveRegs.empty())
+      LiveRegs.setUniverse(TRI->getNumRegs() + 1);
+    return *LiveRegs.insert(LiveReg(Reg)).first;
+  }
+
+  void removeLiveReg(unsigned Reg) {
+    if (!LiveRegs.erase(Reg))
+      llvm_unreachable("Register is not live!");
+  }
 
   ScheduleHazardRecognizer *getHazardRec() { return HazardRec; }
 
@@ -258,6 +303,13 @@ private:
                                 const TargetRegisterClass*,
                                 SmallVectorImpl<SUnit*>&);
   bool DelayForLiveRegsBottomUp(SUnit*, SmallVectorImpl<unsigned>&);
+  void CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
+                          SmallSet<unsigned, 4> &RegAdded,
+                          SmallVectorImpl<unsigned> &LRegs,
+                          const SDNode *Node = nullptr);
+  void CheckForLiveRegDefMasked(SUnit *SU, const uint32_t *RegMask,
+                                SmallSet<unsigned, 4> &RegAdded,
+                                SmallVectorImpl<unsigned> &LRegs);
 
   void releaseInterferences(unsigned Reg = 0);
 
@@ -353,13 +405,10 @@ void ScheduleDAGRRList::Schedule() {
   IssueCount = 0;
   MinAvailableCycle =
       DisableSchedCycles ? 0 : std::numeric_limits<unsigned>::max();
-  NumLiveRegs = 0;
-  // Allocate slots for each physical register, plus one for a special register
-  // to track the virtual resource of a calling sequence.
-  LiveRegDefs.reset(new SUnit*[TRI->getNumRegs() + 1]());
-  LiveRegGens.reset(new SUnit*[TRI->getNumRegs() + 1]());
+  LiveRegs.clear();
   CallSeqEndForStart.clear();
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
+  assert(PendingQueue.empty() && "stale PendingQueue");
 
   // Build the scheduling graph.
   BuildSchedGraph();
@@ -529,7 +578,7 @@ FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
 }
 
 /// Call ReleasePred for each predecessor, then update register live def/gen.
-/// Always update LiveRegDefs for a register dependence even if the current SU
+/// Always update the live Def for a register dependence even if the current SU
 /// also defines the register. This effectively create one large live range
 /// across a sequence of two-address node. This is important because the
 /// entire chain must be scheduled together. Example:
@@ -540,8 +589,8 @@ FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
 ///
 /// results in
 ///
-/// LiveRegDefs[flags] = 3
-/// LiveRegGens[flags] = 1
+/// Def of live register flags = 3
+/// Gen of live register flags = 1
 ///
 /// If (2) addc is unscheduled, then (1) addc must also be unscheduled to avoid
 /// interference on flags.
@@ -554,14 +603,12 @@ void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
       // expensive to copy the register. Make sure nothing that can
       // clobber the register is scheduled between the predecessor and
       // this node.
-      SUnit *RegDef = LiveRegDefs[Pred.getReg()]; (void)RegDef;
-      assert((!RegDef || RegDef == SU || RegDef == Pred.getSUnit()) &&
+      LiveReg &LR = addLiveReg(Pred.getReg());
+      assert((!LR.Def || LR.Def == SU || LR.Def == Pred.getSUnit()) &&
              "interference on register dependence");
-      LiveRegDefs[Pred.getReg()] = Pred.getSUnit();
-      if (!LiveRegGens[Pred.getReg()]) {
-        ++NumLiveRegs;
-        LiveRegGens[Pred.getReg()] = SU;
-      }
+      LR.Def = Pred.getSUnit();
+      if (!LR.Gen)
+        LR.Gen = SU;
     }
   }
 
@@ -569,7 +616,7 @@ void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
   // CALLSEQ_BEGIN. Inject an artificial physical register dependence between
   // these nodes, to prevent other calls from being interscheduled with them.
   unsigned CallResource = TRI->getNumRegs();
-  if (!LiveRegDefs[CallResource])
+  if (!getLiveRegDef(CallResource))
     for (SDNode *Node = SU->getNode(); Node; Node = Node->getGluedNode())
       if (Node->isMachineOpcode() &&
           Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
@@ -581,9 +628,9 @@ void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
         SUnit *Def = &SUnits[N->getNodeId()];
         CallSeqEndForStart[Def] = SU;
 
-        ++NumLiveRegs;
-        LiveRegDefs[CallResource] = Def;
-        LiveRegGens[CallResource] = SU;
+        LiveReg &LR = addLiveReg(CallResource);
+        LR.Def = Def;
+        LR.Gen = SU;
         break;
       }
 }
@@ -763,27 +810,21 @@ void ScheduleDAGRRList::ScheduleNodeBottomUp(SUnit *SU) {
 
   // Release all the implicit physical register defs that are live.
   for (SDep &Succ : SU->Succs) {
-    // LiveRegDegs[Succ.getReg()] != SU when SU is a two-address node.
-    if (Succ.isAssignedRegDep() && LiveRegDefs[Succ.getReg()] == SU) {
-      assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
-      --NumLiveRegs;
-      LiveRegDefs[Succ.getReg()] = nullptr;
-      LiveRegGens[Succ.getReg()] = nullptr;
+    // The live Def is not SU when SU is a two-address node.
+    if (Succ.isAssignedRegDep() && getLiveRegDef(Succ.getReg()) == SU) {
+      removeLiveReg(Succ.getReg());
       releaseInterferences(Succ.getReg());
     }
   }
   // Release the special call resource dependence, if this is the beginning
   // of a call.
   unsigned CallResource = TRI->getNumRegs();
-  if (LiveRegDefs[CallResource] == SU)
+  if (getLiveRegDef(CallResource) == SU)
     for (const SDNode *SUNode = SU->getNode(); SUNode;
          SUNode = SUNode->getGluedNode()) {
       if (SUNode->isMachineOpcode() &&
           SUNode->getMachineOpcode() == TII->getCallFrameSetupOpcode()) {
-        assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
-        --NumLiveRegs;
-        LiveRegDefs[CallResource] = nullptr;
-        LiveRegGens[CallResource] = nullptr;
+        removeLiveReg(CallResource);
         releaseInterferences(CallResource);
       }
     }
@@ -833,13 +874,10 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
 
   for (SDep &Pred : SU->Preds) {
     CapturePred(&Pred);
-    if (Pred.isAssignedRegDep() && SU == LiveRegGens[Pred.getReg()]){
-      assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
-      assert(LiveRegDefs[Pred.getReg()] == Pred.getSUnit() &&
+    if (Pred.isAssignedRegDep() && SU == getLiveRegGen(Pred.getReg())) {
+      assert(getLiveRegDef(Pred.getReg()) == Pred.getSUnit() &&
              "Physical register dependency violated?");
-      --NumLiveRegs;
-      LiveRegDefs[Pred.getReg()] = nullptr;
-      LiveRegGens[Pred.getReg()] = nullptr;
+      removeLiveReg(Pred.getReg());
       releaseInterferences(Pred.getReg());
     }
   }
@@ -853,27 +891,22 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
         SUNode->getMachineOpcode() == TII->getCallFrameSetupOpcode()) {
       SUnit *SeqEnd = CallSeqEndForStart[SU];
       assert(SeqEnd && "Call sequence start/end must be known");
-      assert(!LiveRegDefs[CallResource]);
-      assert(!LiveRegGens[CallResource]);
-      ++NumLiveRegs;
-      LiveRegDefs[CallResource] = SU;
-      LiveRegGens[CallResource] = SeqEnd;
+      assert(!findLiveReg(CallResource));
+      LiveReg &LR = addLiveReg(CallResource);
+      LR.Def = SU;
+      LR.Gen = SeqEnd;
     }
   }
 
   // Release the special call resource dependence, if this is the end
   // of a call.
-  if (LiveRegGens[CallResource] == SU)
+  if (getLiveRegGen(CallResource) == SU)
     for (const SDNode *SUNode = SU->getNode(); SUNode;
          SUNode = SUNode->getGluedNode()) {
       if (SUNode->isMachineOpcode() &&
           SUNode->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
-        assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
-        assert(LiveRegDefs[CallResource]);
-        assert(LiveRegGens[CallResource]);
-        --NumLiveRegs;
-        LiveRegDefs[CallResource] = nullptr;
-        LiveRegGens[CallResource] = nullptr;
+        assert(getLiveRegDef(CallResource));
+        removeLiveReg(CallResource);
         releaseInterferences(CallResource);
       }
     }
@@ -881,21 +914,20 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
   for (auto &Succ : SU->Succs) {
     if (Succ.isAssignedRegDep()) {
       auto Reg = Succ.getReg();
-      if (!LiveRegDefs[Reg])
-        ++NumLiveRegs;
+      LiveReg &LR = addLiveReg(Reg);
       // This becomes the nearest def. Note that an earlier def may still be
       // pending if this is a two-address node.
-      LiveRegDefs[Reg] = SU;
+      LR.Def = SU;
 
-      // Update LiveRegGen only if was empty before this unscheduling.
-      // This is to avoid incorrect updating LiveRegGen set in previous run.
-      if (!LiveRegGens[Reg]) {
+      // Update Gen only if it was empty before this unscheduling.
+      // This is to avoid incorrect updating Gen set in previous run.
+      if (!LR.Gen) {
         // Find the successor with the lowest height.
-        LiveRegGens[Reg] = Succ.getSUnit();
+        LR.Gen = Succ.getSUnit();
         for (auto &Succ2 : SU->Succs) {
           if (Succ2.isAssignedRegDep() && Succ2.getReg() == Reg &&
-              Succ2.getSUnit()->getHeight() < LiveRegGens[Reg]->getHeight())
-            LiveRegGens[Reg] = Succ2.getSUnit();
+              Succ2.getSUnit()->getHeight() < LR.Gen->getHeight())
+            LR.Gen = Succ2.getSUnit();
         }
       }
     }
@@ -1238,21 +1270,23 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
-                               SmallSet<unsigned, 4> &RegAdded,
-                               SmallVectorImpl<unsigned> &LRegs,
-                               const TargetRegisterInfo *TRI,
-                               const SDNode *Node = nullptr) {
+void ScheduleDAGRRList::CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
+                                           SmallSet<unsigned, 4> &RegAdded,
+                                           SmallVectorImpl<unsigned> &LRegs,
+                                           const SDNode *Node) {
   for (MCRegAliasIterator AliasI(Reg, TRI, true); AliasI.isValid(); ++AliasI) {
+    SUnit *Def = getLiveRegDef(*AliasI);
 
     // Check if Ref is live.
-    if (!LiveRegDefs[*AliasI]) continue;
+    if (!Def)
+      continue;
 
     // Allow multiple uses of the same def.
-    if (LiveRegDefs[*AliasI] == SU) continue;
+    if (Def == SU)
+      continue;
 
     // Allow multiple uses of same def
-    if (Node && LiveRegDefs[*AliasI]->getNode() == Node)
+    if (Node && Def->getNode() == Node)
       continue;
 
     // Add Reg to the set of interfering live regs.
@@ -1264,18 +1298,23 @@ static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
 
 /// CheckForLiveRegDefMasked - Check for any live physregs that are clobbered
 /// by RegMask, and add them to LRegs.
-static void CheckForLiveRegDefMasked(SUnit *SU, const uint32_t *RegMask,
-                                     ArrayRef<SUnit*> LiveRegDefs,
-                                     SmallSet<unsigned, 4> &RegAdded,
-                                     SmallVectorImpl<unsigned> &LRegs) {
-  // Look at all live registers. Skip Reg0 and the special CallResource.
-  for (unsigned i = 1, e = LiveRegDefs.size()-1; i != e; ++i) {
-    if (!LiveRegDefs[i]) continue;
-    if (LiveRegDefs[i] == SU) continue;
-    if (!MachineOperand::clobbersPhysReg(RegMask, i)) continue;
-    if (RegAdded.insert(i).second)
-      LRegs.push_back(i);
+void ScheduleDAGRRList::CheckForLiveRegDefMasked(
+    SUnit *SU, const uint32_t *RegMask, SmallSet<unsigned, 4> &RegAdded,
+    SmallVectorImpl<unsigned> &LRegs) {
+  // Look at all live registers, except the special CallResource. Add them in
+  // register order, independent of the order they became live in.
+  unsigned CallResource = TRI->getNumRegs();
+  SmallVector<unsigned, 8> Clobbered;
+  for (const LiveReg &LR : LiveRegs) {
+    if (LR.Reg == CallResource || LR.Def == SU)
+      continue;
+    if (MachineOperand::clobbersPhysReg(RegMask, LR.Reg))
+      Clobbered.push_back(LR.Reg);
   }
+  llvm::sort(Clobbered);
+  for (unsigned Reg : Clobbered)
+    if (RegAdded.insert(Reg).second)
+      LRegs.push_back(Reg);
 }
 
 /// getNodeRegMask - Returns the register mask attached to an SDNode, if any.
@@ -1292,7 +1331,7 @@ static const uint32_t *getNodeRegMask(const SDNode *N) {
 /// whatever is necessary (i.e. backtracking or cloning) to make it possible.
 bool ScheduleDAGRRList::
 DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
-  if (NumLiveRegs == 0)
+  if (LiveRegs.empty())
     return false;
 
   SmallSet<unsigned, 4> RegAdded;
@@ -1301,9 +1340,8 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
   // If SU is the currently live definition of the same register that it uses,
   // then we are free to schedule it.
   for (SDep &Pred : SU->Preds) {
-    if (Pred.isAssignedRegDep() && LiveRegDefs[Pred.getReg()] != SU)
-      CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), LiveRegDefs.get(),
-                         RegAdded, LRegs, TRI);
+    if (Pred.isAssignedRegDep() && getLiveRegDef(Pred.getReg()) != SU)
+      CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), RegAdded, LRegs);
   }
 
   for (SDNode *Node = SU->getNode(); Node; Node = Node->getGluedNode()) {
@@ -1326,7 +1364,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           for (; NumVals; --NumVals, ++i) {
             Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
             if (Reg.isPhysical())
-              CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+              CheckForLiveRegDef(SU, Reg, RegAdded, LRegs);
           }
         } else
           i += NumVals;
@@ -1338,8 +1376,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
       if (Reg.isPhysical()) {
         SDNode *SrcNode = Node->getOperand(2).getNode();
-        CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI,
-                           SrcNode);
+        CheckForLiveRegDef(SU, Reg, RegAdded, LRegs, SrcNode);
       }
     }
 
@@ -1351,8 +1388,8 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
     if (Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
       // Check the special calling-sequence resource.
       unsigned CallResource = TRI->getNumRegs();
-      if (LiveRegDefs[CallResource]) {
-        SDNode *Gen = LiveRegGens[CallResource]->getNode();
+      if (LiveReg *LR = findLiveReg(CallResource)) {
+        SDNode *Gen = LR->Gen->getNode();
         while (SDNode *Glued = Gen->getGluedNode())
           Gen = Glued;
         if (!IsChainDependent(Gen, Node, 0, TII) &&
@@ -1361,9 +1398,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       }
     }
     if (const uint32_t *RegMask = getNodeRegMask(Node))
-      CheckForLiveRegDefMasked(SU, RegMask,
-                               ArrayRef(LiveRegDefs.get(), TRI->getNumRegs()),
-                               RegAdded, LRegs);
+      CheckForLiveRegDefMasked(SU, RegMask, RegAdded, LRegs);
 
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
     if (MCID.hasOptionalDef()) {
@@ -1375,11 +1410,11 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
         if (MCID.operands()[i].isOptionalDef()) {
           const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
           Register Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
-          CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+          CheckForLiveRegDef(SU, Reg, RegAdded, LRegs);
         }
     }
     for (MCPhysReg Reg : MCID.implicit_defs())
-      CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+      CheckForLiveRegDef(SU, Reg, RegAdded, LRegs);
   }
 
   return !LRegs.empty();
@@ -1458,8 +1493,9 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
     SUnit *BtSU = nullptr;
     unsigned LiveCycle = std::numeric_limits<unsigned>::max();
     for (unsigned Reg : LRegs) {
-      if (LiveRegGens[Reg]->getHeight() < LiveCycle) {
-        BtSU = LiveRegGens[Reg];
+      SUnit *Gen = getLiveRegGen(Reg);
+      if (Gen->getHeight() < LiveCycle) {
+        BtSU = Gen;
         LiveCycle = BtSU->getHeight();
       }
     }
@@ -1505,7 +1541,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
     SmallVectorImpl<unsigned> &LRegs = LRegsMap[TrySU];
     assert(LRegs.size() == 1 && "Can't handle this yet!");
     unsigned Reg = LRegs[0];
-    SUnit *LRDef = LiveRegDefs[Reg];
+    SUnit *LRDef = getLiveRegDef(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
@@ -1534,7 +1570,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
 
     LLVM_DEBUG(dbgs() << "    Adding an edge from " << *NewDef << " to "
                       << *TrySU << "\n");
-    LiveRegDefs[Reg] = NewDef;
+    findLiveReg(Reg)->Def = NewDef;
     AddPredQueued(NewDef, SDep(TrySU, SDep::Artificial));
     TrySU->isAvailable = false;
     CurSU = NewDef;
@@ -1715,8 +1751,6 @@ public:
       RegPressure.resize(NumRC);
       llvm::fill(RegLimit, 0);
       llvm::fill(RegPressure, 0);
-      for (const TargetRegisterClass &RC : TRI->regclasses())
-        RegLimit[RC.getID()] = tri->getRegPressureLimit(&RC, MF);
     }
   }
 
@@ -2752,6 +2786,13 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
 
 void RegReductionPQBase::initNodes(std::vector<SUnit> &sunits) {
   SUnits = &sunits;
+  CurQueueId = 0;
+  setCurCycle(0);
+  // The limits depend on function state that can change between blocks, e.g.
+  // whether a frame pointer is needed.
+  if (TracksRegPressure)
+    for (const TargetRegisterClass &RC : TRI->regclasses())
+      RegLimit[RC.getID()] = TRI->getRegPressureLimit(&RC, MF);
   // Add pseudo dependency edges for two-address nodes.
   if (!Disable2AddrHack)
     AddPseudoTwoAddrDeps();

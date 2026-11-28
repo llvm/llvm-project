@@ -173,7 +173,7 @@ TEST(SimpleSymbolTableTest, Iteration) {
 
 TEST(SimpleSymbolTableTest, LookupEmptySet) {
   SimpleSymbolTable ST;
-  auto R = ST.lookup(SymbolLookupSet());
+  auto R = ST.lookup(RemoteSymbolLookupSet());
   EXPECT_TRUE(R.empty());
 }
 

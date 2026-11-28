@@ -186,6 +186,17 @@ uint64_t mlirRemarkGetId(MlirRemark remark) {
   return unwrap(remark)->getId().getValue();
 }
 
+intptr_t mlirRemarkGetNumRelatedRemarks(MlirRemark remark) {
+  return static_cast<intptr_t>(unwrap(remark)->getRelatedRemarkIds().size());
+}
+
+uint64_t mlirRemarkGetRelatedRemarkId(MlirRemark remark, intptr_t pos) {
+  ArrayRef<remark::RemarkId> ids = unwrap(remark)->getRelatedRemarkIds();
+  assert(pos >= 0 && static_cast<size_t>(pos) < ids.size() &&
+         "related remark index out of range");
+  return ids[pos].getValue();
+}
+
 intptr_t mlirRemarkGetNumArgs(MlirRemark remark) {
   return static_cast<intptr_t>(unwrap(remark)->getArgs().size());
 }

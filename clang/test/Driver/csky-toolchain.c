@@ -37,3 +37,14 @@
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/lib/../lib"
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/lib"
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/usr/lib"
+
+// RUN: %clang --sysroot= -### %s --target=csky-unknown-elf --rtlib=none 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-CSKY-ELF-RTLIB-NONE %s
+// C-CSKY-ELF-RTLIB-NONE: "{{.*}}crt0.o"
+// C-CSKY-ELF-RTLIB-NONE-SAME: "{{.*}}crti.o"
+// C-CSKY-ELF-RTLIB-NONE-NOT: crtbegin
+// C-CSKY-ELF-RTLIB-NONE-SAME: "-lc"
+// C-CSKY-ELF-RTLIB-NONE-NOT: libclang_rt
+// C-CSKY-ELF-RTLIB-NONE-NOT: "-lgcc"
+// C-CSKY-ELF-RTLIB-NONE-NOT: crtend
+// C-CSKY-ELF-RTLIB-NONE-SAME: "{{.*}}crtn.o"

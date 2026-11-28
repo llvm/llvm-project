@@ -928,8 +928,7 @@ public:
     size_t old_size = variable_list.GetSize();
     Target *target = static_cast<Target *>(baton);
     if (target)
-      target->GetImages().FindGlobalVariables(ConstString(name), UINT32_MAX,
-                                              variable_list);
+      target->GetImages().FindGlobalVariables(name, UINT32_MAX, variable_list);
     return variable_list.GetSize() - old_size;
   }
 
@@ -3511,6 +3510,23 @@ protected:
         strm.Printf("%p", static_cast<void *>(module));
         break;
 
+      case 'F': {
+        std::string flags;
+        const uint32_t state = module->GetSymtabState();
+        if (state & eSymtabStateLoadedFromCache)
+          flags += 'C';
+        if (state & eSymtabStateParsedFromObjectFile)
+          flags += 'F';
+        if (state & eSymtabStateSavedToCache)
+          flags += 'W';
+        if (state & eSymtabStateSymbolFileAddedSymbols)
+          flags += 'S';
+        if (flags.empty())
+          flags = "-";
+        strm.Format("{0}",
+                    llvm::fmt_align(flags, llvm::AlignStyle::Left, width));
+      } break;
+
       case 'u':
         DumpModuleUUID(strm, module);
         break;
@@ -3657,11 +3673,10 @@ protected:
     SymbolContextList sc_list;
 
     if (m_options.m_type == eLookupTypeFunctionOrSymbol) {
-      ConstString function_name(m_options.m_str);
       ModuleFunctionSearchOptions function_options;
       function_options.include_symbols = true;
       function_options.include_inlines = false;
-      target->GetImages().FindFunctions(function_name, eFunctionNameTypeAuto,
+      target->GetImages().FindFunctions(m_options.m_str, eFunctionNameTypeAuto,
                                         function_options, sc_list);
     } else if (m_options.m_type == eLookupTypeAddress && target) {
       Address addr;
@@ -4901,6 +4916,17 @@ public:
               option_arg.str().c_str());
       } break;
 
+      case 'O': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success)
+          m_one_shot = value;
+        else
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -O option",
+              option_arg.str().c_str());
+      } break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -4927,7 +4953,8 @@ public:
       m_use_one_liner = false;
       m_one_liner.clear();
       m_auto_continue = false;
-      m_at_initial_stop = true;
+      m_at_initial_stop = false;
+      m_one_shot = false;
     }
 
     std::string m_class_name;
@@ -4949,6 +4976,7 @@ public:
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
     bool m_at_initial_stop;
+    bool m_one_shot = false;
 
     bool m_auto_continue = false;
   };
@@ -5117,6 +5145,8 @@ protected:
 
     // Should we run at the initial stop:
     new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
+
+    new_hook_sp->SetOneShot(m_options.m_one_shot);
 
     // Next see if any of the thread options have been entered:
 
@@ -5553,7 +5583,7 @@ public:
       m_thread_name.clear();
       m_queue_name.clear();
       m_auto_continue = false;
-      m_at_initial_stop = true;
+      m_at_initial_stop = false;
     }
 
     std::vector<std::string> m_one_liner;
@@ -5576,7 +5606,7 @@ public:
     std::string m_thread_name;
     std::string m_queue_name;
     bool m_auto_continue = false;
-    bool m_at_initial_stop = true;
+    bool m_at_initial_stop = false;
   };
 
   CommandObjectTargetHookAdd(CommandInterpreter &interpreter)

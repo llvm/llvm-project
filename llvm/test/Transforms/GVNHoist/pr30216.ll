@@ -7,9 +7,10 @@
 @B = external global ptr
 
 define ptr @Foo(i1 %arg) {
-; CHECK-LABEL: define ptr @Foo(i1 %arg) {
+; CHECK-LABEL: define ptr @Foo
+; CHECK-SAME: (i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:    store i8 0, ptr @A, align 1
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store ptr null, ptr @B, align 8
 ; CHECK-NEXT:    ret ptr null
@@ -31,20 +32,21 @@ if.else:
   ret ptr %1
 }
 
-; Make sure the two stores @B do not get hoisted past the store @GlobalVar.
+; The two stores @B may be hoisted past the store @GlobalVar, which does not
+; alias @B.
 
 @GlobalVar = internal global i8 0
 
 define ptr @Fun(i1 %arg) {
-; CHECK-LABEL: define ptr @Fun(i1 %arg) {
+; CHECK-LABEL: define ptr @Fun
+; CHECK-SAME: (i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:    store i8 0, ptr @A, align 1
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    store ptr null, ptr @B, align 8
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    ret ptr null
 ; CHECK:       if.else:
 ; CHECK-NEXT:    store i8 0, ptr @GlobalVar, align 1
-; CHECK-NEXT:    store ptr null, ptr @B, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @B, align 8
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
