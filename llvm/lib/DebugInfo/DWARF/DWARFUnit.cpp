@@ -540,48 +540,10 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
     LocSectionBase = toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0);
   }
 
-  // In general, in DWARF v5 and beyond we derive the start of the unit's
-  // contribution to the string offsets table from the unit DIE's
-  // DW_AT_str_offsets_base attribute. Split DWARF units do not use this
-  // attribute, so we assume that there is a contribution to the string
-  // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
-  // In both cases we need to determine the format of the contribution,
-  // which may differ from the unit's format.
-  DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
-                        IsLittleEndian, 0);
-  if (IsDWO || getVersion() >= 5) {
-    auto StringOffsetOrError =
-        IsDWO ? determineStringOffsetsTableContributionDWO(DA)
-              : determineStringOffsetsTableContribution(DA);
-    if (!StringOffsetOrError)
-      return createStringError(errc::invalid_argument,
-                               "invalid reference to or invalid content in "
-                               ".debug_str_offsets[.dwo]: " +
-                                   toString(StringOffsetOrError.takeError()));
-
-    StringOffsetsTableContribution = *StringOffsetOrError;
-  }
-
-  // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
-  // describe address ranges.
-  if (getVersion() >= 5) {
-    // In case of DWP, the base offset from the index has to be added.
-    if (IsDWO) {
-      uint64_t ContributionBaseOffset = 0;
-      if (auto *IndexEntry = Header.getIndexEntry())
-        if (auto *Contrib = IndexEntry->getContribution(DW_SECT_RNGLISTS))
-          ContributionBaseOffset = Contrib->getOffset();
-      setRangesSection(
-          &Context.getDWARFObj().getRnglistsDWOSection(),
-          ContributionBaseOffset +
-              DWARFListTableHeader::getHeaderSize(Header.getFormat()));
-    } else
-      setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
-                       toSectionOffset(UnitDie.find(DW_AT_rnglists_base),
-                                       DWARFListTableHeader::getHeaderSize(
-                                           Header.getFormat())));
-  }
-
+  // Create the location and range tables now: the CU DIE is already in
+  // DieArray, and any later query on this unit (for example a loclistx or
+  // rnglistx lookup that is verified after the string offsets table failed to
+  // parse below) must not see a null table or an unset section exchange.
   if (IsDWO) {
     // If we are reading a package file, we need to adjust the location list
     // data based on the index entries.
@@ -607,6 +569,48 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
     LocTable = std::make_unique<DWARFDebugLoc>(DWARFDataExtractor(
         Context.getDWARFObj(), Context.getDWARFObj().getLocSection(),
         IsLittleEndian, getAddressByteSize()));
+  }
+
+  // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
+  // describe address ranges.
+  if (getVersion() >= 5) {
+    // In case of DWP, the base offset from the index has to be added.
+    if (IsDWO) {
+      uint64_t ContributionBaseOffset = 0;
+      if (auto *IndexEntry = Header.getIndexEntry())
+        if (auto *Contrib = IndexEntry->getContribution(DW_SECT_RNGLISTS))
+          ContributionBaseOffset = Contrib->getOffset();
+      setRangesSection(
+          &Context.getDWARFObj().getRnglistsDWOSection(),
+          ContributionBaseOffset +
+              DWARFListTableHeader::getHeaderSize(Header.getFormat()));
+    } else
+      setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
+                       toSectionOffset(UnitDie.find(DW_AT_rnglists_base),
+                                       DWARFListTableHeader::getHeaderSize(
+                                           Header.getFormat())));
+  }
+
+  // In general, in DWARF v5 and beyond we derive the start of the unit's
+  // contribution to the string offsets table from the unit DIE's
+  // DW_AT_str_offsets_base attribute. Split DWARF units do not use this
+  // attribute, so we assume that there is a contribution to the string
+  // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
+  // In both cases we need to determine the format of the contribution,
+  // which may differ from the unit's format.
+  DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
+                        IsLittleEndian, 0);
+  if (IsDWO || getVersion() >= 5) {
+    auto StringOffsetOrError =
+        IsDWO ? determineStringOffsetsTableContributionDWO(DA)
+              : determineStringOffsetsTableContribution(DA);
+    if (!StringOffsetOrError)
+      return createStringError(errc::invalid_argument,
+                               "invalid reference to or invalid content in "
+                               ".debug_str_offsets[.dwo]: " +
+                                   toString(StringOffsetOrError.takeError()));
+
+    StringOffsetsTableContribution = *StringOffsetOrError;
   }
 
   // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
