@@ -1167,6 +1167,15 @@ void DWARFRewriter::updateUnitDebugInfo(
   const std::vector<std::unique_ptr<DIEBuilder::DIEInfo>> &DIs =
       DIEBldr.getDIEsByUnit(Unit);
 
+  // A fixed-width indexed form caps the index it can encode, and the index
+  // assigned below comes from a rebuilt .debug_addr that may hold more
+  // entries than the input's. Normalize to the ULEB-encoded form so the
+  // value always fits. DW_FORM_addrx is DWARF 5, so the GNU extension used
+  // by earlier split DWARF keeps its own form.
+  auto normalizeIndexedForm = [](dwarf::Form Form) {
+    return Form == dwarf::DW_FORM_GNU_addr_index ? Form : dwarf::DW_FORM_addrx;
+  };
+
   // Either updates or normalizes DW_AT_range to DW_AT_low_pc and DW_AT_high_pc.
   auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
                                const DIEValue &HighPCVal, uint64_t LowPC,
@@ -1194,16 +1203,6 @@ void DWARFRewriter::updateUnitDebugInfo(
       FormHighPC = HighPCVal.getForm();
     }
 
-    // A fixed-width indexed form caps the index it can encode, and the index
-    // assigned below comes from a rebuilt .debug_addr that may hold more
-    // entries than the input's. Normalize to the ULEB-encoded form so the
-    // value always fits. DW_FORM_addrx is DWARF 5, so the GNU extension used
-    // by earlier split DWARF keeps its own form.
-    auto normalizeIndexedForm = [](dwarf::Form Form) {
-      return Form == dwarf::DW_FORM_GNU_addr_index ? Form
-                                                   : dwarf::DW_FORM_addrx;
-    };
-
     if (isIndexedAddressForm(FormLowPC)) {
       LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
       FormLowPC = normalizeIndexedForm(FormLowPC);
@@ -1227,6 +1226,37 @@ void DWARFRewriter::updateUnitDebugInfo(
     } else {
       DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
       DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(HighPCEncoded));
+    }
+  };
+
+  auto patchPC = [&](DIE *Die, DIEValue &AttrVal, StringRef Entry) -> void {
+    std::optional<uint64_t> Address = getAsAddress(Unit, AttrVal);
+    if (!Address) {
+      // Not an address form. Dwarf 5 section 2.18 also allows DW_AT_entry_pc
+      // of class constant, an offset from the entity's base address, which
+      // this code does not recompute - this should, conservatively, be
+      // reported as unsupported.
+      errs() << "BOLT-ERROR: Unsupported form for " << Entry << "\n";
+      return;
+    }
+
+    const BinaryFunction *Function =
+        BC.getBinaryFunctionContainingAddress(*Address);
+    uint64_t UpdatedAddress = *Address;
+    if (Function)
+      UpdatedAddress = Function->translateInputToOutputAddress(UpdatedAddress);
+
+    if (isIndexedAddressForm(AttrVal.getForm())) {
+      const uint32_t Index =
+          AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
+      DIEBldr.replaceValue(Die, AttrVal.getAttribute(),
+                           normalizeIndexedForm(AttrVal.getForm()),
+                           DIEInteger(Index));
+    } else if (AttrVal.getForm() == dwarf::DW_FORM_addr) {
+      DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
+                           DIEInteger(UpdatedAddress));
+    } else {
+      errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
     }
   };
 
@@ -1306,6 +1336,11 @@ void DWARFRewriter::updateUnitDebugInfo(
       CachedRanges.clear();
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
+      DIEValue EntryPCVal = Die->findAttribute(dwarf::DW_AT_entry_pc);
+
+      if (EntryPCVal)
+        patchPC(Die, EntryPCVal, "DW_AT_entry_pc");
+
       if (FunctionRanges.empty()) {
         // There is no output range for this DIE, so point it at address 0
         // and keep its original size. The stored DW_AT_high_pc is that size
@@ -1373,6 +1408,10 @@ void DWARFRewriter::updateUnitDebugInfo(
       }
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
+      DIEValue EntryPCVal = Die->findAttribute(dwarf::DW_AT_entry_pc);
+      if (EntryPCVal)
+        patchPC(Die, EntryPCVal, "DW_AT_entry_pc");
+
       if (OutputRanges.size() == 1) {
         updateLowPCHighPC(Die, LowPCVal, HighPCVal, OutputRanges.back().LowPC,
                           OutputRanges.back().HighPC);
@@ -1383,27 +1422,6 @@ void DWARFRewriter::updateUnitDebugInfo(
       break;
     }
     case dwarf::DW_TAG_call_site: {
-      auto patchPC = [&](DIE *Die, DIEValue &AttrVal, StringRef Entry) -> void {
-        std::optional<uint64_t> Address = getAsAddress(Unit, AttrVal);
-        const BinaryFunction *Function =
-            BC.getBinaryFunctionContainingAddress(*Address);
-        uint64_t UpdatedAddress = *Address;
-        if (Function)
-          UpdatedAddress =
-              Function->translateInputToOutputAddress(UpdatedAddress);
-
-        if (isIndexedAddressForm(AttrVal.getForm())) {
-          const uint32_t Index =
-              AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
-          DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
-                               DIEInteger(Index));
-        } else if (AttrVal.getForm() == dwarf::DW_FORM_addr) {
-          DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
-                               DIEInteger(UpdatedAddress));
-        } else {
-          errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
-        }
-      };
       DIEValue CallPcAttrVal = Die->findAttribute(dwarf::DW_AT_call_pc);
       if (CallPcAttrVal)
         patchPC(Die, CallPcAttrVal, "DW_AT_call_pc");
