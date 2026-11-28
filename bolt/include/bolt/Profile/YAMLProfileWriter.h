@@ -25,12 +25,21 @@ class YAMLProfileWriter {
 
   std::unique_ptr<raw_fd_ostream> OS;
 
+  yaml::bolt::BinaryProfile Profile;
+  // Preserve the original block indices even if CFG processing inserts blocks.
+  std::vector<std::pair<const BinaryFunction *,
+                        std::vector<const BinaryBasicBlock *>>>
+      OriginalBlocks;
+
 public:
   explicit YAMLProfileWriter(const std::string &Filename)
       : Filename(Filename) {}
 
-  /// Save execution profile for that instance.
-  std::error_code writeProfile(const RewriteInstance &RI);
+  /// Capture the original profile before CFG processing changes its inputs.
+  void captureProfile(const RewriteInstance &RI);
+
+  /// Add computed block counts after CFG processing and save the profile.
+  std::error_code writeProfile();
 
   using InlineTreeMapTy =
       DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>;

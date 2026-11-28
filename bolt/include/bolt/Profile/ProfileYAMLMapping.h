@@ -15,6 +15,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 #include <vector>
 
 using llvm::bolt::BinaryFunction;
@@ -136,6 +137,9 @@ struct BinaryBasicBlockProfile {
   uint32_t NumInstructions{0};
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
+  // Computed on the producing binary after profile processing. Diagnostics only;
+  // ExecCount retains the raw input needed to reconstruct optimization counts.
+  std::optional<uint64_t> ExecTotal;
   uint64_t EventCount{0};
   std::vector<CallSiteInfo> CallSites;
   std::vector<SuccessorInfo> Successors;
@@ -163,6 +167,7 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
                        std::vector<bolt::SuccessorInfo>());
     YamlIO.mapOptional("probes", BBP.PseudoProbes,
                        std::vector<bolt::PseudoProbeInfo>());
+    YamlIO.mapOptional("exec-total", BBP.ExecTotal);
   }
 };
 

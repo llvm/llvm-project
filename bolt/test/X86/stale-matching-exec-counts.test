@@ -1,0 +1,71 @@
+## Optional producer totals affect diagnostics, never optimization inputs.
+# RUN: split-file %s %t
+# RUN: yaml2obj %p/Inputs/blarge.yaml -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.out -data %t/profile.yaml \
+# RUN:   --infer-stale-profile --profile-ignore-hash=1 --profile-use-dfs=0 \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefixes=CFG,NEW
+# RUN: sed '/exec-total:/d' %t/profile.yaml > %t/legacy.yaml
+# RUN: llvm-bolt %t.exe -o %t.legacy -data %t/legacy.yaml \
+# RUN:   --infer-stale-profile --profile-ignore-hash=1 --profile-use-dfs=0 \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefixes=CFG,OLD
+# RUN: sed 's/exec-total: 20$/exec-total: 0/' %t/profile.yaml > %t/zero.yaml
+# RUN: llvm-bolt %t.exe -o %t.zero -data %t/zero.yaml \
+# RUN:   --infer-stale-profile --profile-ignore-hash=1 --profile-use-dfs=0 \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefixes=CFG,ZERO
+
+## Producer totals include matched and unmatched blocks independently of exec.
+## A missing total uses legacy exec; an explicit zero must not use that fallback.
+## Changing or removing totals must leave inferred function/edge counts intact.
+## Total diagnostic weight = 20 + 320 + 320 + 100 = 760.
+# CFG: Binary Function "usqrt" after building cfg {
+# CFG: Exec Count  : 20
+# CFG: Sample Count: 740
+# CFG: count: 20)
+# CFG: count: 320)
+# CFG: count: 300), {{.*}}count: 20)
+# NEW: inference found an exact match for 50.00% of basic blocks (2 out of 4 stale) responsible for 84.21% samples (640 out of 760 stale)
+# NEW: inference found a call match for 0.00% of basic blocks (0 out of 4 stale) responsible for 0.00% samples (0 out of 760 stale)
+# NEW: inference found a loose match for 25.00% of basic blocks (1 out of 4 stale) responsible for 2.63% samples (20 out of 760 stale)
+
+# OLD: inference found an exact match for 50.00% of basic blocks (2 out of 4 stale) responsible for 0.00% samples (0 out of 20 stale)
+# OLD: inference found a loose match for 25.00% of basic blocks (1 out of 4 stale) responsible for 100.00% samples (20 out of 20 stale)
+# ZERO: inference found an exact match for 50.00% of basic blocks (2 out of 4 stale) responsible for 86.49% samples (640 out of 740 stale)
+# ZERO: inference found a loose match for 25.00% of basic blocks (1 out of 4 stale) responsible for 0.00% samples (0 out of 740 stale)
+
+#--- profile.yaml
+---
+header:
+  profile-version: 1
+  binary-name: test.exe
+  profile-flags: [ lbr ]
+  dfs-order: false
+  hash-func: xxh3
+functions:
+  - name: usqrt
+    fid: 7
+    hash: 0x0000000000000000
+    exec: 20
+    nblocks: 100
+    blocks:
+      - bid: 0
+        insns: 4
+        hash: 0x1111111111111111
+        exec: 20
+        exec-total: 20
+        succ: [ { bid: 1, cnt: 0 } ]
+      - bid: 1
+        insns: 9
+        hash: 0xd70d7a64320e0010
+        exec-total: 320
+        succ: [ { bid: 3, cnt: 320 }, { bid: 2, cnt: 0 } ]
+      - bid: 3
+        insns: 2
+        hash: 0x5c06705524800039
+        exec-total: 320
+        succ: [ { bid: 1, cnt: 300 }, { bid: 4, cnt: 20 } ]
+      - bid: 99
+        insns: 1
+        hash: 0xFFFFFFFFFFFFFFFF
+        exec-total: 100
+        succ: [ { bid: 99, cnt: 100 } ]
+...

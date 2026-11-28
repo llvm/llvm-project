@@ -1,0 +1,49 @@
+## Capture BOLT's computed counts without modifying the serialized raw profile.
+# RUN: yaml2obj %p/Inputs/blarge.yaml -o %t.exe
+# RUN: llvm-bolt %t.exe -data %p/Inputs/blarge.fdata -w %t.yaml -o %t.out \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefix=CFG
+# RUN: FileCheck %s --check-prefix=YAML < %t.yaml
+# RUN: llvm-bolt %t.exe -data %t.yaml -o %t.read \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefix=CFG
+# RUN: sed '/exec-total:/d' %t.yaml > %t.legacy.yaml
+# RUN: llvm-bolt %t.exe -data %t.legacy.yaml -o %t.legacy \
+# RUN:   --print-cfg --print-only=usqrt 2>&1 | FileCheck %s --check-prefix=CFG
+# RUN: merge-fdata %t.yaml %t.yaml > %t.merged.yaml
+# RUN: FileCheck %s --check-prefix=MERGED < %t.merged.yaml
+# RUN: merge-fdata %t.yaml %t.legacy.yaml > %t.mixed.yaml
+# RUN: FileCheck %s --check-prefix=MIXED --implicit-check-not=exec-total: < %t.mixed.yaml
+# RUN: merge-fdata %t.legacy.yaml %t.yaml > %t.mixed-reverse.yaml
+# RUN: FileCheck %s --check-prefix=MIXED --implicit-check-not=exec-total: < %t.mixed-reverse.yaml
+
+# YAML:      - name:            usqrt
+# YAML:        exec:            199
+# YAML:        nblocks:         5
+# YAML:        blocks:
+# YAML-NEXT:     - bid:             0
+# YAML:            exec:            199
+# YAML-NEXT:       succ:            [ { bid: 1, cnt: 0 } ]
+# YAML-NEXT:       exec-total:      199
+# YAML-NEXT:     - bid:             1
+# YAML-NEXT:       insns:           9
+# YAML-NEXT:       hash:            {{.*}}
+# YAML-NEXT:       succ:            [ { bid: 3, cnt: 2886, mis: 171 }, { bid: 2, cnt: 0 } ]
+# YAML-NEXT:       exec-total:      4711
+# YAML-NEXT:     - bid:             3
+# YAML-NEXT:       insns:           2
+# YAML-NEXT:       hash:            {{.*}}
+# YAML-NEXT:       succ:            [ { bid: 1, cnt: 4711, mis: 33 }, { bid: 4, cnt: 0 } ]
+# YAML-NEXT:       exec-total:      4711
+
+# MERGED: name:            usqrt
+# MERGED: exec-total:      398
+# MERGED: exec-total:      9422
+# MERGED: exec-total:      9422
+# MIXED: header:
+
+# CFG:      Binary Function "usqrt" after building cfg {
+# CFG:        Exec Count  : 199
+# CFG:        Exec Count : 199
+# CFG:        Exec Count : 4711
+# CFG:        Exec Count : 0
+# CFG:        Exec Count : 4711
+# CFG:        Exec Count : 0

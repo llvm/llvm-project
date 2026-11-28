@@ -649,11 +649,17 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
         MatchedBlocks[YamlBB.Index] = {MatchedBlock, &YamlBB};
       };
 
+  // Computed totals affect diagnostics only. Keep legacy statistics for profiles
+  // without the optional field; never change the optimization input ExecCount.
+  auto getProfileExecCount = [](const yaml::bolt::BinaryBasicBlockProfile &BB) {
+    return BB.ExecTotal.value_or(BB.ExecCount);
+  };
+
   // Match blocks from the profile to the blocks in CFG by strict hash.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     // Update matching stats.
     ++BC.Stats.NumStaleBlocks;
-    BC.Stats.StaleSampleCount += YamlBB.ExecCount;
+    BC.Stats.StaleSampleCount += getProfileExecCount(YamlBB);
 
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
@@ -708,7 +714,7 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
                       << " with hash " << Twine::utohexstr(BinHash.combine())
                       << "\n");
     (void)BinHash;
-    uint64_t ExecCount = YamlBB->ExecCount;
+    const uint64_t ExecCount = getProfileExecCount(*YamlBB);
     // Update matching stats accounting for the matched block.
     switch (Method) {
     case StaleMatcher::MATCH_EXACT:

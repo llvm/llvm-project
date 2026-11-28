@@ -368,19 +368,10 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   return YamlBF;
 }
 
-std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
+void YAMLProfileWriter::captureProfile(const RewriteInstance &RI) {
   const BinaryContext &BC = RI.getBinaryContext();
   const auto &Functions = BC.getBinaryFunctions();
-
-  std::error_code EC;
-  OS = std::make_unique<raw_fd_ostream>(Filename, EC, sys::fs::OF_None);
-  if (EC) {
-    errs() << "BOLT-WARNING: " << EC.message() << " : unable to open "
-           << Filename << " for output.\n";
-    return EC;
-  }
-
-  yaml::bolt::BinaryProfile BP;
+  yaml::bolt::BinaryProfile &BP = Profile;
 
   // Fill out the header info.
   BP.Header.Version = 1;
@@ -429,12 +420,49 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
         continue;
 
       BP.Functions.emplace_back(convert(BF, opts::ProfileUseDFS, InlineTree));
+      std::vector<const BinaryBasicBlock *> Blocks(BF.size());
+      for (const BinaryBasicBlock &BB : BF)
+        Blocks[BB.getLayoutIndex()] = &BB;
+      OriginalBlocks.emplace_back(&BF, std::move(Blocks));
+    }
+  }
+}
+
+std::error_code YAMLProfileWriter::writeProfile() {
+  std::error_code EC;
+  OS = std::make_unique<raw_fd_ostream>(Filename, EC, sys::fs::OF_None);
+  if (EC) {
+    errs() << "BOLT-WARNING: " << EC.message() << " : unable to open "
+           << Filename << " for output.\n";
+    return EC;
+  }
+
+  for (auto [YamlBF, Source] : llvm::zip_equal(Profile.Functions, OriginalBlocks)) {
+    const auto &[BF, Blocks] = Source;
+    // Do not label unprocessed or invalid counts as computed totals.
+    if (!BF->hasValidProfile() ||
+        !(BF->getProfileFlags() & BinaryFunction::PF_BRANCH))
+      continue;
+    // Non-simple functions bypass postProcessProfile(). Calculate their
+    // diagnostic totals in scratch storage, leaving optimization inputs intact.
+    const auto Counts = !BF->isSimple()
+                            ? BF->getProfileBlockExecutionCounts()
+                            : DenseMap<const BinaryBasicBlock *, uint64_t>();
+    for (yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
+      const BinaryBasicBlock *BB = Blocks.at(YamlBB.Index);
+      if (!BF->isSimple()) {
+        auto It = Counts.find(BB);
+        if (It != Counts.end())
+          YamlBB.ExecTotal = It->second;
+      } else if (BB->hasProfile()) {
+        YamlBB.ExecTotal = BB->getKnownExecutionCount();
+      }
     }
   }
 
   // Write the profile.
   yaml::Output Out(*OS, nullptr, 0);
-  Out << BP;
+  Out << Profile;
 
   return std::error_code();
 }
