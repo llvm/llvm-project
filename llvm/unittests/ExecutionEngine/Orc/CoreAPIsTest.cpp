@@ -1511,6 +1511,32 @@ TEST_F(CoreAPIsStandardTest, FailDefineDueToDefunctJITDylib) {
                     Failed<JITDylibDefunct>());
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineLValueDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  auto MU = absoluteSymbols({{Foo, FooSym}});
+  EXPECT_THAT_ERROR(FooJD->define(MU), Failed<JITDylibDefunct>());
+  EXPECT_TRUE(MU) << "MU ownership should remain with the caller on error";
+}
+
+TEST_F(CoreAPIsStandardTest, FailRemoveDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->remove({Foo}), Failed<JITDylibDefunct>());
+}
+
+TEST_F(CoreAPIsStandardTest, FailClearDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->clear(), Failed<JITDylibDefunct>());
+}
+
 TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
   // Check that a defunct resource tracker causes defineMaterializing to error
   // immediately.

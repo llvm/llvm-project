@@ -646,12 +646,16 @@ JITDylib::~JITDylib() {
 
 Error JITDylib::clear() {
   std::vector<ResourceTrackerSP> TrackersToRemove;
-  ES.runSessionLocked([&]() {
-    assert(State != Closed && "JD is defunct");
-    for (auto &KV : TrackerSymbols)
-      TrackersToRemove.push_back(KV.first);
-    TrackersToRemove.push_back(getDefaultResourceTracker());
-  });
+  if (auto Err = ES.runSessionLocked([&]() -> Error {
+        // removeJITDylibs calls clear while the JD is Closing.
+        if (State == Closed)
+          return make_error<JITDylibDefunct>(this);
+        for (auto &KV : TrackerSymbols)
+          TrackersToRemove.push_back(KV.first);
+        TrackersToRemove.push_back(getDefaultResourceTracker());
+        return Error::success();
+      }))
+    return Err;
 
   Error Err = Error::success();
   for (auto &RT : TrackersToRemove)
@@ -1044,7 +1048,9 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
+
     SmallVector<SymbolStringPtr, 0> SymbolsToRemove;
     SymbolNameSet Missing;
     SymbolNameSet Materializing;
