@@ -865,3 +865,24 @@ func.func @mma_after_rejected_elementwise_slice(%0: memref<32x32xf32>, %1: memre
   vector.transfer_write %7, %2[%8, %9] {in_bounds = [true, true]} : vector<16x16xf32>, memref<32x32xf32>
   return
 }
+
+// -----
+
+// Index arithmetic is not part of an MMA chain: it must neither block the
+// conversion nor be converted itself.
+
+// CHECK-LABEL: func @matmul_index_arith
+//       CHECK:   arith.addi {{.*}} : index
+//       CHECK:   gpu.subgroup_mma_compute
+func.func @matmul_index_arith(%arg0: memref<32x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<32x16xf16>, %off: index) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %row = arith.addi %off, %c16 : index
+  %cst = arith.constant 0.000000e+00 : f16
+  %A = vector.transfer_read %arg0[%row, %c0], %cst {in_bounds = [true, true]} : memref<32x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%row, %c0], %cst {in_bounds = [true, true]} : memref<32x16xf16>, vector<16x16xf16>
+  %D = vector.contract {indexing_maps = [affine_map<(m, n, k) -> (m, k)>, affine_map<(m, n, k) -> (n, k)>, affine_map<(m, n, k) -> (m, n)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+  vector.transfer_write %D, %arg2[%row, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<32x16xf16>
+  return
+}
