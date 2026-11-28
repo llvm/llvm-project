@@ -1346,7 +1346,7 @@ static void sectionHeaderTableMapping(IO &IO,
 
 static void programHeaderTableMapping(IO &IO,
                                       ELFYAML::ProgramHeaderTable &PHT) {
-  IO.mapOptional("Name", PHT.Name, StringRef());
+  IO.mapOptional("Name", PHT.Name);
   IO.mapOptional("Offset", PHT.Offset);
 }
 
@@ -1420,8 +1420,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Type = S->Type;
     else if (auto *SHT = dyn_cast<ELFYAML::SectionHeaderTable>(Section.get()))
       TypeStr = SHT->TypeStr;
-    else if (auto *PHT = dyn_cast<ELFYAML::ProgramHeaderTable>(Section.get()))
-      TypeStr = PHT->TypeStr;
   } else {
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
@@ -1449,11 +1447,8 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
   }
 
   if (TypeStr == ELFYAML::ProgramHeaderTable::TypeStr) {
-    if (IO.outputting())
-      setStringValue(IO, "Type", TypeStr);
-    else
-      Section.reset(new ELFYAML::ProgramHeaderTable());
-
+    assert(!IO.outputting()); // obj2yaml doesn't dump it currently.
+    Section.reset(new ELFYAML::ProgramHeaderTable());
     programHeaderTableMapping(
         IO, *cast<ELFYAML::ProgramHeaderTable>(Section.get()));
     return;
