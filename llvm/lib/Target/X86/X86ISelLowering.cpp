@@ -61297,13 +61297,77 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
                           PMADDBuilder);
 }
 
-// ADD(VPMADDWD(X,Y),VPMADDWD(Z,W)) -> VPMADDWD(SHUFFLE(X,Z), SHUFFLE(Y,W))
-// If upper element in each pair of both VPMADDWD are zero then we can merge
-// the operand elements and use the implicit add of VPMADDWD.
-// TODO: Add support for VPMADDUBSW (which isn't commutable).
-static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
-                                   const SDLoc &DL, EVT VT) {
-  if (N0.getOpcode() != N1.getOpcode() || N0.getOpcode() != X86ISD::VPMADDWD)
+// Given PMADD(A,B) and PMADD(C,D) whose upper products are zero, return
+// PMADD(Pack(A,C), Pack(B,D)) so that the implicit add of PMADD replaces the
+// ADD of the two.
+//
+// With B the input element width, Pack works in each 2B-bit element:
+//   Pack(Lo, Hi) = Lo | (Hi << B)
+// placing the even input elements of Lo and Hi in the even and odd input
+// elements of the result.
+//
+// The odd input elements of Hi do not matter, as their products are zero,
+// but both inputs of the Lo PMADD must have zero odd elements so that no
+// masking is needed.
+static SDValue getPackedPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                              const APInt &DemandedHiElts, const SDLoc &DL) {
+  auto HiEltsZero = [&](SDValue N) {
+    return DAG.MaskedVectorIsZero(N.getOperand(0), DemandedHiElts) &&
+           DAG.MaskedVectorIsZero(N.getOperand(1), DemandedHiElts);
+  };
+
+  EVT VT = N0.getValueType();
+  MVT OpVT = N0.getOperand(0).getSimpleValueType();
+  unsigned EltBits = OpVT.getScalarSizeInBits();
+
+  // Return true if an input of N was shifted down by EltBits within wider
+  // elements, so that shifting it back up as Hi recreates the shifted value.
+  auto HasShiftedDownInput = [&](SDValue N) {
+    return any_of(N->ops(), [&](SDValue Op) {
+      Op = peekThroughBitcasts(Op);
+      if (Op.getScalarValueSizeInBits() < 2 * EltBits)
+        return false;
+      if (Op.getOpcode() == X86ISD::VSRLI)
+        return Op.getConstantOperandVal(1) == EltBits;
+      APInt ShAmt;
+      return Op.getOpcode() == ISD::SRL &&
+             ISD::isConstantSplatVector(Op.getOperand(1), ShAmt) &&
+             ShAmt == EltBits;
+    });
+  };
+
+  if (!HiEltsZero(N0)) {
+    if (!HiEltsZero(N1))
+      return SDValue();
+    std::swap(N0, N1);
+  } else if (HiEltsZero(N1) && HasShiftedDownInput(N0) &&
+             !HasShiftedDownInput(N1)) {
+    // Both PMADDs can be Lo. Use the shifted down one as Hi so that the
+    // packing can fold back to the unshifted inputs.
+    std::swap(N0, N1);
+  }
+
+  SDValue ShAmt = DAG.getShiftAmountConstant(EltBits, VT, DL);
+  auto Pack = [&](SDValue Lo, SDValue Hi) {
+    Hi = DAG.getNode(ISD::SHL, DL, VT, DAG.getBitcast(VT, Hi), ShAmt);
+    return DAG.getBitcast(
+        OpVT, DAG.getNode(ISD::OR, DL, VT, DAG.getBitcast(VT, Lo), Hi));
+  };
+
+  SDValue LHS = Pack(N0.getOperand(0), N1.getOperand(0));
+  SDValue RHS = Pack(N0.getOperand(1), N1.getOperand(1));
+  return DAG.getNode(N0.getOpcode(), DL, VT, LHS, RHS);
+}
+
+// ADD(PMADD(X,Y),PMADD(Z,W)) -> PMADD(SHUFFLE(X,Z), SHUFFLE(Y,W))
+// If the upper product in each pair of both PMADDs is zero, merge the operand
+// elements and use the implicit add of PMADD. PMADDUBSW packs the operands
+// with SHIFT+OR instead of shuffles, as its vXi8 shuffles are expensive.
+static SDValue combineAddOfPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                                 const SDLoc &DL, EVT VT) {
+  if (N0.getOpcode() != N1.getOpcode() ||
+      (N0.getOpcode() != X86ISD::VPMADDWD &&
+       N0.getOpcode() != X86ISD::VPMADDUBSW))
     return SDValue();
 
   unsigned NumElts = VT.getVectorNumElements();
@@ -61320,7 +61384,22 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
   if (!Op0HiZero || !Op1HiZero)
     return SDValue();
 
-  // Create a shuffle mask packing the lower elements from each VPMADDWD.
+  // Each unsigned i8 * signed i8 product fits in signed i16. Ensure their sum
+  // does too, so that the saturation in VPMADDUBSW does not change the result.
+  if (N0.getOpcode() == X86ISD::VPMADDUBSW &&
+      !DAG.willNotOverflowAdd(/*IsSigned=*/true, N0, N1))
+    return SDValue();
+
+  // Both PMADDs must disappear or the packing ops are pure overhead. The worst
+  // case costs an instruction or two more than the separate PMADDs, but saves
+  // a PMADD on AVX512.
+  if (N0.getOpcode() == X86ISD::VPMADDUBSW) {
+    if (!N0.hasOneUse() || !N1.hasOneUse())
+      return SDValue();
+    return getPackedPMADD(DAG, N0, N1, DemandedHiElts, DL);
+  }
+
+  // Create a shuffle mask packing the lower elements from each PMADD.
   SmallVector<int> Mask;
   for (int i = 0; i != (int)NumElts; ++i) {
     Mask.push_back(2 * i);
@@ -61331,7 +61410,7 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
       DAG.getVectorShuffle(OpVT, DL, N0.getOperand(0), N1.getOperand(0), Mask);
   SDValue RHS =
       DAG.getVectorShuffle(OpVT, DL, N0.getOperand(1), N1.getOperand(1), Mask);
-  return DAG.getNode(X86ISD::VPMADDWD, DL, VT, LHS, RHS);
+  return DAG.getNode(N0.getOpcode(), DL, VT, LHS, RHS);
 }
 
 /// CMOV of constants requires materializing constant operands in registers.
@@ -61460,7 +61539,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     return MAdd;
   if (SDValue MAdd = matchPMADDWD_2(DAG, N, DL, VT, Subtarget))
     return MAdd;
-  if (SDValue MAdd = combineAddOfPMADDWD(DAG, Op0, Op1, DL, VT))
+  if (SDValue MAdd = combineAddOfPMADD(DAG, Op0, Op1, DL, VT))
     return MAdd;
 
   // Try to synthesize horizontal adds from adds of shuffles.
