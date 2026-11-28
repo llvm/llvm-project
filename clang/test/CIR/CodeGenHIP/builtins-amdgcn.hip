@@ -433,6 +433,21 @@ __device__ void test_lerp(unsigned int* out, unsigned int src0, unsigned int src
   *out = __builtin_amdgcn_lerp(src0, src1, src2);
 }
 
+// CIR-LABEL: @_Z13test_alignbitPjjjj
+// CIR: %[[SRC0:.*]] = cir.load{{.*}}
+// CIR: %[[SRC1:.*]] = cir.load{{.*}}
+// CIR: %[[SRC2:.*]] = cir.load{{.*}}
+// CIR: cir.fshr %[[SRC0]], %[[SRC1]], %[[SRC2]] : !u32i
+// LLVM: define{{.*}} void @_Z13test_alignbitPjjjj
+// LLVM: %[[SRC0:.*]] = load i32
+// LLVM: %[[SRC1:.*]] = load i32
+// LLVM: %[[SRC2:.*]] = load i32
+// LLVM: call{{.*}} i32 @llvm.fshr.i32(i32 %[[SRC0]], i32 %[[SRC1]], i32 %[[SRC2]])
+__device__ void test_alignbit(unsigned int* out, unsigned int src0, unsigned int src1,
+                              unsigned int src2) {
+  *out = __builtin_amdgcn_alignbit(src0, src1, src2);
+}
+
 // CIR-LABEL: @_Z9test_ubfePjjjj
 // CIR: cir.call_llvm_intrinsic "amdgcn.ubfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
 // LLVM: define{{.*}} void @_Z9test_ubfePjjjj
