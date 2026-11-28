@@ -82,4 +82,38 @@ TEST(OffloadingBundleTest, checkExtractCodeObject) {
   EXPECT_FALSE(errorToBool(std::move(Err)));
 }
 
+TEST(OffloadingBundleTest, checkExtractCodeObjectBoundsChecks) {
+  // The MemoryBufferRef overload takes an offset and size straight from the
+  // bundle entry header. Out-of-range values must be rejected instead of
+  // reaching the copy, where they would read past the end of the buffer.
+  StringRef Data = "a small in-memory buffer";
+  MemoryBufferRef Buffer(Data, "membuf");
+
+  llvm::unittest::TempDir Tmp("tmpdir", /*Unique=*/true);
+  SmallString<128> FileName(Tmp.path().begin(), Tmp.path().end());
+  sys::path::append(FileName, "checkExtractCodeObjectBounds.co");
+
+  // Offset past the end of the buffer.
+  EXPECT_TRUE(errorToBool(extractCodeObject(Buffer, /*Offset=*/1 << 20,
+                                            /*Size=*/8, StringRef(FileName))));
+
+  // A negative offset, e.g. a large unsigned header value reinterpreted.
+  EXPECT_TRUE(errorToBool(extractCodeObject(Buffer, /*Offset=*/-1, /*Size=*/8,
+                                            StringRef(FileName))));
+
+  // Size larger than the buffer.
+  EXPECT_TRUE(errorToBool(extractCodeObject(
+      Buffer, /*Offset=*/0, /*Size=*/1 << 20, StringRef(FileName))));
+
+  // Offset in range but offset + size running past the end.
+  EXPECT_TRUE(errorToBool(extractCodeObject(
+      Buffer, /*Offset=*/static_cast<int64_t>(Data.size() - 1),
+      /*Size=*/8, StringRef(FileName))));
+
+  // A fully in-range extraction still succeeds.
+  EXPECT_FALSE(errorToBool(extractCodeObject(
+      Buffer, /*Offset=*/0, /*Size=*/static_cast<int64_t>(Data.size()),
+      StringRef(FileName))));
+}
+
 #endif
