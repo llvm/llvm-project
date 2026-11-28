@@ -73,6 +73,11 @@ class FixupLEAsImpl {
   void processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
                                  MachineBasicBlock &MBB, bool OptIncDec);
 
+  /// Given a slow LEA MI, build the instruction that adds the displacement to
+  /// its destination, inserted before MI.
+  MachineInstr *buildOffsetAdd(MachineInstr &MI, MachineBasicBlock &MBB,
+                               bool OptIncDec) const;
+
   /// Look for LEAs that are really two address LEAs that we might be able to
   /// turn into regular ADD instructions.
   bool optTwoAddrLEA(MachineBasicBlock::iterator &I,
@@ -748,6 +753,41 @@ void FixupLEAsImpl::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   }
 }
 
+MachineInstr *FixupLEAsImpl::buildOffsetAdd(MachineInstr &MI,
+                                            MachineBasicBlock &MBB,
+                                            bool OptIncDec) const {
+  Register DestReg = MI.getOperand(0).getReg();
+  const MachineOperand &Offset = MI.getOperand(1 + X86::AddrDisp);
+  if (OptIncDec && Offset.isImm() &&
+      (Offset.getImm() == 1 || Offset.getImm() == -1)) {
+    unsigned NewOpc = getINCDECFromLEA(MI.getOpcode(), Offset.getImm() == 1);
+    MachineInstr *AddMI =
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+            .addReg(DestReg);
+    LLVM_DEBUG(AddMI->dump(););
+    return AddMI;
+  } else if (Offset.isImm() && Offset.getImm() == 128) {
+    // ADD of +128 needs a 32-bit immediate, while SUB of -128 fits the
+    // sign-extended 8-bit form, three bytes shorter. EFLAGS is dead
+    // (checked by the caller), so the different flag results don't matter.
+    unsigned NewOpc = getSUBriFromLEA(MI.getOpcode());
+    MachineInstr *AddMI =
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+            .addReg(DestReg)
+            .addImm(-128);
+    LLVM_DEBUG(AddMI->dump(););
+    return AddMI;
+  } else {
+    unsigned NewOpc = getADDriFromLEA(MI.getOpcode(), Offset);
+    MachineInstr *AddMI =
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+            .addReg(DestReg)
+            .add(Offset);
+    LLVM_DEBUG(AddMI->dump(););
+    return AddMI;
+  }
+}
+
 void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
                                               MachineBasicBlock &MBB,
                                               bool OptIncDec) {
@@ -818,6 +858,11 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
     // add instructions:
     // 1.lea (%base,%index,1), %base => add %index,%base
     // 2.lea (%base,%index,1), %index => add %base,%index
+    if (mayHaveOffset(Offset))
+      // 3.lea D(%base,%index,1), %base => add D,%base; add %index,%base
+      // The displacement is added first so that only one add waits for a late
+      // index (or base).
+      buildOffsetAdd(MI, MBB, OptIncDec);
 
     unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
     if (DestReg != BaseReg)
@@ -848,38 +893,13 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
                 .addImm(0)
                 .add(Segment);
     LLVM_DEBUG(NewMI->dump(););
+
+    if (mayHaveOffset(Offset))
+      NewMI = buildOffsetAdd(MI, MBB, OptIncDec);
   }
 
-  // If either replacement succeeded above, add the offset if needed, then
-  // replace the instruction.
+  // If either replacement succeeded above, replace the instruction.
   if (NewMI) {
-    // Create ADD instruction for the Offset in case of 3-Ops LEA.
-    if (mayHaveOffset(Offset)) {
-      if (OptIncDec && Offset.isImm() &&
-          (Offset.getImm() == 1 || Offset.getImm() == -1)) {
-        unsigned NewOpc =
-            getINCDECFromLEA(MI.getOpcode(), Offset.getImm() == 1);
-        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
-                    .addReg(DestReg);
-        LLVM_DEBUG(NewMI->dump(););
-      } else if (Offset.isImm() && Offset.getImm() == 128) {
-        // ADD of +128 needs a 32-bit immediate, while SUB of -128 fits the
-        // sign-extended 8-bit form, three bytes shorter. EFLAGS was proved
-        // dead above, so the different flag results don't matter.
-        unsigned NewOpc = getSUBriFromLEA(MI.getOpcode());
-        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
-                    .addReg(DestReg)
-                    .addImm(-128);
-        LLVM_DEBUG(NewMI->dump(););
-      } else {
-        unsigned NewOpc = getADDriFromLEA(MI.getOpcode(), Offset);
-        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
-                    .addReg(DestReg)
-                    .add(Offset);
-        LLVM_DEBUG(NewMI->dump(););
-      }
-    }
-
     MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
     MBB.erase(I);
     I = NewMI;

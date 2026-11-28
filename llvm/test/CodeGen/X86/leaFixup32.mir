@@ -109,8 +109,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2add_32
     ; CHECK: liveins: $eax, $ebp
-    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: $eax = ADD32ri $eax, -5, implicit-def $eflags
+    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: RET64 $eax
     $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg
     RET64 $eax
@@ -146,8 +146,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2add_ebp_32
     ; CHECK: liveins: $eax, $ebp
-    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
     ; CHECK: $ebp = ADD32ri $ebp, -5, implicit-def $eflags
+    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
     ; CHECK: RET64 $ebp
     $ebp = LEA32r killed $ebp, 1, killed $eax, -5, $noreg
     RET64 $ebp
@@ -332,8 +332,8 @@ body:             |
 
     ; CHECK-LABEL: name: test2addi32_32
     ; CHECK: liveins: $eax, $ebp
-    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: $eax = ADD32ri $eax, 129, implicit-def $eflags
+    ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: RET64 $eax
     $eax = LEA32r killed $eax, 1, killed $ebp, 129, $noreg
     RET64 $eax

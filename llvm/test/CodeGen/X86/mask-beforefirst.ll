@@ -338,8 +338,8 @@ define <64 x i8> @v64i1(<64 x i8> %a0, <64 x i8> %a1) "min-legal-vector-width"="
 ; SSE2-NEXT:    orl %eax, %edx
 ; SSE2-NEXT:    shlq $32, %rdx
 ; SSE2-NEXT:    leaq (%rcx,%rdx), %rax
-; SSE2-NEXT:    addq %rdx, %rcx
 ; SSE2-NEXT:    decq %rcx
+; SSE2-NEXT:    addq %rdx, %rcx
 ; SSE2-NEXT:    notq %rax
 ; SSE2-NEXT:    andq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm8
@@ -395,8 +395,8 @@ define <64 x i8> @v64i1(<64 x i8> %a0, <64 x i8> %a1) "min-legal-vector-width"="
 ; SSE42-NEXT:    orl %eax, %edx
 ; SSE42-NEXT:    shlq $32, %rdx
 ; SSE42-NEXT:    leaq (%rcx,%rdx), %rax
-; SSE42-NEXT:    addq %rdx, %rcx
 ; SSE42-NEXT:    decq %rcx
+; SSE42-NEXT:    addq %rdx, %rcx
 ; SSE42-NEXT:    notq %rax
 ; SSE42-NEXT:    andq %rcx, %rax
 ; SSE42-NEXT:    movq %rax, %xmm9
@@ -436,8 +436,8 @@ define <64 x i8> @v64i1(<64 x i8> %a0, <64 x i8> %a1) "min-legal-vector-width"="
 ; AVX2-NEXT:    vpmovmskb %ymm4, %ecx
 ; AVX2-NEXT:    shlq $32, %rcx
 ; AVX2-NEXT:    leaq (%rax,%rcx), %rdx
-; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    decq %rax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    andnq %rax, %rdx, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm4
 ; AVX2-NEXT:    vpbroadcastq %xmm4, %ymm4
