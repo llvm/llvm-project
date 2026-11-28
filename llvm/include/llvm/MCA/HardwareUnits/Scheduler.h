@@ -201,6 +201,13 @@ public:
   /// dependencies.
   LLVM_ABI bool dispatch(InstRef &IR);
 
+  /// Notify the underlying LSUnit about an instruction that was eliminated at
+  /// register renaming (e.g., move-eliminated `mov rbp, rsp`) so stack/frame
+  /// pointer tracking stays in sync.
+  void onInstructionEliminated(const InstRef &IR) {
+    LSU.onInstructionDispatched(IR);
+  }
+
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a
   /// result of this event.

@@ -492,6 +492,43 @@ struct InstrDesc {
   InstrDesc &operator=(const InstrDesc &Other) = delete;
 };
 
+/// Describes a statically known stack-relative memory access (e.g., [rsp + imm]
+/// or [rbp + imm]) for stack-slot alias tracking in LSUnit.
+struct StackAccessInfo {
+  enum class BaseKind : uint8_t {
+    None = 0,
+    SP, // Relative to the stack pointer (e.g., RSP/ESP).
+    FP, // Relative to the frame pointer (e.g., RBP/EBP).
+  };
+
+  BaseKind Base = BaseKind::None;
+  /// Byte offset relative to the pre-instruction base register.
+  int64_t Offset = 0;
+  /// Access width in bytes (0 if unknown).
+  unsigned Size = 0;
+
+  bool isValid() const { return Base != BaseKind::None && Size > 0; }
+};
+
+/// Describes how an instruction modifies the stack pointer (SP) or frame
+/// pointer (FP), applied after the instruction's own memory access.
+struct StackPointerAdjustment {
+  enum class Kind : uint8_t {
+    None = 0,
+    /// Register += Delta (e.g., push/pop, add/sub sp, imm).
+    Delta,
+    /// Register = OtherReg + Delta (e.g., mov rbp, rsp; lea rsp, [rbp + imm]).
+    FromOther,
+    /// Register is modified by a non-constant or untracked expression.
+    Unknown,
+  };
+
+  Kind AdjustKind = Kind::None;
+  int64_t Delta = 0;
+
+  bool isNone() const { return AdjustKind == Kind::None; }
+};
+
 /// Base class for instructions consumed by the simulation pipeline.
 ///
 /// This class tracks data dependencies as well as generic properties
@@ -517,6 +554,12 @@ class InstructionBase {
 
   // Instruction opcode which can be used by mca::CustomBehaviour
   unsigned Opcode;
+
+  // Stack-slot memory access and SP/FP adjustment metadata populated by
+  // target-specific InstrPostProcess hooks for LSUnit alias tracking.
+  StackAccessInfo StackAccess;
+  StackPointerAdjustment SPAdjust;
+  StackPointerAdjustment FPAdjust;
 
   // Flags used by the LSUnit.
   bool IsALoadBarrier : 1;
@@ -594,6 +637,16 @@ public:
   bool getBeginGroup() const { return BeginGroup; }
   bool getEndGroup() const { return EndGroup; }
   bool getRetireOOO() const { return RetireOOO; }
+
+  const StackAccessInfo &getStackAccess() const { return StackAccess; }
+  void setStackAccess(StackAccessInfo Info) { StackAccess = Info; }
+  bool hasStackAccess() const { return StackAccess.isValid(); }
+
+  const StackPointerAdjustment &getSPAdjust() const { return SPAdjust; }
+  void setSPAdjust(StackPointerAdjustment Adj) { SPAdjust = Adj; }
+
+  const StackPointerAdjustment &getFPAdjust() const { return FPAdjust; }
+  void setFPAdjust(StackPointerAdjustment Adj) { FPAdjust = Adj; }
 };
 
 /// An instruction propagated through the simulated instruction pipeline.

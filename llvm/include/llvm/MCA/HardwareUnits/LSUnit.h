@@ -21,6 +21,7 @@
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 namespace mca {
@@ -94,6 +95,11 @@ public:
   /// Returns the GroupID associated with this instruction. That value will be
   /// used to set the LSUTokenID field in class Instruction.
   virtual unsigned dispatch(const InstRef &IR) = 0;
+
+  /// Notifies the LSUnit that a non-memory instruction (or an eliminated
+  /// instruction) has been dispatched, so it can track stack/frame pointer
+  /// adjustments.
+  virtual void onInstructionDispatched(const InstRef &IR) {}
 
   bool isSQEmpty() const { return !UsedSQEntries; }
   bool isLQEmpty() const { return !UsedLQEntries; }
@@ -253,6 +259,9 @@ protected:
     unsigned NumExecuted = 0;
     // Successors that are in a order dependency with this group.
     SmallVector<MemoryGroup *, 4> OrderSucc;
+    // Successors that forward data from this store group (released on issue,
+    // while still attributing the critical memory dependency).
+    SmallVector<MemoryGroup *, 4> ForwardSucc;
     // Successors that are in a data dependency with this group.
     SmallVector<MemoryGroup *, 4> DataSucc;
 
@@ -263,11 +272,13 @@ protected:
     MemoryGroup &operator=(const MemoryGroup &) = delete;
 
   public:
+    enum class DepKind : uint8_t { Order, Forwarding, Data };
+
     MemoryGroup() = default;
     MemoryGroup(MemoryGroup &&) = default;
 
     size_t getNumSuccessors() const {
-      return OrderSucc.size() + DataSucc.size();
+      return OrderSucc.size() + ForwardSucc.size() + DataSucc.size();
     }
     unsigned getNumPredecessors() const { return NumPredecessors; }
     unsigned getNumExecutingPredecessors() const {
@@ -287,22 +298,33 @@ protected:
       return CriticalPredecessor;
     }
 
-    void addSuccessor(MemoryGroup *Group, bool IsDataDependent) {
-      // Do not need to add a dependency if there is no data
-      // dependency and all instructions from this group have been
-      // issued already.
-      if (!IsDataDependent && isExecuting())
+    void addSuccessor(MemoryGroup *Group, DepKind Kind) {
+      // Do not need to add a dependency if there is no full data execution
+      // dependency and all instructions from this group have been issued
+      // already.
+      if (Kind != DepKind::Data && isExecuting())
         return;
 
       Group->NumPredecessors++;
       assert(!isExecuted() && "Should have been removed!");
       if (isExecuting())
-        Group->onGroupIssued(CriticalMemoryInstruction, IsDataDependent);
+        Group->onGroupIssued(CriticalMemoryInstruction, true);
 
-      if (IsDataDependent)
-        DataSucc.emplace_back(Group);
-      else
+      switch (Kind) {
+      case DepKind::Order:
         OrderSucc.emplace_back(Group);
+        break;
+      case DepKind::Forwarding:
+        ForwardSucc.emplace_back(Group);
+        break;
+      case DepKind::Data:
+        DataSucc.emplace_back(Group);
+        break;
+      }
+    }
+
+    void addSuccessor(MemoryGroup *Group, bool IsDataDependent) {
+      addSuccessor(Group, IsDataDependent ? DepKind::Data : DepKind::Order);
     }
 
     bool isWaiting() const {
@@ -320,14 +342,16 @@ protected:
     }
     bool isExecuted() const { return NumInstructions == NumExecuted; }
 
-    void onGroupIssued(const InstRef &IR, bool ShouldUpdateCriticalDep) {
+    void onGroupIssued(const InstRef &IR, bool ShouldUpdateCriticalDep,
+                       bool IsForwarding = false) {
       assert(!isReady() && "Unexpected group-start event!");
       NumExecutingPredecessors++;
 
       if (!ShouldUpdateCriticalDep)
         return;
 
-      unsigned Cycles = IR.getInstruction()->getCyclesLeft();
+      unsigned Cycles =
+          IsForwarding ? 1U : IR.getInstruction()->getCyclesLeft();
       if (CriticalPredecessor.Cycles < Cycles) {
         CriticalPredecessor.IID = IR.getSourceIndex();
         CriticalPredecessor.Cycles = Cycles;
@@ -362,6 +386,14 @@ protected:
       for (MemoryGroup *MG : OrderSucc) {
         MG->onGroupIssued(CriticalMemoryInstruction, false);
         // Release the order dependency with this group.
+        MG->onGroupExecuted();
+      }
+
+      for (MemoryGroup *MG : ForwardSucc) {
+        MG->onGroupIssued(CriticalMemoryInstruction,
+                          /*ShouldUpdateCriticalDep=*/true,
+                          /*IsForwarding=*/true);
+        // Release the forwarding dependency once the store issues.
         MG->onGroupExecuted();
       }
 
@@ -406,6 +438,39 @@ protected:
   unsigned CurrentLoadBarrierGroupID;
   unsigned CurrentStoreGroupID;
   unsigned CurrentStoreBarrierGroupID;
+
+  /// Resolved byte interval [Start, End) in a stack/frame coordinate space.
+  struct ResolvedStackSlot {
+    unsigned SpaceID;
+    int64_t Start;
+    int64_t End;
+
+    bool overlaps(const ResolvedStackSlot &Other) const {
+      return SpaceID == Other.SpaceID && Start < Other.End &&
+             Other.Start < End;
+    }
+  };
+
+  /// Tracks an in-flight stack store for stack-slot alias detection.
+  struct StackSlotRecord {
+    unsigned GroupID;
+    ResolvedStackSlot Slot;
+    /// True if the store is a read-modify-write instruction whose written
+    /// value is only available after execution (not at issue).
+    bool IsRMW;
+  };
+
+  SmallVector<StackSlotRecord, 16> ActiveStackStores;
+
+  // Coordinate-space tracking for SP and FP adjustments.
+  // SP and FP start in separate spaces so [rbp + off] aliases other [rbp + off]
+  // accesses without falsely aliasing [rsp + off], unless linked (e.g., via
+  // `mov rbp, rsp`).
+  unsigned NextSpaceID = 3;
+  unsigned SPSpaceID = 1;
+  int64_t SPDelta = 0;
+  unsigned FPSpaceID = 2;
+  int64_t FPDelta = 0;
 
 public:
   LSUnit(const MCSchedModel &SM)
@@ -465,6 +530,8 @@ public:
   /// 6. A store has to wait until an older store barrier is fully executed.
   unsigned dispatch(const InstRef &IR) override;
 
+  void onInstructionDispatched(const InstRef &IR) override;
+
   void onInstructionIssued(const InstRef &IR) override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     Groups[GroupID]->onInstructionIssued(IR);
@@ -499,6 +566,10 @@ private:
     Groups.insert(std::make_pair(NextGroupID, std::make_unique<MemoryGroup>()));
     return NextGroupID++;
   }
+
+  std::optional<ResolvedStackSlot>
+  resolveStackAccess(const StackAccessInfo &Access) const;
+  void applyStackAdjustments(const Instruction &IS);
 };
 
 } // namespace mca

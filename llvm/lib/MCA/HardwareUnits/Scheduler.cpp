@@ -313,6 +313,8 @@ bool Scheduler::dispatch(InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   if (IS.isMemOp())
     IS.setLSUTokenID(LSU.dispatch(IR));
+  else
+    LSU.onInstructionDispatched(IR);
 
   if (IS.isDispatched() || (IS.isMemOp() && LSU.isWaiting(IR))) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
