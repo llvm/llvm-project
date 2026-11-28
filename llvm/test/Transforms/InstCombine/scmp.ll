@@ -1374,3 +1374,129 @@ define <2 x i8> @scmp_add_common_op_vec(<2 x i32> %a, <2 x i32> %b,
   %r = call <2 x i8> @llvm.scmp(<2 x i32> %an, <2 x i32> %bn)
   ret <2 x i8> %r
 }
+
+define i8 @scmp_shl_nsw_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_nsw_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl nsw i8 %a, %n
+  %bn = shl nsw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: left shift needs nsw on both operations.
+define i8 @scmp_shl_common_no_nsw(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_common_no_nsw(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = shl i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl nsw i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl i8 %a, %n
+  %bn = shl nsw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: nuw is not enough for canceling left shift for scmp.
+define i8 @scmp_shl_common_nuw_not_enough(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_common_nuw_not_enough(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = shl nuw i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl nuw i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl nuw i8 %a, %n
+  %bn = shl nuw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: lshr exact doesn't fold for scmp.
+define i8 @scmp_lshr_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_lshr_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = lshr exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = lshr exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = lshr exact i8 %a, %n
+  %bn = lshr exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_ashr_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_ashr_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = ashr exact i8 %a, %n
+  %bn = ashr exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: ashr needs exact on both
+define i8 @scmp_ashr_common_no_exact(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_ashr_common_no_exact(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = ashr i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = ashr exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = ashr i8 %a, %n
+  %bn = ashr exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: udiv exact doesn't fold for scmp
+define i8 @scmp_udiv_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_udiv_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = udiv exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = udiv exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = udiv exact i8 %a, %n
+  %bn = udiv exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_sdiv_exact_common_positive_const_divisor(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_positive_const_divisor(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sdiv exact i8 %a, 33
+  %bn = sdiv exact i8 %b, 33
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: sdiv needs exact on both
+define i8 @ucmp_sdiv_common_no_exact(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @ucmp_sdiv_common_no_exact(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sdiv i8 [[A]], 33
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], 33
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sdiv i8 %a, 33
+  %bn = sdiv exact i8 %b, 33
+  %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
+  ret i8 %r
+}

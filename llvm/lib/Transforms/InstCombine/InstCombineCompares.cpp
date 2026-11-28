@@ -5467,6 +5467,8 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
   D = BO1->getOperand(1);
 
   switch (BO0->getOpcode()) {
+  default:
+    break;
   case Instruction::Sub:
     if (!NoOp0WrapProblem || !NoOp1WrapProblem)
       return false;
@@ -5531,9 +5533,44 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
 
     return false;
   }
-  default:
-    return false;
   }
+
+  // Only apply if one of the operands has one use, consistent with
+  // existing icmp fold criteria for common operands.
+  if (!BO0->hasOneUse() && !BO1->hasOneUse())
+    return false;
+  if (B != D)
+    return false;
+
+  LHS = A;
+  RHS = C;
+
+  switch (BO0->getOpcode()) {
+  default:
+    break;
+  case Instruction::Shl: {
+    bool NUW = Op0HasNUW && Op1HasNUW;
+    bool NSW = Op0HasNSW && Op1HasNSW;
+    if (!NUW && !NSW)
+      return false;
+    if (!NSW && IsSigned)
+      return false;
+
+    return true;
+  }
+  case Instruction::LShr:
+    return !IsSigned && BO0->isExact() && BO1->isExact();
+  case Instruction::AShr:
+    return BO0->isExact() && BO1->isExact();
+  case Instruction::UDiv:
+    return !IsSigned && BO0->isExact() && BO1->isExact();
+  case Instruction::SDiv:
+    if (!BO0->isExact() || !BO1->isExact())
+      return false;
+
+    return IsEquality || match(B, m_NonNegative());
+  }
+  return false;
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
@@ -5948,32 +5985,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         }
       }
       break;
-    }
-    case Instruction::UDiv:
-    case Instruction::LShr:
-      if (I.isSigned() || !BO0->isExact() || !BO1->isExact())
-        break;
-      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
-
-    case Instruction::SDiv:
-      if (!(I.isEquality() || match(BO0->getOperand(1), m_NonNegative())) ||
-          !BO0->isExact() || !BO1->isExact())
-        break;
-      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
-
-    case Instruction::AShr:
-      if (!BO0->isExact() || !BO1->isExact())
-        break;
-      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
-
-    case Instruction::Shl: {
-      bool NUW = Op0HasNUW && Op1HasNUW;
-      bool NSW = Op0HasNSW && Op1HasNSW;
-      if (!NUW && !NSW)
-        break;
-      if (!NSW && I.isSigned())
-        break;
-      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
     }
     }
   }
