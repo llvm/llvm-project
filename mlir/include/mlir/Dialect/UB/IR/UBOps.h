@@ -9,9 +9,8 @@
 #ifndef MLIR_DIALECT_UB_IR_OPS_H
 #define MLIR_DIALECT_UB_IR_OPS_H
 
+#include "mlir/Dialect/UB/IR/UBOpsInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
-
-#include "mlir/Dialect/UB/IR/UBOpsInterfaces.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/UB/IR/UBOpsAttributes.h.inc"

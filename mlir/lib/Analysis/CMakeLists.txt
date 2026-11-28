@@ -71,6 +71,7 @@ add_mlir_library(MLIRAnalysisDataFlow
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDialectUtils
@@ -80,6 +81,7 @@ add_mlir_library(MLIRAnalysisDataFlow
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
+  MLIRUBDialect
   )
 
 # This is the IR-aware adapter; MLIRPresburger is independent of MLIR IR.
