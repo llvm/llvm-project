@@ -67,7 +67,9 @@ struct complexlike_alias {
   double y;
 };
 struct complexlike_alias pass_complexlike_alias(struct complexlike_alias arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_alias @_Z22pass_complexlike_alias17complexlike_alias({ double, double } %{{.*}})
+// CHECK-LABEL: define void @_Z22pass_complexlike_alias17complexlike_alias(
+// CHECK-SAME: ptr {{.*}} sret(%struct.complexlike_alias) align 32
+// CHECK-SAME: [4 x i64]
 
 // ============================================================================
 // Complex-like struct using alignas specifier

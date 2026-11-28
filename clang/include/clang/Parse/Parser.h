@@ -1443,6 +1443,9 @@ public:
   /// \endverbatim
   ///
   /// Called type-id in C++.
+  ///
+  /// When \p Attrs is non-null, GNU attributes from the type name are added
+  /// before its existing attributes, taking ownership.
   TypeResult
   ParseTypeName(SourceRange *Range = nullptr,
                 DeclaratorContext Context = DeclaratorContext::TypeName,

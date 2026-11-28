@@ -876,6 +876,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
     Diag(D.EllipsisLoc, diag::err_alias_declaration_pack_expansion)
         << FixItHint::CreateRemoval(SourceRange(D.EllipsisLoc));
 
+  bool HasAttrs = !Attrs.empty();
   Decl *DeclFromDeclSpec = nullptr;
   TypeResult TypeAlias =
       ParseTypeName(nullptr,
@@ -888,8 +889,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   // Eat ';'.
   DeclEnd = Tok.getLocation();
   if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                       !Attrs.empty() ? "attributes list"
-                                      : "alias declaration"))
+                       HasAttrs ? "attributes list" : "alias declaration"))
     SkipUntil(tok::semi);
 
   TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;

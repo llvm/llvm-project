@@ -42,6 +42,19 @@ using namespace clang;
 // C99 6.7: Declarations.
 //===----------------------------------------------------------------------===//
 
+/// Appends the GNU attributes in \p From to \p To, skipping those already in
+/// \p To or \p Skip.
+static void appendGNUAttributes(const ParsedAttributesView &From,
+                                const ParsedAttributesView &Skip,
+                                ParsedAttributesView &To) {
+  for (ParsedAttr &AL : From) {
+    if (AL.isGNUAttribute() &&
+        !llvm::is_contained(llvm::make_pointer_range(Skip), &AL) &&
+        !llvm::is_contained(llvm::make_pointer_range(To), &AL))
+      To.addAtEnd(&AL);
+  }
+}
+
 TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
                                  AccessSpecifier AS, Decl **OwnedType,
                                  ParsedAttributes *Attrs) {
@@ -78,7 +91,20 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
   if (DeclaratorInfo.isInvalidType())
     return true;
 
-  return Actions.ActOnTypeName(DeclaratorInfo);
+  TypeResult Result = Actions.ActOnTypeName(DeclaratorInfo);
+
+  // GNU attrs stay until after ActOnTypeName so type attrs still apply. Take
+  // the pools since attrs can move between lists without changing pool owner.
+  if (Attrs && !Result.isInvalid()) {
+    Attrs->getPool().takeAllFrom(DS.getAttributePool());
+    Attrs->getPool().takeAllFrom(DeclaratorInfo.getAttributePool());
+    ParsedAttributesView TypeIdAttrs;
+    appendGNUAttributes(DS.getAttributes(), *Attrs, TypeIdAttrs);
+    for (const DeclaratorChunk &Chunk : DeclaratorInfo.type_objects())
+      appendGNUAttributes(Chunk.getAttrs(), *Attrs, TypeIdAttrs);
+    Attrs->prepend(TypeIdAttrs.begin(), TypeIdAttrs.end());
+  }
+  return Result;
 }
 
 /// Normalizes an attribute name by dropping prefixed and suffixed __.
