@@ -1642,6 +1642,12 @@ struct PartStore {
                Other.Store->getPointerAddressSpace();
   }
 
+  /// Whether the stored bytes overlap. Assumes isCompatibleWith(Other).
+  bool overlapsWith(const PartStore &Other) const {
+    return PtrOffset.slt(Other.PtrOffset + Other.ValWidth / 8) &&
+           Other.PtrOffset.slt(PtrOffset + ValWidth / 8);
+  }
+
   bool operator<(const PartStore &Other) const {
     return PtrOffset.slt(Other.PtrOffset);
   }
@@ -1767,7 +1773,12 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   bool MadeChange = false;
   for (Instruction &I : make_early_inc_range(BB)) {
     if (std::optional<PartStore> Part = matchPartStore(I, DL)) {
-      if (Parts.empty() || Part->isCompatibleWith(Parts[0])) {
+      // A store that overwrites bytes of an earlier part ends the run, as the
+      // merged store may be placed after it.
+      if (Parts.empty() || (Part->isCompatibleWith(Parts[0]) &&
+                            none_of(Parts, [&](const PartStore &P) {
+                              return P.overlapsWith(*Part);
+                            }))) {
         Parts.push_back(std::move(*Part));
         continue;
       }
