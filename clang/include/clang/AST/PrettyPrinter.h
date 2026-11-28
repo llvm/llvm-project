@@ -95,7 +95,8 @@ struct PrintingPolicy {
         CleanUglifiedParameters(false), ResolveDecltype(false),
         EntireContentsOfLargeArray(true), PrettyEnums(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL),
-        SuppressDeclAttributes(false), SuppressLambdaBody(false) {}
+        SuppressDeclAttributes(false), SuppressLambdaBody(false),
+        SuppressFunctionNameScope(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -387,6 +388,14 @@ struct PrintingPolicy {
   /// Whether to suppress printing the body of a lambda.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressLambdaBody : 1;
+
+  /// Whether to suppress the nested name specifiers of a function name. Unlike
+  /// `SuppressScope`, return and parameter types are not affected, so this can
+  /// be combined with `FullyQualifiedName`. Useful if the declaration is
+  /// printed at a place where the name is declared unqualified, e.g. in a
+  /// class body.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressFunctionNameScope : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;
