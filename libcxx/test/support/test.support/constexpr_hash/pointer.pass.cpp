@@ -10,12 +10,10 @@
 
 // "support/constexpr_hash.h"
 
-#include "constexpr_hash.h"
-
 #include <cassert>
 #include <cstddef>
-#include <type_traits>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 constexpr bool test() {
