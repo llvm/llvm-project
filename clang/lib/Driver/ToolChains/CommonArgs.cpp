@@ -110,7 +110,6 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
   case llvm::Triple::amdgpu:
-  case llvm::Triple::r600:
   case llvm::Triple::csky:
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
@@ -876,7 +875,6 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
     return systemz::getSystemZTargetCPU(Args, T);
 
   case llvm::Triple::amdgpu:
-  case llvm::Triple::r600:
     return getAMDGPUTargetGPU(T, Args).str();
 
   case llvm::Triple::wasm32:
@@ -958,7 +956,6 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     sparc::getSparcTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::amdgpu:
-  case llvm::Triple::r600:
     amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features, ForAS);
     break;
   case llvm::Triple::nvptx:

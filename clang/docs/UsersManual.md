@@ -4689,12 +4689,6 @@ Example disabling double support for the 64-bit SPIR-V target:
 $ clang -c --target=spirv64 -cl-ext=-cl_khr_fp64 test.cl
 ```
 
-Enabling all extensions except double support in R600 AMD GPU can be done using:
-
-```console
-$ clang --target=r600 -cl-ext=-all,+cl_khr_fp16 test.cl
-```
-
 Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
 clang by default.
 :::

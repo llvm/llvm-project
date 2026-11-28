@@ -20,7 +20,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -2029,11 +2028,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_grid_size_z:
     return EmitAMDGPUGridSize(*this, 2);
 
-  // r600 intrinsics
-  case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
-  case AMDGPU::BI__builtin_r600_recipsqrt_ieeef:
-    return emitBuiltinWithOneOverloadedType<1>(*this, E,
-                                               Intrinsic::r600_recipsqrt_ieee);
   case AMDGPU::BI__builtin_amdgcn_alignbit: {
     llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));

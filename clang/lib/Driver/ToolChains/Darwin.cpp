@@ -67,7 +67,6 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Cases({"amdgpu", "amdgcn"}, llvm::Triple::amdgpu)
-      .Case("r600", llvm::Triple::r600)
       .Case("nvptx", llvm::Triple::nvptx)
       .Case("nvptx64", llvm::Triple::nvptx64)
       .Case("amdil", llvm::Triple::amdil)
