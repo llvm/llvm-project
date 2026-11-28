@@ -257,7 +257,10 @@ where M is a matrix type? We don’t support this anywhere else, but it’s
 convenient. The alternative is using template deduction to extract this
 information. Also add spelling for C.
 
-Future Work: Initialization syntax.
+Future Work: Initialization syntax. Until then, a braced list with any elements
+is rejected for a matrix type; only an empty list, which value-initializes the
+matrix, is accepted. HLSL is the exception, as it has its own matrix initializer
+syntax.
 
 ## Decisions for the Implementation in Clang
 

@@ -48,6 +48,12 @@ The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
 
+- A braced initializer list for a matrix type is now rejected in C, rather than
+  producing an `-Wexcess-initializers` warning and silently zero-initializing the
+  matrix. Matrix types have no element initializer syntax outside of HLSL yet, so
+  only an empty list, which value-initializes the matrix, is accepted.
+  (#GH246536)
+
 ### C++ Specific Potentially Breaking Changes
 
 - The `[[carries_dependency]]` attribute is no longer recognized, in any language

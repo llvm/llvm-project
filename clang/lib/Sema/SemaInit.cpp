@@ -1890,8 +1890,23 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
                                       unsigned &Index,
                                       InitListExpr *StructuredList,
                                       unsigned &StructuredIndex) {
-  if (!SemaRef.getLangOpts().HLSL)
+  if (!SemaRef.getLangOpts().HLSL) {
+    // Only HLSL has syntax for the elements of a matrix. Consuming nothing here
+    // would leave every initializer to the "excess elements" diagnostic, which
+    // is only a warning in C, and the matrix would silently be
+    // zero-initialized. Reject the list instead, as Clang did before the matrix
+    // dispatch was added; an empty list still value-initializes the matrix.
+    if (Index < IList->getNumInits()) {
+      // Consume the initializer meant for the matrix, so that a loop over the
+      // elements of an enclosing array or record makes progress.
+      ++Index;
+      hadError = true;
+      if (!VerifyOnly)
+        SemaRef.Diag(IList->getBeginLoc(), diag::err_illegal_initializer_type)
+            << DeclType;
+    }
     return;
+  }
 
   const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
 
