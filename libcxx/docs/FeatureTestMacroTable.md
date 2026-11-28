@@ -211,7 +211,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges_zip`                                 | `202110L`       |
 | `__cpp_lib_reference_from_temporary`                   | *unimplemented* |
 | `__cpp_lib_shift`                                      | `202202L`       |
-| `__cpp_lib_spanstream`                                 | *unimplemented* |
+| `__cpp_lib_spanstream`                                 | `202106L`       |
 | `__cpp_lib_stacktrace`                                 | *unimplemented* |
 | `__cpp_lib_stdatomic_h`                                | `202011L`       |
 | `__cpp_lib_string_contains`                            | `202011L`       |
