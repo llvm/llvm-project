@@ -19,7 +19,7 @@
 // RUN:  -triple spirv64-intel -DCUA \
 // RUN:  -fopenmp-targets=spirv64-intel -emit-llvm %s \
 // RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-spv.bc \
-// RUN:  -o - | FileCheck %s --check-prefix CHECK
+// RUN:  -o - | FileCheck %s --check-prefix SPIRV
 
 // expected-no-diagnostics
 int foo() {
@@ -35,73 +35,1239 @@ int foo() {
 
   return 0;
 }
-// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
-// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30
+// CHECK-SAME: (i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[SUM:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:         %[[VAL_228:.*]] = alloca ptr, align 8
-// CHECK-NEXT:         %[[VAL_229:.*]] = alloca i16, align 2
-// CHECK-NEXT:         %[[VAL_230:.*]] = alloca i16, align 2
-// CHECK-NEXT:         %[[VAL_231:.*]] = alloca i16, align 2
-// CHECK-NEXT:         %[[VAL_232:.*]] = alloca [1 x ptr], align 8
-// CHECK-NEXT:         %[[VAL_233:.*]] = alloca { float, float }, align 8
-// CHECK-NEXT:         store ptr %[[VAL_234:.*]], ptr %[[VAL_228]], align 8
-// CHECK-NEXT:         store i16 %[[VAL_235:.*]], ptr %[[VAL_229]], align 2
-// CHECK-NEXT:         store i16 %[[VAL_236:.*]], ptr %[[VAL_230]], align 2
-// CHECK-NEXT:         store i16 %[[VAL_237:.*]], ptr %[[VAL_231]], align 2
-// CHECK-NEXT:         %[[VAL_238:.*]] = load ptr, ptr %[[VAL_228]], align 8
-// CHECK-NEXT:         %[[VAL_239:.*]] = load i16, ptr %[[VAL_229]], align 2
-// CHECK-NEXT:         %[[VAL_240:.*]] = load i16, ptr %[[VAL_230]], align 2
-// CHECK-NEXT:         %[[VAL_241:.*]] = load i16, ptr %[[VAL_231]], align 2
-// CHECK-NEXT:         %[[VAL_242:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_238]], i64 0, i64 0
-// CHECK-NEXT:         %[[VAL_243:.*]] = load ptr, ptr %[[VAL_242]], align 8
-// CHECK-NEXT:         %[[VAL_244:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_232]], i64 0, i64 0
-// CHECK-NEXT:         %[[VAL_245:.*]] = getelementptr { float, float }, ptr %[[VAL_243]], i64 1
-// CHECK-NEXT:         %[[VAL_246:.*]] = load i64, ptr %[[VAL_243]], align 8
-// CHECK-NEXT:         %[[VAL_247:.*]] = call{{.*}}i32 @__kmpc_get_warp_size()
-// CHECK-NEXT:         %[[VAL_248:.*]] = trunc i32 %[[VAL_247]] to i16
-// CHECK-NEXT:         %[[VAL_249:.*]] = call{{.*}}i64 @__kmpc_shuffle_int64(i64 %[[VAL_246]], i16 %[[VAL_240]], i16 %[[VAL_248]])
-// CHECK-NEXT:         store i64 %[[VAL_249]], ptr %[[VAL_233]], align 8
-// CHECK-NEXT:         %[[VAL_250:.*]] = getelementptr i64, ptr %[[VAL_243]], i64 1
-// CHECK-NEXT:         %[[VAL_251:.*]] = getelementptr i64, ptr %[[VAL_233]], i64 1
-// CHECK-NEXT:         store ptr %[[VAL_233]], ptr %[[VAL_244]], align 8
-// CHECK-NEXT:         %[[VAL_252:.*]] = icmp eq i16 %[[VAL_241]], 0
-// CHECK-NEXT:         %[[VAL_253:.*]] = icmp eq i16 %[[VAL_241]], 1
-// CHECK-NEXT:         %[[VAL_254:.*]] = icmp ult i16 %[[VAL_239]], %[[VAL_240]]
-// CHECK-NEXT:         %[[VAL_255:.*]] = and i1 %[[VAL_253]], %[[VAL_254]]
-// CHECK-NEXT:         %[[VAL_256:.*]] = icmp eq i16 %[[VAL_241]], 2
-// CHECK-NEXT:         %[[VAL_257:.*]] = and i16 %[[VAL_239]], 1
-// CHECK-NEXT:         %[[VAL_258:.*]] = icmp eq i16 %[[VAL_257]], 0
-// CHECK-NEXT:         %[[VAL_259:.*]] = and i1 %[[VAL_256]], %[[VAL_258]]
-// CHECK-NEXT:         %[[VAL_260:.*]] = icmp sgt i16 %[[VAL_240]], 0
-// CHECK-NEXT:         %[[VAL_261:.*]] = and i1 %[[VAL_259]], %[[VAL_260]]
-// CHECK-NEXT:         %[[VAL_262:.*]] = or i1 %[[VAL_252]], %[[VAL_255]]
-// CHECK-NEXT:         %[[VAL_263:.*]] = or i1 %[[VAL_262]], %[[VAL_261]]
-// CHECK-NEXT:         br i1 %[[VAL_263]], label %[[VAL_264:.*]], label %[[VAL_265:.*]]
-// CHECK:       then:                                             ; preds = %[[VAL_266:.*]]
-// CHECK-NEXT:         call{{.*}}void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l{{[0-9]+}}_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr %[[VAL_238]], ptr %[[VAL_232]]) #{{[0-9]+}}
-// CHECK-NEXT:         br label %[[VAL_267:.*]]
-// CHECK:       else:                                             ; preds = %[[VAL_266]]
-// CHECK-NEXT:         br label %[[VAL_267]]
-// CHECK:       ifcont:                                           ; preds = %[[VAL_265]], %[[VAL_264]]
-// CHECK-NEXT:         %[[VAL_268:.*]] = icmp eq i16 %[[VAL_241]], 1
-// CHECK-NEXT:         %[[VAL_269:.*]] = icmp uge i16 %[[VAL_239]], %[[VAL_240]]
-// CHECK-NEXT:         %[[VAL_270:.*]] = and i1 %[[VAL_268]], %[[VAL_269]]
-// CHECK-NEXT:         br i1 %[[VAL_270]], label %[[VAL_271:.*]], label %[[VAL_272:.*]]
-// CHECK:       then4:                                            ; preds = %[[VAL_267]]
-// CHECK-NEXT:         %[[VAL_273:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_232]], i64 0, i64 0
-// CHECK-NEXT:         %[[VAL_274:.*]] = load ptr, ptr %[[VAL_273]], align 8
-// CHECK-NEXT:         %[[VAL_275:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_238]], i64 0, i64 0
-// CHECK-NEXT:         %[[VAL_276:.*]] = load ptr, ptr %[[VAL_275]], align 8
-// CHECK-NEXT:         %[[VAL_277:.*]] = getelementptr inbounds { float, float }, ptr %[[VAL_274]], i32 0, i32 0
-// CHECK-NEXT:         %[[VAL_278:.*]] = load float, ptr %[[VAL_277]], align 4
-// CHECK-NEXT:         %[[VAL_279:.*]] = getelementptr inbounds { float, float }, ptr %[[VAL_274]], i32 0, i32 1
-// CHECK-NEXT:         %[[VAL_280:.*]] = load float, ptr %[[VAL_279]], align 4
-// CHECK-NEXT:         %[[VAL_281:.*]] = getelementptr inbounds { float, float }, ptr %[[VAL_276]], i32 0, i32 0
-// CHECK-NEXT:         %[[VAL_282:.*]] = getelementptr inbounds { float, float }, ptr %[[VAL_276]], i32 0, i32 1
-// CHECK-NEXT:         store float %[[VAL_278]], ptr %[[VAL_281]], align 4
-// CHECK-NEXT:         store float %[[VAL_280]], ptr %[[VAL_282]], align 4
-// CHECK-NEXT:         br label %[[VAL_283:.*]]
-// CHECK:       else7:                                            ; preds = %[[VAL_267]]
-// CHECK-NEXT:         br label %[[VAL_283]]
-// CHECK:       ifcont8:                                          ; preds = %[[VAL_272]], %[[VAL_271]]
-// CHECK-NEXT:         ret void
+// CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[J_CASTED:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i64 [[J]], ptr [[J_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_kernel_environment, ptr [[DYN_PTR]])
+// CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
+// CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
+// CHECK:       user_code.entry:
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[J_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[TMP3]], ptr [[J_CASTED]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[J_CASTED]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[DOTTHREADID_TEMP_]], align 4
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTZERO_ADDR]], i64 [[TMP4]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
+// CHECK-NEXT:    ret void
+// CHECK:       worker.exit:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[SUM:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[SUM1:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J3:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J4:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J_CASTED:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [4 x ptr], align 8
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// CHECK-NEXT:    store i64 [[J]], ptr [[J_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[SUM1_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM1]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM1_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM1]], i32 0, i32 1
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM1_REALP]], align 4
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM1_IMAGP]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
+// CHECK-NEXT:    store i32 99, ptr [[DOTOMP_COMB_UB]], align 4
+// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[J3]], align 4
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[J_CASTED]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[J_CASTED]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP2]] to ptr
+// CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP7]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
+// CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP4]] to ptr
+// CHECK-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 2
+// CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP6]] to ptr
+// CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP11]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3
+// CHECK-NEXT:    store ptr [[SUM1]], ptr [[TMP13]], align 8
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP15]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4, i32 0)
+// CHECK-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// CHECK:       omp.loop.exit:
+// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
+// CHECK-NEXT:    br i1 [[TMP17]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
+// CHECK:       .omp.lastprivate.then:
+// CHECK-NEXT:    store i32 10, ptr [[J3]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J3]], align 4
+// CHECK-NEXT:    store i32 [[TMP18]], ptr [[J_ADDR]], align 4
+// CHECK-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       .omp.lastprivate.done:
+// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-NEXT:    store ptr [[SUM1]], ptr [[TMP19]], align 8
+// CHECK-NEXT:    [[TMP20:%.*]] = call i32 @__kmpc_gpu_xteam_reduce_nowait(ptr @[[GLOB1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2, ptr @_omp_reduction_list_to_global_copy_func, ptr @_omp_reduction_global_to_list_copy_func, ptr @_omp_reduction_global_to_list_reduce_func)
+// CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[TMP20]], 1
+// CHECK-NEXT:    br i1 [[TMP21]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK:       .omp.reduction.then:
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[SUM1_REALP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM1]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM1_REAL:%.*]] = load float, ptr [[SUM1_REALP5]], align 4
+// CHECK-NEXT:    [[SUM1_IMAGP6:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM1]], i32 0, i32 1
+// CHECK-NEXT:    [[SUM1_IMAG:%.*]] = load float, ptr [[SUM1_IMAGP6]], align 4
+// CHECK-NEXT:    [[ADD_R:%.*]] = fadd float [[DOTREAL]], [[SUM1_REAL]]
+// CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[DOTIMAG]], [[SUM1_IMAG]]
+// CHECK-NEXT:    [[DOTREALP7:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP8:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    store float [[ADD_R]], ptr [[DOTREALP7]], align 4
+// CHECK-NEXT:    store float [[ADD_I]], ptr [[DOTIMAGP8]], align 4
+// CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
+// CHECK:       .omp.reduction.done:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[SUM:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTPREVIOUS_LB__ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTPREVIOUS_UB__ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J3:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[SUM4:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J5:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// CHECK-NEXT:    store i64 [[DOTPREVIOUS_LB_]], ptr [[DOTPREVIOUS_LB__ADDR]], align 8
+// CHECK-NEXT:    store i64 [[DOTPREVIOUS_UB_]], ptr [[DOTPREVIOUS_UB__ADDR]], align 8
+// CHECK-NEXT:    store i64 [[J]], ptr [[J_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// CHECK-NEXT:    store i32 99, ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[DOTPREVIOUS_LB__ADDR]], align 8
+// CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP1]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR]], align 8
+// CHECK-NEXT:    [[CONV2:%.*]] = trunc i64 [[TMP2]] to i32
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[DOTOMP_LB]], align 4
+// CHECK-NEXT:    store i32 [[CONV2]], ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK-NEXT:    [[SUM4_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM4_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 1
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM4_REALP]], align 4
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM4_IMAGP]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP4]], i32 93, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+// CHECK:       omp.inner.for.cond:
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6:![0-9]+]]
+// CHECK-NEXT:    [[CONV6:%.*]] = sext i32 [[TMP6]] to i64
+// CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR]], align 8, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[CONV6]], [[TMP7]]
+// CHECK-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// CHECK:       omp.inner.for.body:
+// CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP8]], 10
+// CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], 1
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[DIV7:%.*]] = sdiv i32 [[TMP10]], 10
+// CHECK-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[DIV7]], 10
+// CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP9]], [[MUL8]]
+// CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[SUB]], 1
+// CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
+// CHECK-NEXT:    store i32 [[ADD10]], ptr [[J3]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[CONV11:%.*]] = sitofp i32 [[TMP11]] to float
+// CHECK-NEXT:    [[SUM4_REALP12:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM4_REAL:%.*]] = load float, ptr [[SUM4_REALP12]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[SUM4_IMAGP13:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 1
+// CHECK-NEXT:    [[SUM4_IMAG:%.*]] = load float, ptr [[SUM4_IMAGP13]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[ADD_R:%.*]] = fadd float [[SUM4_REAL]], [[CONV11]]
+// CHECK-NEXT:    [[SUM4_REALP14:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM4_IMAGP15:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 1
+// CHECK-NEXT:    store float [[ADD_R]], ptr [[SUM4_REALP14]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    store float [[SUM4_IMAG]], ptr [[SUM4_IMAGP15]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+// CHECK:       omp.body.continue:
+// CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
+// CHECK:       omp.inner.for.inc:
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    [[ADD16:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
+// CHECK-NEXT:    store i32 [[ADD16]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// CHECK:       omp.inner.for.end:
+// CHECK-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// CHECK:       omp.loop.exit:
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-NEXT:    store ptr [[SUM4]], ptr [[TMP14]], align 8
+// CHECK-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
+// CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 1
+// CHECK-NEXT:    br i1 [[TMP16]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK:       .omp.reduction.then:
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[SUM4_REALP17:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 0
+// CHECK-NEXT:    [[SUM4_REAL18:%.*]] = load float, ptr [[SUM4_REALP17]], align 4
+// CHECK-NEXT:    [[SUM4_IMAGP19:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[SUM4]], i32 0, i32 1
+// CHECK-NEXT:    [[SUM4_IMAG20:%.*]] = load float, ptr [[SUM4_IMAGP19]], align 4
+// CHECK-NEXT:    [[ADD_R21:%.*]] = fadd float [[DOTREAL]], [[SUM4_REAL18]]
+// CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[DOTIMAG]], [[SUM4_IMAG20]]
+// CHECK-NEXT:    [[DOTREALP22:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP23:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    store float [[ADD_R21]], ptr [[DOTREALP22]], align 4
+// CHECK-NEXT:    store float [[ADD_I]], ptr [[DOTIMAGP23]], align 4
+// CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
+// CHECK:       .omp.reduction.done:
+// CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
+// CHECK-NEXT:    br i1 [[TMP18]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
+// CHECK:       .omp.lastprivate.then:
+// CHECK-NEXT:    store i32 10, ptr [[J3]], align 4
+// CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[J3]], align 4
+// CHECK-NEXT:    store i32 [[TMP19]], ptr [[J_ADDR]], align 4
+// CHECK-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
+// CHECK:       .omp.lastprivate.done:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTADDR2:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTADDR3:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_ELEMENT:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr [[DOTADDR1]], align 2
+// CHECK-NEXT:    store i16 [[TMP2]], ptr [[DOTADDR2]], align 2
+// CHECK-NEXT:    store i16 [[TMP3]], ptr [[DOTADDR3]], align 2
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[DOTADDR1]], align 2
+// CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[DOTADDR2]], align 2
+// CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[DOTADDR3]], align 2
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr { float, float }, ptr [[TMP9]], i64 1
+// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i16
+// CHECK-NEXT:    [[TMP15:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP12]], i16 [[TMP6]], i16 [[TMP14]])
+// CHECK-NEXT:    store i64 [[TMP15]], ptr [[DOTOMP_REDUCTION_ELEMENT]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP9]], i64 1
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[DOTOMP_REDUCTION_ELEMENT]], i64 1
+// CHECK-NEXT:    store ptr [[DOTOMP_REDUCTION_ELEMENT]], ptr [[TMP10]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i16 [[TMP7]], 0
+// CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK-NEXT:    [[TMP20:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// CHECK-NEXT:    [[TMP21:%.*]] = and i1 [[TMP19]], [[TMP20]]
+// CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i16 [[TMP7]], 2
+// CHECK-NEXT:    [[TMP23:%.*]] = and i16 [[TMP5]], 1
+// CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP23]], 0
+// CHECK-NEXT:    [[TMP25:%.*]] = and i1 [[TMP22]], [[TMP24]]
+// CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i16 [[TMP6]], 0
+// CHECK-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// CHECK-NEXT:    [[TMP28:%.*]] = or i1 [[TMP18]], [[TMP21]]
+// CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP28]], [[TMP27]]
+// CHECK-NEXT:    br i1 [[TMP29]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// CHECK:       then:
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]]) #[[ATTR3]]
+// CHECK-NEXT:    br label [[IFCONT:%.*]]
+// CHECK:       else:
+// CHECK-NEXT:    br label [[IFCONT]]
+// CHECK:       ifcont:
+// CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// CHECK-NEXT:    [[TMP32:%.*]] = and i1 [[TMP30]], [[TMP31]]
+// CHECK-NEXT:    br i1 [[TMP32]], label [[THEN4:%.*]], label [[ELSE7:%.*]]
+// CHECK:       then4:
+// CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[TMP33]], align 8
+// CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[TMP35]], align 8
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP34]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP34]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP36]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP36]], i32 0, i32 1
+// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP5]], align 4
+// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP6]], align 4
+// CHECK-NEXT:    br label [[IFCONT8:%.*]]
+// CHECK:       else7:
+// CHECK-NEXT:    br label [[IFCONT8]]
+// CHECK:       ifcont8:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
+// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    br label [[PRECOND:%.*]]
+// CHECK:       precond:
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// CHECK-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// CHECK:       body:
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// CHECK:       then:
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[TMP6]]
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// CHECK-NEXT:    br label [[IFCONT:%.*]]
+// CHECK:       else:
+// CHECK-NEXT:    br label [[IFCONT]]
+// CHECK:       ifcont:
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// CHECK-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK:       then3:
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP6]]
+// CHECK-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 4
+// CHECK-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK:       else4:
+// CHECK-NEXT:    br label [[IFCONT5]]
+// CHECK:       ifcont5:
+// CHECK-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-NEXT:    store i32 [[TMP19]], ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    br label [[PRECOND]]
+// CHECK:       exit:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func1
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTADDR2:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTADDR3:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_ELEMENT:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr [[DOTADDR1]], align 2
+// CHECK-NEXT:    store i16 [[TMP2]], ptr [[DOTADDR2]], align 2
+// CHECK-NEXT:    store i16 [[TMP3]], ptr [[DOTADDR3]], align 2
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[DOTADDR1]], align 2
+// CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[DOTADDR2]], align 2
+// CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[DOTADDR3]], align 2
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr { float, float }, ptr [[TMP9]], i64 1
+// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i16
+// CHECK-NEXT:    [[TMP15:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP12]], i16 [[TMP6]], i16 [[TMP14]])
+// CHECK-NEXT:    store i64 [[TMP15]], ptr [[DOTOMP_REDUCTION_ELEMENT]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP9]], i64 1
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[DOTOMP_REDUCTION_ELEMENT]], i64 1
+// CHECK-NEXT:    store ptr [[DOTOMP_REDUCTION_ELEMENT]], ptr [[TMP10]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i16 [[TMP7]], 0
+// CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK-NEXT:    [[TMP20:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// CHECK-NEXT:    [[TMP21:%.*]] = and i1 [[TMP19]], [[TMP20]]
+// CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i16 [[TMP7]], 2
+// CHECK-NEXT:    [[TMP23:%.*]] = and i16 [[TMP5]], 1
+// CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP23]], 0
+// CHECK-NEXT:    [[TMP25:%.*]] = and i1 [[TMP22]], [[TMP24]]
+// CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i16 [[TMP6]], 0
+// CHECK-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// CHECK-NEXT:    [[TMP28:%.*]] = or i1 [[TMP18]], [[TMP21]]
+// CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP28]], [[TMP27]]
+// CHECK-NEXT:    br i1 [[TMP29]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// CHECK:       then:
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]]) #[[ATTR3]]
+// CHECK-NEXT:    br label [[IFCONT:%.*]]
+// CHECK:       else:
+// CHECK-NEXT:    br label [[IFCONT]]
+// CHECK:       ifcont:
+// CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// CHECK-NEXT:    [[TMP32:%.*]] = and i1 [[TMP30]], [[TMP31]]
+// CHECK-NEXT:    br i1 [[TMP32]], label [[THEN4:%.*]], label [[ELSE7:%.*]]
+// CHECK:       then4:
+// CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[TMP33]], align 8
+// CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[TMP35]], align 8
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP34]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP34]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP36]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP36]], i32 0, i32 1
+// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP5]], align 4
+// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP6]], align 4
+// CHECK-NEXT:    br label [[IFCONT8:%.*]]
+// CHECK:       else7:
+// CHECK-NEXT:    br label [[IFCONT8]]
+// CHECK:       ifcont8:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func2
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
+// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    br label [[PRECOND:%.*]]
+// CHECK:       precond:
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// CHECK-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// CHECK:       body:
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// CHECK:       then:
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[TMP6]]
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// CHECK-NEXT:    br label [[IFCONT:%.*]]
+// CHECK:       else:
+// CHECK-NEXT:    br label [[IFCONT]]
+// CHECK:       ifcont:
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// CHECK-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK:       then3:
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP6]]
+// CHECK-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 4
+// CHECK-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK:       else4:
+// CHECK-NEXT:    br label [[IFCONT5]]
+// CHECK:       ifcont5:
+// CHECK-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-NEXT:    store i32 [[TMP19]], ptr [[DOTCNT_ADDR]], align 4
+// CHECK-NEXT:    br label [[PRECOND]]
+// CHECK:       exit:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_list_to_global_copy_func
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTADDR2:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[DOTREALP3:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP9]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP9]], i32 0, i32 1
+// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP3]], align 4
+// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP4]], align 4
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_copy_func
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTADDR2:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP9]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP9]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[DOTREALP3:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTIMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr [[TMP7]], i32 0, i32 1
+// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP3]], align 4
+// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP4]], align 4
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_reduce_func
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTADDR2:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST]]) #[[ATTR3]]
+// CHECK-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30
+// SPIRV-SAME: (i64 noundef [[J:%.*]], ptr addrspace(1) noundef align 4 dereferenceable(8) [[SUM_COERCE:%.*]], ptr addrspace(1) noalias noundef [[DYN_PTR_COERCE:%.*]]) addrspace(9) #[[ATTR0:[0-9]+]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[SUM:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DYN_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[J_CASTED:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr [[J_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SUM_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr [[DYN_PTR_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTZERO_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(1) [[SUM_COERCE]], ptr [[SUM]], align 8
+// SPIRV-NEXT:    [[SUM1:%.*]] = load ptr addrspace(4), ptr [[SUM]], align 8
+// SPIRV-NEXT:    store ptr addrspace(1) [[DYN_PTR_COERCE]], ptr [[DYN_PTR]], align 8
+// SPIRV-NEXT:    [[DYN_PTR2:%.*]] = load ptr addrspace(4), ptr [[DYN_PTR]], align 8
+// SPIRV-NEXT:    store i64 [[J]], ptr addrspace(4) [[J_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM1]], ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[DYN_PTR2]], ptr addrspace(4) [[DYN_PTR_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8, !align [[META4:![0-9]+]]
+// SPIRV-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[DYN_PTR_COERCE]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[TMP2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_target_init(ptr addrspace(4) addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_kernel_environment to ptr addrspace(4)), ptr addrspace(4) [[TMP1]])
+// SPIRV-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
+// SPIRV-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
+// SPIRV:       user_code.entry:
+// SPIRV-NEXT:    [[TMP3:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr addrspace(4)))
+// SPIRV-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[J_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP4]], ptr [[J_CASTED]], align 4
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i64, ptr [[J_CASTED]], align 8
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTZERO_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP3]], ptr [[DOTTHREADID_TEMP_]], align 4
+// SPIRV-NEXT:    [[TMP6:%.*]] = addrspacecast ptr [[DOTTHREADID_TEMP_]] to ptr addrspace(4)
+// SPIRV-NEXT:    call spir_func addrspace(9) void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined(ptr addrspace(4) [[TMP6]], ptr addrspace(4) [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], ptr addrspace(4) [[TMP0]]) #[[ATTR3:[0-9]+]]
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_target_deinit()
+// SPIRV-NEXT:    ret void
+// SPIRV:       worker.exit:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined
+// SPIRV-SAME: (ptr addrspace(4) noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr addrspace(4) noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[J:%.*]], ptr addrspace(4) noundef align 4 dereferenceable(8) [[SUM:%.*]]) addrspace(9) #[[ATTR1:[0-9]+]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[SUM1:%.*]] = alloca { float, float }, align 4
+// SPIRV-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J3:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J4:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J_CASTED:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [4 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_RED_LIST]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTBOUND_TID__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr [[J_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SUM_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SUM1_ASCAST:%.*]] = addrspacecast ptr [[SUM1]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_IV]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr [[TMP]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[TMP2_ASCAST:%.*]] = addrspacecast ptr [[_TMP2]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_COMB_LB]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_COMB_UB]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_STRIDE]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_IS_LAST]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J3_ASCAST:%.*]] = addrspacecast ptr [[J3]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr [[I]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J4_ASCAST:%.*]] = addrspacecast ptr [[J4]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTGLOBAL_TID_]], ptr addrspace(4) [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTBOUND_TID_]], ptr addrspace(4) [[DOTBOUND_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i64 [[J]], ptr addrspace(4) [[J_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM]], ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8, !align [[META4]]
+// SPIRV-NEXT:    [[SUM1_ASCAST_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM1_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM1_ASCAST_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM1_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    store float 0.000000e+00, ptr addrspace(4) [[SUM1_ASCAST_REALP]], align 4
+// SPIRV-NEXT:    store float 0.000000e+00, ptr addrspace(4) [[SUM1_ASCAST_IMAGP]], align 4
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTOMP_COMB_LB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 99, ptr addrspace(4) [[DOTOMP_COMB_UB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 1, ptr addrspace(4) [[DOTOMP_STRIDE_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTOMP_IS_LAST_ASCAST]], align 4
+// SPIRV-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call addrspace(9) i32 @__kmpc_get_hardware_num_threads_in_block()
+// SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_COMB_LB_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// SPIRV-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_COMB_UB_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[J3_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP5]], ptr [[J_CASTED]], align 4
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i64, ptr [[J_CASTED]], align 8
+// SPIRV-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x ptr addrspace(4)], ptr addrspace(4) [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP2]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP8]], ptr addrspace(4) [[TMP7]], align 8
+// SPIRV-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr addrspace(4)], ptr addrspace(4) [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
+// SPIRV-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP4]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP10]], ptr addrspace(4) [[TMP9]], align 8
+// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x ptr addrspace(4)], ptr addrspace(4) [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 2
+// SPIRV-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP6]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP12]], ptr addrspace(4) [[TMP11]], align 8
+// SPIRV-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x ptr addrspace(4)], ptr addrspace(4) [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 3
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM1_ASCAST]], ptr addrspace(4) [[TMP13]], align 8
+// SPIRV-NEXT:    [[TMP14:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP15:%.*]] = load i32, ptr addrspace(4) [[TMP14]], align 4
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_parallel_60(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)), i32 [[TMP15]], i32 1, i32 -1, i32 -1, ptr addrspace(9) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined, ptr addrspace(9) null, ptr addrspace(4) [[CAPTURED_VARS_ADDRS_ASCAST]], i64 4, i32 0)
+// SPIRV-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// SPIRV:       omp.loop.exit:
+// SPIRV-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IS_LAST_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
+// SPIRV-NEXT:    br i1 [[TMP17]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
+// SPIRV:       .omp.lastprivate.then:
+// SPIRV-NEXT:    store i32 10, ptr addrspace(4) [[J3_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(4) [[J3_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP18]], ptr addrspace(4) [[J_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
+// SPIRV:       .omp.lastprivate.done:
+// SPIRV-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM1_ASCAST]], ptr addrspace(4) [[TMP19]], align 8
+// SPIRV-NEXT:    [[TMP20:%.*]] = call spir_func addrspace(9) i32 @__kmpc_gpu_xteam_reduce_nowait(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)), ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr addrspace(9) @_omp_reduction_shuffle_and_reduce_func.1, ptr addrspace(9) @_omp_reduction_inter_warp_copy_func.2, ptr addrspace(9) @_omp_reduction_list_to_global_copy_func, ptr addrspace(9) @_omp_reduction_global_to_list_copy_func, ptr addrspace(9) @_omp_reduction_global_to_list_reduce_func)
+// SPIRV-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[TMP20]], 1
+// SPIRV-NEXT:    br i1 [[TMP21]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// SPIRV:       .omp.reduction.then:
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[SUM1_ASCAST_REALP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM1_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM1_ASCAST_REAL:%.*]] = load float, ptr addrspace(4) [[SUM1_ASCAST_REALP5]], align 4
+// SPIRV-NEXT:    [[SUM1_ASCAST_IMAGP6:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM1_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    [[SUM1_ASCAST_IMAG:%.*]] = load float, ptr addrspace(4) [[SUM1_ASCAST_IMAGP6]], align 4
+// SPIRV-NEXT:    [[ADD_R:%.*]] = fadd float [[DOTREAL]], [[SUM1_ASCAST_REAL]]
+// SPIRV-NEXT:    [[ADD_I:%.*]] = fadd float [[DOTIMAG]], [[SUM1_ASCAST_IMAG]]
+// SPIRV-NEXT:    [[DOTREALP7:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP8:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[ADD_R]], ptr addrspace(4) [[DOTREALP7]], align 4
+// SPIRV-NEXT:    store float [[ADD_I]], ptr addrspace(4) [[DOTIMAGP8]], align 4
+// SPIRV-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
+// SPIRV:       .omp.reduction.done:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
+// SPIRV-SAME: (ptr addrspace(4) noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr addrspace(4) noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[J:%.*]], ptr addrspace(4) noundef align 4 dereferenceable(8) [[SUM:%.*]]) addrspace(9) #[[ATTR2:[0-9]+]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTPREVIOUS_LB__ADDR:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[DOTPREVIOUS_UB__ADDR:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8
+// SPIRV-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J3:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[SUM4:%.*]] = alloca { float, float }, align 4
+// SPIRV-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[J5:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_RED_LIST]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTBOUND_TID__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTPREVIOUS_LB__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTPREVIOUS_LB__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTPREVIOUS_UB__ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTPREVIOUS_UB__ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr [[J_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SUM_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_IV]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr [[TMP]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[TMP1_ASCAST:%.*]] = addrspacecast ptr [[_TMP1]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_LB]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_UB]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_STRIDE]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_IS_LAST]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J3_ASCAST:%.*]] = addrspacecast ptr [[J3]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SUM4_ASCAST:%.*]] = addrspacecast ptr [[SUM4]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr [[I]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[J5_ASCAST:%.*]] = addrspacecast ptr [[J5]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTGLOBAL_TID_]], ptr addrspace(4) [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTBOUND_TID_]], ptr addrspace(4) [[DOTBOUND_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i64 [[DOTPREVIOUS_LB_]], ptr addrspace(4) [[DOTPREVIOUS_LB__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i64 [[DOTPREVIOUS_UB_]], ptr addrspace(4) [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i64 [[J]], ptr addrspace(4) [[J_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM]], ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SUM_ADDR_ASCAST]], align 8, !align [[META4]]
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTOMP_LB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 99, ptr addrspace(4) [[DOTOMP_UB_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[DOTPREVIOUS_LB__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP1]] to i32
+// SPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(4) [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[CONV2:%.*]] = trunc i64 [[TMP2]] to i32
+// SPIRV-NEXT:    store i32 [[CONV]], ptr addrspace(4) [[DOTOMP_LB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[CONV2]], ptr addrspace(4) [[DOTOMP_UB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 1, ptr addrspace(4) [[DOTOMP_STRIDE_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTOMP_IS_LAST_ASCAST]], align 4
+// SPIRV-NEXT:    [[SUM4_ASCAST_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    store float 0.000000e+00, ptr addrspace(4) [[SUM4_ASCAST_REALP]], align 4
+// SPIRV-NEXT:    store float 0.000000e+00, ptr addrspace(4) [[SUM4_ASCAST_IMAGP]], align 4
+// SPIRV-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_for_static_init_4(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr addrspace(4)), i32 [[TMP4]], i32 93, ptr addrspace(4) [[DOTOMP_IS_LAST_ASCAST]], ptr addrspace(4) [[DOTOMP_LB_ASCAST]], ptr addrspace(4) [[DOTOMP_UB_ASCAST]], ptr addrspace(4) [[DOTOMP_STRIDE_ASCAST]], i32 1, i32 1)
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_LB_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP5]], ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+// SPIRV:       omp.inner.for.cond:
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5:![0-9]+]]
+// SPIRV-NEXT:    [[CONV6:%.*]] = sext i32 [[TMP6]] to i64
+// SPIRV-NEXT:    [[TMP7:%.*]] = load i64, ptr addrspace(4) [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[CMP:%.*]] = icmp ule i64 [[CONV6]], [[TMP7]]
+// SPIRV-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// SPIRV:       omp.inner.for.body:
+// SPIRV-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP8]], 10
+// SPIRV-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], 1
+// SPIRV-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// SPIRV-NEXT:    store i32 [[ADD]], ptr addrspace(4) [[I_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[TMP10:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[DIV7:%.*]] = sdiv i32 [[TMP10]], 10
+// SPIRV-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[DIV7]], 10
+// SPIRV-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP9]], [[MUL8]]
+// SPIRV-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[SUB]], 1
+// SPIRV-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
+// SPIRV-NEXT:    store i32 [[ADD10]], ptr addrspace(4) [[J3_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(4) [[I_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[CONV11:%.*]] = sitofp i32 [[TMP11]] to float
+// SPIRV-NEXT:    [[SUM4_ASCAST_REALP12:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM4_ASCAST_REAL:%.*]] = load float, ptr addrspace(4) [[SUM4_ASCAST_REALP12]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAGP13:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAG:%.*]] = load float, ptr addrspace(4) [[SUM4_ASCAST_IMAGP13]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[ADD_R:%.*]] = fadd float [[SUM4_ASCAST_REAL]], [[CONV11]]
+// SPIRV-NEXT:    [[SUM4_ASCAST_REALP14:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAGP15:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[ADD_R]], ptr addrspace(4) [[SUM4_ASCAST_REALP14]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    store float [[SUM4_ASCAST_IMAG]], ptr addrspace(4) [[SUM4_ASCAST_IMAGP15]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+// SPIRV:       omp.body.continue:
+// SPIRV-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
+// SPIRV:       omp.inner.for.inc:
+// SPIRV-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_STRIDE_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    [[ADD16:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
+// SPIRV-NEXT:    store i32 [[ADD16]], ptr addrspace(4) [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP5]]
+// SPIRV-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// SPIRV:       omp.inner.for.end:
+// SPIRV-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// SPIRV:       omp.loop.exit:
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_for_static_fini(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr addrspace(4)), i32 [[TMP4]])
+// SPIRV-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    store ptr addrspace(4) [[SUM4_ASCAST]], ptr addrspace(4) [[TMP14]], align 8
+// SPIRV-NEXT:    [[TMP15:%.*]] = call spir_func addrspace(9) i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)), i64 8, ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr addrspace(9) @_omp_reduction_shuffle_and_reduce_func, ptr addrspace(9) @_omp_reduction_inter_warp_copy_func)
+// SPIRV-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 1
+// SPIRV-NEXT:    br i1 [[TMP16]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// SPIRV:       .omp.reduction.then:
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[SUM4_ASCAST_REALP17:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 0
+// SPIRV-NEXT:    [[SUM4_ASCAST_REAL18:%.*]] = load float, ptr addrspace(4) [[SUM4_ASCAST_REALP17]], align 4
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAGP19:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[SUM4_ASCAST]], i32 0, i32 1
+// SPIRV-NEXT:    [[SUM4_ASCAST_IMAG20:%.*]] = load float, ptr addrspace(4) [[SUM4_ASCAST_IMAGP19]], align 4
+// SPIRV-NEXT:    [[ADD_R21:%.*]] = fadd float [[DOTREAL]], [[SUM4_ASCAST_REAL18]]
+// SPIRV-NEXT:    [[ADD_I:%.*]] = fadd float [[DOTIMAG]], [[SUM4_ASCAST_IMAG20]]
+// SPIRV-NEXT:    [[DOTREALP22:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP23:%.*]] = getelementptr inbounds nuw { float, float }, ptr addrspace(4) [[TMP0]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[ADD_R21]], ptr addrspace(4) [[DOTREALP22]], align 4
+// SPIRV-NEXT:    store float [[ADD_I]], ptr addrspace(4) [[DOTIMAGP23]], align 4
+// SPIRV-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
+// SPIRV:       .omp.reduction.done:
+// SPIRV-NEXT:    [[TMP17:%.*]] = load i32, ptr addrspace(4) [[DOTOMP_IS_LAST_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
+// SPIRV-NEXT:    br i1 [[TMP18]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
+// SPIRV:       .omp.lastprivate.then:
+// SPIRV-NEXT:    store i32 10, ptr addrspace(4) [[J3_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP19:%.*]] = load i32, ptr addrspace(4) [[J3_ASCAST]], align 4
+// SPIRV-NEXT:    store i32 [[TMP19]], ptr addrspace(4) [[J_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
+// SPIRV:       .omp.lastprivate.done:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) addrspace(9) #[[ATTR4:[0-9]+]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTADDR2:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTADDR3:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST:%.*]] = alloca [1 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_ELEMENT:%.*]] = alloca { float, float }, align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_ELEMENT_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_ELEMENT]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i16 [[TMP1]], ptr [[DOTADDR1]], align 2
+// SPIRV-NEXT:    store i16 [[TMP2]], ptr [[DOTADDR2]], align 2
+// SPIRV-NEXT:    store i16 [[TMP3]], ptr [[DOTADDR3]], align 2
+// SPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i16, ptr [[DOTADDR1]], align 2
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i16, ptr [[DOTADDR2]], align 2
+// SPIRV-NEXT:    [[TMP7:%.*]] = load i16, ptr [[DOTADDR3]], align 2
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP4]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr { float, float }, ptr addrspace(4) [[TMP9]], i64 1
+// SPIRV-NEXT:    [[TMP12:%.*]] = load i64, ptr addrspace(4) [[TMP9]], align 8
+// SPIRV-NEXT:    [[TMP13:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i16
+// SPIRV-NEXT:    [[TMP15:%.*]] = call spir_func addrspace(9) i64 @__kmpc_shuffle_int64(i64 [[TMP12]], i16 [[TMP6]], i16 [[TMP14]])
+// SPIRV-NEXT:    store i64 [[TMP15]], ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr addrspace(4) [[TMP9]], i64 1
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], i64 1
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], ptr addrspace(4) [[TMP10]], align 8
+// SPIRV-NEXT:    [[TMP18:%.*]] = icmp eq i16 [[TMP7]], 0
+// SPIRV-NEXT:    [[TMP19:%.*]] = icmp eq i16 [[TMP7]], 1
+// SPIRV-NEXT:    [[TMP20:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP21:%.*]] = and i1 [[TMP19]], [[TMP20]]
+// SPIRV-NEXT:    [[TMP22:%.*]] = icmp eq i16 [[TMP7]], 2
+// SPIRV-NEXT:    [[TMP23:%.*]] = and i16 [[TMP5]], 1
+// SPIRV-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP23]], 0
+// SPIRV-NEXT:    [[TMP25:%.*]] = and i1 [[TMP22]], [[TMP24]]
+// SPIRV-NEXT:    [[TMP26:%.*]] = icmp sgt i16 [[TMP6]], 0
+// SPIRV-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// SPIRV-NEXT:    [[TMP28:%.*]] = or i1 [[TMP18]], [[TMP21]]
+// SPIRV-NEXT:    [[TMP29:%.*]] = or i1 [[TMP28]], [[TMP27]]
+// SPIRV-NEXT:    br i1 [[TMP29]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// SPIRV:       then:
+// SPIRV-NEXT:    call spir_func addrspace(9) void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr addrspace(4) [[TMP4]], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR3]]
+// SPIRV-NEXT:    br label [[IFCONT:%.*]]
+// SPIRV:       else:
+// SPIRV-NEXT:    br label [[IFCONT]]
+// SPIRV:       ifcont:
+// SPIRV-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP7]], 1
+// SPIRV-NEXT:    [[TMP31:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP32:%.*]] = and i1 [[TMP30]], [[TMP31]]
+// SPIRV-NEXT:    br i1 [[TMP32]], label [[THEN4:%.*]], label [[ELSE7:%.*]]
+// SPIRV:       then4:
+// SPIRV-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP34:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP33]], align 8
+// SPIRV-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP4]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP36:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP35]], align 8
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP34]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP34]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP36]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP36]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[DOTREAL]], ptr addrspace(4) [[DOTREALP5]], align 4
+// SPIRV-NEXT:    store float [[DOTIMAG]], ptr addrspace(4) [[DOTIMAGP6]], align 4
+// SPIRV-NEXT:    br label [[IFCONT8:%.*]]
+// SPIRV:       else7:
+// SPIRV-NEXT:    br label [[IFCONT8]]
+// SPIRV:       ifcont8:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTCNT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTCNT_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[TMP2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[TMP3:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 63
+// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 6
+// SPIRV-NEXT:    [[TMP5:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[PRECOND:%.*]]
+// SPIRV:       precond:
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// SPIRV-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// SPIRV:       body:
+// SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3:[0-9]+]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM]])
+// SPIRV-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// SPIRV-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// SPIRV:       then:
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP9]], i32 [[TMP6]]
+// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// SPIRV-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(4) [[TMP10]], align 4
+// SPIRV-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// SPIRV-NEXT:    br label [[IFCONT:%.*]]
+// SPIRV:       else:
+// SPIRV-NEXT:    br label [[IFCONT]]
+// SPIRV:       ifcont:
+// SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// SPIRV-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// SPIRV-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// SPIRV:       then3:
+// SPIRV-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// SPIRV-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP16:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP15]], align 8
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP16]], i32 [[TMP6]]
+// SPIRV-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// SPIRV-NEXT:    store i32 [[TMP18]], ptr addrspace(4) [[TMP17]], align 4
+// SPIRV-NEXT:    br label [[IFCONT5:%.*]]
+// SPIRV:       else4:
+// SPIRV-NEXT:    br label [[IFCONT5]]
+// SPIRV:       ifcont5:
+// SPIRV-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// SPIRV-NEXT:    store i32 [[TMP19]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[PRECOND]]
+// SPIRV:       exit:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func.1
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTADDR2:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTADDR3:%.*]] = alloca i16, align 2
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST:%.*]] = alloca [1 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_ELEMENT:%.*]] = alloca { float, float }, align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_ELEMENT_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_ELEMENT]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i16 [[TMP1]], ptr [[DOTADDR1]], align 2
+// SPIRV-NEXT:    store i16 [[TMP2]], ptr [[DOTADDR2]], align 2
+// SPIRV-NEXT:    store i16 [[TMP3]], ptr [[DOTADDR3]], align 2
+// SPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i16, ptr [[DOTADDR1]], align 2
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i16, ptr [[DOTADDR2]], align 2
+// SPIRV-NEXT:    [[TMP7:%.*]] = load i16, ptr [[DOTADDR3]], align 2
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP4]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr { float, float }, ptr addrspace(4) [[TMP9]], i64 1
+// SPIRV-NEXT:    [[TMP12:%.*]] = load i64, ptr addrspace(4) [[TMP9]], align 8
+// SPIRV-NEXT:    [[TMP13:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i16
+// SPIRV-NEXT:    [[TMP15:%.*]] = call spir_func addrspace(9) i64 @__kmpc_shuffle_int64(i64 [[TMP12]], i16 [[TMP6]], i16 [[TMP14]])
+// SPIRV-NEXT:    store i64 [[TMP15]], ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr addrspace(4) [[TMP9]], i64 1
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], i64 1
+// SPIRV-NEXT:    store ptr addrspace(4) [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], ptr addrspace(4) [[TMP10]], align 8
+// SPIRV-NEXT:    [[TMP18:%.*]] = icmp eq i16 [[TMP7]], 0
+// SPIRV-NEXT:    [[TMP19:%.*]] = icmp eq i16 [[TMP7]], 1
+// SPIRV-NEXT:    [[TMP20:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP21:%.*]] = and i1 [[TMP19]], [[TMP20]]
+// SPIRV-NEXT:    [[TMP22:%.*]] = icmp eq i16 [[TMP7]], 2
+// SPIRV-NEXT:    [[TMP23:%.*]] = and i16 [[TMP5]], 1
+// SPIRV-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP23]], 0
+// SPIRV-NEXT:    [[TMP25:%.*]] = and i1 [[TMP22]], [[TMP24]]
+// SPIRV-NEXT:    [[TMP26:%.*]] = icmp sgt i16 [[TMP6]], 0
+// SPIRV-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// SPIRV-NEXT:    [[TMP28:%.*]] = or i1 [[TMP18]], [[TMP21]]
+// SPIRV-NEXT:    [[TMP29:%.*]] = or i1 [[TMP28]], [[TMP27]]
+// SPIRV-NEXT:    br i1 [[TMP29]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// SPIRV:       then:
+// SPIRV-NEXT:    call spir_func addrspace(9) void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp$reduction$reduction_func"(ptr addrspace(4) [[TMP4]], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR3]]
+// SPIRV-NEXT:    br label [[IFCONT:%.*]]
+// SPIRV:       else:
+// SPIRV-NEXT:    br label [[IFCONT]]
+// SPIRV:       ifcont:
+// SPIRV-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP7]], 1
+// SPIRV-NEXT:    [[TMP31:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP32:%.*]] = and i1 [[TMP30]], [[TMP31]]
+// SPIRV-NEXT:    br i1 [[TMP32]], label [[THEN4:%.*]], label [[ELSE7:%.*]]
+// SPIRV:       then4:
+// SPIRV-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP34:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP33]], align 8
+// SPIRV-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP4]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP36:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP35]], align 8
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP34]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP34]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP36]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP36]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[DOTREAL]], ptr addrspace(4) [[DOTREALP5]], align 4
+// SPIRV-NEXT:    store float [[DOTIMAG]], ptr addrspace(4) [[DOTIMAGP6]], align 4
+// SPIRV-NEXT:    br label [[IFCONT8:%.*]]
+// SPIRV:       else7:
+// SPIRV-NEXT:    br label [[IFCONT8]]
+// SPIRV:       ifcont8:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func.2
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTCNT_ADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTCNT_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[TMP2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[TMP3:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 63
+// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 6
+// SPIRV-NEXT:    [[TMP5:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[PRECOND:%.*]]
+// SPIRV:       precond:
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// SPIRV-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// SPIRV:       body:
+// SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM]])
+// SPIRV-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// SPIRV-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// SPIRV:       then:
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP9]], i32 [[TMP6]]
+// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// SPIRV-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(4) [[TMP10]], align 4
+// SPIRV-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// SPIRV-NEXT:    br label [[IFCONT:%.*]]
+// SPIRV:       else:
+// SPIRV-NEXT:    br label [[IFCONT]]
+// SPIRV:       ifcont:
+// SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
+// SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// SPIRV-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// SPIRV-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// SPIRV:       then3:
+// SPIRV-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// SPIRV-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP16:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP15]], align 8
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP16]], i32 [[TMP6]]
+// SPIRV-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// SPIRV-NEXT:    store i32 [[TMP18]], ptr addrspace(4) [[TMP17]], align 4
+// SPIRV-NEXT:    br label [[IFCONT5:%.*]]
+// SPIRV:       else4:
+// SPIRV-NEXT:    br label [[IFCONT5]]
+// SPIRV:       ifcont5:
+// SPIRV-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// SPIRV-NEXT:    store i32 [[TMP19]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    br label [[PRECOND]]
+// SPIRV:       exit:
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_list_to_global_copy_func
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr addrspace(4) noundef [[TMP2:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTADDR2:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR1_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR1]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR2_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR2]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP2]], ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP3]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP7:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP6]], align 8
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr addrspace(4) [[TMP4]], i32 [[TMP5]]
+// SPIRV-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr addrspace(4) [[TMP8]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP7]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP7]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[DOTREALP3:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP9]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP9]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[DOTREAL]], ptr addrspace(4) [[DOTREALP3]], align 4
+// SPIRV-NEXT:    store float [[DOTIMAG]], ptr addrspace(4) [[DOTIMAGP4]], align 4
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_copy_func
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr addrspace(4) noundef [[TMP2:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTADDR2:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR1_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR1]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR2_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR2]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP2]], ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP3]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP7:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP6]], align 8
+// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr addrspace(4) [[TMP4]], i32 [[TMP5]]
+// SPIRV-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr addrspace(4) [[TMP8]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP9]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTREAL:%.*]] = load float, ptr addrspace(4) [[DOTREALP]], align 4
+// SPIRV-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP9]], i32 0, i32 1
+// SPIRV-NEXT:    [[DOTIMAG:%.*]] = load float, ptr addrspace(4) [[DOTIMAGP]], align 4
+// SPIRV-NEXT:    [[DOTREALP3:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP7]], i32 0, i32 0
+// SPIRV-NEXT:    [[DOTIMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr addrspace(4) [[TMP7]], i32 0, i32 1
+// SPIRV-NEXT:    store float [[DOTREAL]], ptr addrspace(4) [[DOTREALP3]], align 4
+// SPIRV-NEXT:    store float [[DOTIMAG]], ptr addrspace(4) [[DOTIMAGP4]], align 4
+// SPIRV-NEXT:    ret void
+//
+//
+// SPIRV-LABEL: define {{[^@]+}}@_omp_reduction_global_to_list_reduce_func
+// SPIRV-SAME: (ptr addrspace(4) noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]], ptr addrspace(4) noundef [[TMP2:%.*]]) addrspace(9) #[[ATTR4]] {
+// SPIRV-NEXT:  entry:
+// SPIRV-NEXT:    [[DOTADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTADDR2:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr addrspace(4)], align 8
+// SPIRV-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR1_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR1]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTADDR2_ASCAST:%.*]] = addrspacecast ptr [[DOTADDR2]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DOTOMP_REDUCTION_RED_LIST_ASCAST:%.*]] = addrspacecast ptr [[DOTOMP_REDUCTION_RED_LIST]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP0]], ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP2]], ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[DOTADDR1_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr addrspace(4) [[TMP3]], i32 [[TMP4]]
+// SPIRV-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr addrspace(4) [[TMP6]], i32 0, i32 0
+// SPIRV-NEXT:    store ptr addrspace(4) [[TMP7]], ptr addrspace(4) [[TMP5]], align 8
+// SPIRV-NEXT:    [[TMP8:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR2_ASCAST]], align 8
+// SPIRV-NEXT:    call spir_func addrspace(9) void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp$reduction$reduction_func"(ptr addrspace(4) [[TMP8]], ptr addrspace(4) [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR3]]
+// SPIRV-NEXT:    ret void
+//

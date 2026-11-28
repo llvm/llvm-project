@@ -3493,6 +3493,7 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
                                       Value *DstAddr, Type *ElemType,
                                       Value *Offset, Type *ReductionArrayTy,
                                       bool IsByRefElem) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   uint64_t Size = M.getDataLayout().getTypeStoreSize(ElemType);
   // Create the loop over the big sized data.
   // ptr = (void*)Elem;
@@ -3513,16 +3514,16 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       continue;
     Type *IntType = Builder.getIntNTy(IntSize * 8);
     Ptr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        Ptr, Builder.getPtrTy(0), Ptr->getName() + ".ascast");
+        Ptr, PtrTy, Ptr->getName() + ".ascast");
     Value *SrcAddrGEP =
         Builder.CreateGEP(ElemType, SrcAddr, {ConstantInt::get(IndexTy, 1)});
     ElemPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        ElemPtr, Builder.getPtrTy(0), ElemPtr->getName() + ".ascast");
+        ElemPtr, PtrTy, ElemPtr->getName() + ".ascast");
 
     Function *CurFunc = Builder.GetInsertBlock()->getParent();
     if ((Size / IntSize) > 1) {
-      Value *PtrEnd = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          SrcAddrGEP, Builder.getPtrTy());
+      Value *PtrEnd =
+          Builder.CreatePointerBitCastOrAddrSpaceCast(SrcAddrGEP, PtrTy);
       BasicBlock *PreCondBB =
           BasicBlock::Create(M.getContext(), ".shuffle.pre_cond");
       BasicBlock *ThenBB = BasicBlock::Create(M.getContext(), ".shuffle.then");
@@ -3539,7 +3540,7 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       ElemPtr = PhiDest;
       Value *PtrDiff = Builder.CreatePtrDiff(
           Builder.getInt8Ty(), PtrEnd,
-          Builder.CreatePointerBitCastOrAddrSpaceCast(Ptr, Builder.getPtrTy()));
+          Builder.CreatePointerBitCastOrAddrSpaceCast(Ptr, PtrTy));
       Builder.CreateCondBr(
           Builder.CreateICmpSGT(PtrDiff, Builder.getInt64(IntSize - 1)), ThenBB,
           ExitBB);
@@ -3577,6 +3578,7 @@ Error OpenMPIRBuilder::emitReductionListCopy(
     InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
     ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
     ArrayRef<bool> IsByRef, CopyOptionsTy CopyOptions) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Value *RemoteLaneOffset = CopyOptions.RemoteLaneOffset;
@@ -3599,7 +3601,7 @@ Error OpenMPIRBuilder::emitReductionListCopy(
     Value *SrcElementPtrAddr = Builder.CreateInBoundsGEP(
         ReductionArrayTy, SrcBase,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
-    SrcElementAddr = Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrAddr);
+    SrcElementAddr = Builder.CreateLoad(PtrTy, SrcElementPtrAddr);
 
     // Step 1.2: Create a temporary to store the element in the destination
     // Reduce list.
@@ -3619,17 +3621,15 @@ Error OpenMPIRBuilder::emitReductionListCopy(
       DestAlloca->setAlignment(
           M.getDataLayout().getPrefTypeAlign(DestAllocaType));
       DestElementAddr = DestAlloca;
-      DestElementAddr =
-          Builder.CreateAddrSpaceCast(DestElementAddr, Builder.getPtrTy(),
-                                      DestElementAddr->getName() + ".ascast");
+      DestElementAddr = Builder.CreateAddrSpaceCast(
+          DestElementAddr, PtrTy, DestElementAddr->getName() + ".ascast");
       Builder.restoreIP(CurIP);
       ShuffleInElement = true;
       UpdateDestListPtr = true;
       break;
     }
     case CopyAction::ThreadCopy: {
-      DestElementAddr =
-          Builder.CreateLoad(Builder.getPtrTy(), DestElementPtrAddr);
+      DestElementAddr = Builder.CreateLoad(PtrTy, DestElementPtrAddr);
       break;
     }
     }
@@ -3660,8 +3660,7 @@ Error OpenMPIRBuilder::emitReductionListCopy(
           if (!GenResult)
             return GenResult.takeError();
 
-          ShuffleSrcAddr =
-              Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
+          ShuffleSrcAddr = Builder.CreateLoad(PtrTy, ShuffleSrcAddr);
 
           {
             InsertPointTy OldIP = Builder.saveIP();
@@ -3684,7 +3683,7 @@ Error OpenMPIRBuilder::emitReductionListCopy(
       if (IsByRefElem && RI.DataPtrPtrGen) {
         // Copy descriptor from source and update base_ptr to shuffled data
         Value *DestDescriptorAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-            DestAlloca, Builder.getPtrTy(), ".ascast");
+            DestAlloca, PtrTy, ".ascast");
 
         InsertPointOrErrorTy GenResult = generateReductionDescriptor(
             DestDescriptorAddr, LocalStorage, SrcElementAddr,
@@ -3738,8 +3737,7 @@ Error OpenMPIRBuilder::emitReductionListCopy(
     // RemoteReduceData[i] = (void*)&RemoteElem
     if (UpdateDestListPtr) {
       Value *CastDestAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          DestElementAddr, Builder.getPtrTy(),
-          DestElementAddr->getName() + ".ascast");
+          DestElementAddr, PtrTy, DestElementAddr->getName() + ".ascast");
       Builder.CreateStore(CastDestAddr, DestElementPtrAddr);
     }
   }
@@ -3750,11 +3748,12 @@ Error OpenMPIRBuilder::emitReductionListCopy(
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
-  FunctionType *FuncTy = FunctionType::get(
-      Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getInt32Ty()},
-      /* IsVarArg */ false);
+  FunctionType *FuncTy =
+      FunctionType::get(Builder.getVoidTy(), {PtrTy, Builder.getInt32Ty()},
+                        /* IsVarArg */ false);
   Function *WcFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_inter_warp_copy_func", &M);
@@ -3821,8 +3820,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       getInsertPointAfterInstr(&Builder.GetInsertBlock()->back());
   Builder.restoreIP(CodeGenIP);
 
-  Value *ReduceList =
-      Builder.CreateLoad(Builder.getPtrTy(), ReduceListAddrCast);
+  Value *ReduceList = Builder.CreateLoad(PtrTy, ReduceListAddrCast);
 
   for (auto En : enumerate(ReductionInfos)) {
     //
@@ -3849,7 +3847,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
         CntAddr =
             Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, ".cnt.addr");
 
-        CntAddr = Builder.CreateAddrSpaceCast(CntAddr, Builder.getPtrTy(),
+        CntAddr = Builder.CreateAddrSpaceCast(CntAddr, PtrTy,
                                               CntAddr->getName() + ".ascast");
         Builder.restoreIP(CodeGenIP);
         Builder.CreateStore(Constant::getNullValue(Builder.getInt32Ty()),
@@ -3885,8 +3883,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       emitBlock(ThenBB, Builder.GetInsertBlock()->getParent());
 
       // Reduce element = LocalReduceList[i]
-      auto *RedListArrayTy =
-          ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+      auto *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
       Type *IndexTy = Builder.getIndexTy(
           M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
       Value *ElemPtrPtr =
@@ -3894,7 +3891,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
                                     {ConstantInt::get(IndexTy, 0),
                                      ConstantInt::get(IndexTy, En.index())});
       // elemptr = ((CopyType*)(elemptrptr)) + I
-      Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
+      Value *ElemPtr = Builder.CreateLoad(PtrTy, ElemPtrPtr);
 
       if (IsByRefElem && RI.DataPtrPtrGen) {
         InsertPointOrErrorTy GenRes =
@@ -3903,7 +3900,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
         if (!GenRes)
           return GenRes.takeError();
 
-        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+        ElemPtr = Builder.CreateLoad(PtrTy, ElemPtr);
       }
 
       if (NumIters > 1)
@@ -3958,8 +3955,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
           Builder.CreateInBoundsGEP(RedListArrayTy, ReduceList,
                                     {ConstantInt::get(IndexTy, 0),
                                      ConstantInt::get(IndexTy, En.index())});
-      Value *TargetElemPtrVal =
-          Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtrPtr);
+      Value *TargetElemPtrVal = Builder.CreateLoad(PtrTy, TargetElemPtrPtr);
       Value *TargetElemPtr = TargetElemPtrVal;
 
       if (IsByRefElem && RI.DataPtrPtrGen) {
@@ -3969,7 +3965,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
         if (!GenRes)
           return GenRes.takeError();
 
-        TargetElemPtr = Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtr);
+        TargetElemPtr = Builder.CreateLoad(PtrTy, TargetElemPtr);
       }
 
       if (NumIters > 1)
@@ -4008,13 +4004,13 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
 Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   LLVMContext &Ctx = M.getContext();
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  FunctionType *FuncTy =
-      FunctionType::get(Builder.getVoidTy(),
-                        {Builder.getPtrTy(), Builder.getInt16Ty(),
-                         Builder.getInt16Ty(), Builder.getInt16Ty()},
-                        /* IsVarArg */ false);
+  FunctionType *FuncTy = FunctionType::get(
+      Builder.getVoidTy(),
+      {PtrTy, Builder.getInt16Ty(), Builder.getInt16Ty(), Builder.getInt16Ty()},
+      /* IsVarArg */ false);
   Function *SarFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_shuffle_and_reduce_func", &M);
@@ -4051,8 +4047,7 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
       LaneIDArgType, nullptr, RemoteLaneOffsetArg->getName() + ".addr");
   Value *AlgoVerAlloca = Builder.CreateAlloca(LaneIDArgType, nullptr,
                                               AlgoVerArg->getName() + ".addr");
-  ArrayType *RedListArrayTy =
-      ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+  ArrayType *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
 
   // Create a local thread-private variable to host the Reduce list
   // from a remote lane.
@@ -4070,7 +4065,7 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Value *AlgoVerAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       AlgoVerAlloca, LaneIDArgPtrType, AlgoVerAlloca->getName() + ".ascast");
   Value *RemoteListAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      RemoteReductionListAlloca, Builder.getPtrTy(),
+      RemoteReductionListAlloca, PtrTy,
       RemoteReductionListAlloca->getName() + ".ascast");
 
   Builder.CreateStore(ReduceListArg, ReduceListAddrCast);
@@ -4138,10 +4133,10 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
 
   Builder.CreateCondBr(CondReduce, ThenBB, ElseBB);
   emitBlock(ThenBB, Builder.GetInsertBlock()->getParent());
-  Value *LocalReduceListPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceList, Builder.getPtrTy());
-  Value *RemoteReduceListPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      RemoteListAddrCast, Builder.getPtrTy());
+  Value *LocalReduceListPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(ReduceList, PtrTy);
+  Value *RemoteReduceListPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(RemoteListAddrCast, PtrTy);
   createRuntimeFunctionCall(ReduceFn, {LocalReduceListPtr, RemoteReduceListPtr})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateBr(MergeBB);
@@ -4242,12 +4237,12 @@ Expected<Value *> OpenMPIRBuilder::createReductionDescriptorCopy(
 Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
-  FunctionType *FuncTy = FunctionType::get(
-      Builder.getVoidTy(),
-      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
-      /* IsVarArg */ false);
+  FunctionType *FuncTy = FunctionType::get(Builder.getVoidTy(),
+                                           {PtrTy, Builder.getInt32Ty(), PtrTy},
+                                           /* IsVarArg */ false);
   Function *LtGCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_list_to_global_copy_func", &M);
@@ -4267,42 +4262,37 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
   // ReduceList: thread local Reduce list.
   Argument *ReduceListArg = LtGCFunc->getArg(2);
 
-  Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
-                                                BufferArg->getName() + ".addr");
+  Value *BufferArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, BufferArg->getName() + ".addr");
   Value *IdxArgAlloca = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr,
                                              IdxArg->getName() + ".addr");
-  Value *ReduceListArgAlloca = Builder.CreateAlloca(
-      Builder.getPtrTy(), nullptr, ReduceListArg->getName() + ".addr");
+  Value *ReduceListArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, ReduceListArg->getName() + ".addr");
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      BufferArgAlloca, Builder.getPtrTy(),
-      BufferArgAlloca->getName() + ".ascast");
+      BufferArgAlloca, PtrTy, BufferArgAlloca->getName() + ".ascast");
   Value *IdxArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      IdxArgAlloca, Builder.getPtrTy(), IdxArgAlloca->getName() + ".ascast");
+      IdxArgAlloca, PtrTy, IdxArgAlloca->getName() + ".ascast");
   Value *ReduceListArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceListArgAlloca, Builder.getPtrTy(),
-      ReduceListArgAlloca->getName() + ".ascast");
+      ReduceListArgAlloca, PtrTy, ReduceListArgAlloca->getName() + ".ascast");
 
   Builder.CreateStore(BufferArg, BufferArgAddrCast);
   Builder.CreateStore(IdxArg, IdxArgAddrCast);
   Builder.CreateStore(ReduceListArg, ReduceListArgAddrCast);
 
-  Value *LocalReduceList =
-      Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
-  Value *BufferArgVal =
-      Builder.CreateLoad(Builder.getPtrTy(), BufferArgAddrCast);
+  Value *LocalReduceList = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
+  Value *BufferArgVal = Builder.CreateLoad(PtrTy, BufferArgAddrCast);
   Value *Idxs[] = {Builder.CreateLoad(Builder.getInt32Ty(), IdxArgAddrCast)};
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    auto *RedListArrayTy =
-        ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+    auto *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
     // Reduce element = LocalReduceList[i]
     Value *ElemPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, LocalReduceList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
     // elemptr = ((CopyType*)(elemptrptr)) + I
-    Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
+    Value *ElemPtr = Builder.CreateLoad(PtrTy, ElemPtrPtr);
 
     // Global = Buffer.VD[Idx];
     Value *BufferVD =
@@ -4324,7 +4314,7 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
           if (!GenResult)
             return GenResult.takeError();
 
-          ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+          ElemPtr = Builder.CreateLoad(PtrTy, ElemPtr);
         }
         TargetElement = Builder.CreateLoad(RI.ByRefElementType, ElemPtr);
       }
@@ -4368,12 +4358,12 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
 Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
-  FunctionType *FuncTy = FunctionType::get(
-      Builder.getVoidTy(),
-      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
-      /* IsVarArg */ false);
+  FunctionType *FuncTy = FunctionType::get(Builder.getVoidTy(),
+                                           {PtrTy, Builder.getInt32Ty(), PtrTy},
+                                           /* IsVarArg */ false);
   Function *LtGRFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_list_to_global_reduce_func", &M);
@@ -4393,14 +4383,13 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
   // ReduceList: thread local Reduce list.
   Argument *ReduceListArg = LtGRFunc->getArg(2);
 
-  Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
-                                                BufferArg->getName() + ".addr");
+  Value *BufferArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, BufferArg->getName() + ".addr");
   Value *IdxArgAlloca = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr,
                                              IdxArg->getName() + ".addr");
-  Value *ReduceListArgAlloca = Builder.CreateAlloca(
-      Builder.getPtrTy(), nullptr, ReduceListArg->getName() + ".addr");
-  auto *RedListArrayTy =
-      ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+  Value *ReduceListArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, ReduceListArg->getName() + ".addr");
+  auto *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
 
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
@@ -4410,22 +4399,19 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
   InsertPointTy AllocaIP(EntryBlock->begin());
 
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      BufferArgAlloca, Builder.getPtrTy(),
-      BufferArgAlloca->getName() + ".ascast");
+      BufferArgAlloca, PtrTy, BufferArgAlloca->getName() + ".ascast");
   Value *IdxArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      IdxArgAlloca, Builder.getPtrTy(), IdxArgAlloca->getName() + ".ascast");
+      IdxArgAlloca, PtrTy, IdxArgAlloca->getName() + ".ascast");
   Value *ReduceListArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceListArgAlloca, Builder.getPtrTy(),
-      ReduceListArgAlloca->getName() + ".ascast");
+      ReduceListArgAlloca, PtrTy, ReduceListArgAlloca->getName() + ".ascast");
   Value *LocalReduceListAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      LocalReduceList, Builder.getPtrTy(),
-      LocalReduceList->getName() + ".ascast");
+      LocalReduceList, PtrTy, LocalReduceList->getName() + ".ascast");
 
   Builder.CreateStore(BufferArg, BufferArgAddrCast);
   Builder.CreateStore(IdxArg, IdxArgAddrCast);
   Builder.CreateStore(ReduceListArg, ReduceListArgAddrCast);
 
-  Value *BufferVal = Builder.CreateLoad(Builder.getPtrTy(), BufferArgAddrCast);
+  Value *BufferVal = Builder.CreateLoad(PtrTy, BufferArgAddrCast);
   Value *Idxs[] = {Builder.CreateLoad(Builder.getInt32Ty(), IdxArgAddrCast)};
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
@@ -4443,18 +4429,16 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
 
     if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
       // Get source descriptor from the reduce list argument
-      Value *ReduceList =
-          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *ReduceList = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
       Value *SrcElementPtrPtr =
           Builder.CreateInBoundsGEP(RedListArrayTy, ReduceList,
                                     {ConstantInt::get(IndexTy, 0),
                                      ConstantInt::get(IndexTy, En.index())});
-      Value *SrcDescriptorAddr =
-          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
+      Value *SrcDescriptorAddr = Builder.CreateLoad(PtrTy, SrcElementPtrPtr);
 
       // Copy descriptor from source and update base_ptr to global buffer data
       Expected<Value *> ByRefAlloc = createReductionDescriptorCopy(
-          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, Builder.getPtrTy());
+          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, PtrTy);
       if (!ByRefAlloc)
         return ByRefAlloc.takeError();
 
@@ -4465,8 +4449,7 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
   }
 
   // Call reduce_function(GlobalReduceList, ReduceList)
-  Value *ReduceList =
-      Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+  Value *ReduceList = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
   createRuntimeFunctionCall(ReduceFn, {LocalReduceListAddrCast, ReduceList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
@@ -4476,12 +4459,12 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
 Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
-  FunctionType *FuncTy = FunctionType::get(
-      Builder.getVoidTy(),
-      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
-      /* IsVarArg */ false);
+  FunctionType *FuncTy = FunctionType::get(Builder.getVoidTy(),
+                                           {PtrTy, Builder.getInt32Ty(), PtrTy},
+                                           /* IsVarArg */ false);
   Function *GtLCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_copy_func", &M);
@@ -4501,40 +4484,36 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
   // ReduceList: thread local Reduce list.
   Argument *ReduceListArg = GtLCFunc->getArg(2);
 
-  Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
-                                                BufferArg->getName() + ".addr");
+  Value *BufferArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, BufferArg->getName() + ".addr");
   Value *IdxArgAlloca = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr,
                                              IdxArg->getName() + ".addr");
-  Value *ReduceListArgAlloca = Builder.CreateAlloca(
-      Builder.getPtrTy(), nullptr, ReduceListArg->getName() + ".addr");
+  Value *ReduceListArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, ReduceListArg->getName() + ".addr");
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      BufferArgAlloca, Builder.getPtrTy(),
-      BufferArgAlloca->getName() + ".ascast");
+      BufferArgAlloca, PtrTy, BufferArgAlloca->getName() + ".ascast");
   Value *IdxArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      IdxArgAlloca, Builder.getPtrTy(), IdxArgAlloca->getName() + ".ascast");
+      IdxArgAlloca, PtrTy, IdxArgAlloca->getName() + ".ascast");
   Value *ReduceListArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceListArgAlloca, Builder.getPtrTy(),
-      ReduceListArgAlloca->getName() + ".ascast");
+      ReduceListArgAlloca, PtrTy, ReduceListArgAlloca->getName() + ".ascast");
   Builder.CreateStore(BufferArg, BufferArgAddrCast);
   Builder.CreateStore(IdxArg, IdxArgAddrCast);
   Builder.CreateStore(ReduceListArg, ReduceListArgAddrCast);
 
-  Value *LocalReduceList =
-      Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
-  Value *BufferVal = Builder.CreateLoad(Builder.getPtrTy(), BufferArgAddrCast);
+  Value *LocalReduceList = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
+  Value *BufferVal = Builder.CreateLoad(PtrTy, BufferArgAddrCast);
   Value *Idxs[] = {Builder.CreateLoad(Builder.getInt32Ty(), IdxArgAddrCast)};
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
     const OpenMPIRBuilder::ReductionInfo &RI = En.value();
-    auto *RedListArrayTy =
-        ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+    auto *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
     // Reduce element = LocalReduceList[i]
     Value *ElemPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, LocalReduceList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
     // elemptr = ((CopyType*)(elemptrptr)) + I
-    Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
+    Value *ElemPtr = Builder.CreateLoad(PtrTy, ElemPtrPtr);
     // Global = Buffer.VD[Idx];
     Value *BufferVD =
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
@@ -4554,7 +4533,7 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
           if (!GenResult)
             return GenResult.takeError();
 
-          ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+          ElemPtr = Builder.CreateLoad(PtrTy, ElemPtr);
         }
       }
 
@@ -4599,12 +4578,12 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
 Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
-  auto *FuncTy = FunctionType::get(
-      Builder.getVoidTy(),
-      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
-      /* IsVarArg */ false);
+  auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
+                                   {PtrTy, Builder.getInt32Ty(), PtrTy},
+                                   /* IsVarArg */ false);
   Function *GtLRFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_reduce_func", &M);
@@ -4624,14 +4603,13 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
   // ReduceList: thread local Reduce list.
   Argument *ReduceListArg = GtLRFunc->getArg(2);
 
-  Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
-                                                BufferArg->getName() + ".addr");
+  Value *BufferArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, BufferArg->getName() + ".addr");
   Value *IdxArgAlloca = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr,
                                              IdxArg->getName() + ".addr");
-  Value *ReduceListArgAlloca = Builder.CreateAlloca(
-      Builder.getPtrTy(), nullptr, ReduceListArg->getName() + ".addr");
-  ArrayType *RedListArrayTy =
-      ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+  Value *ReduceListArgAlloca =
+      Builder.CreateAlloca(PtrTy, nullptr, ReduceListArg->getName() + ".addr");
+  ArrayType *RedListArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
 
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
@@ -4641,22 +4619,19 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
   InsertPointTy AllocaIP(EntryBlock->begin());
 
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      BufferArgAlloca, Builder.getPtrTy(),
-      BufferArgAlloca->getName() + ".ascast");
+      BufferArgAlloca, PtrTy, BufferArgAlloca->getName() + ".ascast");
   Value *IdxArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      IdxArgAlloca, Builder.getPtrTy(), IdxArgAlloca->getName() + ".ascast");
+      IdxArgAlloca, PtrTy, IdxArgAlloca->getName() + ".ascast");
   Value *ReduceListArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceListArgAlloca, Builder.getPtrTy(),
-      ReduceListArgAlloca->getName() + ".ascast");
+      ReduceListArgAlloca, PtrTy, ReduceListArgAlloca->getName() + ".ascast");
   Value *ReductionList = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      LocalReduceList, Builder.getPtrTy(),
-      LocalReduceList->getName() + ".ascast");
+      LocalReduceList, PtrTy, LocalReduceList->getName() + ".ascast");
 
   Builder.CreateStore(BufferArg, BufferArgAddrCast);
   Builder.CreateStore(IdxArg, IdxArgAddrCast);
   Builder.CreateStore(ReduceListArg, ReduceListArgAddrCast);
 
-  Value *BufferVal = Builder.CreateLoad(Builder.getPtrTy(), BufferArgAddrCast);
+  Value *BufferVal = Builder.CreateLoad(PtrTy, BufferArgAddrCast);
   Value *Idxs[] = {Builder.CreateLoad(Builder.getInt32Ty(), IdxArgAddrCast)};
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
@@ -4674,18 +4649,16 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
 
     if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
       // Get source descriptor from the reduce list
-      Value *ReduceListVal =
-          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *ReduceListVal = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
       Value *SrcElementPtrPtr =
           Builder.CreateInBoundsGEP(RedListArrayTy, ReduceListVal,
                                     {ConstantInt::get(IndexTy, 0),
                                      ConstantInt::get(IndexTy, En.index())});
-      Value *SrcDescriptorAddr =
-          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
+      Value *SrcDescriptorAddr = Builder.CreateLoad(PtrTy, SrcElementPtrPtr);
 
       // Copy descriptor from source and update base_ptr to global buffer data
       Expected<Value *> ByRefAlloc = createReductionDescriptorCopy(
-          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, Builder.getPtrTy());
+          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, PtrTy);
       if (!ByRefAlloc)
         return ByRefAlloc.takeError();
 
@@ -4696,8 +4669,7 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
   }
 
   // Call reduce_function(ReduceList, GlobalReduceList)
-  Value *ReduceList =
-      Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+  Value *ReduceList = Builder.CreateLoad(PtrTy, ReduceListArgAddrCast);
   createRuntimeFunctionCall(ReduceFn, {ReduceList, ReductionList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
@@ -4714,9 +4686,9 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
     ArrayRef<bool> IsByRef, ReductionGenCBKind ReductionGenCBKind,
     AttributeList FuncAttrs) {
+  PointerType *PtrTy = Builder.getPtrTy(Config.getDefaultTargetAS());
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
-                                   {Builder.getPtrTy(), Builder.getPtrTy()},
+  auto *FuncTy = FunctionType::get(Builder.getVoidTy(), {PtrTy, PtrTy},
                                    /* IsVarArg */ false);
   std::string Name = getReductionFuncName(ReducerName);
   Function *ReductionFunc =
@@ -4752,7 +4724,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
   LHSArrayPtr = Builder.CreateLoad(Arg0Type, LHSAddrCast);
   RHSArrayPtr = Builder.CreateLoad(Arg1Type, RHSAddrCast);
 
-  Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), ReductionInfos.size());
+  Type *RedArrayTy = ArrayType::get(PtrTy, ReductionInfos.size());
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   SmallVector<Value *> LHSPtrs, RHSPtrs;
@@ -4761,7 +4733,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     Value *RHSI8PtrPtr = Builder.CreateInBoundsGEP(
         RedArrayTy, RHSArrayPtr,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
-    Value *RHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), RHSI8PtrPtr);
+    Value *RHSI8Ptr = Builder.CreateLoad(PtrTy, RHSI8PtrPtr);
     Value *RHSPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
         RHSI8Ptr, RI.PrivateVariable->getType(),
         RHSI8Ptr->getName() + ".ascast");
@@ -4769,7 +4741,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     Value *LHSI8PtrPtr = Builder.CreateInBoundsGEP(
         RedArrayTy, LHSArrayPtr,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
-    Value *LHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), LHSI8PtrPtr);
+    Value *LHSI8Ptr = Builder.CreateLoad(PtrTy, LHSI8PtrPtr);
     Value *LHSPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
         LHSI8Ptr, RI.Variable->getType(), LHSI8Ptr->getName() + ".ascast");
 
@@ -4998,9 +4970,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   Function *CopyScratchToListFunc = nullptr;
   // Thread-local storage for the reduction variables.
   Value *ScratchForCopyBack = nullptr;
-  // RL pointer to which the final value from the per-thread scratch should be
-  // copied back. (Basically RL, appropriately casted if necessary.)
-  Value *RLForCopyBack = RL;
 
   bool IsAtomicReduction =
       IsTeamsReduction && isAtomicableReductionSet(ReductionInfos);
@@ -5105,24 +5074,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         }
         Builder.CreateStore(RuntimeListEntry, Slot);
       }
-      // The copy helpers were emitted with default-AS (AS 0) pointer params
-      // (see emitListToGlobalCopyFunction / emitGlobalToListCopyFunction),
-      // but PerThreadScratch and RL live in the target's default AS, which
-      // is non-zero on e.g. SPIRV. (See Config.getDefaultTargetAS().)
-      Type *CopyArg0Ty = (*LtGCFunc)->getFunctionType()->getParamType(0);
-      Type *CopyArg2Ty = (*LtGCFunc)->getFunctionType()->getParamType(2);
-      ScratchForCopyBack = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          PerThreadScratch, CopyArg0Ty);
-      RLForCopyBack =
-          Builder.CreatePointerBitCastOrAddrSpaceCast(RL, CopyArg2Ty);
+      ScratchForCopyBack = PerThreadScratch;
       // Use index 0 because there is no array of target values to index into,
       // there is only one thread-local memory slot.
       // restoreIP above left a stale/empty debug location; this inlinable call
       // to a debug-info-bearing helper needs one or the verifier rejects the
       // module ("!dbg attachment points at wrong subprogram") after inlining.
       Builder.SetCurrentDebugLocation(Loc.DL);
-      Builder.CreateCall(
-          *LtGCFunc, {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
+      Builder.CreateCall(*LtGCFunc,
+                         {ScratchForCopyBack, Builder.getInt32(0), RL});
       CopyScratchToListFunc = *GtLCFunc;
     }
 
@@ -5152,9 +5112,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // needs one or the verifier rejects the module after inlining.
   if (ScratchForCopyBack) {
     Builder.SetCurrentDebugLocation(Loc.DL);
-    Builder.CreateCall(
-        CopyScratchToListFunc,
-        {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
+    Builder.CreateCall(CopyScratchToListFunc,
+                       {ScratchForCopyBack, Builder.getInt32(0), RL});
   }
 
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
