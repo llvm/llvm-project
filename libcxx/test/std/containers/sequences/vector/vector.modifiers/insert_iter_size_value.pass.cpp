@@ -19,6 +19,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "MoveOnly.h"
 #include "asan_testing.h"
 #include "../common.h"
 #include "count_new.h"
@@ -70,6 +71,18 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 1);
     for (++j; j < v.size(); ++j)
       assert(v[j] == 0);
+  }
+  { // Check that inserting from the same vector works as expected
+    std::vector<int> v;
+    v.push_back(1);
+    v.push_back(2);
+    v.push_back(3);
+    v.push_back(4);
+    v.reserve(6); // force no reallocation
+    v.insert(v.begin(), 2, v.back());
+    assert(v.size() == 6);
+    int expected[] = {4, 4, 1, 2, 3, 4};
+    assert(std::equal(v.begin(), v.end(), expected));
   }
   {
     std::vector<int, limited_allocator<int, 300> > v(100);
