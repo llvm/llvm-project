@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -75,9 +76,8 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
 
 
 ProgramStateManager::~ProgramStateManager() {
-  for (GDMContextsTy::iterator I=GDMContexts.begin(), E=GDMContexts.end();
-       I!=E; ++I)
-    I->second.second(I->second.first);
+  for (const auto &[Data, Destroy] : llvm::make_second_range(GDMContexts))
+    Destroy(Data);
 }
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(

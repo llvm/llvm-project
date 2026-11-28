@@ -18,6 +18,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "llvm/ADT/STLExtras.h"
 #include <optional>
 #include <tuple>
 
@@ -38,11 +39,10 @@ template <class T> bool containsStmt(const Stmt *S) {
   if (isa<T>(S))
       return true;
 
-  for (const Stmt *Child : S->children())
-    if (Child && containsStmt<T>(Child))
-      return true;
-
-  return false;
+  auto ChildContainsStmt = [](const Stmt *Child) {
+    return Child && containsStmt<T>(Child);
+  };
+  return llvm::any_of(S->children(), ChildContainsStmt);
 }
 
 std::pair<const clang::VarDecl *, const clang::Expr *>
