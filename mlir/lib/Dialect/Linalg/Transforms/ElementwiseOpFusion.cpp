@@ -2700,7 +2700,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
   }
 };
 
-/// Fold linalg.fill into linalg.generic
+/// Propagate fill values into inputs and non-accumulating outputs of a generic.
 struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
 
@@ -2710,7 +2710,19 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
     bool fillFound = false;
     Block &payload = genericOp.getRegion().front();
-    for (OpOperand *opOperand : genericOp.getDpsInputOperands()) {
+    bool allParallel =
+        genericOp.getNumParallelLoops() == genericOp.getNumLoops();
+    for (OpOperand &operand : genericOp->getOpOperands()) {
+      OpOperand *opOperand = &operand;
+      // A permutation output map with only parallel loops visits each output
+      // element once, so its block argument reads the initial fill value.
+      // Reduction accumulators and overlapping output accesses cannot use this
+      // substitution. Leave sparse outputs to the sparsifier.
+      if (genericOp.isDpsInit(opOperand) &&
+          (!allParallel ||
+           !genericOp.getMatchingIndexingMap(opOperand).isPermutation() ||
+           sparse_tensor::getSparseTensorEncoding(opOperand->get().getType())))
+        continue;
       if (!genericOp.payloadUsesValueFromOperand(opOperand))
         continue;
       FillOp fillOp = opOperand->get().getDefiningOp<FillOp>();
