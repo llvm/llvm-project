@@ -127,6 +127,15 @@ defm as_needed: B<"as-needed",
     "Only set DT_NEEDED for shared libraries if used",
     "Always set DT_NEEDED for shared libraries (default)">;
 
+def as_needed_diagnostics: FF<"as-needed-diagnostics">,
+  HelpText<"Emit diagnostics for libraries dropped due to --as-needed">;
+
+defm as_needed_diagnostics_exclude
+    : EEq<"as-needed-diagnostics-exclude",
+          "Exclude libraries matching the glob pattern from "
+          "--as-needed-diagnostics">,
+      MetaVarName<"<glob>">;
+
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 

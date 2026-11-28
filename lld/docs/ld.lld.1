@@ -64,6 +64,21 @@ Apply link-time values for dynamic relocations.
 Only set
 .Dv DT_NEEDED
 for shared libraries if used.
+.It Fl -as-needed-diagnostics
+Warn about each shared library whose
+.Dv DT_NEEDED
+entry was dropped by
+.Fl -as-needed .
+If the library is a
+.Dv DT_NEEDED
+dependency of another library that is needed, the needed libraries are listed
+as well.
+.It Fl -as-needed-diagnostics-exclude Ns = Ns Ar glob
+Do not report libraries whose soname or resolved input path matches
+.Ar glob
+in
+.Fl -as-needed-diagnostics .
+May be specified multiple times.
 .It Fl -auxiliary Ns = Ns Ar value
 Set the
 .Dv DT_AUXILIARY

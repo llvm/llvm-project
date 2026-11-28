@@ -1405,6 +1405,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
+  ctx.arg.asNeededDiagnostics = args.hasArg(OPT_as_needed_diagnostics);
   if (opt::Arg *arg = args.getLastArg(
           OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
           OPT_Bsymbolic_functions, OPT_Bsymbolic_non_weak, OPT_Bsymbolic)) {
@@ -1997,6 +1998,24 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     StringRef pattern(arg->getValue());
     if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
       ctx.arg.warnBackrefsExclude.push_back(std::move(*pat));
+    else
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError() << ": "
+                     << pattern;
+  }
+
+  if (!args.hasArg(OPT_as_needed) &&
+      (args.hasArg(OPT_as_needed_diagnostics) ||
+       args.hasArg(OPT_as_needed_diagnostics_exclude)))
+    Warn(ctx) << "--as-needed-diagnostics and --as-needed-diagnostics-exclude "
+                 "have no effect without --as-needed";
+  else if (!args.hasArg(OPT_as_needed_diagnostics) &&
+           args.hasArg(OPT_as_needed_diagnostics_exclude))
+    Warn(ctx) << "--as-needed-diagnostics-exclude has no effect without "
+                 "--as-needed-diagnostics";
+  for (opt::Arg *arg : args.filtered(OPT_as_needed_diagnostics_exclude)) {
+    StringRef pattern(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
+      ctx.arg.asNeededDiagnosticsExclude.push_back(std::move(*pat));
     else
       ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError() << ": "
                      << pattern;
@@ -3572,6 +3591,41 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
+
+  if (ctx.arg.asNeededDiagnostics) {
+    // Index needed libraries by the sonames they depend on so each report is a
+    // single lookup.
+    DenseMap<StringRef, SmallVector<StringRef, 0>> dependants;
+    for (const SharedFile *file : ctx.sharedFiles)
+      if (file->isNeeded)
+        for (StringRef soName : file->dtNeeded)
+          dependants[soName].push_back(file->soName);
+
+    for (const SharedFile *file : ctx.sharedFiles) {
+      if (file->isNeeded)
+        continue;
+      bool isExcluded = llvm::any_of(ctx.arg.asNeededDiagnosticsExclude,
+                                     [file](const llvm::GlobPattern &pat) {
+                                       return pat.match(file->soName) ||
+                                              pat.match(file->getName());
+                                     });
+      if (isExcluded)
+        continue;
+      ELFSyncStream msg(ctx, DiagLevel::Warn);
+      msg << file << ": DT_NEEDED entry";
+      if (file->soName != file->getName())
+        msg << " " << file->soName;
+      msg << " dropped because no symbol from it is used";
+      // Build systems often group libraries by link requirements such as "if
+      // you link A, also link B" (e.g. CMake PUBLIC links). If needed library
+      // A lists unneeded library B in its DT_NEEDED, log A as a possible
+      // source of that transitive link. It is useful for debugging.
+      auto it = dependants.find(file->soName);
+      if (it != dependants.end())
+        msg << "\n>>> the following linked files share this dependency:\n>>> "
+            << llvm::join(it->second, ", ");
+    }
+  }
 
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
