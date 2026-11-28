@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -312,8 +313,9 @@ class BTFDebug : public DebugHandlerBase {
       DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
-  std::map<const DICompositeType *,
-           std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
+  // Preserve insertion order when assigning type IDs to forward declarations.
+  MapVector<const DICompositeType *,
+            std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;
 
