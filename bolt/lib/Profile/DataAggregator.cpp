@@ -96,7 +96,7 @@ cl::opt<bool> IgnoreBuildID(
         "continue even if build-ids in input binary and perf.data mismatch"),
     cl::init(false), cl::cat(AggregatorCategory));
 
-static cl::opt<bool> IgnoreInterruptLBR(
+static cl::opt<bool> IgnoreInterruptBRStack(
     "ignore-interrupt-lbr",
     cl::desc(
         "ignore brstack entries representing asynchronous kernel interrupts"),
@@ -454,7 +454,7 @@ std::error_code DataAggregator::parsePreAggregated() {
     }
   }
 
-  return parsePreAggregatedLBRSamples();
+  return parsePreAggregatedRecords();
 }
 
 std::error_code DataAggregator::parsePerfScriptFileHeader() {
@@ -749,7 +749,7 @@ Error DataAggregator::parsePerfData() {
     // of whether they are due to system calls or due to
     // interrupts. Therefore, we cannot ignore interrupt
     // in Linux kernel mode.
-    opts::IgnoreInterruptLBR = false;
+    opts::IgnoreInterruptBRStack = false;
   } else {
     Jobs.emplace_back("mmap events", &MMapEventsPPI,
                       &DataAggregator::parseMMapEvents);
@@ -947,7 +947,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     imputeFallThroughs();
 
   if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap())
+    if (std::error_code EC = printBRStackHeatMap())
       return errorCodeToError(EC);
     if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
       exit(0);
@@ -995,7 +995,7 @@ bool DataAggregator::mayHaveProfileData(const BinaryFunction &Function) {
 
 void DataAggregator::processProfile(BinaryContext &BC) {
   // Set for DataReader::readProfile
-  NoLBRMode = opts::BasicAggregation;
+  NoBRStackMode = opts::BasicAggregation;
 
   // Set for DataReader::recordBranch and evaluateProfileData
   BATMode = usesBAT();
@@ -1326,7 +1326,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   return Branches;
 }
 
-ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
+ErrorOr<DataAggregator::BRStackEntry> DataAggregator::parseBRStackEntry() {
   /// perf script -F brstack entry format:
   /// FROM/TO/EVENT/INTX/ABORT/CYCLES[/TYPE/SPEC]
   ErrorOr<StringRef> EntryStr = parseString(FieldSeparator, true);
@@ -1341,7 +1341,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  LBREntry Res;
+  BRStackEntry Res;
   // From
   StringRef OffsetStr = Fields[0];
   if (OffsetStr.getAsInteger(0, Res.From)) {
@@ -1443,15 +1443,15 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   while (!checkAndConsumeNewLine()) {
     checkAndConsumeFS();
 
-    ErrorOr<LBREntry> LBRRes = parseLBREntry();
-    if (std::error_code EC = LBRRes.getError())
+    ErrorOr<BRStackEntry> BRStackRes = parseBRStackEntry();
+    if (std::error_code EC = BRStackRes.getError())
       return EC;
-    LBREntry LBR = LBRRes.get();
-    if (ignoreKernelInterrupt(LBR))
+    BRStackEntry Entry = BRStackRes.get();
+    if (ignoreKernelInterrupt(Entry))
       continue;
     if (!BC->HasFixedLoadAddress)
-      adjustLBR(LBR, MMapInfoIter->second);
-    Res.LBR.push_back(LBR);
+      adjustBRStack(Entry, MMapInfoIter->second);
+    Res.BRStack.push_back(Entry);
   }
 
   return Res;
@@ -1576,8 +1576,8 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
   return Location(true, BuildID.get(), Offset.get());
 }
 
-std::error_code DataAggregator::parseAggregatedLBREntry() {
-  enum AggregatedLBREntry : char {
+std::error_code DataAggregator::parsePreAggregatedRecord() {
+  enum RecordType : char {
     INVALID = 0,
     EVENT_NAME,         // E
     TRACE,              // T
@@ -1612,7 +1612,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
       break;
     }
 
-    Type = StringSwitch<AggregatedLBREntry>(Str)
+    Type = StringSwitch<RecordType>(Str)
                .Case("T", TRACE)
                .Case("R", RETURN)
                .Case("S", SAMPLE)
@@ -1735,12 +1735,12 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   return std::error_code();
 }
 
-bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
-  return opts::IgnoreInterruptLBR &&
-         (LBR.From >= KernelBaseAddr || LBR.To >= KernelBaseAddr);
+bool DataAggregator::ignoreKernelInterrupt(BRStackEntry &BRStack) const {
+  return opts::IgnoreInterruptBRStack &&
+         (BRStack.From >= KernelBaseAddr || BRStack.To >= KernelBaseAddr);
 }
 
-std::error_code DataAggregator::printLBRHeatMap() {
+std::error_code DataAggregator::printBRStackHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
   NamedRegionTimer T("buildHeatmap", "Building heatmap", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
@@ -1813,13 +1813,13 @@ std::error_code DataAggregator::printLBRHeatMap() {
   return std::error_code();
 }
 
-void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
-                                    bool NeedsSkylakeFix) {
-  // Brstack entries are stored in reverse execution order. NextLBR refers to
-  // the next executed branch record.
-  const LBREntry *NextLBR = nullptr;
+void DataAggregator::parseBRStackSample(const PerfBranchSample &Sample,
+                                        bool NeedsSkylakeFix) {
+  // Brstack entries are stored in reverse execution order. NextBRSample
+  // refers to the next executed branch record.
+  const BRStackEntry *NextBRSample = nullptr;
   uint32_t NumEntry = 0;
-  for (const LBREntry &LBR : Sample.LBR) {
+  for (const BRStackEntry &BRStackSample : Sample.BRStack) {
     ++NumEntry;
     // Hardware bug workaround: Intel Skylake (which has 32 LBR entries)
     // sometimes record entry 32 as an exact copy of entry 31. This will cause
@@ -1829,21 +1829,22 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    uint64_t TraceTo = NextLBR ? NextLBR->From : Trace::BR_ONLY;
-    NextLBR = &LBR;
+    uint64_t TraceTo = NextBRSample ? NextBRSample->From : Trace::BR_ONLY;
+    NextBRSample = &BRStackSample;
 
-    TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
+    TakenBranchInfo &Info =
+        TraceMap[Trace{BRStackSample.From, BRStackSample.To, TraceTo}];
     ++Info.TakenCount;
-    Info.MispredCount += LBR.Mispred;
-    if (LBR.IsReturn)
-      Returns.emplace(LBR.From, true);
+    Info.MispredCount += BRStackSample.Mispred;
+    if (BRStackSample.IsReturn)
+      Returns.emplace(BRStackSample.From, true);
   }
   // Record brstack addresses not covered by fallthroughs (bottom-of-stack
   // source and top-of-stack target) as basic samples for heatmap.
   if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive &&
-      !Sample.LBR.empty()) {
-    ++BasicSamples[Sample.LBR.front().To];
-    ++BasicSamples[Sample.LBR.back().From];
+      !Sample.BRStack.empty()) {
+    ++BasicSamples[Sample.BRStack.front().To];
+    ++BasicSamples[Sample.BRStack.back().From];
   }
 }
 
@@ -1917,7 +1918,7 @@ std::error_code DataAggregator::parseBranchEvents() {
 
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
-  uint64_t NumSamplesNoLBR = 0;
+  uint64_t NumSamplesNoBRStack = 0;
   bool NeedsSkylakeFix = false;
 
   while (hasData() && NumTotalSamples < opts::MaxSamples) {
@@ -1933,19 +1934,19 @@ std::error_code DataAggregator::parseBranchEvents() {
 
     PerfBranchSample &Sample = SampleRes.get();
 
-    if (Sample.LBR.empty()) {
-      ++NumSamplesNoLBR;
+    if (Sample.BRStack.empty()) {
+      ++NumSamplesNoBRStack;
       continue;
     }
 
-    NumEntries += Sample.LBR.size();
-    if (this->BC->isX86() && BAT && Sample.LBR.size() == 32 &&
+    NumEntries += Sample.BRStack.size();
+    if (this->BC->isX86() && BAT && Sample.BRStack.size() == 32 &&
         !NeedsSkylakeFix) {
       errs() << "PERF2BOLT-WARNING: using Intel Skylake bug workaround\n";
       NeedsSkylakeFix = true;
     }
 
-    parseLBRSample(Sample, NeedsSkylakeFix);
+    parseBRStackSample(Sample, NeedsSkylakeFix);
   }
 
   Traces.reserve(TraceMap.size());
@@ -1956,7 +1957,7 @@ std::error_code DataAggregator::parseBranchEvents() {
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
          << " brstack entries\n";
   if (NumTotalSamples) {
-    if (NumSamples && NumSamplesNoLBR == NumSamples) {
+    if (NumSamples && NumSamplesNoBRStack == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
       // at this point. In this case, it is OK to parse zero brstack entries.
       if (!opts::ArmSPE)
@@ -2103,19 +2104,18 @@ void DataAggregator::processMemEvents() {
   }
 }
 
-std::error_code DataAggregator::parsePreAggregatedLBRSamples() {
+std::error_code DataAggregator::parsePreAggregatedRecords() {
   outs() << "PERF2BOLT: parsing pre-aggregated profile...\n";
   NamedRegionTimer T("parseAggregated", "Parsing aggregated branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
-  size_t AggregatedLBRs = 0;
+  size_t NumRecords = 0;
   while (hasData()) {
-    if (std::error_code EC = parseAggregatedLBREntry())
+    if (std::error_code EC = parsePreAggregatedRecord())
       return EC;
-    ++AggregatedLBRs;
+    ++NumRecords;
   }
 
-  outs() << "PERF2BOLT: read " << AggregatedLBRs
-         << " aggregated brstack entries\n";
+  outs() << "PERF2BOLT: read " << NumRecords << " aggregated brstack entries\n";
 
   return std::error_code();
 }
@@ -2797,9 +2797,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 void DataAggregator::dump() const { DataReader::dump(); }
 
 void DataAggregator::dump(const PerfBranchSample &Sample) const {
-  Diag << "Sample brstack entries: " << Sample.LBR.size() << "\n";
-  for (const LBREntry &LBR : Sample.LBR)
-    Diag << LBR << '\n';
+  Diag << "Sample brstack entries: " << Sample.BRStack.size() << "\n";
+  for (const BRStackEntry &Entry : Sample.BRStack)
+    Diag << Entry << '\n';
 }
 
 void DataAggregator::dump(const PerfMemSample &Sample) const {

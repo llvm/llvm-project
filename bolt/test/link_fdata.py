@@ -47,7 +47,7 @@ preagg_pat = re.compile(r"(?P<type>[TRSBFfr]) (?P<offsets_count>.*)")
 
 # Basic sample profile (without brstack):
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
-nolbr_pat = re.compile(r"([01].*) (?P<count>\d+)")
+nobrstack_pat = re.compile(r"([01].*) (?P<count>\d+)")
 
 # Replacement symbol: #symname#
 replace_pat = re.compile(r"#(?P<symname>[^#]+)#")
@@ -64,7 +64,7 @@ with open(args.input, "r") as f:
         profile_line = prefix_match.group(2)
         fdata_match = fdata_pat.match(profile_line)
         preagg_match = preagg_pat.match(profile_line)
-        nolbr_match = nolbr_pat.match(profile_line)
+        nobrstack_match = nobrstack_pat.match(profile_line)
         if fdata_match:
             src_dst, mispred, execnt = fdata_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
@@ -75,8 +75,8 @@ with open(args.input, "r") as f:
                 len(chunks) == 6
             ), f"ERROR: wrong format/whitespaces must be escaped:\n{line}"
             exprs.append(("FDATA", (*chunks, mispred, execnt)))
-        elif nolbr_match:
-            loc, count = nolbr_match.groups()
+        elif nobrstack_match:
+            loc, count = nobrstack_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
             chunks = re.split(r"(?<!\\) +", loc)
             # Check if the number of records separated by non-escaped whitespace
@@ -84,7 +84,7 @@ with open(args.input, "r") as f:
             assert (
                 len(chunks) == 3
             ), f"ERROR: wrong format/whitespaces must be escaped:\n{line}"
-            exprs.append(("NOLBR", (*chunks, count)))
+            exprs.append(("NOBRSTACK", (*chunks, count)))
         elif preagg_match:
             exprs.append(("PREAGG", preagg_match.groups()))
         else:
@@ -157,7 +157,7 @@ with open(args.output, "w", newline="\n") as f:
                 mispred,
                 file=f,
             )
-        elif etype == "NOLBR":
+        elif etype == "NOBRSTACK":
             issym, anchor, offsym, count = expr
             print(evaluate_symbol(issym, anchor, offsym), count, file=f)
         elif etype == "PREAGG":

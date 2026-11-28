@@ -35,17 +35,17 @@ class BoltAddressTranslation;
 /// The aggregator works by dispatching two separate perf-script jobs that
 /// read perf samples and perf task annotations. Later, we read the output
 /// files to extract information about which PID was used for this binary.
-/// With the PID, we filter the samples and extract all brstack entries.
+/// With the PID, we filter and extract all of the branch stack samples.
 ///
-/// To aggregate brstack entries, we rely on a BinaryFunction map to locate the
-/// original function where the event happened. Then, we convert a raw address
-/// to an offset relative to the start of this function and aggregate branch
-/// information for each function.
+/// To aggregate the branch stack samples, we rely on a BinaryFunction map to
+/// locate the original function where the event happened. Then, we convert a
+/// raw address to an offset relative to the start of this function and
+/// aggregate branch information for each function.
 ///
 /// This must be coordinated with RewriteInstance so we have BinaryFunctions in
 /// State::Disassembled. After this state, BinaryFunction will drop the
 /// instruction map with original addresses we rely on to validate the traces
-/// found in the brstack.
+/// found in the branch stack.
 ///
 /// The last step is to write the aggregated data to disk in the output file
 /// specified by the user.
@@ -89,13 +89,13 @@ public:
   static bool checkInputFileMagic(StringRef FileName, StringLiteral MagicStr);
 
 private:
-  struct LBREntry {
+  struct BRStackEntry {
     uint64_t From;
     uint64_t To;
     bool Mispred;
     bool IsReturn;
   };
-  friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
+  friend raw_ostream &operator<<(raw_ostream &OS, const BRStackEntry &);
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
@@ -103,7 +103,7 @@ private:
   friend struct MMapEventsTestHelper;
 
   struct PerfBranchSample {
-    SmallVector<LBREntry, 32> LBR;
+    SmallVector<BRStackEntry, 32> BRStack;
   };
 
   struct PerfBasicSample {
@@ -254,8 +254,8 @@ private:
   BoltAddressTranslation *BAT{nullptr};
 
   /// Update function execution profile with a recorded trace.
-  /// A trace is a region of code executed between two brstack entries supplied
-  /// in execution order.
+  /// A trace is region of code executed between two branch stack samples
+  /// supplied in execution order.
   ///
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
@@ -297,7 +297,7 @@ private:
   static StringRef getLocationName(const BinaryFunction &Func, bool BAT);
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
-  /// Register a sample (non-brstack mode), i.e. a new hit at \p Address
+  /// Register a sample (no-brstack mode), i.e. a new hit at \p Address
   bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
                      uint64_t Count);
 
@@ -317,7 +317,8 @@ private:
   /// Register a \p Branch.
   bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
-  /// Register a trace between two brstack entries supplied in execution order.
+  /// Register a trace between two branch stack samples supplied in execution
+  /// order.
   bool doTrace(const Trace &Trace, uint64_t Count, bool IsReturn);
 
   /// Parser helpers
@@ -325,11 +326,11 @@ private:
   /// everything
   bool hasData() const { return !ParsingBuf.empty(); }
 
-  /// Print heat map based on brstack samples.
-  std::error_code printLBRHeatMap();
+  /// Print heat map based on branch stack samples.
+  std::error_code printBRStackHeatMap();
 
   /// Parse a single perf sample containing a PID associated with a sequence of
-  /// brstack entries. If the PID does not correspond to the binary we are
+  /// branch stack samples. If the PID does not correspond to the binary we are
   /// looking for, return std::errc::no_such_process. If other parsing errors
   /// occur, return the error. Otherwise, return the parsed sample.
   ErrorOr<PerfBranchSample> parseBranchSample();
@@ -342,11 +343,11 @@ private:
   /// address.
   ErrorOr<PerfMemSample> parseMemSample();
 
-  /// Parse pre-aggregated brstack samples created by an external tool
-  std::error_code parseAggregatedLBREntry();
+  /// Parse a pre-aggregated record created by an external tool
+  std::error_code parsePreAggregatedRecord();
 
   /// Parse either buildid:offset or just offset, representing a location in the
-  /// binary. Used exclusively for pre-aggregated brstack samples.
+  /// binary. Used exclusively for pre-aggregated brstack profiles.
   ErrorOr<Location> parseLocationOrOffset();
 
   /// Check if a field separator is the next char to parse and, if yes, consume
@@ -364,11 +365,11 @@ private:
   /// Returns an error if the perf invocation fails.
   Error prepareToParse(StringRef Name, PerfProcessInfo &Process);
 
-  /// Parse a single brstack entry as output by perf script -Fbrstack
-  ErrorOr<LBREntry> parseLBREntry();
+  /// Parse one branch stack entry as output by perf script -Fbrstack
+  ErrorOr<BRStackEntry> parseBRStackEntry();
 
-  /// Parse a brstack sample.
-  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  /// Parse branch stack sample.
+  void parseBRStackSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -379,11 +380,11 @@ private:
   /// Parse the full output generated by perf script to report main samples.
   std::error_code parseMainEvents();
 
-  /// Parse the full output generated by perf script to report non-brstack
+  /// Parse the full output generated by perf script to report no-brstack
   /// samples.
   std::error_code parseBasicEvents();
 
-  /// Process non-brstack events.
+  /// Process no-brstack events.
   void processBasicEvents();
 
   /// Parse the full output generated by perf script to report memory events.
@@ -498,9 +499,9 @@ private:
   /// B 4b196f 4b19e0 2
   std::error_code parsePreAggregated();
 
-  /// Parse the full output of pre-aggregated brstack samples generated by
+  /// Parse the full output of pre-aggregated records generated by
   /// an external tool.
-  std::error_code parsePreAggregatedLBRSamples();
+  std::error_code parsePreAggregatedRecords();
 
   /// Coordinate reading pre-parsed perf-script:
   /// - open file header to determine offset and length for each part,
@@ -570,14 +571,14 @@ private:
     }
   }
 
-  /// Adjust addresses in the brstack entry \p LBR.
-  void adjustLBR(LBREntry &LBR, const MMapInfo &MMI) const {
-    adjustAddress(LBR.From, MMI);
-    adjustAddress(LBR.To, MMI);
+  /// Adjust addresses in the brstack entry \p BRStack.
+  void adjustBRStack(BRStackEntry &BRStack, const MMapInfo &MMI) const {
+    adjustAddress(BRStack.From, MMI);
+    adjustAddress(BRStack.To, MMI);
   }
 
   /// Ignore brstack entries involving kernel addresses if requested.
-  bool ignoreKernelInterrupt(LBREntry &LBR) const;
+  bool ignoreKernelInterrupt(BRStackEntry &BRStack) const;
 
   /// Populate functions in \p BC with profile.
   void processProfile(BinaryContext &BC);
@@ -685,7 +686,7 @@ public:
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
-                               const DataAggregator::LBREntry &L) {
+                               const DataAggregator::BRStackEntry &L) {
   OS << formatv("{0:x} -> {1:x}/{2}/{3}", L.From, L.To, L.Mispred ? 'M' : 'P',
                 L.IsReturn ? "RET" : "-");
   return OS;

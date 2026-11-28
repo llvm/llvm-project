@@ -227,7 +227,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
       opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
-  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_BRANCH;
+  const bool HasBranchProfile =
+      BF.getProfileFlags() & BinaryFunction::PF_BRANCH;
 
   // Prepare function and block hashes
   BF.computeHash(UseDFS);
@@ -257,7 +258,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
     YamlBB.NumInstructions = BB->getNumNonPseudos();
     YamlBB.Hash = BB->getHash();
 
-    if (!LBRProfile) {
+    if (!HasBranchProfile) {
       YamlBB.EventCount = BB->getKnownExecutionCount();
       if (YamlBB.EventCount)
         YamlBF.Blocks.emplace_back(YamlBB);
