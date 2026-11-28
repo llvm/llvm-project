@@ -560,6 +560,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Errors for invalid element types during instantiation of an `ext_vector_type`
   now include a source location, including in alias templates. (#GH229300)
 
+- Fixed missing keyword compatibility and extension warnings in single-token
+  macro expansions, and duplicate or spurious warnings from macro argument
+  expansion.
+
 - Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
   in `#if !defined(...)` header guards.
 

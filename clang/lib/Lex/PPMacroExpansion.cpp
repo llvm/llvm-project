@@ -570,6 +570,9 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
           if (NewMI != MI || MI->isFunctionLike())
             Diag(Identifier, diag::pp_disabled_macro_expansion);
         }
+      // Fast expansion bypasses TokenLexer and its call to HandleIdentifier.
+      if (NewII->isHandleIdentifierCase())
+        diagnoseKeywordUsage(Identifier, *NewII);
     }
 
     // Since this is not an identifier token, it can't be macro expanded, so

@@ -879,6 +879,33 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
+void Preprocessor::diagnoseKeywordUsage(const Token &Identifier,
+                                        IdentifierInfo &II) {
+  // Diagnose pre-expanded arguments when they are rescanned after substitution,
+  // since the tokens may be discarded by a later macro expansion.
+  if (InMacroArgPreExpansion)
+    return;
+
+  // If this identifier is a keyword in a newer Standard or proposed Standard,
+  // produce a warning.
+  if (II.isFutureCompatKeyword()) {
+    Diag(Identifier,
+         getIdentifierTable().getFutureCompatDiagKind(II, getLangOpts()))
+        << II.getName();
+    // Don't diagnose this keyword again in this translation unit.
+    II.setIsFutureCompatKeyword(false);
+  }
+
+  // If this identifier would be a keyword in C++, diagnose as a compatibility
+  // issue.
+  if (II.IsKeywordInCPlusPlus())
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
+
+  // If this is an extension token, diagnose its use.
+  if (II.isExtensionToken())
+    Diag(Identifier, diag::ext_token_used);
+}
+
 /// HandleIdentifier - This callback is invoked when the lexer reads an
 /// identifier.  This callback looks up the identifier in the map and/or
 /// potentially macro expands it or turns it into a named token (like 'for').
@@ -939,29 +966,10 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     }
   }
 
-  // If this identifier is a keyword in a newer Standard or proposed Standard,
-  // produce a warning. Don't warn if we're not considering macro expansion,
-  // since this identifier might be the name of a macro.
-  // FIXME: This warning is disabled in cases where it shouldn't be, like
-  //   "#define constexpr constexpr", "int constexpr;"
-  if (II.isFutureCompatKeyword() && !DisableMacroExpansion) {
-    Diag(Identifier, getIdentifierTable().getFutureCompatDiagKind(II, getLangOpts()))
-        << II.getName();
-    // Don't diagnose this keyword again in this translation unit.
-    II.setIsFutureCompatKeyword(false);
-  }
-
-  // If this identifier would be a keyword in C++, diagnose as a compatibility
-  // issue.
-  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
-    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
-
-  // If this is an extension token, diagnose its use.
-  // We avoid diagnosing tokens that originate from macro definitions.
-  // FIXME: This warning is disabled in cases where it shouldn't be,
-  // like "#define TY typeof", "TY(1) x".
-  if (II.isExtensionToken() && !DisableMacroExpansion)
-    Diag(Identifier, diag::ext_token_used);
+  // Don't warn while reading unexpanded tokens, since this identifier might
+  // be the name of a macro.
+  if (!DisableMacroExpansion)
+    diagnoseKeywordUsage(Identifier, II);
 
   // Handle module contextual keywords.
   if (getLangOpts().CPlusPlusModules && CurLexer &&
