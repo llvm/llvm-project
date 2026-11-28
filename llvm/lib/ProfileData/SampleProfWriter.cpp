@@ -33,7 +33,9 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <map>
 #include <memory>
+#include <set>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -667,6 +669,56 @@ SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
   return sampleprof_error::success;
 }
 
+// Record every function inlined (at any depth) into \p S as an inlinee of
+// \p TopLevel.
+static void
+collectInlinees(const FunctionSamples &S, FunctionId TopLevel,
+                std::map<FunctionId, std::set<FunctionId>> &InlineeMap) {
+  for (const auto &Callsite : S.getCallsiteSamples()) {
+    for (const auto &[Callee, CalleeSamples] : Callsite.second) {
+      InlineeMap[CalleeSamples.getFunction()].insert(TopLevel);
+      collectInlinees(CalleeSamples, TopLevel, InlineeMap);
+    }
+  }
+}
+
+// The SecInlineeTopLevelMap section maps each inlinee to the top-level
+// functions whose profiles contain an inlined instance of it. All function
+// names are encoded as indices into SecNameTable. The on-disk layout is:
+// - ULEB128 number of inlinees
+// - For each inlinee, sorted by function name:
+//   - ULEB128 name index of the inlinee
+//   - ULEB128 number of top-level functions containing the inlinee
+//   - ULEB128 name index of each top-level function, sorted by function name
+std::error_code
+SampleProfileWriterExtBinaryBase::writeInlineeTopLevelMapSection(
+    const SampleProfileMap &ProfileMap) {
+  // Full context-sensitive profiles express inlining through contexts rather
+  // than nested callsite samples.
+  if (FunctionSamples::ProfileIsCS)
+    return sampleprof_error::unsupported_writing_format;
+
+  // Use ordered containers so the output is deterministic regardless of the
+  // iteration order of ProfileMap.
+  std::map<FunctionId, std::set<FunctionId>> InlineeMap;
+  for (const auto &Entry : ProfileMap) {
+    const FunctionSamples &TopLevelSamples = Entry.second;
+    collectInlinees(TopLevelSamples, TopLevelSamples.getFunction(), InlineeMap);
+  }
+
+  auto &OS = *OutputStream;
+  encodeULEB128(InlineeMap.size(), OS);
+  for (const auto &[Inlinee, TopLevelFuncs] : InlineeMap) {
+    if (std::error_code EC = writeNameIdx(Inlinee))
+      return EC;
+    encodeULEB128(TopLevelFuncs.size(), OS);
+    for (FunctionId TopLevel : TopLevelFuncs)
+      if (std::error_code EC = writeNameIdx(TopLevel))
+        return EC;
+  }
+  return sampleprof_error::success;
+}
+
 unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
   auto WrittenIndices =
       llvm::map_range(SecHdrTable, &SecHdrTableEntry::LayoutIndex);
@@ -740,6 +792,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     if (auto EC = writeProfileSymbolListSection())
       return EC;
     break;
+  case SecInlineeTopLevelMap:
+    if (auto EC = writeInlineeTopLevelMapSection(ProfileMap))
+      return EC;
+    break;
   default:
     if (auto EC = writeCustomSection(Type))
       return EC;
@@ -766,6 +822,9 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
   };
   for (SecType Type : Sections)
     if (std::error_code EC = writeOneSection(Type, ProfileMap))
+      return EC;
+  if (WriteInlineeTopLevelMap)
+    if (std::error_code EC = writeOneSection(SecInlineeTopLevelMap, ProfileMap))
       return EC;
   return sampleprof_error::success;
 }
@@ -796,6 +855,9 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   };
   for (const auto &[Type, Map] : Sections)
     if (std::error_code EC = writeOneSection(Type, Map))
+      return EC;
+  if (WriteInlineeTopLevelMap)
+    if (std::error_code EC = writeOneSection(SecInlineeTopLevelMap, ProfileMap))
       return EC;
 
   return sampleprof_error::success;
@@ -1030,8 +1092,38 @@ SampleProfileWriterBinary::writeHeader(const SampleProfileMap &ProfileMap) {
 }
 
 void SampleProfileWriterExtBinaryBase::setToCompressAllSections() {
+  CompressAllSections = true;
   for (auto &Entry : SectionHdrLayout)
     addSecFlag(Entry, SecCommonFlags::SecFlagCompress);
+}
+
+void SampleProfileWriterExtBinaryBase::setWriteInlineeTopLevelMap(bool Enable) {
+  WriteInlineeTopLevelMap = Enable;
+  auto IsInlineeMapEntry = [](const SecHdrTableEntry &Entry) {
+    return Entry.Type == SecInlineeTopLevelMap;
+  };
+  bool InLayout = llvm::any_of(SectionHdrLayout, IsInlineeMapEntry);
+  if (!Enable)
+    llvm::erase_if(SectionHdrLayout, IsInlineeMapEntry);
+  else if (!InLayout)
+    addInlineeTopLevelMapToLayout();
+}
+
+void SampleProfileWriterExtBinaryBase::addInlineeTopLevelMapToLayout() {
+  // The reader reads sections in layout order. The section references
+  // SecNameTable indices, so it must come after SecNameTable, and the reader
+  // consults it when deciding which function profiles to load, so it must
+  // come before every function offset table and profile section. Place it
+  // right after SecNameTable.
+  auto *NameTableIt = llvm::find_if(SectionHdrLayout, [](const auto &Entry) {
+    return Entry.Type == SecNameTable;
+  });
+  assert(NameTableIt != SectionHdrLayout.end() &&
+         "Layout must contain a SecNameTable");
+  SecHdrTableEntry Entry{SecInlineeTopLevelMap, 0, 0, 0, 0};
+  if (CompressAllSections)
+    addSecFlag(Entry, SecCommonFlags::SecFlagCompress);
+  SectionHdrLayout.insert(std::next(NameTableIt), Entry);
 }
 
 void SampleProfileWriterExtBinaryBase::setToCompressSection(SecType Type) {

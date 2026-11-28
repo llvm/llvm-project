@@ -483,6 +483,8 @@ defm : EnumField<"sample-profile-inline-replay-scope", "ReplayInlinerSettings::S
   "Whether inline replay should be applied to the entire Module or just the Functions (default) that are present as callers in remarks during sample profile inlining">;
 defm : OptionalBoolField<"sample-profile-inline-size",
   "Inline cold call sites in profile loader if it's beneficial for code size">;
+defm : BoolField<"sample-profile-load-inlinee-top-level", "true",
+  "In ThinLTO pre-link, also load the profiles of top-level functions that contain an inlined instance of a function defined in the module, if the profile records them in an inlinee-to-top-level map section">;
 defm : BoolField<"sample-profile-merge-inlinee", "true",
   "Merge past inlinee's profile to outline version if sample profile loader decided not to inline a call site. It will only be enabled when top-down order of profile loading is enabled">;
 defm : BoolField<"sample-profile-preserve-deferred-inlines", "true",

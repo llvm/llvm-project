@@ -155,6 +155,9 @@ enum SecType {
   SecCSNameTable = 6,
   // Function offset table used by the composite profile representation.
   SecCompositeFuncOffsetTable = 7,
+  // Map from each inlinee function to the top-level functions whose profiles
+  // contain an inlined instance of it.
+  SecInlineeTopLevelMap = 8,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
   SecLBRProfile = SecFuncProfileFirst,
@@ -180,6 +183,8 @@ static inline std::string getSecName(SecType Type) {
     return "CSNameTableSection";
   case SecCompositeFuncOffsetTable:
     return "CompositeFuncOffsetTableSection";
+  case SecInlineeTopLevelMap:
+    return "InlineeTopLevelMapSection";
   case SecLBRProfile:
     return "LBRProfileSection";
   case SecCompositeProfile:
@@ -1609,6 +1614,12 @@ public:
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
+
+/// Map from an inlinee function to the top-level functions whose profiles
+/// contain an inlined instance of it (at any inline depth). This is the
+/// in-memory form of the SecInlineeTopLevelMap section.
+using InlineeTopLevelMap =
+    HashKeyMap<DenseMap, FunctionId, SmallVector<FunctionId, 1>>;
 
 LLVM_ABI void
 sortFuncProfiles(const SampleProfileMap &ProfileMap,

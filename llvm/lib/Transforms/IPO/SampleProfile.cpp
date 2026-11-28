@@ -1767,6 +1767,12 @@ bool SampleProfileLoader::doInitialization(Module &M,
   }
   Reader = std::move(ReaderOrErr.get());
   Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
+  // In ThinLTO pre-link, make the profiles of the top-level functions that a
+  // function in this module was inlined into available as well, even when
+  // those top-level functions are defined in other modules.
+  Reader->setLoadInlineeTopLevelFuncs(
+      LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink &&
+      Opts.sample_profile_load_inlinee_top_level);
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);

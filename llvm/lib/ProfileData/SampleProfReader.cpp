@@ -44,6 +44,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <memory>
 #include <system_error>
 #include <vector>
@@ -1070,10 +1071,42 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
             hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5)))
       return EC;
     break;
+  case SecInlineeTopLevelMap:
+    if (std::error_code EC = readInlineeTopLevelMap())
+      return EC;
+    break;
   default:
     if (std::error_code EC = readCustomSection(Entry))
       return EC;
     break;
+  }
+  return sampleprof_error::success;
+}
+
+// See SampleProfileWriterExtBinaryBase::writeInlineeTopLevelMapSection for
+// the section layout.
+std::error_code SampleProfileReaderExtBinaryBase::readInlineeTopLevelMap() {
+  auto NumInlinees = readNumber<uint64_t>();
+  if (std::error_code EC = NumInlinees.getError())
+    return EC;
+
+  // Don't reserve based on the counts read from the profile, which may be
+  // malformed.
+  InlineeTopLevelFuncs.emplace();
+  for (uint64_t I = 0; I < *NumInlinees; ++I) {
+    auto Inlinee = readStringFromTable();
+    if (std::error_code EC = Inlinee.getError())
+      return EC;
+    auto NumTopLevel = readNumber<uint64_t>();
+    if (std::error_code EC = NumTopLevel.getError())
+      return EC;
+    auto &TopLevelFuncs = (*InlineeTopLevelFuncs)[*Inlinee];
+    for (uint64_t J = 0; J < *NumTopLevel; ++J) {
+      auto TopLevel = readStringFromTable();
+      if (std::error_code EC = TopLevel.getError())
+        return EC;
+      TopLevelFuncs.push_back(*TopLevel);
+    }
   }
   return sampleprof_error::success;
 }
@@ -1316,6 +1349,60 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileReaderExtBinaryBase::readInlineeTopLevelProfiles(
+    const uint8_t *Start) {
+  assert(M && InlineeTopLevelFuncs && "Expect a module and the inlinee map");
+  // The map is only written for profiles without full contexts.
+  if (ProfileIsCS)
+    return sampleprof_error::success;
+
+  // Collect the top-level functions containing an inlined instance of any
+  // function defined in the module, skipping profiles already loaded. Key them
+  // by GUID in an ordered map so profiles are read in a deterministic order.
+  std::map<uint64_t, FunctionId> TopLevelFuncs;
+  for (const Function &F : *M) {
+    if (F.isDeclaration())
+      continue;
+    auto It = InlineeTopLevelFuncs->find(
+        FunctionId(FunctionSamples::getCanonicalFnName(F)));
+    if (It == InlineeTopLevelFuncs->end())
+      continue;
+    for (FunctionId TopLevel : It->second)
+      if (!Profiles.count(SampleContext(TopLevel)))
+        TopLevelFuncs.try_emplace(TopLevel.getHashCode(), TopLevel);
+  }
+
+  auto LoadProfile = [&](FunctionId TopLevel, uint64_t Offset) {
+    LLVM_DEBUG(dbgs() << "Load top-level profile of inlinee container: "
+                      << TopLevel << "\n");
+    return readFuncProfile(Start + Offset, Profiles);
+  };
+
+  if (useFuncOffsetList()) {
+    // The offset table was read into a list, e.g. when a remapper is used.
+    for (const auto &[FContext, Offset] : FuncOffsetList) {
+      auto It = TopLevelFuncs.find(FContext.getHashCode());
+      if (It == TopLevelFuncs.end() || Profiles.count(FContext))
+        continue;
+      if (std::error_code EC = LoadProfile(It->second, Offset))
+        return EC;
+    }
+    return sampleprof_error::success;
+  }
+
+  if (!FuncOffsetTable)
+    return sampleprof_error::success;
+  for (const auto &[GUID, TopLevel] : TopLevelFuncs) {
+    // A top-level profile may live in a different function profile section,
+    // e.g. the nested vs. flat sections of the context-split layout, in which
+    // case it is loaded when that section is read.
+    if (std::optional<uint64_t> Offset = FuncOffsetTable->lookup(GUID))
+      if (std::error_code EC = LoadProfile(TopLevel, *Offset))
+        return EC;
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   // Collect functions used by current module if the Reader has been
   // given a module.
@@ -1335,8 +1422,12 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
     assert(Data == End && "More data is read than expected");
   } else {
     // Load function profiles on demand.
+    const uint8_t *SecStart = Data;
     if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
       return EC;
+    if (LoadInlineeTopLevelFuncs && InlineeTopLevelFuncs)
+      if (std::error_code EC = readInlineeTopLevelProfiles(SecStart))
+        return EC;
     Data = End;
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&

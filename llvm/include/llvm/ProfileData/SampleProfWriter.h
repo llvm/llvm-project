@@ -134,6 +134,7 @@ public:
   virtual void setUseMD5ProfileSymbolList() {}
   virtual void setUseMD5IndexedTables() {}
   virtual void setUseCompositeProfile(bool /*Enable*/) {}
+  virtual void setWriteInlineeTopLevelMap(bool /*Enable*/) {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -315,6 +316,13 @@ public:
     WriteCompositeProf = Enable;
   }
 
+  /// Emit the SecInlineeTopLevelMap section, which maps every inlinee in the
+  /// profile to the top-level functions it is inlined into. The section is
+  /// only added to the section header layout when enabled, so profiles
+  /// written without it are unchanged. Not supported for full
+  /// context-sensitive profiles.
+  void setWriteInlineeTopLevelMap(bool Enable) override;
+
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
@@ -326,11 +334,15 @@ public:
 #endif
     SecLayout = SL;
     SectionHdrLayout = getExtBinaryHdrLayout(SL);
+    if (WriteInlineeTopLevelMap)
+      addInlineeTopLevelMapToLayout();
   }
 
 protected:
   static SmallVector<SecHdrTableEntry, 8>
   getExtBinaryHdrLayout(SectionLayout SL);
+  // Insert the SecInlineeTopLevelMap entry into SectionHdrLayout.
+  void addInlineeTopLevelMapToLayout();
 
   uint64_t markSectionStart(SecType Type, uint32_t LayoutIdx);
   std::error_code addNewSection(SecType Sec, uint32_t LayoutIdx,
@@ -378,10 +390,17 @@ protected:
   std::error_code writeEytzingerFuncOffsetTable(SecType Type, bool IsNested);
   std::error_code writeLegacyFuncOffsetTable(SecType Type);
   std::error_code writeProfileSymbolListSection();
+  std::error_code
+  writeInlineeTopLevelMapSection(const SampleProfileMap &ProfileMap);
   std::error_code writeStringBasedProfileSymbolListSection();
   std::error_code writeMD5ProfileSymbolListSection();
 
   SectionLayout SecLayout = DefaultLayout;
+  // Whether to write the SecInlineeTopLevelMap section.
+  bool WriteInlineeTopLevelMap = false;
+  // Whether setToCompressAllSections() has been called, so sections added to
+  // the layout afterwards are compressed as well.
+  bool CompressAllSections = false;
   // Specifiy the order of sections in section header table. Note
   // the order of sections in SecHdrTable may be different that the
   // order in SectionHdrLayout. sample Reader will follow the order
