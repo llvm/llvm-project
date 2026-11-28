@@ -1206,6 +1206,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT_SAT,    VT, Custom);
     }
 
+    setOperationAction(ISD::FP_TO_UINT_SAT,     MVT::v4i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,     MVT::v4i32, Custom);
+
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Custom);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v4i32, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i32, Custom);
@@ -1477,6 +1480,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i16, MVT::v8i32);
     setOperationAction(ISD::FP_TO_SINT,                MVT::v8i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,                MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,            MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT,            MVT::v8i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Custom);
@@ -1884,6 +1889,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
     }
+
+    setOperationAction(ISD::FP_TO_SINT_SAT,    MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT,    MVT::v16i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
@@ -22656,8 +22664,143 @@ SDValue X86TargetLowering::LRINT_LLRINTHelper(SDNode *N,
   return DAG.getLoad(DstVT, DL, Chain, StackPtr, MPI);
 }
 
-SDValue
-X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
+static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT DstVT = Op.getSimpleValueType();
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+
+  if (DstVT != MVT::v4i32 && DstVT != MVT::v8i32 && DstVT != MVT::v16i32)
+    return SDValue();
+
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
+  assert(SatWidth <= 32 &&
+         "Expected saturation width no wider than result element");
+
+  MVT SrcEltVT = SrcVT.getScalarType();
+  if (SrcEltVT == MVT::bf16 ||
+      (SrcEltVT == MVT::f16 && (!Subtarget.hasFP16() || !Subtarget.hasVLX()))) {
+    SrcEltVT = MVT::f32;
+    SrcVT = SrcVT.changeVectorElementType(SrcEltVT);
+    Src = DAG.getNode(ISD::FP_EXTEND, dl, SrcVT, Src);
+  }
+
+  if (SatWidth == 32) {
+    if (IsSigned) {
+      EVT CCVT =
+          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+      if (SrcEltVT == MVT::f64) {
+        SDValue Clamped = DAG.getNode(ISD::PSEUDO_FMIN, dl, SrcVT, Src,
+                                      DAG.getConstantFP(INT32_MAX, dl, SrcVT));
+        SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
+        Clamped = DAG.getSelect(dl, SrcVT, NotNaN, Clamped,
+                                DAG.getConstantFP(0.0, dl, SrcVT));
+        return DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Clamped);
+      }
+      // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
+      // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
+      SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
+      APFloat PosOvfBoundFlt(SrcEltVT.getFltSemantics());
+      PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
+                                      /*IsSigned=*/true,
+                                      APFloat::rmNearestTiesToEven);
+      PosOvfBoundFlt.changeSign();
+      SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
+      SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
+      SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
+
+      // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
+      // bitmask vector (CCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
+      // (0x80000000) to INT_MAX (0x7FFFFFFF) on positive overflow without
+      // needing INT_MAX in the constant pool or select emulation.
+      if (CCVT == DstVT) {
+        SDValue Fixed = DAG.getNode(ISD::XOR, dl, DstVT, Cvt, PosOvf);
+        return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
+      }
+
+      SDValue IntMax = DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
+      SDValue Zero = DAG.getConstant(0, dl, DstVT);
+      SDValue Zeroed = DAG.getSelect(dl, DstVT, NotNaN, Cvt, Zero);
+      return DAG.getSelect(dl, DstVT, PosOvf, IntMax, Zeroed);
+    }
+
+    SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
+    // Non-commutative PSEUDO_FMAX maps negatives, -0.0, and NaN to +0.0.
+    SDValue Clamped = DAG.getNode(ISD::PSEUDO_FMAX, dl, SrcVT, Src, ZeroFP);
+    if (SrcVT.is512BitVector() || Subtarget.hasVLX())
+      return DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
+    if (SrcEltVT == MVT::f64) {
+      Clamped = DAG.getNode(X86ISD::FMINC, dl, SrcVT, Clamped,
+                            DAG.getConstantFP(UINT32_MAX, dl, SrcVT));
+      return expandFP_TO_UINT_SSE(DstVT, Clamped, dl, DAG, Subtarget);
+    }
+
+    APFloat OvfBoundFlt(SrcEltVT.getFltSemantics());
+    OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
+                                 /*IsSigned=*/false,
+                                 APFloat::rmNearestTiesToEven);
+    SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
+    SDValue IsOvf = DAG.getSetCC(dl, DstVT, Clamped, OvfBound, ISD::SETOGE);
+    SDValue Cvt = expandFP_TO_UINT_SSE(DstVT, Clamped, dl, DAG, Subtarget);
+    return DAG.getNode(ISD::OR, dl, DstVT, Cvt, IsOvf);
+  }
+
+  APInt MinInt = IsSigned ? APInt::getSignedMinValue(SatWidth)
+                          : APInt::getMinValue(SatWidth);
+  APInt MaxInt = IsSigned ? APInt::getSignedMaxValue(SatWidth)
+                          : APInt::getMaxValue(SatWidth);
+
+  const fltSemantics &Sem = SrcVT.getFltSemantics();
+  APFloat MinFloat(Sem);
+  APFloat MaxFloat(Sem);
+  // Only use the FMAX/FMIN clamp path when both bounds are exactly
+  // representable in the source float type. If either is inexact, fall back
+  // to generic lowering.
+  bool AreExactFloatBounds =
+      MinFloat.convertFromAPInt(MinInt, IsSigned, APFloat::rmTowardZero) ==
+          APFloat::opOK &&
+      MaxFloat.convertFromAPInt(MaxInt, IsSigned, APFloat::rmTowardZero) ==
+          APFloat::opOK;
+  if (!AreExactFloatBounds)
+    return SDValue();
+
+  SDValue MaxC = DAG.getConstantFP(MaxFloat, dl, SrcVT);
+  SDValue MinC = DAG.getConstantFP(MinFloat, dl, SrcVT);
+
+  // For unsigned, non-commutative PSEUDO_FMAX maps NaN to MinC (+0.0) so no
+  // NaN fixup is needed. For signed, commutative FMAXC is safe since NaN is
+  // zeroed below.
+  unsigned MaxOpc = IsSigned ? X86ISD::FMAXC : ISD::PSEUDO_FMAX;
+  SDValue ClampedBottom = DAG.getNode(MaxOpc, dl, SrcVT, Src, MinC);
+  SDValue ClampedTop =
+      DAG.getNode(X86ISD::FMINC, dl, SrcVT, ClampedBottom, MaxC);
+
+  // For SatWidth < 32, max unsigned value fits in signed i32.
+  SDValue Result = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, ClampedTop);
+  if (!IsSigned)
+    return Result;
+
+  EVT CCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+  SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
+  EVT SelCCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+  if (CCVT != SelCCVT)
+    NotNaN = DAG.getSExtOrTrunc(NotNaN, dl, SelCCVT);
+
+  if (SelCCVT == DstVT)
+    return DAG.getNode(ISD::AND, dl, DstVT, Result, NotNaN);
+
+  SDValue Zero = DAG.getConstant(0, dl, DstVT);
+  return DAG.getSelect(dl, DstVT, NotNaN, Result, Zero);
+}
+
+SDValue X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
+                                              SelectionDAG &DAG) const {
   // This is based on the TargetLowering::expandFP_TO_INT_SAT implementation,
   // but making use of X86 specifics to produce better instruction sequences.
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
@@ -22681,7 +22824,10 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
   }
-
+  if (DstVT.isVector()) {
+    if (SDValue V = lowerVectorFP_TO_INT_SAT(Op, DAG, Subtarget))
+      return V;
+  }
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
   if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
