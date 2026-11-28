@@ -5030,6 +5030,39 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
 
   return nullptr;
 }
+static Value *simplifySelectWithLogicalCond(Value *Cond, Value *TrueVal,
+                                            Value *FalseVal, FastMathFlags FMF,
+                                            const SimplifyQuery &Q,
+                                            unsigned MaxRecurse) {
+  if (!MaxRecurse)
+    return nullptr;
+
+  Value *A, *B;
+  if (match(Cond, m_LogicalOr(m_Value(A), m_Value(B)))) { // match with condition or
+    // Check whether either part of the OR condition simplifies the select
+    // to TrueVal.
+    if (simplifySelectInst(A, TrueVal, FalseVal, FMF, Q, MaxRecurse - 1) ==
+        TrueVal)
+      return TrueVal;
+    if (simplifySelectInst(B, TrueVal, FalseVal, FMF, Q, MaxRecurse - 1) ==
+        TrueVal)
+      return TrueVal;
+  }
+
+  if (match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))) { // match with condition and
+    // Check whether either part of the AND condition simplifies the select
+    // to FalseVal.
+    if (simplifySelectInst(A, TrueVal, FalseVal, FMF, Q, MaxRecurse - 1) ==
+        FalseVal)
+      return FalseVal;
+    if (simplifySelectInst(B, TrueVal, FalseVal, FMF, Q, MaxRecurse - 1) ==
+        FalseVal)
+      return FalseVal;
+  }
+
+  // No simplification was found.
+  return nullptr;
+}
 
 /// Look for the following pattern and simplify %to_fold to %identicalPhi.
 /// Here %phi, %to_fold and %phi.next perform the same functionality as
@@ -5286,6 +5319,10 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
   if (Value *V =
           simplifySelectWithFCmp(Cond, TrueVal, FalseVal, FMF, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifySelectWithLogicalCond(Cond, TrueVal, FalseVal, FMF, Q,
+                                               MaxRecurse))
     return V;
 
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CtxI, Q.DL);
