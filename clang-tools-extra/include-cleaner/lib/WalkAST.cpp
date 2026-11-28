@@ -590,21 +590,17 @@ public:
 
   bool VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
     // A category declaration depends on its base interface.
-    if (auto *Interface = D->getClassInterface()) {
-      report(D->getLocation(), Interface);
-    }
+    report(D->getCategoryNameLoc(), D->getClassInterface());
     return true;
   }
 
   bool VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *D) {
-    // Implementation requires the base interface.
-    if (auto *Interface = D->getClassInterface()) {
-      report(D->getLocation(), Interface);
-    }
-    // Implementation requires the category declaration.
-    if (auto *Category = D->getCategoryDecl()) {
-      report(D->getCategoryNameLoc(), Category);
-    }
+    auto *Category = D->getCategoryDecl();
+    SourceLocation Loc = D->getCategoryNameLoc();
+    if (Category && !Category->isImplicit())
+      report(Loc, Category);
+    else
+      report(Loc, D->getClassInterface());
     return true;
   }
 
