@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-typedef void (*FPTR)();
+typedef int (*FPTR)();
 
 // __xi_a and __xi_z are defined in VC/crt/src/crt0dat.c
 // and are located in .CRT$XIA and .CRT$XIZ respectively.
@@ -24,7 +24,7 @@ int main() {
 // CHECK: Number of nonzero CRT initializers
 }
 
-void call_me_maybe() {}
+int call_me_maybe() { return 0; }
 
 #pragma data_seg(".CRT$XIB")
 // Add an initializer that shouldn't get its own redzone.
