@@ -625,7 +625,7 @@ public:
 class AllocaSlices {
 public:
   /// Construct the slices of a particular alloca.
-  AllocaSlices(const DataLayout &DL, AllocaInst &AI);
+  AllocaSlices(const DataLayout &DL, AllocaInst &AI, bool AllowFCA = false);
 
   /// Test whether a pointer to the allocation escapes our analysis.
   ///
@@ -1059,10 +1059,14 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   /// Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
+  const bool AllowFCA;
+
 public:
-  SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
+  SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS,
+               bool AllowFCA)
       : PtrUseVisitor<SliceBuilder>(DL),
-        AllocSize(AI.getAllocationSize(DL)->getFixedValue()), AS(AS) {}
+        AllocSize(AI.getAllocationSize(DL)->getFixedValue()), AS(AS),
+        AllowFCA(AllowFCA) {}
 
 private:
   void markAsDead(Instruction &I) {
@@ -1139,7 +1143,7 @@ private:
   }
 
   void visitLoadInst(LoadInst &LI) {
-    assert((!LI.isSimple() || LI.getType()->isSingleValueType()) &&
+    assert((AllowFCA || !LI.isSimple() || LI.getType()->isSingleValueType()) &&
            "All simple FCA loads should have been pre-split");
 
     // If there is a load with an unknown offset, we can still perform store
@@ -1194,8 +1198,9 @@ private:
       return markAsDead(SI);
     }
 
-    assert((!SI.isSimple() || ValOp->getType()->isSingleValueType()) &&
-           "All simple FCA stores should have been pre-split");
+    assert(
+        (AllowFCA || !SI.isSimple() || ValOp->getType()->isSingleValueType()) &&
+        "All simple FCA stores should have been pre-split");
     handleLoadOrStore(ValOp->getType(), SI, Offset, Size, SI.isVolatile());
   }
 
@@ -1438,13 +1443,13 @@ private:
   }
 };
 
-AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
+AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI, bool AllowFCA)
     :
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       AI(AI),
 #endif
       PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
-  SliceBuilder PB(DL, AI, *this);
+  SliceBuilder PB(DL, AI, *this, AllowFCA);
   SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
   if (PtrI.isEscaped() || PtrI.isAborted()) {
     // FIXME: We should sink the escape vs. abort info into the caller nicely,
@@ -4320,6 +4325,18 @@ private:
   }
 };
 
+static bool shouldSplitAggregateOps(AllocaInst &AI, const DataLayout &DL) {
+  AllocaSlices AS(DL, AI, /*AllowFCA=*/true);
+  LLVM_DEBUG(AS.print(dbgs()));
+  if (AS.isEscaped())
+    return false;
+  if (AS.isEscapedReadOnly())
+    return any_of(AS, [](const Slice &S) {
+      return isa<LoadInst>(S.getUse()->getUser());
+    });
+  return true;
+}
+
 /// Visitor to rewrite aggregate loads and stores as scalar.
 ///
 /// This pass aggressively rewrites all aggregate loads and stores on
@@ -4344,9 +4361,12 @@ class AggLoadStoreRewriter : public InstVisitor<AggLoadStoreRewriter, bool> {
 
   IRBuilderTy &IRB;
 
+  const bool SplitAggregateOps;
+
 public:
-  AggLoadStoreRewriter(const DataLayout &DL, IRBuilderTy &IRB)
-      : DL(DL), IRB(IRB) {}
+  AggLoadStoreRewriter(const DataLayout &DL, IRBuilderTy &IRB,
+                       bool SplitAggregateOps)
+      : DL(DL), IRB(IRB), SplitAggregateOps(SplitAggregateOps) {}
 
   /// Rewrite loads and stores through a pointer and all pointers derived from
   /// it.
@@ -4527,7 +4547,8 @@ private:
 
   bool visitLoadInst(LoadInst &LI) {
     assert(LI.getPointerOperand() == *U);
-    if (!LI.isSimple() || LI.getType()->isSingleValueType())
+    if (!SplitAggregateOps || !LI.isSimple() ||
+        LI.getType()->isSingleValueType())
       return false;
 
     // We have an aggregate being loaded, split it apart.
@@ -4598,7 +4619,7 @@ private:
   };
 
   bool visitStoreInst(StoreInst &SI) {
-    if (!SI.isSimple() || SI.getPointerOperand() != *U)
+    if (!SplitAggregateOps || !SI.isSimple() || SI.getPointerOperand() != *U)
       return false;
     Value *V = SI.getValueOperand();
     if (V->getType()->isSingleValueType())
@@ -6443,8 +6464,12 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
   IRB.disableGEPCanonicalization();
-  AggLoadStoreRewriter AggRewriter(DL, IRB);
-  Changed |= AggRewriter.rewrite(AI);
+  Changed |=
+      AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/false).rewrite(AI);
+  if (!shouldSplitAggregateOps(AI, DL))
+    return {Changed, CFGChanged};
+  Changed |=
+      AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/true).rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);

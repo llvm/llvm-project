@@ -20,9 +20,7 @@ define amdgpu_vs void @promote_1d_aggr() #0 {
 ; CHECK-NEXT:    [[FOO:%.*]] = getelementptr [[BLOCK:%.*]], ptr addrspace(1) @block, i32 0, i32 1
 ; CHECK-NEXT:    [[FOO1:%.*]] = load i32, ptr addrspace(1) [[FOO]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = load [1 x float], ptr addrspace(1) @block, align 4
-; CHECK-NEXT:    [[FOO3_FCA_0_EXTRACT:%.*]] = extractvalue [1 x float] [[FOO3]], 0
-; CHECK-NEXT:    [[FOO3_FCA_0_GEP:%.*]] = getelementptr inbounds [1 x float], ptr addrspace(5) [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store float [[FOO3_FCA_0_EXTRACT]], ptr addrspace(5) [[FOO3_FCA_0_GEP]], align 4
+; CHECK-NEXT:    store [1 x float] [[FOO3]], ptr addrspace(5) [[F1]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [1 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO1]]
 ; CHECK-NEXT:    [[FOO6:%.*]] = load float, ptr addrspace(5) [[FOO5]], align 4
 ; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> undef, float [[FOO6]], i32 0
@@ -87,15 +85,13 @@ define amdgpu_vs void @promote_store_aggr() #0 {
 
 define amdgpu_vs void @promote_load_from_store_aggr() #0 {
 ; CHECK-LABEL: @promote_load_from_store_aggr(
-; CHECK-NEXT:    [[F1:%.*]] = freeze <2 x float> poison
+; CHECK-NEXT:    [[F1:%.*]] = alloca [2 x float], align 4, addrspace(5)
 ; CHECK-NEXT:    [[FOO:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 1
 ; CHECK-NEXT:    [[FOO1:%.*]] = load i32, ptr addrspace(1) [[FOO]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = load [2 x float], ptr addrspace(1) @block3, align 4
-; CHECK-NEXT:    [[FOO3_FCA_0_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[F1]], float [[FOO3_FCA_0_EXTRACT]], i32 0
-; CHECK-NEXT:    [[FOO3_FCA_1_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FOO3_FCA_1_EXTRACT]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 [[FOO1]]
+; CHECK-NEXT:    store [2 x float] [[FOO3]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [2 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[FOO5]], align 4
 ; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[FOO10:%.*]] = insertelement <4 x float> [[FOO9]], float [[TMP3]], i32 1
 ; CHECK-NEXT:    [[FOO11:%.*]] = insertelement <4 x float> [[FOO10]], float [[TMP3]], i32 2
@@ -180,18 +176,16 @@ define amdgpu_vs void @promote_memmove_aggr() #0 {
 
 define amdgpu_vs void @promote_memcpy_aggr() #0 {
 ; CHECK-LABEL: @promote_memcpy_aggr(
-; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <5 x float> [[TMP7]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <5 x float> [[TMP8]], float 0.000000e+00, i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP9]], float 0.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[TMP5]], float 2.000000e+00, i32 3
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
+; CHECK-NEXT:    store float 2.000000e+00, ptr addrspace(5) [[FOO2]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[TMP6]], float 3.000000e+00, i32 [[FOO4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x float> [[TMP1]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <5 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 [[F1]], ptr addrspace(5) align 4 [[FOO2]], i32 8, i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[F1]], align 4
 ; CHECK-NEXT:    store float [[TMP3]], ptr addrspace(1) @pv, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -234,26 +228,8 @@ define amdgpu_vs void @promote_memcpy_two_aggrs() #0 {
 ; CHECK-LABEL: @promote_memcpy_two_aggrs(
 ; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
 ; CHECK-NEXT:    [[F2:%.*]] = alloca [5 x float], align 4, addrspace(5)
-; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_0_GEP1]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 1
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_1_GEP2]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_GEP3:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 2
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_2_GEP3]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_GEP4:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_3_GEP4]], align 4
-; CHECK-NEXT:    [[DOTFCA_4_GEP5:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 4
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_4_GEP5]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 0
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 1
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 2
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_2_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 3
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_3_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_4_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 4
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_4_GEP]], align 4
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F2]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
@@ -287,16 +263,7 @@ define amdgpu_vs void @promote_memcpy_two_aggrs() #0 {
 define amdgpu_vs void @promote_memcpy_p1p5_aggr(ptr addrspace(1) inreg %src) #0 {
 ; CHECK-LABEL: @promote_memcpy_p1p5_aggr(
 ; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 1
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 2
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_2_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_3_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_4_GEP:%.*]] = getelementptr inbounds [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 4
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[DOTFCA_4_GEP]], align 4
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
@@ -318,17 +285,15 @@ define amdgpu_vs void @promote_memcpy_p1p5_aggr(ptr addrspace(1) inreg %src) #0 
 
 define amdgpu_vs void @promote_memcpy_inline_aggr() #0 {
 ; CHECK-LABEL: @promote_memcpy_inline_aggr(
-; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[TMP6]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <5 x float> [[TMP7]], float 0.000000e+00, i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP8]], float 0.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
 ; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[TMP5]], float 3.000000e+00, i32 [[FOO4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x float> [[TMP1]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <5 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p5.p5.i32(ptr addrspace(5) align 4 [[F1]], ptr addrspace(5) align 4 [[FOO2]], i32 8, i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[F1]], align 4
 ; CHECK-NEXT:    store float [[TMP3]], ptr addrspace(1) @pv, align 4
 ; CHECK-NEXT:    ret void
 ;
