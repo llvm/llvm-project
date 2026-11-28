@@ -63,6 +63,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -2288,8 +2289,23 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
       return false;
   }
 
+  // A call in a Windows EH funclet needs the funclet bundle, or WinEHPrepare
+  // removes it and makes the rest of the funclet unreachable.
+  SmallVector<OperandBundleDef, 1> Bundles;
+  Function *Fn = Preheader->getParent();
+  if (Fn->hasPersonalityFn() &&
+      isScopedEHPersonality(classifyEHPersonality(Fn->getPersonalityFn()))) {
+    ColorVector Colors = colorEHFunclets(*Fn).lookup(Preheader);
+    if (Colors.size() != 1)
+      return false;
+    BasicBlock::iterator EHPadIt = Colors.front()->getFirstNonPHIIt();
+    if (EHPadIt != Colors.front()->end() && EHPadIt->isEHPad())
+      Bundles.emplace_back("funclet", &*EHPadIt);
+  }
+
   IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(CurLoop->getStartLoc());
+  Builder.setDefaultOperandBundles(Bundles);
   SCEVExpander Expander(*SE, "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
       Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
