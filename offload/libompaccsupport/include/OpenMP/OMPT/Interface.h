@@ -27,12 +27,18 @@
 #define OMPT_IF_BUILT_AND_INITIALIZED(stmt)                                    \
   OMPT_IF_BUILT(performIfOmptInitialized(stmt))
 
+/// Prefix of ompt_task_info_t struct from libomp
+typedef struct ompt_task_info_t {
+  ompt_data_t task_data;
+  ompt_data_t target_data;
+} ompt_task_info_t;
+
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
 /// Callbacks for target regions and target data ops require
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
-typedef ompt_data_t *(*ompt_get_target_task_data_t)();
+typedef ompt_task_info_t *(*ompt_get_task_info_target_t)();
 
 namespace llvm {
 namespace omp {
@@ -42,7 +48,7 @@ namespace ompt {
 /// Function pointers that will be used to track task_data and
 /// target_task_data.
 static ompt_get_task_data_t ompt_get_task_data_fn;
-static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+static ompt_get_task_info_target_t ompt_get_task_info_target_fn;
 
 /// Used to maintain execution state for this thread
 class Interface {
@@ -220,27 +226,41 @@ public:
   }
 
   /// Setters for target region and target operation correlation ids
-  void setTargetDataValue(uint64_t DataValue) { TargetData.value = DataValue; }
-  void setTargetDataPtr(void *DataPtr) { TargetData.ptr = DataPtr; }
+  void setTargetDataValue(uint64_t DataValue) {
+    targetData().value = DataValue;
+  }
+  void setTargetDataPtr(void *DataPtr) { targetData().ptr = DataPtr; }
   void setHostOpId(ompt_id_t OpId) { HostOpId = OpId; }
 
   /// Getters for target region and target operation correlation ids
-  uint64_t getTargetDataValue() { return TargetData.value; }
-  void *getTargetDataPtr() { return TargetData.ptr; }
+  uint64_t getTargetDataValue() { return targetData().value; }
+  void *getTargetDataPtr() { return targetData().ptr; }
   ompt_id_t getHostOpId() { return HostOpId; }
 
 private:
   /// Target operations id
-  ompt_id_t HostOpId = 0;
-
-  /// Target region data
-  ompt_data_t TargetData = ompt_data_none;
+  ompt_id_t HostOpId{0};
 
   /// Task data representing the encountering task
-  ompt_data_t *TaskData = nullptr;
+  ompt_data_t *TaskData{nullptr};
 
-  /// Target task data representing the target task region
-  ompt_data_t *TargetTaskData = nullptr;
+  /// TaskInfo contains target_data and task_data
+  ompt_task_info_t OmptTaskInfo{ompt_data_none, ompt_data_none};
+
+  /// Ptr to TaskInfo in OpenMP runtime in case of deferred target tasks
+  ompt_task_info_t *OmptTaskInfoPtr{nullptr};
+
+  /// Target region data of the current target region
+  ompt_data_t &targetData() { return OmptTaskInfoPtr->target_data; }
+
+  /// Target task data, or nullptr if there is no target task in libomp
+  ompt_data_t *targetTaskData() {
+    return OmptTaskInfoPtr == &OmptTaskInfo ? nullptr
+                                            : &OmptTaskInfoPtr->task_data;
+  }
+
+  /// Flag to indicate whether the target region is for a runtime routine
+  bool IsRuntimeRoutine = true;
 
   /// Used for marking begin of a data operation
   void beginTargetDataOperation();
