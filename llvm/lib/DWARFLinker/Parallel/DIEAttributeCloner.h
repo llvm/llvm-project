@@ -42,6 +42,9 @@ struct AttributesInfo {
 
   /// Does the DIE have an address base attribute?
   bool HasAddrBaseAttr = false;
+
+  /// Does the DIE have a DW_AT_APPLE_origin attribute?
+  bool HasAppleOrigin = false;
 };
 
 /// This class creates clones of input DIE attributes.
@@ -117,6 +120,9 @@ protected:
   size_t
   cloneStringAttr(const DWARFFormValue &Val,
                   const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
+
+  /// Add the string attribute \p Attr, in the string form of the unit.
+  size_t addStringAttr(dwarf::Attribute Attr, StringEntry *String);
 
   /// Clone attribute referencing another DIE.
   size_t
