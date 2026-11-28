@@ -61,6 +61,29 @@ __device__ int dhd() { return 0; }          // expected-note {{previous declarat
 __host__ __device__ int dhd() { return 0; }
 // expected-error@-1 {{__host__ __device__ function 'dhd' cannot overload __device__ function 'dhd'}}
 
+// A host/device redeclaration with no attribute inherits the initial state.
+__host__ __device__ int hd_bare();
+int hd_bare() { return 0; }
+__global__ void call_hd_bare() { hd_bare(); }
+
+struct HDMember {
+  __host__ __device__ int f();
+};
+int HDMember::f() { return 0; }
+__global__ void call_hd_member(HDMember m) { m.f(); }
+
+template <typename T>
+struct HDTemplateMember {
+  __host__ __device__ int f();
+};
+template <typename T>
+int HDTemplateMember<T>::f() { return 0; }
+__global__ void call_hd_template_member(HDTemplateMember<int> m) { m.f(); }
+
+int bare_then_hd();                     // expected-note {{previous declaration is here}}
+__host__ __device__ int bare_then_hd();
+// expected-error@-1 {{__host__ __device__ function 'bare_then_hd' cannot overload __host__ function 'bare_then_hd'}}
+
 // Same tests for extern "C" functions.
 extern "C" __host__ int chh() { return 0; } // expected-note {{previous definition is here}}
 extern "C" int chh() { return 0; }          // expected-error {{redefinition of 'chh'}}
