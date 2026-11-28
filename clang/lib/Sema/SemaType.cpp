@@ -3894,11 +3894,15 @@ static CallingConv getCCForDeclaratorChunk(
   CallingConv CC = S.Context.getDefaultCallingConvention(FTI.isVariadic,
                                                          IsCXXInstanceMethod);
 
-  if (S.getLangOpts().CUDA) {
-    // If we're compiling CUDA/HIP code and targeting HIPSPV we need to make
-    // sure the kernels will be marked with the right calling convention so that
+  if (S.getLangOpts().CUDA && !S.getLangOpts().HIP) {
+    // If we're compiling CUDA code and targeting SPIR-V we need to make sure
+    // the kernels will be marked with the right calling convention so that
     // they will be visible by the APIs that ingest SPIR-V. We do not do this
-    // when targeting AMDGCNSPIRV, as it does not rely on OpenCL.
+    // when targeting AMDGCNSPIRV, as it does not rely on OpenCL. HIP kernels
+    // get the kernel calling convention in CodeGen instead
+    // (setCUDAKernelCallingConvention), as on AMDGPU: in the declared type it
+    // would keep host code from converting a kernel to an ordinary function
+    // pointer.
     llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
     if (Triple.isSPIRV() && Triple.getVendor() != llvm::Triple::AMD) {
       for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
