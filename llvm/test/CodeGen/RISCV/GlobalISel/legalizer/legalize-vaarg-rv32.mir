@@ -32,7 +32,7 @@ body:             |
     ; CHECK-NEXT: G_STORE [[PTR_ADD1]](p0), [[FRAME_INDEX]](p0) :: (store (p0))
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = G_FRAME_INDEX %stack.0
-    %1:_(s32) = G_VAARG %0(p0), 4
+    %1:_(i32) = G_VAARG %0(p0), 4
     PseudoRET
 ...
 ---

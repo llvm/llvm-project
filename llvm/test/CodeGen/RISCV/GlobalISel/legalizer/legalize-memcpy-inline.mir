@@ -40,9 +40,9 @@ body:             |
     ; RISCV64-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
     %1:_(p0) = COPY $x11
-    %2:_(s64) = G_CONSTANT i64 2
-    %3:_(s32) = G_TRUNC %2(s64)
-    G_MEMCPY_INLINE %0(p0), %1(p0), %3(s32) :: (store (s8), align 4), (load (s8), align 4)
+    %2:_(i64) = G_CONSTANT i64 2
+    %3:_(i32) = G_TRUNC %2(i64)
+    G_MEMCPY_INLINE %0(p0), %1(p0), %3(i32) :: (store (s8), align 4), (load (s8), align 4)
     PseudoRET
 
 ...
