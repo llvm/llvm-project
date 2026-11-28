@@ -112,7 +112,7 @@ def SPIRV_ArrayLengthOp : SPIRV_Op<"ArrayLength", [Pure]> {
   );
 
   let results = (outs
-    SPIRV_Int32:$result
+    SignlessOrUnsignedIntOfWidths<[32, 64]>:$result
   );
   let assemblyFormat = "$structure `,` $array_member attr-dict `:` type($structure) `->` type($result)";
 }
