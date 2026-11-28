@@ -8110,8 +8110,16 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     if (getLangOpts().CPlusPlus) {
       NumElements = ParseArrayBoundExpression();
     } else {
-      EnterExpressionEvaluationContext Unevaluated(
+      EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext =
+          true;
+      for (auto Iter = Actions.ExprEvalContexts.rbegin() + 1;
+           Iter != Actions.ExprEvalContexts.rend(); ++Iter) {
+        if (!Iter->isUnevaluated())
+          break;
+        Iter->InConditionallyConstantEvaluateContext = true;
+      }
       NumElements = ParseAssignmentExpression();
     }
   } else {

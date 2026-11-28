@@ -437,13 +437,6 @@ public:
   /// result expression.
   const Expr *RetExpr = nullptr;
 
-  /// Return true if a label was seen in the current scope.
-  bool hasLabelBeenSeenInCurrentScope() const {
-    if (CurLexicalScope)
-      return CurLexicalScope->hasLabels();
-    return !LabelMap.empty();
-  }
-
   /// AllocaInsertPoint - This is an instruction in the entry block before which
   /// we prefer to insert allocas.
   llvm::AssertingVH<llvm::Instruction> AllocaInsertPt;
@@ -1169,8 +1162,6 @@ public:
       if (!Labels.empty())
         rescopeLabels();
     }
-
-    bool hasLabels() const { return !Labels.empty(); }
 
     void rescopeLabels();
   };

@@ -15848,6 +15848,23 @@ Sema::BuildDeclaratorGroup(MutableArrayRef<Decl *> Group) {
 
   ActOnDocumentableDecls(Group);
 
+  // Declarations with variably modified types (e.g., VLAs or typeof(expr)) may
+  // have recorded cleanups without an initializer full-expression to consume
+  // them. CodeGen evaluates declaration-level variably modified types inside
+  // their own RunCleanupsScope, so discard any leftover cleanups here.
+  // Skip range-for declarations because their range initializer has already
+  // been parsed and its cleanups are consumed later by ActOnCXXForRangeStmt.
+  bool IsCXXForRange = llvm::any_of(Group, [](Decl *D) {
+    auto *VD = dyn_cast_or_null<VarDecl>(D);
+    return VD && VD->isCXXForRangeDecl();
+  });
+  if (!IsCXXForRange) {
+    ExprCleanupObjects.erase(ExprCleanupObjects.begin() +
+                                 ExprEvalContexts.back().NumCleanupObjects,
+                             ExprCleanupObjects.end());
+    Cleanup.reset();
+  }
+
   return DeclGroupPtrTy::make(
       DeclGroupRef::Create(Context, Group.data(), Group.size()));
 }
