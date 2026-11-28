@@ -3442,7 +3442,8 @@ defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
 def isSafeStackArch : RuntimeLibcallAvailability<(any_of
     IsAArch64, IsARM, IsThumb, IsHexagon, IsRISCV, IsSPARC, IsX86,
     IsMIPS, IsLoongArch, IsVE, IsBPF, IsArchCSKY, IsArchArc, IsArchM68k,
-    IsArchXtensa, (all_of IsSystemZ, (not IsOSzOS)))>;
+    IsArchXtensa, (all_of IsSystemZ, (not IsOSzOS)),
+    (all_of IsPPC64, (not IsOSAIX)))>;
 
 def isSafeStackPointerAddress : RuntimeLibcallAvailability<
     (all_of (any_of IsAArch64, IsARM, IsThumb, IsX86), IsAndroid)>;
