@@ -50,6 +50,7 @@
 
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -57,6 +58,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/TargetParser/X86TargetParser.h"
+#include <array>
 #include <optional>
 
 using namespace llvm;
@@ -68,6 +71,50 @@ using namespace llvm;
 // X86 cost model.
 //
 //===----------------------------------------------------------------------===//
+
+static bool isCpuSupportsName(StringRef Name) {
+  return StringSwitch<bool>(Name)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
+#include "llvm/TargetParser/X86TargetParser.def"
+      .Default(false);
+}
+
+/// Return the runtime predicates in the "fmv-features" attribute of \p F, or
+/// std::nullopt if \p F has no such attribute or it holds a name that
+/// __builtin_cpu_supports does not accept. Clang never emits such a name, but
+/// hand-written IR can, and the TargetParser lookups require valid names.
+static std::optional<SmallVector<StringRef, 8>>
+getFMVFeatures(const Function &F) {
+  if (!F.hasFnAttribute("fmv-features"))
+    return std::nullopt;
+  SmallVector<StringRef, 8> Features;
+  F.getFnAttribute("fmv-features")
+      .getValueAsString()
+      .split(Features, ",", -1, false);
+  if (!all_of(Features, isCpuSupportsName))
+    return std::nullopt;
+  return Features;
+}
+
+APInt X86TTIImpl::getFeatureMask(const Function &F) const {
+  std::array<uint32_t, 4> Words{};
+  if (auto Features = getFMVFeatures(F))
+    Words = X86::getCpuSupportsMask(*Features);
+  APInt Mask(32 * Words.size(), 0);
+  for (auto [I, Word] : enumerate(Words))
+    Mask |= APInt(Mask.getBitWidth(), Word) << (32 * I);
+  return Mask;
+}
+
+APInt X86TTIImpl::getPriorityMask(const Function &F) const {
+  auto Features = getFMVFeatures(F);
+  return APInt(32, Features ? X86::getFMVPriority(*Features) : 0);
+}
+
+bool X86TTIImpl::isMultiversionedFunction(const Function &F) const {
+  return getFMVFeatures(F).has_value();
+}
 
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
