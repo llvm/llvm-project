@@ -1535,55 +1535,44 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
   ret <2 x i8> %bc
 }
 
-; Regression test for the assertion failure when type legalization splits a
-; <32 x i1> bitcast result into two <16 x i1> halves and applies the v16i8
-; bitmask lowering to each half.
+; Regression test for returning a packed predicate through the ABI.
 define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: bitmask_v32i8_split:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x9, .LCPI21_0
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    adrp x9, .LCPI21_0
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI21_0]
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    str h1, [x8, #2]
-; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    str s0, [x8]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: bitmask_v32i8_split:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
-; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-BE-NEXT:    adrp x9, .LCPI21_0
-; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI21_0
 ; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    adrp x9, .LCPI21_0
+; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI21_0
+; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    cmeq v0.16b, v0.16b, v2.16b
 ; CHECK-BE-NEXT:    cmeq v1.16b, v1.16b, v3.16b
 ; CHECK-BE-NEXT:    ld1 { v3.16b }, [x9]
-; CHECK-BE-NEXT:    cmeq v0.16b, v0.16b, v2.16b
 ; CHECK-BE-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-BE-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v1.16b
 ; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    rev16 v1.16b, v1.16b
-; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-BE-NEXT:    str h1, [x8, #2]
-; CHECK-BE-NEXT:    str h0, [x8]
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    str s0, [x8]
 ; CHECK-BE-NEXT:    ret
   %r = icmp eq <32 x i8> %a, %b
   ret <32 x i1> %r
