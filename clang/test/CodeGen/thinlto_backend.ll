@@ -9,8 +9,8 @@
 ; CHECK-WARNING: error: invalid argument '-fthinlto-index={{.*}}' only allowed with '-x ir'
 
 ; Ensure we get expected error for missing index file
-; RUN: %clang -O2 -o %t4.o -x ir %t1.o -c -fthinlto-index=bad.thinlto.bc 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR1
-; CHECK-ERROR1: Error loading index file 'bad.thinlto.bc'
+; RUN: not %clang -O2 -o %t4.o -x ir %t1.o -c -fthinlto-index=bad.thinlto.bc 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR1
+; CHECK-ERROR1: error: error reading 'bad.thinlto.bc'
 
 ; Ensure we ignore empty index file, and run non-ThinLTO compilation which
 ; would not import f2
@@ -46,8 +46,8 @@
 
 ; Ensure we get expected error for input files without summaries
 ; RUN: opt -o %t2.o %s
-; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR2
-; CHECK-ERROR2: Error loading imported file {{.*}}: Could not find module summary
+; RUN: not %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR2
+; CHECK-ERROR2: error in backend: Error loading imported file {{.*}}: Could not find module summary
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
