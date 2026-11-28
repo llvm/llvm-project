@@ -1846,7 +1846,7 @@ let Predicates = [FeatureVector] in {
     let Predicates = [FeatureVectorEnhancements1] in {
       def VFTCISB : BinaryVRIe<"vftcisb", 0xE74A, z_vftci, v128f, v128sb, 2, 0>;
       def WFTCISB : BinaryVRIe<"wftcisb", 0xE74A, null_frag, v32f, v32sb, 2, 8>;
-      def WFTCIXB : BinaryVRIe<"wftcixb", 0xE74A, null_frag, v128q, v128xb, 4, 8>;
+      def WFTCIXB : BinaryVRIe<"wftcixb", 0xE74A, z_wftcixb, v128q, v128xb, 4, 8>;
     }
   }
 }

@@ -614,6 +614,13 @@ def z_vstrsz_cc         : SDNode<"SystemZISD::VSTRSZ_CC",
 // Test floating-point data class for vectors.
 def z_vftci             : SDNode<"SystemZISD::VFTCI", SDT_ZVecBinaryConvIntCC>;
 
+// Test floating-point data class for scalar f128 (WFTCIXB).
+// Returns i128 all-ones (match) or all-zeros (no match) in a VR, plus CC.
+def SDT_ZWftcixb : SDTypeProfile<2, 2,
+                                 [SDTCisVT<0, i128>, SDTCisVT<1, i32>,
+                                  SDTCisVT<2, f128>, SDTCisVT<3, i32>]>;
+def z_wftcixb : SDNode<"SystemZISD::WFTCIXB", SDT_ZWftcixb>;
+
 class AtomicWOp<string name, SDTypeProfile profile = SDT_ZAtomicLoadBinaryW>
   : SDNode<"SystemZISD::"#name, profile,
            [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
