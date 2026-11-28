@@ -140,6 +140,11 @@ double scalbn(double, int);
 float scalbn(float, int);
 bool signbit(double);
 bool signbit(float);
+#ifdef _MSVC_STL_VERSION
+// MSVC's <cmath> and <math.h> declare these for long double too.
+bool signbit(long double);
+long double fma(long double, long double, long double);
+#endif
 long double sin(long double);
 double sin(double);
 float sin(float);

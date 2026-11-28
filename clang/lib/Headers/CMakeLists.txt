@@ -366,6 +366,7 @@ set(cuda_wrapper_files
   cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
+  cuda_wrappers/utility
 )
 
 set(cuda_wrapper_bits_files

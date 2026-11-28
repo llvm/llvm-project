@@ -2,6 +2,11 @@
 
 #include <cmath>
 
+#ifdef _MSVC_STL_VERSION
+// Like MSVC's <complex>.
+#include <ymath.h>
+#endif
+
 #define INFINITY (__builtin_inff())
 #define NAN (__builtin_nanf (""))
 

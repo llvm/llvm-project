@@ -801,45 +801,110 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #endif // !defined(__HIPCC_RTC__)
 
 // Define device-side math functions from <ymath.h> on MSVC.
-#if !defined(__HIPCC_RTC__)
 #if defined(_MSC_VER)
-
+#if !defined(__HIPCC_RTC__)
 // Before VS2019, `<ymath.h>` is also included in `<limits>` and other headers.
 // But, from VS2019, it's only included in `<complex>`. Need to include
 // `<ymath.h>` here to ensure C functions declared there won't be markded as
 // `__host__` and `__device__` through `<complex>` wrapper.
 #include <ymath.h>
+#endif // !defined(__HIPCC_RTC__)
 
 #if defined(__cplusplus)
+// MSVC's long double has the same format as double. Device code calls these
+// with long double arguments (MSVC's <complex> calls std::signbit, its <cmath>
+// std::fma), which must not be ambiguous between the float and double
+// overloads. __clang_cuda_math_forward_declares.h also declares isfinite,
+// isinf and isnan for long double on MSVC.
+__DEVICE__ __CONSTEXPR__ bool isfinite(long double __x) {
+  return ::__finite(__x);
+}
+__DEVICE__ __CONSTEXPR__ bool isinf(long double __x) { return ::__isinf(__x); }
+__DEVICE__ __CONSTEXPR__ bool isnan(long double __x) { return ::__isnan(__x); }
+__DEVICE__ __CONSTEXPR__ bool signbit(long double __x) {
+  return ::__signbit(__x);
+}
+__DEVICE__ __CONSTEXPR__ long double fma(long double __x, long double __y,
+                                         long double __z) {
+  return ::fma((double)__x, (double)__y, (double)__z);
+}
+
 extern "C" {
 #endif // defined(__cplusplus)
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) double _Cosh(double x,
-                                                                    double y) {
-  return cosh(x) * y;
+__DEVICE__ __CONSTEXPR__
+    __attribute__((overloadable)) double _Cosh(double __x, double __y) {
+  return cosh(__x) * __y;
 }
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FCosh(float x,
-                                                                    float y) {
-  return coshf(x) * y;
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FCosh(float __x,
+                                                                    float __y) {
+  return coshf(__x) * __y;
 }
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short _Dtest(double *p) {
-  return fpclassify(*p);
+// The classification codes of the MSVC runtime: _NANCODE (2), _INFCODE (1),
+// _FINITE (-1), _DENORM (-2) and 0 for zero. They are the FP_* values of the
+// UCRT <math.h>, which hipRTC does not include.
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_Dtest(double *__p) {
+  return __builtin_fpclassify(2, 1, -1, -2, 0, *__p);
 }
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short _FDtest(float *p) {
-  return fpclassify(*p);
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_FDtest(float *__p) {
+  return __builtin_fpclassify(2, 1, -1, -2, 0, *__p);
 }
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) double _Sinh(double x,
-                                                                    double y) {
-  return sinh(x) * y;
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) double
+_Sinh(double __x, double __y) {
+  return sinh(__x) * __y;
 }
-__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FSinh(float x,
-                                                                    float y) {
-  return sinhf(x) * y;
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FSinh(float __x,
+                                                                    float __y) {
+  return sinhf(__x) * __y;
+}
+// Store __y * e^(*__px) * 2^__eoff in *__px and return its classification:
+// 0 for zero, _INFCODE, _NANCODE, else _FINITE (also for a subnormal result).
+// Like the MSVC runtime, give 0 or infinity for |*__px| above 1842 (229 for
+// float), and else compute e^(*__px) as e^__r * 2^__k with |__r| <= ln(2) / 2,
+// so that, with __y = __m * 2^__ey, only the final scaling of e^__r * __m can
+// overflow or underflow.
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_Exp(double *__px, double __y, short __eoff) {
+  double __x = *__px;
+  if (__y == 0) {
+    *__px = __y;
+  } else if (__x < -1842) {
+    *__px = __builtin_copysign(0.0, __y);
+  } else if (__x > 1842) {
+    *__px = __builtin_copysign(__builtin_huge_val(), __y);
+  } else if (!__builtin_isnan(__x)) {
+    double __k = rint(__x * 1.44269504088896340736);
+    double __r = (__x - __k * 6.93147180369123816490e-01) -
+                 __k * 1.90821492927058770002e-10;
+    int __ey = 0;
+    double __m = __builtin_isfinite(__y) ? frexp(__y, &__ey) : __y;
+    *__px = ldexp(exp(__r) * __m, (int)__k + __ey + __eoff);
+  }
+  return __builtin_fpclassify(2, 1, -1, -1, 0, *__px);
+}
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_FExp(float *__px, float __y, short __eoff) {
+  float __x = *__px;
+  if (__y == 0) {
+    *__px = __y;
+  } else if (__x < -229) {
+    *__px = __builtin_copysignf(0.0f, __y);
+  } else if (__x > 229) {
+    *__px = __builtin_copysignf(__builtin_huge_valf(), __y);
+  } else if (!__builtin_isnan(__x)) {
+    float __k = rintf(__x * 1.44269504f);
+    float __r = (__x - __k * 6.93145752e-01f) - __k * 1.42860677e-06f;
+    int __ey = 0;
+    float __m = __builtin_isfinite(__y) ? frexpf(__y, &__ey) : __y;
+    *__px = ldexpf(expf(__r) * __m, (int)__k + __ey + __eoff);
+  }
+  return __builtin_fpclassify(2, 1, -1, -1, 0, *__px);
 }
 #if defined(__cplusplus)
 }
 #endif // defined(__cplusplus)
 #endif // defined(_MSC_VER)
-#endif // !defined(__HIPCC_RTC__)
 #endif // ifndef __OPENMP_AMDGCN__
 
 #pragma pop_macro("__DEVICE__")

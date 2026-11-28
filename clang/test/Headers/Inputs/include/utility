@@ -1,2 +1,6 @@
 #pragma once
 
+#ifdef _MSVC_STL_VERSION
+// Like MSVC's <utility>, which defines std::swap.
+#include <type_traits>
+#endif

@@ -36,6 +36,19 @@
 #include <cmath>
 #include <sstream>
 
+#ifdef _MSVC_STL_VERSION
+// MSVC's <complex> calls C functions declared in <ymath.h> (_Exp, _Cosh, ...).
+// Include it here, so that they stay __host__; __clang_hip_cmath.h defines
+// their __device__ versions for HIP.
+#if __has_include(<ymath.h>)
+#include <ymath.h>
+#endif
+
+// MSVC's <complex> also calls std::swap on its value type. Our <utility>
+// wrapper makes it usable in device code before C++20.
+#include <utility>
+#endif // _MSVC_STL_VERSION
+
 // Next, include our <algorithm> wrapper, to ensure that device overloads of
 // std::min/max are available.
 #include <algorithm>

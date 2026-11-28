@@ -1,0 +1,45 @@
+/*===---- utility - CUDA wrapper for <utility> -----------------------------===
+ *
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
+#ifndef __CLANG_CUDA_WRAPPERS_UTILITY
+#define __CLANG_CUDA_WRAPPERS_UTILITY
+
+#include_next <utility>
+
+// MSVC's std::swap is constexpr, and thus implicitly __host__ __device__, only
+// from C++20 on. Before that, add a __device__ overload, so that device code,
+// including MSVC's <complex>, can swap ints, floats, structs, complex numbers.
+// MSVC's <utility> defines std::swap, and every MSVC STL header that declares
+// a container or an algorithm includes <utility>. Host code never calls this
+// overload; device code, also in __host__ __device__ functions, calls it
+// instead of the __host__ std::swap.
+//
+// It is only for types whose moves are trivial, and thus __host__ __device__.
+// The moves of other types, such as std::pair or std::vector before C++20, may
+// be __host__ functions, which a __device__ function cannot call: that would
+// be an error in every __host__ __device__ function that swaps such a type,
+// even one never emitted for the device, whereas a call to the __host__
+// std::swap is only an error once the function is emitted for the device.
+#if (defined(__CUDA__) || defined(__HIP__)) && defined(_MSVC_STL_VERSION) &&   \
+    !_HAS_CXX20
+namespace std {
+template <class _Tp,
+          typename enable_if<__is_trivially_constructible(_Tp, _Tp &&) &&
+                                 __is_trivially_assignable(_Tp &, _Tp &&) &&
+                                 __is_trivially_destructible(_Tp),
+                             int>::type = 0>
+__attribute__((device)) inline void swap(_Tp &__a, _Tp &__b) noexcept {
+  _Tp __t = static_cast<_Tp &&>(__a);
+  __a = static_cast<_Tp &&>(__b);
+  __b = static_cast<_Tp &&>(__t);
+}
+} // namespace std
+#endif
+
+#endif // __CLANG_CUDA_WRAPPERS_UTILITY
