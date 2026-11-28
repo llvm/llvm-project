@@ -110,3 +110,55 @@ endif:
   store <4 x i32> %r, ptr addrspace(1) %out
   ret void
 }
+
+; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle96_func:
+; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 1.0
+
+; GCN: v_add_i32_e64
+; GCN: v_add_i32_e64
+; GCN: v_add_i32_e64
+
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+
+define <3 x i32> @test_vccnz_ifcvt_triangle96_func(<3 x i32> %v, float inreg %cnd) #0 {
+entry:
+  %cc = fcmp oeq float %cnd, 1.000000e+00
+  br i1 %cc, label %if, label %endif
+
+if:
+  %u = add <3 x i32> %v, %v
+  br label %endif
+
+endif:
+  %r = phi <3 x i32> [ %v, %entry ], [ %u, %if ]
+  ret <3 x i32> %r
+}
+
+; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle128_func:
+; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 1.0
+
+; GCN: v_add_i32_e64
+; GCN: v_add_i32_e64
+; GCN: v_add_i32_e64
+; GCN: v_add_i32_e64
+
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+
+define <4 x i32> @test_vccnz_ifcvt_triangle128_func(<4 x i32> %v, float inreg %cnd) #0 {
+entry:
+  %cc = fcmp oeq float %cnd, 1.000000e+00
+  br i1 %cc, label %if, label %endif
+
+if:
+  %u = add <4 x i32> %v, %v
+  br label %endif
+
+endif:
+  %r = phi <4 x i32> [ %v, %entry ], [ %u, %if ]
+  ret <4 x i32> %r
+}
