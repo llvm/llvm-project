@@ -33,6 +33,7 @@ add_llvm_tool(dsymutil
   DwarfLinkerForBinary.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
+  Parallel2/Driver.cpp
   PseudoProbeLinker.cpp
   Reproducer.cpp
   RelocationMap.cpp
