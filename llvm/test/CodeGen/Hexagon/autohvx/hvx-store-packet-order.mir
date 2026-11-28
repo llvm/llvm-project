@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128b \
+# RUN:   -run-pass=hexagon-packetizer -verify-machineinstrs %s -o - | FileCheck %s
+
+# An HVX store goes in slot 0 and commits last, so it must not share a
+# packet with a later store that may alias it.
+
+# CHECK-LABEL: name: hvx_store_scalar_store
+# CHECK: {{^    }}V6_vS32b_ai $r29, 0, $v0
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: S2_storeri_io $r2, 0, $r1
+
+# The other order is fine: the later (HVX) store goes in slot 0.
+# CHECK-LABEL: name: scalar_store_hvx_store
+# CHECK: BUNDLE
+# CHECK-NEXT: S2_storeri_io $r2, 0, $r1
+# CHECK-NEXT: V6_vS32b_ai $r29, 0, $v0
+
+# Stores that do not alias can still share a packet.
+# CHECK-LABEL: name: hvx_store_disjoint_store
+# CHECK: BUNDLE
+# CHECK-NEXT: V6_vS32b_ai $r0, 0, $v0
+# CHECK-NEXT: S2_storeri_io $r1, 0, $r2
+
+--- |
+  define void @hvx_store_scalar_store() { ret void }
+  define void @scalar_store_hvx_store() { ret void }
+  define void @hvx_store_disjoint_store(ptr noalias %a, ptr noalias %b) {
+    ret void
+  }
+...
+---
+name: hvx_store_scalar_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 128, alignment: 128 }
+body: |
+  bb.0:
+    liveins: $r1, $r2, $r29, $v0
+
+    V6_vS32b_ai $r29, 0, $v0 :: (store (s1024) into %stack.0)
+    S2_storeri_io $r2, 0, $r1 :: (store (s32) into %stack.0)
+    PS_jmpret $r31, implicit-def dead $pc
+...
+---
+name: scalar_store_hvx_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 128, alignment: 128 }
+body: |
+  bb.0:
+    liveins: $r1, $r2, $r29, $v0
+
+    S2_storeri_io $r2, 0, $r1 :: (store (s32) into %stack.0)
+    V6_vS32b_ai $r29, 0, $v0 :: (store (s1024) into %stack.0)
+    PS_jmpret $r31, implicit-def dead $pc
+...
+---
+name: hvx_store_disjoint_store
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $v0
+
+    V6_vS32b_ai $r0, 0, $v0 :: (store (s1024) into %ir.a)
+    S2_storeri_io $r1, 0, $r2 :: (store (s32) into %ir.b)
+    PS_jmpret $r31, implicit-def dead $pc
+...

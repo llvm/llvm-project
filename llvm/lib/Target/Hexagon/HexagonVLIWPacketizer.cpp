@@ -1569,7 +1569,8 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     // 1. Volatile loads/stores can be packetized together, unless other
     //    rules prevent is.
     // 2. Store followed by a load is not allowed.
-    // 3. Store followed by a store is valid.
+    // 3. Store followed by a store is valid, unless the first is slot-0 only
+    //    and they may alias.
     // 4. Load followed by any memory operation is allowed.
     if (DepType == SDep::Order) {
       if (!PacketizeVolatiles) {
@@ -1600,6 +1601,15 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // Don't reorder the loads if there is an order dependence. This would
       // occur if the first instruction must go in slot0.
       if (LoadJ && LoadI && HII->isPureSlot0(J)) {
+        FoundSequentialDependence = true;
+        break;
+      }
+
+      // A slot-0 store commits after the other store in its packet, so a
+      // slot-0-only store (e.g. HVX vmem) can't share one with a later
+      // aliasing store. ALLOCFRAME is glued with its store on purpose.
+      if (StoreJ && StoreI && HII->isPureSlot0(J) &&
+          J.getOpcode() != Hexagon::S2_allocframe && alias(J, I)) {
         FoundSequentialDependence = true;
         break;
       }
