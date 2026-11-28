@@ -47,7 +47,7 @@ define <3 x float> @constrained_vector_fma_v3f32() #0 {
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [1.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = [4.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm0 * xmm3) + mem
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm3[0],xmm2[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm3[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; CHECK-NEXT:    retq
 entry:
