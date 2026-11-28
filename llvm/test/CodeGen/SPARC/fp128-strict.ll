@@ -570,35 +570,36 @@ define i32 @fptoui_f128_i32(fp128 %a) nounwind strictfp {
 ; HARD32-NEXT:    fcmpeq %f0, %f4
 ; HARD32-NEXT:    nop
 ; HARD32-NEXT:    fbl .LBB10_2
-; HARD32-NEXT:    mov %g0, %o0
+; HARD32-NEXT:    nop
 ; HARD32-NEXT:  ! %bb.1:
-; HARD32-NEXT:    mov %o0, %o1
-; HARD32-NEXT:    cmp %o1, 0
+; HARD32-NEXT:    mov %g0, %o0
+; HARD32-NEXT:    cmp %o0, 0
 ; HARD32-NEXT:    bne .LBB10_3
 ; HARD32-NEXT:    nop
 ; HARD32-NEXT:    ba .LBB10_4
 ; HARD32-NEXT:    nop
 ; HARD32-NEXT:  .LBB10_2:
-; HARD32-NEXT:    mov 1, %o1
-; HARD32-NEXT:    cmp %o1, 0
+; HARD32-NEXT:    mov 1, %o0
+; HARD32-NEXT:    cmp %o0, 0
 ; HARD32-NEXT:    be .LBB10_4
 ; HARD32-NEXT:    nop
 ; HARD32-NEXT:  .LBB10_3:
-; HARD32-NEXT:    sethi %hi(.LCPI10_1), %o2
-; HARD32-NEXT:    ldd [%o2+%lo(.LCPI10_1)], %f4
-; HARD32-NEXT:    add %o2, %lo(.LCPI10_1), %o2
-; HARD32-NEXT:    ldd [%o2+8], %f6
+; HARD32-NEXT:    sethi %hi(.LCPI10_1), %o1
+; HARD32-NEXT:    ldd [%o1+%lo(.LCPI10_1)], %f4
+; HARD32-NEXT:    add %o1, %lo(.LCPI10_1), %o1
+; HARD32-NEXT:    ldd [%o1+8], %f6
 ; HARD32-NEXT:  .LBB10_4:
+; HARD32-NEXT:    mov %g0, %o1
 ; HARD32-NEXT:    fsubq %f0, %f4, %f0
 ; HARD32-NEXT:    fqtoi %f0, %f0
-; HARD32-NEXT:    cmp %o1, 0
+; HARD32-NEXT:    cmp %o0, 0
 ; HARD32-NEXT:    bne .LBB10_6
 ; HARD32-NEXT:    st %f0, [%sp+92]
 ; HARD32-NEXT:  ! %bb.5:
-; HARD32-NEXT:    sethi 2097152, %o0
+; HARD32-NEXT:    sethi 2097152, %o1
 ; HARD32-NEXT:  .LBB10_6:
-; HARD32-NEXT:    ld [%sp+92], %o1
-; HARD32-NEXT:    xor %o1, %o0, %o0
+; HARD32-NEXT:    ld [%sp+92], %o0
+; HARD32-NEXT:    xor %o0, %o1, %o0
 ; HARD32-NEXT:    retl
 ; HARD32-NEXT:    add %sp, 96, %sp
 ;

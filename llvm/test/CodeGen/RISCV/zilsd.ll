@@ -292,21 +292,19 @@ declare void @llvm.memset.p0.i32(ptr, i8, i32, i1 immarg)
 define void @no_coalesce() #0 {
 ; CHECK-LABEL: no_coalesce:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    j .LBB12_2
-; CHECK-NEXT:  .LBB12_1: # %crash
-; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
+; CHECK-NEXT:  # %bb.1: # %crash
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    sd a0, 0(zero)
-; CHECK-NEXT:    sw a1, 4(zero)
-; CHECK-NEXT:    sw a1, 8(zero)
-; CHECK-NEXT:    sw a1, 0(zero)
+; CHECK-NEXT:    sw zero, 4(zero)
+; CHECK-NEXT:    sw zero, 8(zero)
+; CHECK-NEXT:    sw zero, 0(zero)
 ; CHECK-NEXT:  .LBB12_2: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    bnez a1, .LBB12_1
 ; CHECK-NEXT:  # %bb.3: # %loop
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
-; CHECK-NEXT:    beqz a1, .LBB12_2
+; CHECK-NEXT:    j .LBB12_2
 ; CHECK-NEXT:  # %bb.4: # %exit
 ; CHECK-NEXT:    ret
 entry:
