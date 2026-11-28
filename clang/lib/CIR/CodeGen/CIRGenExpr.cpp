@@ -3032,12 +3032,8 @@ RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
 
 Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
                                             LValueBaseInfo *pointeeBaseInfo) {
-  if (refLVal.isVolatile())
-    cgm.errorNYI(loc, "load of volatile reference");
-
   cir::LoadOp load =
-      cir::LoadOp::create(builder, loc, refLVal.getAddress().getElementType(),
-                          refLVal.getAddress().getPointer());
+      builder.createLoad(loc, refLVal.getAddress(), refLVal.isVolatile());
 
   assert(!cir::MissingFeatures::opTBAA());
 
