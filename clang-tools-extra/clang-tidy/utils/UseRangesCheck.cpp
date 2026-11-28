@@ -18,7 +18,9 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -172,11 +174,116 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-static void removeFunctionArgs(const DiagnosticBuilder &Diag,
-                               const CallExpr &Call, ArrayRef<unsigned> Indexes,
-                               const ASTContext &Ctx) {
+static CharSourceRange findCommaBetween(const Expr &PrevArg,
+                                        const Expr &NextArg,
+                                        const ASTContext &Ctx,
+                                        bool NextArgRemoved) {
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LangOpts = Ctx.getLangOpts();
+  const CharSourceRange PrevRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(PrevArg.getSourceRange()), SM, LangOpts);
+  const CharSourceRange NextRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(NextArg.getSourceRange()), SM, LangOpts);
+  if (PrevRange.isInvalid() || NextRange.isInvalid())
+    return {};
+
+  const CharSourceRange FileRange =
+      CharSourceRange::getCharRange(PrevRange.getEnd(), NextRange.getBegin());
+  const auto [BeginFID, BeginOffset] =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const auto [EndFID, EndOffset] = SM.getDecomposedLoc(FileRange.getEnd());
+  if (BeginFID != EndFID || BeginOffset > EndOffset)
+    return {};
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginFID, &Invalid);
+  if (Invalid)
+    return {};
+
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginFID), LangOpts, Buffer.begin(),
+                 Buffer.data() + BeginOffset, Buffer.end());
+  TheLexer.SetCommentRetentionState(true);
+
+  unsigned ParenDepth = 0;
+  bool HasTokensBeforeComma = false;
+  SourceLocation LastTokenEnd = FileRange.getBegin();
+  std::optional<Token> CommaTok;
+  std::optional<Token> AfterCommaTok;
+
+  while (true) {
+    Token Tok;
+    TheLexer.LexFromRawLexer(Tok);
+
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      break;
+
+    if (CommaTok && !AfterCommaTok)
+      AfterCommaTok = Tok;
+
+    // Bail out on preprocessor directives (e.g. #if / #ifdef) in the gap.
+    if (Tok.is(tok::hash))
+      return {};
+
+    if (Tok.is(tok::l_paren)) {
+      ++ParenDepth;
+      continue;
+    }
+    if (Tok.is(tok::r_paren)) {
+      if (ParenDepth == 0)
+        return {};
+      --ParenDepth;
+      if (ParenDepth == 0 && !CommaTok) {
+        HasTokensBeforeComma = true;
+        LastTokenEnd = Tok.getEndLoc();
+      }
+      continue;
+    }
+
+    if (ParenDepth == 0 && Tok.is(tok::comma)) {
+      if (CommaTok)
+        return {};
+      CommaTok = Tok;
+      continue;
+    }
+
+    if (ParenDepth == 0 && !CommaTok && Tok.isNot(tok::comment)) {
+      HasTokensBeforeComma = true;
+      LastTokenEnd = Tok.getEndLoc();
+    }
+  }
+
+  if (!CommaTok || ParenDepth != 0)
+    return {};
+
+  if (!AfterCommaTok && (NextArgRemoved || !HasTokensBeforeComma))
+    return CharSourceRange::getCharRange(CommaTok->getLocation(),
+                                         FileRange.getEnd());
+
+  // When a comment or empty macro stands adjacent to the comma, remove only
+  // the comma token itself so separating whitespace is preserved. Bail out if
+  // removing `,` with no surrounding whitespace or comment would paste two
+  // tokens together (e.g. `I.begin(),EMPTY(1, 2) I.end()`).
+  const bool TightBefore = (NextArgRemoved || HasTokensBeforeComma) &&
+                           CommaTok->getLocation() == LastTokenEnd;
+  const bool TightAfter =
+      AfterCommaTok
+          ? (AfterCommaTok->isNot(tok::comment) &&
+             CommaTok->getEndLoc() == AfterCommaTok->getLocation())
+          : (!NextArgRemoved && CommaTok->getEndLoc() == FileRange.getEnd());
+  if (TightBefore && TightAfter)
+    return {};
+
+  return CharSourceRange::getCharRange(CommaTok->getLocation(),
+                                       CommaTok->getEndLoc());
+}
+
+static std::optional<SmallVector<FixItHint>>
+getArgRemovalFixes(const CallExpr &Call, ArrayRef<unsigned> Indexes,
+                   const ASTContext &Ctx) {
   SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
+  SmallVector<FixItHint> Fixes;
   // Keep track of commas removed
   llvm::SmallBitVector Commas(Call.getNumArgs());
   // The first comma is actually the '(' which we can't remove
@@ -184,23 +291,27 @@ static void removeFunctionArgs(const DiagnosticBuilder &Diag,
   for (const unsigned Index : Sorted) {
     const Expr *Arg = Call.getArg(Index);
     if (Commas[Index]) {
-      if (Index >= Commas.size()) {
-        Diag << FixItHint::CreateRemoval(Arg->getSourceRange());
-      } else {
-        // Remove the next comma
+      if (Index + 1 < Call.getNumArgs()) {
+        // Remove the next comma (including trailing trivia when safe).
+        const CharSourceRange CommaRange = findCommaBetween(
+            *Arg, *Call.getArg(Index + 1), Ctx, /*NextArgRemoved=*/false);
+        if (CommaRange.isInvalid())
+          return std::nullopt;
         Commas[Index + 1] = true;
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            {Arg->getBeginLoc(),
-             Lexer::getLocForEndOfToken(
-                 Arg->getEndLoc(), 0, Ctx.getSourceManager(), Ctx.getLangOpts())
-                 .getLocWithOffset(1)}));
+        Fixes.push_back(FixItHint::CreateRemoval(CommaRange));
       }
     } else {
-      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-          Arg->getBeginLoc().getLocWithOffset(-1), Arg->getEndLoc()));
+      assert(Index > 0);
+      const CharSourceRange CommaRange = findCommaBetween(
+          *Call.getArg(Index - 1), *Arg, Ctx, /*NextArgRemoved=*/true);
+      if (CommaRange.isInvalid())
+        return std::nullopt;
       Commas[Index] = true;
+      Fixes.push_back(FixItHint::CreateRemoval(CommaRange));
     }
+    Fixes.push_back(FixItHint::CreateRemoval(Arg->getSourceRange()));
   }
+  return Fixes;
 }
 
 static bool isResultUsed(const DynTypedNode &Node,
@@ -293,13 +404,20 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (!shouldEmitFixIts(ResultPolicy, ResultUsed, IsStructuredBinding))
       return;
 
+    SmallVector<unsigned, 3> ToRemove;
+    for (const auto &[First, Second, Replace] : Sig)
+      ToRemove.push_back(Replace == Indexes::Second ? First : Second);
+    const std::optional<SmallVector<FixItHint>> RemovalFixes =
+        getArgRemovalFixes(*Call, ToRemove, *Result.Context);
+    if (!RemovalFixes)
+      return;
+
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
                                            *ReplaceName);
     if (auto Include = Replacer->getHeaderInclusion(*Function))
       Diag << Inserter.createIncludeInsertion(
           Result.SourceManager->getFileID(Call->getBeginLoc()), *Include);
-    SmallVector<unsigned, 3> ToRemove;
     for (const auto &[First, Second, Replace] : Sig) {
       auto ArgNode = ArgName + std::to_string(First);
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {
@@ -334,9 +452,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
                 ->getSourceRange(),
             ReplaceText);
       }
-      ToRemove.push_back(Replace == Indexes::Second ? First : Second);
     }
-    removeFunctionArgs(Diag, *Call, ToRemove, *Result.Context);
+    for (const FixItHint &Fix : *RemovalFixes)
+      Diag << Fix;
     using ResultPolicyKind = Replacer::ResultUsePolicy::Kind;
     if (ResultUsed && ResultPolicy.PolicyKind ==
                           ResultPolicyKind::AppendAccessorForUsedResult) {
