@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "asan_testing.h"
 
 template <class S>
@@ -51,6 +52,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 

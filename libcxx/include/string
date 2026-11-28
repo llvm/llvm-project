@@ -640,8 +640,10 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
+#  include <__type_traits/is_trivially_assignable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
+#  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/assume.h>
@@ -749,7 +751,7 @@ public:
   using const_pointer                  = typename __alloc_traits::const_pointer;
 
   // A basic_string contains the following members which may be trivially relocatable:
-  // - pointer: is currently assumed to be trivially relocatable, but is still checked in case that changes
+  // - pointer: may or may not be trivially relocatable, so it's checked
   // - size_type: is always trivially relocatable, since it has to be an integral type
   // - value_type: is always trivially relocatable, since it has to be trivial
   // - unsigned char: is a fundamental type, so it's trivially relocatable
@@ -878,15 +880,67 @@ private:
 
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
-  union __rep {
+  // _Dummy is to address GCC explicit specialization issue https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85282
+  template <class _Dummy,
+            bool _Trivial = is_trivially_default_constructible<__long>::value &&
+                            is_trivially_copy_assignable<__long>::value && is_trivially_destructible<__long>::value>
+  union __rep_t {
     __short __s;
     __long __l;
 
-    __rep() = default;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__short __r) : __s(__r) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __l(__r) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__uninitialized_tag) {}
+    __rep_t() = default;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__short __r) _NOEXCEPT : __s(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__long __r) _NOEXCEPT_(noexcept(__long(__r)))
+        : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__uninitialized_tag) _NOEXCEPT {}
   };
+
+  template <class _Dummy>
+  union __rep_t<_Dummy, false> {
+    __short __s;
+    __long __l;
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_long() const _NOEXCEPT {
+      if (__libcpp_is_constant_evaluated() && __builtin_constant_p(__l.__is_long_)) {
+        return __l.__is_long_;
+      }
+      return __s.__is_long_;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t() _NOEXCEPT : __s() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__short __r) _NOEXCEPT : __s(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__long __r) _NOEXCEPT_(noexcept(__long(__r)))
+        : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__uninitialized_tag) _NOEXCEPT : __s() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(const __rep_t& __other)
+        _NOEXCEPT_(is_nothrow_copy_constructible<__long>::value) {
+      if (__other.__is_long())
+        std::__construct_at(std::addressof(__l), __other.__l);
+      else
+        __s = __other.__s;
+    }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t& operator=(const __rep_t& __other)
+        _NOEXCEPT_(is_nothrow_copy_constructible<__long>::value&& is_nothrow_copy_assignable<__long>::value) {
+      if (__other.__is_long()) {
+        if (__is_long())
+          __l = __other.__l;
+        else
+          std::__construct_at(std::addressof(__l), __other.__l);
+      } else {
+        if (__is_long())
+          __l.~__long();
+        __s = __other.__s;
+      }
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__rep_t() _NOEXCEPT {
+      if (__is_long())
+        __l.~__long();
+    }
+  };
+
+  using __rep _LIBCPP_NODEBUG = __rep_t<void>;
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
 
@@ -935,7 +989,7 @@ private:
     return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
-#  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+#  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
   }
 
 public:
@@ -2222,7 +2276,7 @@ private:
       __annotate_new(__size);
       return __get_short_pointer();
     } else {
-      __rep_.__l = __allocate_long_buffer(__alloc_, __size);
+      __rep_ = __allocate_long_buffer(__alloc_, __size);
       __annotate_new(__size);
       return __get_long_pointer();
     }
@@ -2889,13 +2943,13 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     }
 #    endif
   }
+
   size_type __str_old_size = __str.size();
   bool __str_was_short     = !__str.__is_long();
 
   __move_assign_alloc(__str);
   __rep_ = __str.__rep_;
-  __str.__set_short_size(0);
-  traits_type::assign(__str.__get_short_pointer()[0], value_type());
+  __str.__rep_ = __rep();
 
   if (__str_was_short && this != std::addressof(__str))
     __str.__annotate_shrink(__str_old_size);
@@ -3402,6 +3456,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
   // We're a long string and we're shrinking into the small buffer.
   if (__fits_in_sso(__size)) {
     __annotation_guard __g(*this);
+    __rep_ = __rep();
     __set_short_size(__size);
     traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __alloc_traits::deallocate(__alloc_, __ptr, __cap);

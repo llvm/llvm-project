@@ -65,6 +65,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
   assert(alloc_stats.alloc_count == alloc_count);
   {
+    typedef fancy_pointer_allocator<char> A;
+    typedef std::basic_string<char, std::char_traits<char>, A> S;
+    test(S(), A());
+    test(S("1"), A());
+    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
+  }
+  {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 #if TEST_STD_VER > 14
