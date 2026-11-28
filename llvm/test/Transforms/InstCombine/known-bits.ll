@@ -2135,3 +2135,275 @@ define i1 @urem_smaller_lhs_known_ones_ugt_3(i8 %x, i8 %y) {
   %c = icmp ugt i8 %r, 3
   ret i1 %c
 }
+
+; x * (x + odd) is always even.
+define i32 @mul_x_xplus1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xplus1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %x, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_xplus3_commuted_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xplus3_commuted_sdiv2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 3
+  %m = mul i32 %x, %a
+  %r = sdiv i32 %m, 2
+  ret i32 %r
+}
+
+; Negative test: %x may be undef.
+define i32 @mul_x_xplus1_maybe_undef(i32 %x) {
+; CHECK-LABEL: @mul_x_xplus1_maybe_undef(
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[TMP1:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 1
+  %m = mul i32 %a, %x
+  %r = sdiv i32 %m, 2
+  ret i32 %r
+}
+
+; Negative test: even constant.
+define i32 @mul_x_xplus2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xplus2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %a = add i32 %x, 2
+  %m = mul i32 %a, %x
+  %r = sdiv i32 %m, 2
+  ret i32 %r
+}
+
+define i32 @mul_x_xminus1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xminus1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %x, -1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+; x*x + x is canonicalized to x*(x+1).
+define i32 @sq_plus_x_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @sq_plus_x_sdiv2(
+; CHECK-NEXT:    [[X1:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[X1]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %sq = mul i32 %x, %x
+  %m = add i32 %sq, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define <2 x i32> @mul_x_xplus1_sdiv2_vec(<2 x i32> noundef %x) {
+; CHECK-LABEL: @mul_x_xplus1_sdiv2_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = add <2 x i32> %x, <i32 1, i32 1>
+  %m = mul <2 x i32> %a, %x
+  %d = sdiv <2 x i32> %m, <i32 2, i32 2>
+  ret <2 x i32> %d
+}
+
+; Negative test: the add is on a different variable.
+define i32 @mul_y_xplus1_sdiv2(i32 noundef %x, i32 noundef %y) {
+; CHECK-LABEL: @mul_y_xplus1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %y, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_xminus3_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xminus3_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %x, -3
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define <2 x i32> @mul_x_xplus_nonsplat_odd_sdiv2(<2 x i32> noundef %x) {
+; CHECK-LABEL: @mul_x_xplus_nonsplat_odd_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 3>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = add <2 x i32> %x, <i32 1, i32 3>
+  %m = mul <2 x i32> %a, %x
+  %d = sdiv <2 x i32> %m, <i32 2, i32 2>
+  ret <2 x i32> %d
+}
+
+; Negative test: one lane is even.
+define <2 x i32> @mul_x_xplus_nonsplat_even_lane_sdiv2(<2 x i32> noundef %x) {
+; CHECK-LABEL: @mul_x_xplus_nonsplat_even_lane_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 2>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = add <2 x i32> %x, <i32 1, i32 2>
+  %m = mul <2 x i32> %a, %x
+  %d = sdiv <2 x i32> %m, <i32 2, i32 2>
+  ret <2 x i32> %d
+}
+
+define i32 @mul_x_xxor5_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xxor5_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, 5
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_notx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_notx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, -1
+  %m = mul i32 %x, %a
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_7minusx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_7minusx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = sub i32 7, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = sub i32 7, %x
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_1minusx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_1minusx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = sub i32 1, %x
+  %m = mul i32 %x, %a
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_xordisjoint1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xordisjoint1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = or disjoint i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = or disjoint i32 %x, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define <2 x i32> @mul_x_xplus_poison_lane_sdiv2(<2 x i32> noundef %x) {
+; CHECK-LABEL: @mul_x_xplus_poison_lane_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 5, i32 poison>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = add <2 x i32> %x, <i32 5, i32 poison>
+  %m = mul <2 x i32> %a, %x
+  %d = sdiv <2 x i32> %m, <i32 2, i32 2>
+  ret <2 x i32> %d
+}
+
+; Negative test: xor with an even constant keeps the parity.
+define i32 @mul_x_xxor2_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xxor2_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, 2
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+; Negative test: or without disjoint is not an add (x | 1 == x for odd x).
+define i32 @mul_x_or_nondisjoint1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_or_nondisjoint1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = or i32 %x, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+; (X + 4) * (X + 3) is always even, but neither factor is X itself, so this is
+; not handled yet.
+define i32 @mul_xplus4_xplus3_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_xplus4_xplus3_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[X]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %x, 4
+  %b = add i32 %x, 3
+  %m = mul i32 %a, %b
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
