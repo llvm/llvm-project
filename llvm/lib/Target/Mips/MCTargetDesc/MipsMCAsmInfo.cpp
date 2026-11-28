@@ -144,6 +144,8 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
                                    const MCTargetOptions &Options)
     : MCAsmInfoELF(TheTriple, Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
+  // microMIPS encoding uses compressed intruction byte-order
+  CompInstByteOrderFeature = Mips::FeatureMicroMips;
 
   MipsABIInfo ABI =
       MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
@@ -207,9 +209,4 @@ bool Mips::isGpOff(const MCSpecifierExpr &E) {
     }
   }
   return false;
-}
-
-bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
-  // microMIPS encoding uses compressed intruction byte-order
-  return STI.hasFeature(Mips::FeatureMicroMips);
 }

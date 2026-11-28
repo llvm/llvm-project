@@ -113,6 +113,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
+  // Thumb encoding uses compressed instruction byte-order
+  CompInstByteOrderFeature = ARM::ModeThumb;
 
   // ".comm align is in bytes but .align is pow-2."
   AlignmentIsInBytes = false;
@@ -143,11 +145,6 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
 
   SpecifierExprPrintFn = printSpecifierExpr;
   SpecifierExprEvaluateFn = [](auto...) { return false; };
-}
-
-bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
-  // Thumb encoding uses compressed instruction byte-order
-  return STI.hasFeature(ARM::ModeThumb);
 }
 
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
