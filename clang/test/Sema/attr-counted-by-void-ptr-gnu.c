@@ -3,7 +3,10 @@
 // RUN: %clang_cc1 -fexperimental-bounds-safety -fsyntax-only -verify=expected-bounds %s
 
 // expected-nowarn-no-diagnostics
-// expected-bounds-no-diagnostics
+
+// FIXME: -fbounds-safety rejects `counted_by` on `void *` until it supports
+// treating `void` as a 1-byte element.
+// See https://github.com/swiftlang/llvm-project/issues/11807.
 
 #define NULL (void*)0
 #define __counted_by(f)  __attribute__((counted_by(f)))
@@ -16,6 +19,7 @@
 
 struct test_void_ptr_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by' on a pointer to void is a GNU extension, treated as 'sized_by'}}
   // expected-warn-note@+1{{use '__sized_by' to suppress this warning}}
   void* buf __counted_by(count);
@@ -23,6 +27,7 @@ struct test_void_ptr_gnu {
 
 struct test_const_void_ptr_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'const void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by' on a pointer to void is a GNU extension, treated as 'sized_by'}}
   // expected-warn-note@+1{{use '__sized_by' to suppress this warning}}
   const void* buf __counted_by(count);
@@ -30,6 +35,7 @@ struct test_const_void_ptr_gnu {
 
 struct test_volatile_void_ptr_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'volatile void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by' on a pointer to void is a GNU extension, treated as 'sized_by'}}
   // expected-warn-note@+1{{use '__sized_by' to suppress this warning}}
   volatile void* buf __counted_by(count);
@@ -37,6 +43,7 @@ struct test_volatile_void_ptr_gnu {
 
 struct test_const_volatile_void_ptr_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'const volatile void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by' on a pointer to void is a GNU extension, treated as 'sized_by'}}
   // expected-warn-note@+1{{use '__sized_by' to suppress this warning}}
   const volatile void* buf __counted_by(count);
@@ -54,6 +61,7 @@ struct test_sized_by_void_ptr {
 
 struct test_void_ptr_or_null_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
   // expected-warn-note@+1{{use '__sized_by_or_null' to suppress this warning}}
   void* buf __counted_by_or_null(count);
@@ -61,6 +69,7 @@ struct test_void_ptr_or_null_gnu {
 
 struct test_const_void_ptr_or_null_gnu {
   int count;
+  // expected-bounds-error@+3{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'const void' is an incomplete type}}
   // expected-warn-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
   // expected-warn-note@+1{{use '__sized_by_or_null' to suppress this warning}}
   const void* buf __counted_by_or_null(count);
