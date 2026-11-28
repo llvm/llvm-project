@@ -125,12 +125,11 @@ bool StackAddrEscapeChecker::isNotInCurrentFrame(const StackSpaceRegion *MS,
 bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
   if (!dispatch_semaphore_tII)
     dispatch_semaphore_tII = &B.getASTContext().Idents.get("dispatch_semaphore_t");
-  for (const auto &C : B.captures()) {
+  auto IsSemaphoreCapture = [&](const BlockDecl::Capture &C) {
     const auto *T = C.getVariable()->getType()->getAs<TypedefType>();
-    if (T && T->getDecl()->getIdentifier() == dispatch_semaphore_tII)
-      return true;
-  }
-  return false;
+    return T && T->getDecl()->getIdentifier() == dispatch_semaphore_tII;
+  };
+  return llvm::any_of(B.captures(), IsSemaphoreCapture);
 }
 
 SmallVector<std::pair<const MemRegion *, const StackSpaceRegion *>, 4>

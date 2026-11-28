@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -195,12 +196,11 @@ static bool IsPartOfAST(const CXXRecordDecl *R) {
   if (IsClangStmt(R) || IsClangType(R) || IsClangDecl(R) || IsClangAttr(R))
     return true;
 
-  for (const auto &BS : R->bases())
-    if (const auto *baseD = BS.getType()->getAsCXXRecordDecl();
-        baseD && IsPartOfAST(baseD))
-      return true;
-
-  return false;
+  auto IsPartOfASTBase = [](const CXXBaseSpecifier &BS) {
+    const auto *baseD = BS.getType()->getAsCXXRecordDecl();
+    return baseD && IsPartOfAST(baseD);
+  };
+  return llvm::any_of(R->bases(), IsPartOfASTBase);
 }
 
 namespace {
