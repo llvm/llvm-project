@@ -1238,6 +1238,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       IRBuilder<> IRB(SI);
       Value *Val = SI->getValueOperand();
       Value *Addr = SI->getPointerOperand();
+      // No shadow for memory in untracked address spaces (see visitStoreInst).
+      if (isUntrackedAddrSpace(Addr))
+        continue;
       Value *Shadow = SI->isAtomic() ? getCleanShadow(Val) : getShadow(Val);
       Value *ShadowPtr, *OriginPtr;
       Type *ShadowTy = Shadow->getType();
@@ -1791,10 +1794,54 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return {ShadowPtrs, OriginPtrs};
   }
 
+  /// Returns true if the memory pointed to by \p Addr has no associated shadow
+  /// memory. Pointers into such memory (e.g., x86 segment-relative pointers)
+  /// cannot be mapped to shadow, nor be passed to the runtime library. Values
+  /// loaded from such memory are treated as fully initialized, and values
+  /// stored to it are checked eagerly.
+  ///
+  /// Conservatively, any non-default address space is treated as untracked.
+  /// This includes address spaces that refer to ordinary memory (e.g., x86
+  /// __ptr32/__ptr64), matching what ASan and TSan do.
+  static bool isUntrackedAddrSpace(const Value *Addr) {
+    return Addr->getType()->getScalarType()->getPointerAddressSpace() != 0;
+  }
+
+  /// Mark the \p Size bytes of memory at \p Addr as initialized. In the
+  /// kernel, this is done by calling \p KmsanUnpoisonFn(Addr, Size). If \p Ty
+  /// is given, it is the type of the memory being unpoisoned.
+  void unpoisonMemoryRange(IRBuilder<> &IRB, Value *Addr, Value *Size,
+                           FunctionCallee KmsanUnpoisonFn, Type *Ty = nullptr) {
+    Size = IRB.CreateZExtOrTrunc(Size, MS.IntptrTy);
+    if (MS.CompileKernel) {
+      IRB.CreateCall(KmsanUnpoisonFn, {Addr, Size});
+      return;
+    }
+    // The alignment of Addr is not known, so conservatively assume that the
+    // shadow memory is unaligned.
+    auto [ShadowPtr, _] =
+        getShadowOriginPtrUserspace(Addr, IRB, IRB.getInt8Ty(), Align(1));
+    // When Size is large, avoid StoreInst as it would expand to many
+    // instructions.
+    if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
+      uint64_t N = CSize->getZExtValue();
+      if (N == 0)
+        return;
+      if (N <= 32) {
+        Value *Clean = Ty ? getCleanShadow(Ty) : IRB.getIntN(N * 8, 0);
+        IRB.CreateAlignedStore(Clean, ShadowPtr, Align(1));
+        return;
+      }
+    }
+    IRB.CreateMemSet(ShadowPtr, IRB.getInt8(0), Size, Align(1));
+  }
+
   std::pair<Value *, Value *> getShadowOriginPtr(Value *Addr, IRBuilder<> &IRB,
                                                  Type *ShadowTy,
                                                  MaybeAlign Alignment,
                                                  bool isStore) {
+    assert(!isUntrackedAddrSpace(Addr) &&
+           "no shadow for memory in untracked address spaces");
     if (MS.CompileKernel)
       return getShadowOriginPtrKernel(Addr, IRB, ShadowTy, isStore);
     return getShadowOriginPtrUserspace(Addr, IRB, ShadowTy, Alignment);
@@ -2211,7 +2258,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Addr = I.getPointerOperand();
     Value *ShadowPtr = nullptr, *OriginPtr = nullptr;
     const Align Alignment = I.getAlign();
-    if (PropagateShadow) {
+    const bool LoadShadow = PropagateShadow && !isUntrackedAddrSpace(Addr);
+    if (LoadShadow) {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
       setShadow(&I,
@@ -2227,7 +2275,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       I.setOrdering(addAcquireOrdering(I.getOrdering()));
 
     if (MS.TrackOrigins) {
-      if (PropagateShadow) {
+      if (LoadShadow) {
         const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
         setOrigin(
             &I, IRB.CreateAlignedLoad(MS.OriginTy, OriginPtr, OriginAlignment));
@@ -2245,6 +2293,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     StoreList.push_back(&I);
     if (Opts.msan_check_access_address)
       insertCheckShadowOf(I.getPointerOperand(), &I);
+    // There is no shadow to store for memory in untracked address spaces, so
+    // the value would come back as initialized when loaded again. Check the
+    // stored value eagerly instead, as is done for inline asm inputs.
+    if (isUntrackedAddrSpace(I.getPointerOperand()))
+      insertCheckShadowOf(I.getValueOperand(), &I);
   }
 
   void handleCASOrRMW(Instruction &I) {
@@ -2253,9 +2306,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getOperand(0);
     Value *Val = I.getOperand(1);
-    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, getShadowTy(Val), Align(1),
-                                          /*isStore*/ true)
-                           .first;
+    Value *ShadowPtr = nullptr;
+    if (!isUntrackedAddrSpace(Addr))
+      ShadowPtr = getShadowOriginPtr(Addr, IRB, getShadowTy(Val), Align(1),
+                                     /*isStore*/ true)
+                      .first;
 
     if (Opts.msan_check_access_address)
       insertCheckShadowOf(Addr, &I);
@@ -2266,7 +2321,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<AtomicCmpXchgInst>(I))
       insertCheckShadowOf(Val, &I);
 
-    IRB.CreateStore(getCleanShadow(Val), ShadowPtr);
+    if (ShadowPtr)
+      IRB.CreateStore(getCleanShadow(Val), ShadowPtr);
 
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
@@ -3224,12 +3280,85 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Similar situation exists for memcpy and memset.
   void visitMemMoveInst(MemMoveInst &I) {
+    if (handleUntrackedMemIntrinsic(I))
+      return;
     getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
     IRB.CreateCall(MS.MemmoveFn,
                    {I.getArgOperand(0), I.getArgOperand(1),
                     IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
     I.eraseFromParent();
+  }
+
+  /// Handle a memory intrinsic that accesses memory in an address space that
+  /// has no shadow (see isUntrackedAddrSpace). Such intrinsics cannot be
+  /// replaced with calls into the runtime library, so leave them alone, and
+  ///  - if data is copied from untracked memory into regular memory, mark the
+  ///    destination as initialized;
+  ///  - if data is copied from regular memory into untracked memory, check the
+  ///    source eagerly (like stores into untracked memory) if its size is a
+  ///    small constant.
+  /// Like for regular memset, the shadow of the memset value is ignored.
+  /// Returns true if \p I was handled.
+  bool handleUntrackedMemIntrinsic(MemIntrinsic &I) {
+    Value *Dst = I.getRawDest();
+    auto *MTI = dyn_cast<MemTransferInst>(&I);
+    const bool DstUntracked = isUntrackedAddrSpace(Dst);
+    const bool SrcUntracked = MTI && isUntrackedAddrSpace(MTI->getRawSource());
+    if (!DstUntracked && !SrcUntracked)
+      return false;
+
+    IRBuilder<> IRB(&I);
+    if (!DstUntracked) {
+      // __msan_unpoison_alloca() unpoisons arbitrary memory, not only allocas.
+      unpoisonMemoryRange(IRB, Dst, I.getLength(), MS.MsanUnpoisonAllocaFn);
+    } else if (MTI && !SrcUntracked) {
+      checkMemoryRangeIsInitialized(IRB, MTI->getRawSource(), MTI->getLength(),
+                                    &I);
+    }
+    return true;
+  }
+
+  /// Insert a check that the \p Size bytes of memory at \p Addr are
+  /// initialized, if \p Size is a small enough constant.
+  void checkMemoryRangeIsInitialized(IRBuilder<> &IRB, Value *Addr, Value *Size,
+                                     Instruction *OrigIns) {
+    // Larger sizes are not checked, and the check is lost. This is
+    // acceptable, as large copies into untracked memory are rare.
+    constexpr uint64_t kMaxCheckedSize = 64;
+    auto *CSize = dyn_cast<ConstantInt>(Size);
+    if (!CSize || CSize->isZero() || CSize->getZExtValue() > kMaxCheckedSize)
+      return;
+    Type *ShadowTy = IRB.getIntNTy(CSize->getZExtValue() * 8);
+    auto [ShadowPtr, OriginPtr] =
+        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ false);
+    Value *Shadow = IRB.CreateAlignedLoad(ShadowTy, ShadowPtr, Align(1));
+    Value *Origin =
+        MS.TrackOrigins
+            ? IRB.CreateAlignedLoad(MS.OriginTy, OriginPtr, kMinOriginAlignment)
+            : nullptr;
+    insertCheckShadow(Shadow, Origin, OrigIns);
+  }
+
+  /// Handle an intrinsic that accesses memory through a pointer argument in an
+  /// untracked address space (see isUntrackedAddrSpace), for which there is no
+  /// shadow to propagate: check the arguments eagerly (only the pointers, if
+  /// the intrinsic only reads memory), and consider the result initialized.
+  /// Returns true if \p I was handled.
+  bool maybeHandleUntrackedMemoryIntrinsic(IntrinsicInst &I) {
+    if (!I.mayReadOrWriteMemory() || none_of(I.args(), [](const Use &U) {
+          return U->getType()->isPtrOrPtrVectorTy() &&
+                 isUntrackedAddrSpace(U.get());
+        }))
+      return false;
+
+    for (const Use &U : I.args())
+      if (U->getType()->isSized() &&
+          (!I.onlyReadsMemory() || U->getType()->isPtrOrPtrVectorTy()))
+        insertCheckShadowOf(U.get(), &I);
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+    return true;
   }
 
   /// Instrument memcpy
@@ -3247,6 +3376,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// __msan_memcpy(). Should this be wrong, such as when implementing memcpy()
   /// itself, instrumentation should be disabled with the no_sanitize attribute.
   void visitMemCpyInst(MemCpyInst &I) {
+    if (handleUntrackedMemIntrinsic(I))
+      return;
     getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
     IRB.CreateCall(MS.MemcpyFn,
@@ -3257,6 +3388,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Same as memcpy.
   void visitMemSetInst(MemSetInst &I) {
+    if (handleUntrackedMemIntrinsic(I))
+      return;
     IRBuilder<> IRB(&I);
     IRB.CreateCall(
         MS.MemsetFn,
@@ -7641,6 +7774,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
+    if (maybeHandleUntrackedMemoryIntrinsic(I))
+      return;
+
     if (maybeHandleCrossPlatformIntrinsic(I))
       return;
 
@@ -8230,23 +8366,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    auto Size = DL.getTypeStoreSize(ElemTy);
-    Value *SizeVal = IRB.CreateTypeSize(MS.IntptrTy, Size);
-    if (MS.CompileKernel) {
-      IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
-    } else {
-      // ElemTy, derived from elementtype(), does not encode the alignment of
-      // the pointer. Conservatively assume that the shadow memory is unaligned.
-      // When Size is large, avoid StoreInst as it would expand to many
-      // instructions.
-      auto [ShadowPtr, _] =
-          getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
-      if (Size <= 32)
-        IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
-      else
-        IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                         SizeVal, Align(1));
-    }
+    // There is no shadow to unpoison for memory in other address spaces.
+    if (isUntrackedAddrSpace(Operand))
+      return;
+    // ElemTy, derived from elementtype(), does not encode the alignment of
+    // the pointer.
+    Value *SizeVal =
+        IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
+    unpoisonMemoryRange(IRB, Operand, SizeVal, MS.MsanInstrumentAsmStoreFn,
+                        ElemTy);
   }
 
   /// Get the number of output arguments returned by pointers.
