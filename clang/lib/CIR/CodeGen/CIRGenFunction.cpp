@@ -1352,9 +1352,11 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                "emitLValue: ObjCIvarRefExpr");
     return LValue();
-  case Expr::StmtExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: StmtExpr");
-    return LValue();
+  case Expr::StmtExprClass: {
+    RValue rv = emitAnyExprToTemp(e);
+    return makeAddrLValue(rv.getAggregateAddress(), e->getType(),
+                          AlignmentSource::Decl);
+  }
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::ArraySubscriptExprClass:
