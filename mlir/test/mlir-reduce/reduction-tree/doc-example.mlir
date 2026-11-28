@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/../script/grep-select.sh' | FileCheck %s
+// RUN: mlir-reduce %s -reduction-tree='traversal-mode=2 test=%S/../script/grep-select.sh' | FileCheck %s
 
 // This test case is referenced on the website (mlir/docs/Tools/mlir-reduce.md).
 
