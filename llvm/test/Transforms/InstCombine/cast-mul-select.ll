@@ -72,8 +72,8 @@ define i8 @select2(i1 %cond, i8 %x, i8 %y, i8 %z) {
 ; DBGINFO-NEXT:      #dbg_value(i8 [[Z:%.*]], [[META41:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META47:![0-9]+]])
 ; DBGINFO-NEXT:    [[D:%.*]] = add i8 [[X]], [[Y]], !dbg [[DBG48:![0-9]+]]
 ; DBGINFO-NEXT:      #dbg_value(!DIArgList(i8 [[X]], i8 [[Y]]), [[META42:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_plus, DW_OP_stack_value), [[DBG48]])
-; DBGINFO-NEXT:      #dbg_value(i32 poison, [[META43:![0-9]+]], !DIExpression(), [[META49:![0-9]+]])
-; DBGINFO-NEXT:    [[F:%.*]] = select i1 [[COND:%.*]], i8 [[Z]], i8 [[D]], !dbg [[META49]]
+; DBGINFO-NEXT:      #dbg_value(!DIArgList(i1 [[COND:%.*]], i8 [[Z]], i8 [[X]], i8 [[Y]]), [[META43:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 1, DW_OP_and, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 2, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 3, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_plus, DW_OP_minus, DW_OP_mul, DW_OP_LLVM_arg, 2, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 3, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_plus, DW_OP_plus, DW_OP_stack_value), [[META49:![0-9]+]])
+; DBGINFO-NEXT:    [[F:%.*]] = select i1 [[COND]], i8 [[Z]], i8 [[D]], !dbg [[META49]]
 ; DBGINFO-NEXT:      #dbg_value(i8 [[F]], [[META44:![0-9]+]], !DIExpression(), [[META50:![0-9]+]])
 ; DBGINFO-NEXT:    ret i8 [[F]], !dbg [[DBG51:![0-9]+]]
 ;
@@ -199,7 +199,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B]], 0, !dbg [[META97]]
 ; DBGINFO-NEXT:      #dbg_value(i1 [[TOBOOL]], [[META91]], !DIExpression(), [[META97]])
 ; DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i32 0, i32 4, !dbg [[DBG99:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i8 poison, [[META92:![0-9]+]], !DIExpression(), [[DBG99]])
+; DBGINFO-NEXT:      #dbg_value(i1 [[TOBOOL]], [[META92:![0-9]+]], !DIExpression(DW_OP_constu, 1, DW_OP_and, DW_OP_lit0, DW_OP_constu, 4, DW_OP_minus, DW_OP_mul, DW_OP_plus_uconst, 4, DW_OP_stack_value), [[DBG99]])
 ; DBGINFO-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
 ; DBGINFO-NEXT:      i3 0, label [[FOR_END:%.*]]
 ; DBGINFO-NEXT:      i3 -1, label [[FOR_END]]

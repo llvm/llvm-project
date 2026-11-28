@@ -2350,6 +2350,47 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
   return Icmp->getOperand(0);
 }
 
+static Value *
+getSalvageOpsForSelect(SelectInst *Sel, const DataLayout &DL,
+                       uint64_t CurrentLocOps,
+                       SmallVectorImpl<uint64_t> &Opcodes,
+                       SmallVectorImpl<Value *> &AdditionalValues) {
+  // Compute F + (C & 1) * (T - F), which is exact modulo the address size.
+  Type *Ty = Sel->getType();
+  if (!Ty->isIntegerTy() || Sel->getCondition()->getType()->isVectorTy() ||
+      Ty->getIntegerBitWidth() > DL.getPointerSizeInBits())
+    return nullptr;
+  Value *TrueV = Sel->getTrueValue();
+  Value *FalseV = Sel->getFalseValue();
+  for (Value *V : {TrueV, FalseV})
+    if (isa<Constant>(V) && !isa<ConstantInt>(V))
+      return nullptr;
+
+  DenseMap<Value *, uint64_t> ArgIndex;
+  auto PushOperand = [&](Value *V) {
+    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+      Opcodes.append({dwarf::DW_OP_constu, CI->getZExtValue()});
+      return;
+    }
+    if (!CurrentLocOps) {
+      Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
+      CurrentLocOps = 1;
+    }
+    auto [It, Inserted] =
+        ArgIndex.try_emplace(V, CurrentLocOps + ArgIndex.size());
+    if (Inserted)
+      AdditionalValues.push_back(V);
+    Opcodes.append({dwarf::DW_OP_LLVM_arg, It->second});
+  };
+  Opcodes.append({dwarf::DW_OP_lit1, dwarf::DW_OP_and});
+  PushOperand(TrueV);
+  PushOperand(FalseV);
+  Opcodes.append({dwarf::DW_OP_minus, dwarf::DW_OP_mul});
+  PushOperand(FalseV);
+  Opcodes.push_back(dwarf::DW_OP_plus);
+  return Sel->getCondition();
+}
+
 Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
                                   SmallVectorImpl<uint64_t> &Ops,
                                   SmallVectorImpl<Value *> &AdditionalValues) {
@@ -2391,6 +2432,9 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
     return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
   if (auto *IC = dyn_cast<ICmpInst>(&I))
     return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
+  if (auto *Sel = dyn_cast<SelectInst>(&I))
+    return getSalvageOpsForSelect(Sel, DL, CurrentLocOps, Ops,
+                                  AdditionalValues);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
