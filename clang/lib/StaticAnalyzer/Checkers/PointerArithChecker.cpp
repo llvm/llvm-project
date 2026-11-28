@@ -92,15 +92,13 @@ static ProgramStateRef markSuperRegionReinterpreted(ProgramStateRef State,
 
 void PointerArithChecker::checkDeadSymbols(SymbolReaper &SR,
                                            CheckerContext &C) const {
-  // TODO: intentional leak. Some information is garbage collected too early,
-  // see http://reviews.llvm.org/D14203 for further information.
-  /*ProgramStateRef State = C.getState();
+  ProgramStateRef State = C.getState();
   RegionStateTy RegionStates = State->get<RegionState>();
   for (const MemRegion *Reg: llvm::make_first_range(RegionStates)) {
     if (!SR.isLiveRegion(Reg))
       State = State->remove<RegionState>(Reg);
   }
-  C.addTransition(State);*/
+  C.addTransition(State);
 }
 
 AllocKind PointerArithChecker::getKindOfNewOp(const CXXNewExpr *NE,
