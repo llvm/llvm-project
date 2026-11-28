@@ -264,7 +264,7 @@ INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
 RUN: not llvm-dis -disable-output %p/Inputs/unterminated-vbr.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=UNTERMINATED-VBR %s
 
-UNTERMINATED-VBR: Failed to read size: Unterminated VBR
+UNTERMINATED-VBR: Failed to read size: unterminated VBR
 
 RUN: not llvm-dis -disable-output %p/Inputs/comdat-name-too-large.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=COMDAT-NAME-TOO-LARGE %s
