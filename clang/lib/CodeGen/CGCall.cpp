@@ -6434,8 +6434,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       getBundlesForFunclet(CalleePtr);
 
   if (SanOpts.has(SanitizerKind::KCFI) &&
-      !isa_and_nonnull<FunctionDecl>(TargetDecl))
+      !isa_and_nonnull<FunctionDecl>(TargetDecl)) {
     EmitKCFIOperandBundle(ConcreteCallee, BundleList);
+    // An indirect call through a function type without a prototype (e.g.
+    // pre-C23 `int (*)()`) isn't checked.
+    if (isa_and_nonnull<FunctionNoProtoType>(
+            ConcreteCallee.getAbstractInfo().getCalleeFunctionType()) &&
+        !isa<llvm::Constant>(CalleePtr->stripPointerCasts()))
+      CGM.getDiags().Report(Loc, diag::warn_kcfi_unprototyped_call);
+  }
 
   // Add the pointer-authentication bundle.
   EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);

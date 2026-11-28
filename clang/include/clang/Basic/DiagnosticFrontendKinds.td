@@ -420,6 +420,10 @@ def warn_profile_data_misexpect : Warning<
 def warn_cgs_no_proto : Warning<
   "indirect call to a function with no prototype; generating type metadata for assumed prototype %0 (type string: %1)">,
   InGroup<DiagGroup<"call-graph-section-no-prototype">>;
+def warn_kcfi_unprototyped_call : Warning<
+  "indirect call through a function type without a prototype is not checked "
+  "by '-fsanitize=kcfi'">,
+  InGroup<DiagGroup<"kcfi-unprototyped-call">>;
 
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
