@@ -2,7 +2,10 @@
 
 On macOS, debug symbols are often in stand alone bundles called **dSYM** files.
 These are bundles that contain DWARF debug information and other resources
-related to builds and debug info.
+related to builds and debug info. A dSYM can also carry a Python script that
+LLDB loads with its module, as
+[Auto-Loading Scripts from Code-Signed dSYM Bundles](tutorials/auto-loading-scripts-from-dsyms.md)
+explains.
 
 The DebugSymbols.framework framework helps locate dSYM files when given a UUID.
 It can locate the symbols using a variety of methods:
