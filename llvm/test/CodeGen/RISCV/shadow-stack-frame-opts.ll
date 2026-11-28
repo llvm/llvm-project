@@ -2149,6 +2149,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-ZCMP-NEXT:    sspopchk ra
 ; RV32-ZCMP-NEXT:    ret
 ; RV32-ZCMP-NEXT:  .LBB9_2: # %return
+; RV32-ZCMP-NEXT:    .cfi_def_cfa sp, 0
+; RV32-ZCMP-NEXT:    .cfi_same_value ra
 ; RV32-ZCMP-NEXT:    li a0, 1
 ; RV32-ZCMP-NEXT:    ret
 ;
@@ -2167,6 +2169,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 0
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_same_value ra
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
 ;
@@ -2185,6 +2189,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-XQCCMP-NEXT:    sspopchk ra
 ; RV32-XQCCMP-NEXT:    ret
 ; RV32-XQCCMP-NEXT:  .LBB9_2: # %return
+; RV32-XQCCMP-NEXT:    .cfi_def_cfa sp, 0
+; RV32-XQCCMP-NEXT:    .cfi_same_value ra
 ; RV32-XQCCMP-NEXT:    li a0, 1
 ; RV32-XQCCMP-NEXT:    ret
 ;
@@ -2271,6 +2277,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-ZCMP-NEXT:    sspopchk ra
 ; RV64-ZCMP-NEXT:    ret
 ; RV64-ZCMP-NEXT:  .LBB9_2: # %return
+; RV64-ZCMP-NEXT:    .cfi_def_cfa sp, 0
+; RV64-ZCMP-NEXT:    .cfi_same_value ra
 ; RV64-ZCMP-NEXT:    li a0, 1
 ; RV64-ZCMP-NEXT:    ret
 ;
@@ -2290,6 +2298,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 0
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_same_value ra
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
 ;
@@ -2309,6 +2319,8 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-XQCCMP-NEXT:    sspopchk ra
 ; RV64-XQCCMP-NEXT:    ret
 ; RV64-XQCCMP-NEXT:  .LBB9_2: # %return
+; RV64-XQCCMP-NEXT:    .cfi_def_cfa sp, 0
+; RV64-XQCCMP-NEXT:    .cfi_same_value ra
 ; RV64-XQCCMP-NEXT:    li a0, 1
 ; RV64-XQCCMP-NEXT:    ret
   %cmp = icmp eq i32 %x, 0

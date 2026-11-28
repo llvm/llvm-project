@@ -598,6 +598,35 @@ static unsigned getNumPushPopRegs(const std::vector<CalleeSavedInfo> &CSI) {
   return NumPushPopRegs;
 }
 
+void RISCVFrameLowering::resetCFIToInitialState(MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  const auto *TRI = STI.getRegisterInfo();
+
+  CFIInstBuilder CFIBuilder(MBB, MBB.begin(), MachineInstr::NoFlags);
+  CFIBuilder.buildDefCFA(SPReg, 0);
+
+  if (RVFI->getShadowStackKind(MF) ==
+          RISCVMachineFunctionInfo::ShadowStackKind::Software &&
+      llvm::any_of(
+          MF.getFrameInfo().getCalleeSavedInfo(),
+          [&](const CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; })) {
+    CFIBuilder.buildSameValue(RISCVABI::getSCSPReg());
+  }
+
+  for (const CalleeSavedInfo &Info : MF.getFrameInfo().getCalleeSavedInfo()) {
+    MCRegister Reg = Info.getReg();
+    if (RISCV::GPRPairRegClass.contains(Reg)) {
+      MCRegister EvenReg = TRI->getSubReg(Reg, RISCV::sub_gpr_even);
+      MCRegister OddReg = TRI->getSubReg(Reg, RISCV::sub_gpr_odd);
+      CFIBuilder.buildSameValue(EvenReg);
+      CFIBuilder.buildSameValue(OddReg);
+    } else {
+      CFIBuilder.buildSameValue(Reg);
+    }
+  }
+}
+
 // Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
