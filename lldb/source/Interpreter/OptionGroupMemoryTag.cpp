@@ -9,27 +9,21 @@
 #include "lldb/Interpreter/OptionGroupMemoryTag.h"
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-static const uint32_t SHORT_OPTION_SHOW_TAGS = 0x54414753; // 'tags'
+#define LLDB_OPTIONS_memory_tag
+#include "InterpreterOptions.inc"
+
+#define LLDB_OPTIONS_memory_tag_binary
+#include "InterpreterOptions.inc"
 
 OptionGroupMemoryTag::OptionGroupMemoryTag(bool note_binary /*=false*/)
-    : m_show_tags(false, false), m_option_definition{
-                                     LLDB_OPT_SET_1,
-                                     false,
-                                     "show-tags",
-                                     SHORT_OPTION_SHOW_TAGS,
-                                     OptionParser::eNoArgument,
-                                     nullptr,
-                                     {},
-                                     0,
-                                     eArgTypeNone,
-                                     note_binary
-                                         ? "Include memory tags in output "
-                                           "(does not apply to binary output)."
-                                         : "Include memory tags in output."} {}
+    : m_show_tags(false, false),
+      m_option_definition(note_binary ? g_memory_tag_binary_options[0]
+                                      : g_memory_tag_options[0]) {}
 
 llvm::ArrayRef<OptionDefinition> OptionGroupMemoryTag::GetDefinitions() {
   return llvm::ArrayRef(m_option_definition);
@@ -42,7 +36,7 @@ OptionGroupMemoryTag::SetOptionValue(uint32_t option_idx,
   assert(option_idx == 0 && "Only one option in memory tag group!");
 
   switch (m_option_definition.short_option) {
-  case SHORT_OPTION_SHOW_TAGS:
+  case '\x02': // --show-tags
     m_show_tags.SetCurrentValue(true);
     m_show_tags.SetOptionWasSet();
     break;
