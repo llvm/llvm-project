@@ -3382,7 +3382,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
     // If the return instruction returned a value, replace uses of the call with
     // uses of the returned value.
-    if (!CB.use_empty()) {
+    if (!CB.use_empty() || CB.isUsedByMetadata()) {
       ReturnInst *R = Returns[0];
       if (&CB == R->getReturnValue())
         CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
@@ -3494,7 +3494,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   } else if (!Returns.empty()) {
     // Otherwise, if there is exactly one return value, just replace anything
     // using the return value of the call with the computed value.
-    if (!CB.use_empty()) {
+    if (!CB.use_empty() || CB.isUsedByMetadata()) {
       if (&CB == Returns[0]->getReturnValue())
         CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       else
