@@ -14164,7 +14164,7 @@ SDValue DAGCombiner::visitVECTOR_COMPRESS(SDNode *N) {
       if (MaskI.isUndef())
         continue;
 
-      if (TLI.isConstTrueVal(MaskI)) {
+      if (MaskI->getAsAPIntVal()[0]) {
         SDValue VecI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec,
                                    DAG.getVectorIdxConstant(I, DL));
         Ops.push_back(VecI);
