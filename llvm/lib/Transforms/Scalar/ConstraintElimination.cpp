@@ -625,6 +625,27 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed);
+
+/// Returns true if \p X <=u D for a sub D = Z - \p Y, and D does not wrap
+/// unsigned, so that X + Y does not wrap unsigned.
+static bool isBoundedByNoWrapSub(Value *X, Value *Y, ConstraintInfo &Info) {
+  Value *D = nullptr;
+  Value *SDiv = nullptr;
+  auto BoundingSub = m_Value(D, m_Sub(m_Value(), m_Specific(Y)));
+  if (!match(X,
+             m_CombineOr(
+                 m_LShr(BoundingSub, m_Value()), m_UDiv(BoundingSub, m_Value()),
+                 m_Value(SDiv, m_SDiv(BoundingSub, m_StrictlyPositive())))))
+    return false;
+
+  if (!isKnownNoWrap(D, Info, /*Signed=*/false))
+    return false;
+
+  // D sdiv C <=u D only holds for D >=s 0.
+  return !SDiv || Info.isKnownNonNegative(D);
+}
+
 /// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
 /// is known to not wrap in signed or unsigned, depending on \p Signed.
 static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
@@ -633,6 +654,13 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   using OBO = OverflowingBinaryOperator;
 
   if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
+    return true;
+
+  // X + Y does not wrap unsigned if X <=u D for D = Z - Y, and D does not wrap
+  // unsigned.
+  if (Opcode == Instruction::Add && !Signed &&
+      (isBoundedByNoWrapSub(Op0, Op1, Info) ||
+       isBoundedByNoWrapSub(Op1, Op0, Info)))
     return true;
 
   if (Opcode == Instruction::Sub) {
