@@ -127,7 +127,10 @@ spirv.func @bitfield_sextract_scalar_same_bit_width(%base: i64, %offset: i64, %c
   // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : i64
   // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : i64
   // CHECK: %[[T2:.*]] = llvm.add %[[OFFSET]], %[[T1]] : i64
-  // CHECK: llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i64
+  // CHECK: %[[RESULT:.*]] = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i64
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[COUNT_IS_ZERO:.*]] = llvm.icmp "eq" %[[COUNT]], %[[C0]] : i64
+  // CHECK: llvm.select %[[COUNT_IS_ZERO]], %[[C0]], %[[RESULT]] : i1, i64
   %0 = spirv.BitFieldSExtract %base, %offset, %count : i64, i64, i64
   spirv.Return
 }
@@ -142,7 +145,10 @@ spirv.func @bitfield_sextract_scalar_smaller_bit_width(%base: i32, %offset: i8, 
   // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : i32
   // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : i32
   // CHECK: %[[T2:.*]] = llvm.add %[[EXT_OFFSET]], %[[T1]] : i32
-  // CHECK: llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i32
+  // CHECK: %[[RESULT:.*]] = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i32
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[COUNT_IS_ZERO:.*]] = llvm.icmp "eq" %[[EXT_COUNT]], %[[C0]] : i32
+  // CHECK: llvm.select %[[COUNT_IS_ZERO]], %[[C0]], %[[RESULT]] : i1, i32
   %0 = spirv.BitFieldSExtract %base, %offset, %count : i32, i8, i8
   spirv.Return
 }
@@ -157,7 +163,10 @@ spirv.func @bitfield_sextract_scalar_greater_bit_width(%base: i32, %offset: i64,
   // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : i32
   // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : i32
   // CHECK: %[[T2:.*]] = llvm.add %[[TRUNC_OFFSET]], %[[T1]] : i32
-  // CHECK: llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i32
+  // CHECK: %[[RESULT:.*]] = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : i32
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[COUNT_IS_ZERO:.*]] = llvm.icmp "eq" %[[TRUNC_COUNT]], %[[C0]] : i32
+  // CHECK: llvm.select %[[COUNT_IS_ZERO]], %[[C0]], %[[RESULT]] : i1, i32
   %0 = spirv.BitFieldSExtract %base, %offset, %count : i32, i64, i64
   spirv.Return
 }
@@ -180,7 +189,10 @@ spirv.func @bitfield_sextract_vector(%base: vector<2xi32>, %offset: i32, %count:
   // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : vector<2xi32>
   // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : vector<2xi32>
   // CHECK: %[[T2:.*]] = llvm.add %[[OFFSET_V2]], %[[T1]] : vector<2xi32>
-  // CHECK: llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : vector<2xi32>
+  // CHECK: %[[RESULT:.*]] = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : vector<2xi32>
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(dense<0> : vector<2xi32>) : vector<2xi32>
+  // CHECK: %[[COUNT_IS_ZERO:.*]] = llvm.icmp "eq" %[[COUNT_V2]], %[[C0]] : vector<2xi32>
+  // CHECK: llvm.select %[[COUNT_IS_ZERO]], %[[C0]], %[[RESULT]] : vector<2xi1>, vector<2xi32>
   %0 = spirv.BitFieldSExtract %base, %offset, %count : vector<2xi32>, i32, i32
   spirv.Return
 }

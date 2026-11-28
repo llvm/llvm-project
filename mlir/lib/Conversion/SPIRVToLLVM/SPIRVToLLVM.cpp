@@ -678,8 +678,20 @@ public:
     // Shift the result right, filling the bits with the sign bit.
     Value amountToShiftRight =
         LLVM::AddOp::create(rewriter, loc, dstType, offset, amountToShiftLeft);
-    rewriter.replaceOpWithNewOp<LLVM::AShrOp>(op, dstType, baseShiftedLeft,
-                                              amountToShiftRight);
+    Value result = LLVM::AShrOp::create(rewriter, loc, dstType, baseShiftedLeft,
+                                        amountToShiftRight);
+
+    // Count 0 shifts by Size (poison in LLVM); the spec requires 0 then.
+    Value zero = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                       rewriter.getIntegerAttr(integerType, 0));
+    Type i1Type = rewriter.getI1Type();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+    Value countIsZero = LLVM::ICmpOp::create(
+        rewriter, loc, cmpType, LLVM::ICmpPredicate::eq, count, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, countIsZero, zero,
+                                                result);
     return success();
   }
 };
