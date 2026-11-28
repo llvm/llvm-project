@@ -1184,20 +1184,52 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
 }
 
 namespace {
+/// A device shared memory allocation (`__kmpc_alloc_shared`) created to replace
+/// a stack allocation emitted while inlining a privatization/reduction recipe
+/// region in a shared device context. Because the replaced allocation may be
+/// created conditionally (e.g. in one branch of the recipe region) and
+/// therefore not dominate the recipe cleanup point, the allocated pointer and
+/// its byte size are stashed into stack slots placed at a dominating point, so
+/// the matching `__kmpc_free_shared` can be emitted at cleanup guarded by a
+/// null check.
+struct DeviceSharedAlloc {
+  llvm::Value *ptrSlot = nullptr;  ///< `ptr` slot, null unless the alloc ran.
+  llvm::Value *sizeSlot = nullptr; ///< `i64` slot holding the byte size.
+};
+
 /// A util to collect info needed to convert delayed privatizers from MLIR to
 /// LLVM.
 struct PrivateVarsInfo {
+  /// How the storage allocated for a privatized variable was obtained.
+  enum class StorageKind {
+    None,        ///< No storage was allocated for the variable.
+    Stack,       ///< Stack allocation.
+    Allocator,   ///< Allocated with an `allocate` clause's allocator.
+    DeviceShared ///< Device shared memory.
+  };
+
   /// Per-variable data for a single delayed privatizer.
   struct VarInfo {
     BlockArgument blockArg;
     mlir::Value mlirVar;
     omp::PrivateClauseOp privatizer;
-    llvm::Value *llvmVar = nullptr;
-  };
 
-  struct AllocatorInfo {
-    llvm::Value *allocatedPtr;
-    llvm::Value *allocator;
+    /// The value the variable is privatized into.
+    llvm::Value *llvmVar = nullptr;
+
+    /// The allocation made to hold the variable. Tracked separately because
+    /// `llvmVar` might be replaced by the value yielded by the init region,
+    /// but the corresponding original allocation (depending on the
+    /// `storageKind`) must still be deallocated at cleanup.
+    llvm::Value *storage = nullptr;
+    StorageKind storageKind = StorageKind::None;
+
+    /// Allocator used to allocate `storage`, if `storageKind == Allocator`.
+    llvm::Value *allocator = nullptr;
+
+    /// Device shared memory allocations that replaced stack allocations emitted
+    /// while inlining this variable's recipe regions, to be freed at cleanup.
+    SmallVector<DeviceSharedAlloc> sharedAllocs;
   };
 
   template <typename OP>
@@ -1227,7 +1259,6 @@ struct PrivateVarsInfo {
   size_t numPrivateVars = 0;
   SmallVector<VarInfo> vars;
   llvm::DenseMap<Value, llvm::Value *> convertedAllocators;
-  SmallVector<AllocatorInfo> allocatorPrivates;
 
   SmallVector<llvm::Value *> getLlvmVars() const {
     return llvm::map_to_vector(vars,
@@ -1242,7 +1273,9 @@ private:
     vars.reserve(vars.size() + blockArgs.size());
     for (auto [blockArg, mlirVar, privatizer] :
          llvm::zip_equal(blockArgs, privateVars, privatizers))
-      vars.push_back({blockArg, mlirVar, privatizer});
+      vars.push_back({blockArg, mlirVar, privatizer, /*llvmVar=*/nullptr,
+                      /*storage=*/nullptr, StorageKind::None,
+                      /*allocator=*/nullptr, /*sharedAllocs=*/{}});
   }
 
   /// Populates `privatizers` with privatization declarations the provided
@@ -1260,7 +1293,211 @@ private:
         [&](SymbolRefAttr symbolRef) { return findPrivatizer(op, symbolRef); });
   }
 };
+
+/// Scoped replacement of stack allocations with device shared memory. On
+/// construction it snapshots the allocas already present in the function; on
+/// destruction it replaces those created in the meantime with device shared
+/// memory allocations (`__kmpc_alloc_shared`), appending them to \p
+/// sharedAllocs for later deallocation and remapping any swapped \p
+/// yieldedValues in place. When \p enabled is false it does nothing. Call
+/// cancel() to abandon the pending replacement (e.g. when the region inlining
+/// it was scoped around failed).
+class ScopedStackToSharedReplacer {
+public:
+  ScopedStackToSharedReplacer(
+      llvm::OpenMPIRBuilder *ompBuilder, llvm::IRBuilderBase &builder,
+      llvm::BasicBlock *allocBlock,
+      SmallVectorImpl<DeviceSharedAlloc> &sharedAllocs,
+      SmallVectorImpl<llvm::Value *> *yieldedValues = nullptr,
+      bool enabled = false)
+      : enabled(enabled), ompBuilder(ompBuilder), builder(builder),
+        func(*builder.GetInsertBlock()->getParent()), allocBlock(allocBlock),
+        sharedAllocs(sharedAllocs), yieldedValues(yieldedValues) {
+    if (enabled)
+      visitFnAllocas(
+          [&](llvm::AllocaInst *alloca) { beforeAllocas.insert(alloca); });
+  }
+
+  ~ScopedStackToSharedReplacer() {
+    if (!enabled)
+      return;
+
+    SmallVector<llvm::AllocaInst *> newAllocas;
+    visitFnAllocas([&](llvm::AllocaInst *alloca) {
+      if (!beforeAllocas.contains(alloca))
+        newAllocas.push_back(alloca);
+    });
+    replaceAllocas(newAllocas);
+  }
+
+  ScopedStackToSharedReplacer(const ScopedStackToSharedReplacer &) = delete;
+  ScopedStackToSharedReplacer &
+  operator=(const ScopedStackToSharedReplacer &) = delete;
+
+  /// Abandon the pending replacement so the destructor leaves the collected
+  /// allocas untouched.
+  void cancel() {
+    enabled = false;
+    beforeAllocas.clear();
+  }
+
+private:
+  template <typename CallbackTy>
+  void visitFnAllocas(CallbackTy callback) {
+    for (llvm::BasicBlock &bb : func)
+      for (llvm::Instruction &inst : bb)
+        if (auto *alloca = dyn_cast<llvm::AllocaInst>(&inst))
+          callback(alloca);
+  }
+
+  /// Replace a stack allocation \p allocaInst (emitted while inlining a recipe
+  /// region in a shared device context) with a device shared memory allocation
+  /// (`__kmpc_alloc_shared`). The allocated pointer and its byte size are
+  /// stashed into stack slots created in `allocBlock` -- which must dominate
+  /// both the allocation site and the recipe cleanup point -- so the allocation
+  /// can be freed at cleanup even when it is created conditionally (and
+  /// therefore does not itself dominate the cleanup). Returns the slots, or
+  /// std::nullopt when the allocation could not be handled and was left
+  /// untouched.
+  ///
+  /// \p replacedValues is populated with mappings from each erased value (the
+  /// alloca and any address-space casts of it) to the shared pointer, so
+  /// callers still holding those values (e.g. a region's yielded value) can
+  /// remap them.
+  std::optional<DeviceSharedAlloc>
+  replaceAlloca(llvm::AllocaInst *allocaInst,
+                DenseMap<llvm::Value *, llvm::Value *> &replacedValues) {
+    const llvm::DataLayout &dl = allocaInst->getModule()->getDataLayout();
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    llvm::Type *ptrTy = builder.getPtrTy();
+    llvm::Type *sizeTy = builder.getInt64Ty();
+
+    // Compute the allocation's byte size: sizeof(elemType) * arraySize.
+    builder.SetInsertPoint(allocaInst);
+    llvm::Value *size = llvm::ConstantInt::get(
+        sizeTy,
+        dl.getTypeAllocSize(allocaInst->getAllocatedType()).getFixedValue());
+    if (allocaInst->isArrayAllocation())
+      size = builder.CreateMul(
+          size, builder.CreateZExtOrTrunc(allocaInst->getArraySize(), sizeTy));
+
+    // Create the replacement device shared memory allocation at the alloca
+    // site.
+    llvm::CallInst *shared = ompBuilder->createOMPAllocShared(builder, size);
+
+    // Rewire uses, then erase the original stack allocation.
+    if (allocaInst->getType()->getPointerAddressSpace() == 0) {
+      replacedValues[allocaInst] = shared;
+      allocaInst->replaceAllUsesWith(shared);
+    } else {
+      // Non-default address space allocations accessed exclusively through an
+      // addrspacecast to the default address space are rewired to the shared
+      // pointer. Any other use shape is unsupported.
+      assert(allocaInst->hasOneUse() &&
+             "unsupported non-default address space alloca with multiple uses");
+      auto *cast =
+          llvm::cast<llvm::AddrSpaceCastInst>(*allocaInst->user_begin());
+      replacedValues[cast] = shared;
+      cast->replaceAllUsesWith(shared);
+      cast->eraseFromParent();
+    }
+    allocaInst->eraseFromParent();
+
+    // Create zero-initialized slots at a dominating point, and store the shared
+    // pointer and size at the (possibly conditional) allocation site.
+    builder.SetInsertPoint(allocBlock->getFirstNonPHIOrAlloca());
+    llvm::Value *ptrSlot =
+        builder.CreateAlloca(ptrTy, nullptr, "omp.shared.ptr");
+    llvm::Value *sizeSlot =
+        builder.CreateAlloca(sizeTy, nullptr, "omp.shared.size");
+    builder.CreateStore(llvm::ConstantPointerNull::get(ptrTy), ptrSlot);
+    builder.CreateStore(llvm::ConstantInt::get(sizeTy, 0), sizeSlot);
+
+    builder.SetInsertPoint(std::next(shared->getIterator()));
+    builder.CreateStore(shared, ptrSlot);
+    builder.CreateStore(size, sizeSlot);
+
+    return DeviceSharedAlloc{ptrSlot, sizeSlot};
+  }
+
+  /// Replace every stack allocation in \p newAllocas (those emitted while
+  /// inlining a recipe region) with a device shared memory allocation,
+  /// appending the created allocations to `sharedAllocs` for later
+  /// deallocation. `allocBlock` must dominate the allocation sites and the
+  /// recipe cleanup and it's used to hold any temporary bookkeeping storage
+  /// needed. Any values in `yieldedValues` that were swapped (e.g. a region's
+  /// yielded descriptor) are remapped in place to their replacement.
+  void replaceAllocas(ArrayRef<llvm::AllocaInst *> newAllocas) {
+    if (newAllocas.empty())
+      return;
+
+    DenseMap<llvm::Value *, llvm::Value *> replaced;
+    for (llvm::AllocaInst *alloca : newAllocas)
+      if (std::optional<DeviceSharedAlloc> shared =
+              replaceAlloca(alloca, replaced))
+        sharedAllocs.push_back(*shared);
+
+    if (!yieldedValues)
+      return;
+
+    for (llvm::Value *&value : *yieldedValues)
+      if (llvm::Value *remapped = replaced.lookup(value))
+        value = remapped;
+  }
+
+  bool enabled;
+  llvm::OpenMPIRBuilder *ompBuilder;
+  llvm::IRBuilderBase &builder;
+  llvm::Function &func;
+  llvm::BasicBlock *allocBlock;
+  SmallVectorImpl<DeviceSharedAlloc> &sharedAllocs;
+  SmallVectorImpl<llvm::Value *> *yieldedValues;
+  SmallPtrSet<llvm::AllocaInst *, 16> beforeAllocas;
+};
 } // namespace
+
+/// Emit a `__kmpc_free_shared` for a device shared memory allocation created by
+/// replaceAllocaWithDeviceSharedMem, guarded by a null check so it is skipped
+/// when the (possibly conditional) allocation did not run. Works whether or not
+/// the current block has a terminator, and leaves \p builder positioned so that
+/// subsequent code is emitted after the guard.
+static void emitGuardedFreeSharedMem(llvm::OpenMPIRBuilder *ompBuilder,
+                                     llvm::IRBuilderBase &builder,
+                                     const DeviceSharedAlloc &alloc) {
+  llvm::Function *func = builder.GetInsertBlock()->getParent();
+  llvm::LLVMContext &ctx = builder.getContext();
+
+  llvm::Value *ptr = builder.CreateLoad(builder.getPtrTy(), alloc.ptrSlot);
+  llvm::Value *isNonNull = builder.CreateIsNotNull(ptr);
+
+  // Carve out a continuation block holding whatever followed the insertion
+  // point (including any terminator), so the guard can be spliced in before it.
+  llvm::BasicBlock *curBlock = builder.GetInsertBlock();
+  bool hasTerminator = !curBlock->empty() && curBlock->back().isTerminator();
+  llvm::BasicBlock *contBlock;
+  if (hasTerminator) {
+    contBlock = curBlock->splitBasicBlock(builder.GetInsertPoint(),
+                                          "omp.shared.free.cont");
+    // splitBasicBlock added an unconditional branch; replace it below.
+    curBlock->back().eraseFromParent();
+  } else {
+    contBlock = llvm::BasicBlock::Create(ctx, "omp.shared.free.cont", func);
+  }
+  llvm::BasicBlock *freeBlock =
+      llvm::BasicBlock::Create(ctx, "omp.shared.free", func, contBlock);
+
+  builder.SetInsertPoint(curBlock);
+  builder.CreateCondBr(isNonNull, freeBlock, contBlock);
+
+  builder.SetInsertPoint(freeBlock);
+  llvm::Value *size = builder.CreateLoad(builder.getInt64Ty(), alloc.sizeSlot);
+  ompBuilder->createOMPFreeShared(builder, ptr, size);
+  builder.CreateBr(contBlock);
+
+  // Continue emitting at the start of the continuation (before the original
+  // remainder/terminator, if any).
+  builder.SetInsertPoint(contBlock->begin());
+}
 
 /// Populates `reductions` with reduction declarations used in the given op.
 template <typename T>
@@ -1584,6 +1821,9 @@ struct ReductionVarsInfo {
     bool byRef;
     llvm::Value *privateVar = nullptr;
     llvm::Value *storage = nullptr;
+    /// Device shared memory allocations that replaced stack allocations emitted
+    /// while inlining this variable's recipe regions, to be freed at cleanup.
+    SmallVector<DeviceSharedAlloc> sharedAllocs;
   };
 
   /// Contains the arguments for an LLVM store operation.
@@ -1607,7 +1847,8 @@ struct ReductionVarsInfo {
     vars.reserve(blockArgs.size());
     for (auto [blockArg, mlirVar, decl, byRef] :
          llvm::zip_equal(blockArgs, op.getReductionVars(), decls, byRefs))
-      vars.push_back({blockArg, mlirVar, decl, byRef});
+      vars.push_back({blockArg, mlirVar, decl, byRef, /*privateVar=*/nullptr,
+                      /*storage=*/nullptr, /*sharedAllocs=*/{}});
   }
 
   SmallVector<VarInfo> vars;
@@ -1652,13 +1893,25 @@ allocReductionVars(Operation &op, llvm::IRBuilderBase &builder,
       if (allocRegion.empty())
         continue;
 
+      // Make sure that any new stack allocations emitted while inlining the
+      // alloc region are placed in device shared memory if useDeviceSharedMem
+      // is true.
       SmallVector<llvm::Value *, 1> phis;
-      if (failed(inlineConvertOmpRegions(allocRegion, "omp.reduction.alloc",
-                                         builder, moduleTranslation, &phis)))
-        return op.emitError(
-            "failed to inline `alloc` region of `omp.declare_reduction`");
+      {
+        ScopedStackToSharedReplacer replacer(
+            ompBuilder, builder, allocaIP.getNodeParent(), var.sharedAllocs,
+            &phis, useDeviceSharedMem);
+        if (failed(inlineConvertOmpRegions(allocRegion, "omp.reduction.alloc",
+                                           builder, moduleTranslation,
+                                           &phis))) {
+          replacer.cancel();
+          return op.emitError(
+              "failed to inline `alloc` region of `omp.declare_reduction`");
+        }
+      }
 
       assert(phis.size() == 1 && "expected one allocation to be yielded");
+
       builder.SetInsertPoint(allocaIP.getNodeParent()->getTerminator());
 
       // Allocate reduction variable (which is a pointer to the real reduction
@@ -1806,10 +2059,21 @@ initReductionVars(Operation &op, llvm::IRBuilderBase &builder,
     // problematic. Instead of just inlining the region, handle allocations by
     // hoisting fixed length allocations to the function entry and using
     // stacksave and restore for variable length ones.
-    if (failed(inlineConvertOmpRegions(var.decl.getInitializerRegion(),
-                                       "omp.reduction.neutral", builder,
-                                       moduleTranslation, &phis)))
-      return failure();
+
+    // Make sure that any new stack allocations emitted while inlining the
+    // initializer region are placed in device shared memory if
+    // useDeviceSharedMem is true.
+    {
+      ScopedStackToSharedReplacer replacer(ompBuilder, builder,
+                                           latestAllocaBlock, var.sharedAllocs,
+                                           &phis, useDeviceSharedMem);
+      if (failed(inlineConvertOmpRegions(var.decl.getInitializerRegion(),
+                                         "omp.reduction.neutral", builder,
+                                         moduleTranslation, &phis))) {
+        replacer.cancel();
+        return failure();
+      }
+    }
 
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
@@ -2002,10 +2266,17 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
 
   bool useDeviceSharedMem = omp::opInSharedDeviceContext(op);
   if (useDeviceSharedMem) {
-    for (ReductionVarsInfo::VarInfo &var : redInfo.vars)
+    for (ReductionVarsInfo::VarInfo &var : redInfo.vars) {
+      // Free the init-region internal allocations before the top-level private
+      // storage, in reverse order, consistent with the privatization cleanup
+      // path.
+      for (const DeviceSharedAlloc &alloc : llvm::reverse(var.sharedAllocs))
+        emitGuardedFreeSharedMem(ompBuilder, builder, alloc);
+
       ompBuilder->createOMPFreeShared(
           builder, var.privateVar,
           moduleTranslation.convertType(var.decl.getType()));
+    }
   }
 
   return result;
@@ -2119,7 +2390,17 @@ initPrivateVar(llvm::IRBuilderBase &builder,
 
   assert(nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
-  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
+
+  // The private argument is only mapped if it's used, since there might be no
+  // storage to map it to (see allocatePrivateVars) and materializing the value
+  // of by-value arguments requires emitting a load.
+  BlockArgument privateArg = privDecl.getInitPrivateArg();
+  if (!privateArg.use_empty()) {
+    assert(llvmPrivateVar && "private storage required by init region");
+    moduleTranslation.mapValue(
+        privateArg, materializeRegionArgValue(builder, moduleTranslation,
+                                              privateArg, llvmPrivateVar));
+  }
 
   // in-place convert the private initialization region
   SmallVector<llvm::Value *, 1> phis;
@@ -2158,22 +2439,39 @@ static llvm::Error
 initPrivateVars(llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation,
                 PrivateVarsInfo &privateVarsInfo,
+                llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                 llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   if (privateVarsInfo.vars.empty())
     return llvm::Error::success();
 
+  llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder(moduleTranslation);
   llvm::BasicBlock *privInitBlock = splitBB(builder, true, "omp.private.init");
   setInsertPointForPossiblyEmptyBlock(builder, privInitBlock);
 
   for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
-    llvm::Expected<llvm::Value *> privVarOrErr = initPrivateVar(
-        builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
-        var.llvmVar, privInitBlock, mappedPrivateVars);
+    Operation *op = var.blockArg.getOwner()->getParentOp();
+    bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op) &&
+                              omp::allocaUsesRequireSharedMem(var.blockArg);
 
-    if (!privVarOrErr)
-      return privVarOrErr.takeError();
+    // Make sure that any new stack allocations emitted while inlining the init
+    // region are placed in device shared memory if useDeviceSharedMem is true.
+    SmallVector<llvm::Value *, 1> phis;
+    {
+      ScopedStackToSharedReplacer replacer(
+          ompBuilder, builder, allocaIP.getNodeParent(), var.sharedAllocs,
+          &phis, useDeviceSharedMem);
+      llvm::Expected<llvm::Value *> privVarOrErr = initPrivateVar(
+          builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
+          var.llvmVar, privInitBlock, mappedPrivateVars);
+      if (!privVarOrErr) {
+        replacer.cancel();
+        return privVarOrErr.takeError();
+      }
+      phis.push_back(privVarOrErr.get());
+    }
 
-    var.llvmVar = privVarOrErr.get();
+    assert(phis.size() == 1 && "expected one allocation to be yielded");
+    var.llvmVar = phis.front();
     moduleTranslation.mapValue(var.blockArg, var.llvmVar);
 
     setInsertPointForPossiblyEmptyBlock(builder);
@@ -2281,6 +2579,13 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
         moduleTranslation.convertType(var.privatizer.getType());
     llvm::Value *llvmPrivateVar = nullptr;
     int64_t allocateIndex = allocateItemForPrivate[privateIndex];
+
+    // An init region that never uses its private argument doesn't operate on
+    // the storage allocated here, so don't allocate it as it would remain
+    // unused.
+    bool storageUnused = !var.privatizer.getInitRegion().empty() &&
+                         var.privatizer.getInitPrivateArg().use_empty();
+
     builder.SetInsertPoint(allocateIndex >= 0 && allocatorTerminator
                                ? allocatorTerminator
                                : allocaTerminator);
@@ -2335,20 +2640,26 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
       if (!llvmPrivateVar)
         return llvm::createStringError(
             "failed to create OpenMP private allocation");
-      privateVarsInfo.allocatorPrivates.push_back(
-          {llvmPrivateVar, allocator->second});
+      var.storageKind = PrivateVarsInfo::StorageKind::Allocator;
+      var.allocator = allocator->second;
+    } else if (storageUnused) {
+      // Leave `var.llvmVar` null. It will be set to the value yielded by the
+      // init region in `initPrivateVars`, which must run before anything else
+      // accesses `var.llvmVar`.
+      continue;
     } else if (mightUseDeviceSharedMem &&
                omp::allocaUsesRequireSharedMem(var.blockArg)) {
       llvmPrivateVar = ompBuilder->createOMPAllocShared(builder, llvmAllocType);
+      var.storageKind = PrivateVarsInfo::StorageKind::DeviceShared;
     } else {
       llvmPrivateVar = builder.CreateAlloca(
           llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
       if (allocaAS != defaultAS)
         llvmPrivateVar = builder.CreateAddrSpaceCast(
             llvmPrivateVar, builder.getPtrTy(defaultAS));
+      var.storageKind = PrivateVarsInfo::StorageKind::Stack;
     }
-
-    var.llvmVar = llvmPrivateVar;
+    var.storage = var.llvmVar = llvmPrivateVar;
   }
 
   return afterAllocatorAllocations ? afterAllocatorAllocations : afterAllocas;
@@ -2506,21 +2817,25 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
   setInsertPointForPossiblyEmptyBlock(builder);
 
   llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder(moduleTranslation);
-  bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
-  for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
-    if (mightUseDeviceSharedMem &&
-        omp::allocaUsesRequireSharedMem(var.blockArg)) {
+  for (PrivateVarsInfo::VarInfo &var : llvm::reverse(privateVarsInfo.vars)) {
+    // Free the init-region internal allocations before the top-level private
+    // storage.
+    for (const DeviceSharedAlloc &alloc : llvm::reverse(var.sharedAllocs))
+      emitGuardedFreeSharedMem(ompBuilder, builder, alloc);
+
+    switch (var.storageKind) {
+    case PrivateVarsInfo::StorageKind::Allocator:
+      ompBuilder->createOMPFree(builder, var.storage, var.allocator);
+      break;
+    case PrivateVarsInfo::StorageKind::DeviceShared:
       ompBuilder->createOMPFreeShared(
-          builder, var.llvmVar,
+          builder, var.storage,
           moduleTranslation.convertType(var.privatizer.getType()));
+      break;
+    default:
+      break;
     }
   }
-
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  for (const PrivateVarsInfo::AllocatorInfo &allocation :
-       llvm::reverse(privateVarsInfo.allocatorPrivates))
-    ompBuilder->createOMPFree(ompLoc, allocation.allocatedPtr,
-                              allocation.allocator);
 
   return success();
 }
@@ -2744,9 +3059,9 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
       builder.restoreIP(codeGenIP);
     }
 
-    if (handleError(
-            initPrivateVars(builder, moduleTranslation, privateVarsInfo),
-            *scopeOp)
+    if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
+                                    privateAllocaIP),
+                    *scopeOp)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -2929,10 +3244,9 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   builder.restoreIP(*afterIP);
   if (teamsRedInfo) {
     // Process the reductions if required.
-    return createReductionsAndCleanup(*op, builder, moduleTranslation, allocaIP,
-                                      *teamsRedInfo,
-                                      /*isNoWait=*/false,
-                                      /*isTeamsReduction=*/true);
+    return createReductionsAndCleanup(
+        *op, builder, moduleTranslation, allocaIP, *teamsRedInfo,
+        /*isNoWait=*/false, /*isTeamsReduction=*/true);
   }
   return success();
 }
@@ -5024,7 +5338,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                 reductionInfo)))
     return failure();
 
-  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo),
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
+                                  allocaIP),
                   opInst)
           .failed())
     return failure();
@@ -5232,9 +5547,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     assert(afterAllocas.get()->getSinglePredecessor());
     builder.restoreIP(codeGenIP);
 
-    if (handleError(
-            initPrivateVars(builder, moduleTranslation, privateVarsInfo),
-            *opInst)
+    if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
+                                    allocaIP),
+                    *opInst)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -5427,7 +5742,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                                 reductionInfo)))
     return failure();
 
-  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo),
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
+                                  allocaIP),
                   opInst)
           .failed())
     return failure();
@@ -9497,8 +9813,9 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
         moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
-    if (handleError(initPrivateVars(builder, moduleTranslation, privVarsInfo),
-                    opInst)
+    if (handleError(
+            initPrivateVars(builder, moduleTranslation, privVarsInfo, allocaIP),
+            opInst)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -10382,7 +10699,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
     builder.restoreIP(codeGenIP);
     if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
-                                    &mappedPrivateVars),
+                                    allocaIP, &mappedPrivateVars),
                     *targetOp)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
