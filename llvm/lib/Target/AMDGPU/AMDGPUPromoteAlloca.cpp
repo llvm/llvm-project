@@ -30,10 +30,12 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -97,6 +99,7 @@ private:
   const AMDGPUOptions &CLOpts;
   const TargetMachine &TM;
   LoopInfo &LI;
+  function_ref<const UniformityInfo *()> GetUI;
   Module &Mod;
   const DataLayout &DL;
 
@@ -106,6 +109,7 @@ private:
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
+  unsigned DivergentSelectRatio;
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -140,9 +144,10 @@ private:
   void setFunctionLimits(const Function &F);
 
 public:
-  AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI)
+  AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI,
+                          function_ref<const UniformityInfo *()> GetUI)
       : CLOpts(static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts()),
-        TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
+        TM(TM), LI(LI), GetUI(GetUI), Mod(M), DL(M.getDataLayout()) {
     const Triple &TT = M.getTargetTriple();
     IsAMDGCN = TT.isAMDGCN();
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
@@ -164,7 +169,11 @@ public:
     if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
       return AMDGPUPromoteAllocaImpl(
                  TPC->getTM<TargetMachine>(), *F.getParent(),
-                 getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
+                 getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+                 [&]() {
+                   return &getAnalysis<UniformityInfoWrapperPass>()
+                               .getUniformityInfo();
+                 })
           .run(F, /*PromoteToLDS*/ true);
     return false;
   }
@@ -174,6 +183,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -211,6 +221,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUPromoteAlloca, DEBUG_TYPE,
 // estimation of LDS available
 INITIALIZE_PASS_DEPENDENCY(AMDGPULowerModuleLDSLegacy)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPromoteAlloca, DEBUG_TYPE,
                     "AMDGPU promote alloca to vector or LDS", false, false)
 
@@ -219,8 +230,9 @@ char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/true);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI, [&]() {
+                   return &AM.getResult<UniformityInfoAnalysis>(F);
+                 }).run(F, /*PromoteToLDS=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -232,8 +244,9 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
 PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/false);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI, [&]() {
+                   return &AM.getResult<UniformityInfoAnalysis>(F);
+                 }).run(F, /*PromoteToLDS=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -328,6 +341,9 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
       F.getFnAttributeAsParsedInteger(
           "amdgpu-promote-alloca-to-vector-max-regs",
           IsAMDGCN ? 32 : R600MaxVectorRegs));
+  DivergentSelectRatio = CLOpts.promote_alloca_to_vector_select_ratio.value_or(
+      F.getFnAttributeAsParsedInteger(
+          "amdgpu-promote-alloca-to-vector-select-ratio", 8));
   VGPRBudgetRatio = CLOpts.promote_alloca_to_vector_vgpr_ratio.value_or(
       F.getFnAttributeAsParsedInteger(
           "amdgpu-promote-alloca-to-vector-vgpr-ratio", 4));
@@ -984,6 +1000,14 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   Type *VecEltTy = AA.Vector.Ty->getElementType();
   unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
+  // Keyed on every component of the index so that %i and %i + 1 are not treated
+  // as the same index.
+  SmallDenseSet<
+      std::tuple<Value *, ConstantInt *, ConstantInt *, ConstantInt *>, 4>
+      DivergentIdxs;
+  SmallPtrSet<BasicBlock *, 2> DivergentAccessBlocks;
+  unsigned NumDivergentAccesses = 0;
+  unsigned NumNonDivergentAccesses = 0;
   for (auto *U : AA.Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -1003,6 +1027,21 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
         return RejectUser(Inst, "not a simple load or store");
 
       Ptr = Ptr->stripPointerCasts();
+
+      const GEPToVectorIndex *Idx = nullptr;
+      if (auto *AccessGEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+        auto *It = AA.Vector.GEPVectorIdx.find(AccessGEP);
+        if (It != AA.Vector.GEPVectorIdx.end())
+          Idx = &It->second;
+      }
+      if (Idx && Idx->VarIndex && GetUI()->isDivergentAtUse(*U)) {
+        DivergentIdxs.insert(
+            {Idx->VarIndex, Idx->VarMul, Idx->VarShift, Idx->ConstIndex});
+        DivergentAccessBlocks.insert(Inst->getParent());
+        ++NumDivergentAccesses;
+      } else {
+        ++NumNonDivergentAccesses;
+      }
 
       // Alloca already accessed as vector.
       if (Ptr == AA.Alloca &&
@@ -1033,6 +1072,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
         MSI && isSupportedMemset(MSI, AA.Alloca, DL)) {
+      ++NumNonDivergentAccesses;
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
@@ -1111,7 +1151,35 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       return RejectUser(Entry.first,
                         "mem transfer inst between different objects");
     AA.Vector.Worklist.push_back(Entry.first);
+    ++NumNonDivergentAccesses;
   }
+
+  if (DivergentIdxs.empty())
+    return;
+
+  // Every access uses the same divergent index, so no `cmp`/`cndmask` chain
+  // remains; however this only holds if the vector value is never merged
+  // by a phi.
+  if (DivergentIdxs.size() == 1 && NumNonDivergentAccesses == 0 &&
+      DivergentAccessBlocks.size() == 1 &&
+      !LI.getLoopFor(*DivergentAccessBlocks.begin()))
+    return;
+
+  // Check if removing memory access is worth extra `cmp`/`cndmask`
+  // instructions.
+  const uint64_t SelectsPerAccess =
+      static_cast<uint64_t>(AA.Vector.Ty->getNumElements()) *
+      divideCeil(DL.getTypeSizeInBits(VecEltTy).getFixedValue(), 32);
+  const uint64_t AddedSelectsCost = NumDivergentAccesses * SelectsPerAccess;
+  // Non-divergent accesses amplify the benefit. They are always profitable, so
+  // it is likely a win on average even if we introduce some select chains for
+  // divergent cases.
+  const uint64_t RemovedMemAccessBenefit =
+      static_cast<uint64_t>(DivergentSelectRatio) *
+      (NumDivergentAccesses + NumNonDivergentAccesses);
+  if (AddedSelectsCost > RemovedMemAccessBenefit)
+    return RejectUser(AA.Alloca,
+                      "divergent dynamic indices cost more than they save");
 }
 
 void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {

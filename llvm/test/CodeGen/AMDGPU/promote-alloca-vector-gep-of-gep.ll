@@ -76,4 +76,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" }
+attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" "amdgpu-promote-alloca-to-vector-select-ratio"="32" }
