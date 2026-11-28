@@ -2167,6 +2167,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(CI);
   }
 
+  // A constrained FP intrinsic is not speculatable, so the generic fold of an
+  // intrinsic into a select below does not apply. It is still fine to replace
+  // the call with a select of the simplified results if the call simplifies
+  // for both select arms, as then neither arm raises an FP exception that must
+  // be kept.
+  if (isa<ConstrainedFPIntrinsic>(CI))
+    for (Value *Op : CI.args())
+      if (auto *Sel = dyn_cast<SelectInst>(Op))
+        if (Instruction *R =
+                FoldOpIntoSelect(CI, Sel, /*FoldWithMultiUse=*/false,
+                                 /*SimplifyBothArms=*/true))
+          return R;
+
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
   case Intrinsic::objectsize: {
