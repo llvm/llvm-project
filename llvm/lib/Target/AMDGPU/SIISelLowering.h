@@ -277,6 +277,7 @@ private:
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue splitPackedMathWithFAbsSource(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFDivCombine(SDNode *N, DAGCombinerInfo &DCI) const;
