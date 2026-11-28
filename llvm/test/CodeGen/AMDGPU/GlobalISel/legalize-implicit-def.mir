@@ -621,9 +621,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_v2s1024
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s1024>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s1024), [[UV1:%[0-9]+]]:_(s1024) = G_UNMERGE_VALUES [[DEF]](<2 x s1024>)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[UV]](s1024), implicit [[UV1]](s1024)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[DEF]](s1024), implicit [[DEF]](s1024)
     %0:_(<2 x s1024>) = G_IMPLICIT_DEF
     %1:_(s1024), %2:_(s1024) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2
@@ -636,9 +635,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_v3s1024
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s1024>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s1024), [[UV1:%[0-9]+]]:_(s1024), [[UV2:%[0-9]+]]:_(s1024) = G_UNMERGE_VALUES [[DEF]](<3 x s1024>)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[UV]](s1024), implicit [[UV1]](s1024), implicit [[UV2]](s1024)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[DEF]](s1024), implicit [[DEF]](s1024), implicit [[DEF]](s1024)
     %0:_(<3 x s1024>) = G_IMPLICIT_DEF
     %1:_(s1024), %2:_(s1024), %3:_(s1024) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2, implicit %3
