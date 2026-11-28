@@ -835,13 +835,10 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);
-  // HACK to make MIR tests with no uses happy
-  bool HasUses = false;
   while (!worklist.empty()) {
     const MachineInstr *Instr = worklist.pop_back_val();
     Register Reg = Instr->getOperand(0).getReg();
     for (const auto &Use : MRI->use_operands(Reg)) {
-      HasUses = true;
       const MachineInstr *UseMI = Use.getParent();
       AllAGPRUses &= (UseMI->isCopy() &&
                       TRI->isAGPR(*MRI, UseMI->getOperand(0).getReg())) ||
@@ -857,7 +854,9 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
 
   Register PHIRes = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC0 = MRI->getRegClass(PHIRes);
-  if (HasUses && AllAGPRUses && !TRI->isAGPRClass(RC0)) {
+  // Without uses, AllAGPRUses holds vacuously. ISel can leave such PHIs, and
+  // not every class has an AGPR equivalent, so leave them alone.
+  if (!MRI->use_empty(PHIRes) && AllAGPRUses && !TRI->isAGPRClass(RC0)) {
     LLVM_DEBUG(dbgs() << "Moving PHI to AGPR: " << MI);
     MRI->setRegClass(PHIRes, TRI->getEquivalentAGPRClass(RC0));
     for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
