@@ -31002,21 +31002,18 @@ void BoUpSLP::computeMinimumValueSizes() {
     auto WillWrapFlagsBeDroppedFor = [&](Instruction *I) -> bool {
       if (!isa<OverflowingBinaryOperator>(I))
         return false;
-
       if (!I->getType()->isIntegerTy())
         return false;
-
       const auto &Entries = getTreeEntries(I);
       if (Entries.empty())
         return false;
-
       if (any_of(Entries, [&](TreeEntry *E) {
             return E->isGather() || Shared.TransformedToGatherNodes.contains(E);
           }))
         return false;
-
-      // If all the Tree Entries have candidate minbitwidths we can safely
-      // say that the wrap flags can be dropped.
+      // PropagateIRFlags skips nuw/nsw for entries in MinBWs.
+      // Check all entries for Instruction I, because I can appear in multiple
+      // TreeEntries.
       return all_of(Entries, [&](const TreeEntry *TE) {
         auto It = Candidate.MinBWs.find(TE);
         return It != Candidate.MinBWs.end();
