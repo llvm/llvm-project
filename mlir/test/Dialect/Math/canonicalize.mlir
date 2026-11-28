@@ -18,6 +18,16 @@ func.func @ceil_fold2() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @ceil_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-NEXT: %[[RES:.*]] = math.ceil %[[ARG]] : f32
+// CHECK-NEXT: return %[[RES]]
+func.func @ceil_fold_idempotent(%arg: f32) -> f32 {
+  %0 = math.ceil %arg : f32
+  %1 = math.ceil %0 : f32
+  return %1 : f32
+}
+
 // CHECK-LABEL: @log2_fold
 // CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
   // CHECK: return %[[cst]]
@@ -156,6 +166,26 @@ func.func @abs_fold() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @abs_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-NEXT: %[[RES:.*]] = math.absf %[[ARG]] : f32
+// CHECK-NEXT: return %[[RES]]
+func.func @abs_fold_idempotent(%arg: f32) -> f32 {
+  %0 = math.absf %arg : f32
+  %1 = math.absf %0 : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @absi_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: i32
+// CHECK-NEXT: %[[RES:.*]] = math.absi %[[ARG]] : i32
+// CHECK-NEXT: return %[[RES]]
+func.func @absi_fold_idempotent(%arg: i32) -> i32 {
+  %0 = math.absi %arg : i32
+  %1 = math.absi %0 : i32
+  return %1 : i32
+}
+
 // CHECK-LABEL: @copysign_fold
 // CHECK: %[[cst:.+]] = arith.constant -4.000000e+00 : f32
 // CHECK: return %[[cst]]
@@ -164,6 +194,14 @@ func.func @copysign_fold() -> f32 {
   %c2 = arith.constant -9.0 : f32
   %r = math.copysign %c1, %c2 : f32
   return %r : f32
+}
+
+// CHECK-LABEL: @copysign_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+func.func @copysign_fold_idempotent(%arg: f32) -> f32 {
+  // CHECK-NEXT: return %[[ARG]]
+  %0 = math.copysign %arg, %arg : f32
+  return %0 : f32
 }
 
 // CHECK-LABEL: @ctlz_fold1
@@ -412,6 +450,16 @@ func.func @roundeven_fold() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @roundeven_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-NEXT: %[[RES:.*]] = math.roundeven %[[ARG]] : f32
+// CHECK-NEXT: return %[[RES]]
+func.func @roundeven_fold_idempotent(%arg: f32) -> f32 {
+  %0 = math.roundeven %arg : f32
+  %1 = math.roundeven %0 : f32
+  return %1 : f32
+}
+
 // CHECK-LABEL: @roundeven_fold_vec
 // CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, -0.000000e+00, 2.000000e+00, -2.000000e+00]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
@@ -428,6 +476,16 @@ func.func @round_fold() -> f32 {
   %c = arith.constant 1.5 : f32
   %r = math.round %c : f32
   return %r : f32
+}
+
+// CHECK-LABEL: @round_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-NEXT: %[[RES:.*]] = math.round %[[ARG]] : f32
+// CHECK-NEXT: return %[[RES]]
+func.func @round_fold_idempotent(%arg: f32) -> f32 {
+  %0 = math.round %arg : f32
+  %1 = math.round %0 : f32
+  return %1 : f32
 }
 
 // CHECK-LABEL: @round_fold_vec
@@ -457,6 +515,16 @@ func.func @floor_fold2() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @floor_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-NEXT: %[[RES:.*]] = math.floor %[[ARG]] : f32
+// CHECK-NEXT: return %[[RES]]
+func.func @floor_fold_idempotent(%arg: f32) -> f32 {
+  %0 = math.floor %arg : f32
+  %1 = math.floor %0 : f32
+  return %1 : f32
+}
+
 // CHECK-LABEL: @trunc_fold
 // CHECK-NEXT: %[[cst:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK-NEXT:   return %[[cst]]
@@ -464,6 +532,16 @@ func.func @trunc_fold() -> f32 {
   %c = arith.constant 1.1 : f32
   %r = math.trunc %c : f32
   return %r : f32
+}
+
+// CHECK-LABEL: @trunc_fold_idempotent
+// CHECK-SAME: %[[ARG:.*]]: f32
+func.func @trunc_fold_idempotent(%arg: f32) -> f32 {
+  // CHECK-NEXT: %[[RES:.*]] = math.trunc %[[ARG]] : f32
+  // CHECK-NEXT: return %[[RES]]
+  %0 = math.trunc %arg : f32
+  %1 = math.trunc %0 : f32
+  return %1 : f32
 }
 
 // CHECK-LABEL: @trunc_fold_vec

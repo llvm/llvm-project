@@ -152,7 +152,7 @@ class Math_FloatTernaryOpWithRoundingMode<string mnemonic,
 // AbsFOp
 //===----------------------------------------------------------------------===//
 
-def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
+def Math_AbsFOp : Math_FloatUnaryOp<"absf", [Idempotent]> {
   let summary = "floating point absolute-value operation";
   let description = [{
     The `absf` operation computes the absolute value. It takes one operand of
@@ -173,7 +173,7 @@ def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
 // AbsIOp
 //===----------------------------------------------------------------------===//
 
-def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
+def Math_AbsIOp : Math_IntegerUnaryOp<"absi", [Idempotent]> {
   let summary = "integer absolute-value operation";
   let description = [{
     The `absi` operation computes the absolute value. It takes one operand of
@@ -375,7 +375,7 @@ def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
 // CeilOp
 //===----------------------------------------------------------------------===//
 
-def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
+def Math_CeilOp : Math_FloatUnaryOp<"ceil", [Idempotent]> {
   let summary = "ceiling of the specified value";
   let description = [{
     The `ceil` operation computes the ceiling of a given value. It takes one
@@ -428,7 +428,7 @@ def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
 // CopySignOp
 //===----------------------------------------------------------------------===//
 
-def Math_CopySignOp : Math_FloatBinaryOp<"copysign"> {
+def Math_CopySignOp : Math_FloatBinaryOp<"copysign", [Idempotent]> {
   let summary = "A copysign operation";
   let description = [{
     The `copysign` returns a value with the magnitude of the first operand and
@@ -766,7 +766,7 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
 // FloorOp
 //===----------------------------------------------------------------------===//
 
-def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
+def Math_FloorOp : Math_FloatUnaryOp<"floor", [Idempotent]> {
   let summary = "floor of the specified value";
   let description = [{
     The `floor` operation computes the floor of a given value. It takes one
@@ -1110,7 +1110,7 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
 // RoundEvenOp
 //===----------------------------------------------------------------------===//
 
-def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
+def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven", [Idempotent]> {
   let summary = "round of the specified value with halfway cases to even";
   let description = [{
     The `roundeven` operation returns the operand rounded to the nearest integer
@@ -1134,7 +1134,7 @@ def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
 // RoundOp
 //===----------------------------------------------------------------------===//
 
-def Math_RoundOp : Math_FloatUnaryOp<"round"> {
+def Math_RoundOp : Math_FloatUnaryOp<"round", [Idempotent]> {
   let summary = "round of the specified value";
   let description = [{
     The `round` operation returns the operand rounded to the nearest integer
@@ -1158,7 +1158,7 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
 // TruncOp
 //===----------------------------------------------------------------------===//
 
-def Math_TruncOp : Math_FloatUnaryOp<"trunc"> {
+def Math_TruncOp : Math_FloatUnaryOp<"trunc", [Idempotent]> {
   let summary = "trunc of the specified value";
   let description = [{
     The `trunc` operation returns the operand rounded to the nearest integer

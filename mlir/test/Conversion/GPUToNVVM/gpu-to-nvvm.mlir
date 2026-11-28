@@ -895,10 +895,10 @@ gpu.module @test_module_40 {
   // CHECK: llvm.func @__nv_copysignf(f32, f32) -> f32
   // CHECK: llvm.func @__nv_copysign(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_copysign
-  func.func @gpu_copysign(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = math.copysign %arg_f32, %arg_f32 : f32
+  func.func @gpu_copysign(%arg1_f32 : f32, %arg2_f32 : f32, %arg1_f64 : f64, %arg2_f64 : f64) -> (f32, f64) {
+    %result32 = math.copysign %arg1_f32, %arg2_f32 : f32
     // CHECK: llvm.call @__nv_copysignf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
-    %result64 = math.copysign %arg_f64, %arg_f64 : f64
+    %result64 = math.copysign %arg1_f64, %arg2_f64 : f64
     // CHECK: llvm.call @__nv_copysign(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
     func.return %result32, %result64 : f32, f64
   }
