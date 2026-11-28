@@ -506,23 +506,33 @@ void llvm::ilist_traits<::mlir::Operation>::removeNodeFromList(Operation *op) {
   op->block = nullptr;
 }
 
-/// This is a trait method invoked when an operation is moved from one block
-/// to another.  We keep the block pointer up to date.
+/// This is a trait method invoked when operations are moved within or between
+/// blocks. Keep the block pointers and cached order indices up to date.
 void llvm::ilist_traits<::mlir::Operation>::transferNodesFromList(
     ilist_traits<Operation> &otherList, op_iterator first, op_iterator last) {
   Block *curParent = getContainingBlock();
 
-  // Invalidate the ordering of the parent block.
-  curParent->invalidateOpOrder();
+  if (curParent == otherList.getContainingBlock()) {
+    if (first == last)
+      return;
 
-  // If we are transferring operations within the same block, the block
-  // pointer doesn't need to be updated.
-  if (curParent == otherList.getContainingBlock())
+    // A single moved operation can get a new index lazily without invalidating
+    // the other indices. Keep larger same-block transfers constant-time by
+    // invalidating the block instead of walking the transferred range.
+    if (std::next(first) == last)
+      first->orderIndex = Operation::kInvalidOrderIdx;
+    else
+      curParent->invalidateOpOrder();
     return;
+  }
 
-  // Update the 'block' member of each operation.
-  for (; first != last; ++first)
+  // Cross-block transfers already visit each operation to update its parent.
+  // Invalidate the transferred indices while preserving the cached order of
+  // the operations that remain in either block.
+  for (; first != last; ++first) {
     first->block = curParent;
+    first->orderIndex = Operation::kInvalidOrderIdx;
+  }
 }
 
 /// Remove this operation (and its descendants) from its Block and delete
