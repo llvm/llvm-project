@@ -988,7 +988,7 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
 }
 
 bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
-  return HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+  return HoistOutOf && SE.isLoopInvariant(S, HoistOutOf) &&
          SE.isGuaranteedNotToCauseUB(S);
 }
 

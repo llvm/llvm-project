@@ -1874,7 +1874,9 @@ define void @udiv_known_nonzero_maybe_poison(ptr %dst, ptr %src, i64 %n, i64 %x,
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp sle i64 [[S]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP0]], [[S]]
+; CHECK-NEXT:    [[TMP33:%.*]] = freeze i64 [[S]]
+; CHECK-NEXT:    [[TMP34:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP33]], i64 1)
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP0]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 101380
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]

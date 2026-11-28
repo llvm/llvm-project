@@ -765,7 +765,8 @@ define void @alias_mask_bound_with_versioned_stride_udiv(ptr %dst, ptr %src, i64
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[SRC1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP3]], i64 [[DST2]], i64 4)
