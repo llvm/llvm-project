@@ -1232,6 +1232,25 @@ class FPrintfLibcall : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
   let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly]];
 }
 
+class OperatorNewLibcall<list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<Ptr, ArgTypes> {
+  defvar NoThrow = !not(!empty(!filter(Ty, ArgTypes, !eq(Ty, Ptr))));
+  let FnAttrs = !listconcat(!if(NoThrow, [NoUnwind], []<Attr>),
+                            [AllocSizeAttr<0>]);
+  let RetAttrs = !if(NoThrow, [NoUndef], [NonNull, NoUndef]);
+  let ParamAttrs = !foreach(Ty, ArgTypes,
+                            !if(!eq(Ty, Ptr), [NonNull, NoUndef], [NoUndef]));
+}
+
+class OperatorDeleteLibcall<list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<Void, ArgTypes> {
+  let FnAttrs = [NoUnwind];
+  let ParamAttrs = !listconcat(
+      [[NoUndef]], !foreach(I, !range(1, !size(ArgTypes)),
+                            !if(!eq(ArgTypes[I], Ptr), [NonNull, NoUndef],
+                                [NoUndef])));
+}
+
 def ABORT : RuntimeLibcall<Void, []> {
   let FnAttrs = [Cold, NoFree, NoReturn, NoUnwind];
 }
@@ -1773,26 +1792,26 @@ def MKTIME : RuntimeLibcall<IntPlus, [Ptr]> {
   let ParamAttrs = [[CapturesNone, NoUndef]];
 }
 
-def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall<Void, [Ptr, UInt]>;
-def MSVC_DELETE_ARRAY_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def MSVC_DELETE_ARRAY_PTR64 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_ARRAY_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, ULLong]>;
-def MSVC_DELETE_ARRAY_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def MSVC_DELETE_PTR32 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_PTR32_INT : RuntimeLibcall<Void, [Ptr, UInt]>;
-def MSVC_DELETE_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def MSVC_DELETE_PTR64 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, ULLong]>;
-def MSVC_DELETE_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def MSVC_NEW_ARRAY_INT : RuntimeLibcall<Ptr, [UInt]>;
-def MSVC_NEW_ARRAY_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
-def MSVC_NEW_ARRAY_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
-def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
-def MSVC_NEW_INT : RuntimeLibcall<Ptr, [UInt]>;
-def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
-def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
-def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
+def MSVC_DELETE_ARRAY_PTR32 : OperatorDeleteLibcall<[Ptr]>;
+def MSVC_DELETE_ARRAY_PTR32_INT : OperatorDeleteLibcall<[Ptr, UInt]>;
+def MSVC_DELETE_ARRAY_PTR32_NOTHROW : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def MSVC_DELETE_ARRAY_PTR64 : OperatorDeleteLibcall<[Ptr]>;
+def MSVC_DELETE_ARRAY_PTR64_LONGLONG : OperatorDeleteLibcall<[Ptr, ULLong]>;
+def MSVC_DELETE_ARRAY_PTR64_NOTHROW : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def MSVC_DELETE_PTR32 : OperatorDeleteLibcall<[Ptr]>;
+def MSVC_DELETE_PTR32_INT : OperatorDeleteLibcall<[Ptr, UInt]>;
+def MSVC_DELETE_PTR32_NOTHROW : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def MSVC_DELETE_PTR64 : OperatorDeleteLibcall<[Ptr]>;
+def MSVC_DELETE_PTR64_LONGLONG : OperatorDeleteLibcall<[Ptr, ULLong]>;
+def MSVC_DELETE_PTR64_NOTHROW : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def MSVC_NEW_ARRAY_INT : OperatorNewLibcall<[UInt]>;
+def MSVC_NEW_ARRAY_INT_NOTHROW : OperatorNewLibcall<[UInt, Ptr]>;
+def MSVC_NEW_ARRAY_LONGLONG : OperatorNewLibcall<[ULLong]>;
+def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : OperatorNewLibcall<[ULLong, Ptr]>;
+def MSVC_NEW_INT : OperatorNewLibcall<[UInt]>;
+def MSVC_NEW_INT_NOTHROW : OperatorNewLibcall<[UInt, Ptr]>;
+def MSVC_NEW_LONGLONG : OperatorNewLibcall<[ULLong]>;
+def MSVC_NEW_LONGLONG_NOTHROW : OperatorNewLibcall<[ULLong, Ptr]>;
 def NTOHL : PureLibcall<UInt32, [UInt32]>;
 def NTOHS : PureLibcall<UInt16, [UInt16]>;
 def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]> {
@@ -1970,11 +1989,18 @@ def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]> {
 
 def SIPRINTF : SPrintfLibcall;
 def SizedPtr : StructFuncArgType<[Ptr, SizeT]>;
-def SIZE_RETURNING_NEW : RuntimeLibcall<SizedPtr, [SizeT]>;
-def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<SizedPtr, [SizeT, AlignValT]>;
+
+class SizeReturningNewLibcall<list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<SizedPtr, ArgTypes> {
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = !listsplat([NoUndef], !size(ArgTypes));
+}
+
+def SIZE_RETURNING_NEW : SizeReturningNewLibcall<[SizeT]>;
+def SIZE_RETURNING_NEW_ALIGNED : SizeReturningNewLibcall<[SizeT, AlignValT]>;
 def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD
-    : RuntimeLibcall<SizedPtr, [SizeT, AlignValT, UInt8]>;
-def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<SizedPtr, [SizeT, UInt8]>;
+    : SizeReturningNewLibcall<[SizeT, AlignValT, UInt8]>;
+def SIZE_RETURNING_NEW_HOT_COLD : SizeReturningNewLibcall<[SizeT, UInt8]>;
 def SMALL_FPRINTF : FPrintfLibcall;
 def SMALL_PRINTF : PrintfLibcall;
 def SMALL_SPRINTF : SPrintfLibcall;
@@ -2399,46 +2425,56 @@ def WRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]> {
   let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef, ReadOnly], [NoUndef]];
 }
 
-def ZDAPV : RuntimeLibcall<Void, [Ptr]>;
-def ZDAPVJ : RuntimeLibcall<Void, [Ptr, UInt]>;
-def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, UInt, AlignValT]>;
-def ZDAPVM : RuntimeLibcall<Void, [Ptr, ULong]>;
-def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, ULong, AlignValT]>;
-def ZDAPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, AlignValT]>;
-def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, AlignValT, Ptr]>;
-def ZDLPV : RuntimeLibcall<Void, [Ptr]>;
-def ZDLPVJ : RuntimeLibcall<Void, [Ptr, UInt]>;
-def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, UInt, AlignValT]>;
-def ZDLPVM : RuntimeLibcall<Void, [Ptr, ULong]>;
-def ZDLPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, ULong, AlignValT]>;
-def ZDLPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def ZDLPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, AlignValT]>;
-def ZDLPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, AlignValT, Ptr]>;
-def ZNAJ : RuntimeLibcall<Ptr, [UInt]>;
-def ZNAJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, Ptr]>;
-def ZNAJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [UInt, AlignValT]>;
-def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, AlignValT, Ptr]>;
-def ZNAM : RuntimeLibcall<Ptr, [ULong]>;
-def ZNAM12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, UInt8]>;
-def ZNAMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, Ptr]>;
-def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, Ptr, UInt8]>;
-def ZNAMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [ULong, AlignValT]>;
-def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, UInt8]>;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr]>;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr, UInt8]>;
-def ZNWJ : RuntimeLibcall<Ptr, [UInt]>;
-def ZNWJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, Ptr]>;
-def ZNWJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [UInt, AlignValT]>;
-def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, AlignValT, Ptr]>;
-def ZNWM : RuntimeLibcall<Ptr, [ULong]>;
-def ZNWM12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, UInt8]>;
-def ZNWMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, Ptr]>;
-def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, Ptr, UInt8]>;
-def ZNWMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [ULong, AlignValT]>;
-def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, UInt8]>;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr]>;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr, UInt8]>;
+def ZDAPV : OperatorDeleteLibcall<[Ptr]>;
+def ZDAPVJ : OperatorDeleteLibcall<[Ptr, UInt]>;
+def ZDAPVJST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, UInt, AlignValT]>;
+def ZDAPVM : OperatorDeleteLibcall<[Ptr, ULong]>;
+def ZDAPVMST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, ULong, AlignValT]>;
+def ZDAPVRKST9NOTHROW_T : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def ZDAPVST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, AlignValT]>;
+def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorDeleteLibcall<[Ptr, AlignValT, Ptr]>;
+def ZDLPV : OperatorDeleteLibcall<[Ptr]>;
+def ZDLPVJ : OperatorDeleteLibcall<[Ptr, UInt]>;
+def ZDLPVJST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, UInt, AlignValT]>;
+def ZDLPVM : OperatorDeleteLibcall<[Ptr, ULong]>;
+def ZDLPVMST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, ULong, AlignValT]>;
+def ZDLPVRKST9NOTHROW_T : OperatorDeleteLibcall<[Ptr, Ptr]>;
+def ZDLPVST11ALIGN_VAL_T : OperatorDeleteLibcall<[Ptr, AlignValT]>;
+def ZDLPVST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorDeleteLibcall<[Ptr, AlignValT, Ptr]>;
+def ZNAJ : OperatorNewLibcall<[UInt]>;
+def ZNAJRKST9NOTHROW_T : OperatorNewLibcall<[UInt, Ptr]>;
+def ZNAJST11ALIGN_VAL_T : OperatorNewLibcall<[UInt, AlignValT]>;
+def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorNewLibcall<[UInt, AlignValT, Ptr]>;
+def ZNAM : OperatorNewLibcall<[ULong]>;
+def ZNAM12__HOT_COLD_T : OperatorNewLibcall<[ULong, UInt8]>;
+def ZNAMRKST9NOTHROW_T : OperatorNewLibcall<[ULong, Ptr]>;
+def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : OperatorNewLibcall<[ULong, Ptr, UInt8]>;
+def ZNAMST11ALIGN_VAL_T : OperatorNewLibcall<[ULong, AlignValT]>;
+def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T
+    : OperatorNewLibcall<[ULong, AlignValT, UInt8]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorNewLibcall<[ULong, AlignValT, Ptr]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T
+    : OperatorNewLibcall<[ULong, AlignValT, Ptr, UInt8]>;
+def ZNWJ : OperatorNewLibcall<[UInt]>;
+def ZNWJRKST9NOTHROW_T : OperatorNewLibcall<[UInt, Ptr]>;
+def ZNWJST11ALIGN_VAL_T : OperatorNewLibcall<[UInt, AlignValT]>;
+def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorNewLibcall<[UInt, AlignValT, Ptr]>;
+def ZNWM : OperatorNewLibcall<[ULong]>;
+def ZNWM12__HOT_COLD_T : OperatorNewLibcall<[ULong, UInt8]>;
+def ZNWMRKST9NOTHROW_T : OperatorNewLibcall<[ULong, Ptr]>;
+def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : OperatorNewLibcall<[ULong, Ptr, UInt8]>;
+def ZNWMST11ALIGN_VAL_T : OperatorNewLibcall<[ULong, AlignValT]>;
+def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T
+    : OperatorNewLibcall<[ULong, AlignValT, UInt8]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T
+    : OperatorNewLibcall<[ULong, AlignValT, Ptr]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T
+    : OperatorNewLibcall<[ULong, AlignValT, Ptr, UInt8]>;
 def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoUnwind, NoSync,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
