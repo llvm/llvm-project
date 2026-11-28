@@ -271,11 +271,10 @@ static ProgramStateRef removeFromState(ProgramStateRef State,
 
 static bool isAnyBaseRegionReported(ProgramStateRef State,
                                     const MemRegion *Region) {
-  for (auto &E : State->get<TrackedRegionMap>()) {
-    if (Region->isSubRegionOf(E.first) && E.second.isReported())
-      return true;
-  }
-  return false;
+  auto IsReportedBase = [&](const auto &E) {
+    return Region->isSubRegionOf(E.first) && E.second.isReported();
+  };
+  return llvm::any_of(State->get<TrackedRegionMap>(), IsReportedBase);
 }
 
 static const MemRegion *unwrapRValueReferenceIndirection(const MemRegion *MR) {

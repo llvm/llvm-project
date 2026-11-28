@@ -77,12 +77,10 @@ public:
                                      PathSensitiveBugReport &BR) override;
 
     bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
-      RawPtrMapTy Map = State->get<RawPtrMap>();
-      for (const auto &Entry : Map) {
-        if (Entry.second.contains(Sym))
-          return true;
-      }
-      return false;
+      auto ContainsSym = [&](const auto &Entry) {
+        return Entry.second.contains(Sym);
+      };
+      return llvm::any_of(State->get<RawPtrMap>(), ContainsSym);
     }
   };
 
