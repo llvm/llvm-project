@@ -6,7 +6,6 @@ declare void @bar()
 define void @test(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP_2:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

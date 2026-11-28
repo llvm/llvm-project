@@ -96,6 +96,10 @@ DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr,
                MemorySSAUpdater *MSSAU = nullptr,
                SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs = nullptr);
 
+/// Erase Terminator and DCE condition if the terminator have any.
+LLVM_ABI void eraseTerminatorAndDCECond(Instruction *TI,
+                                        MemorySSAUpdater *MSSAU = nullptr);
+
 /// Attempts to merge a block into its predecessor, if possible. The return
 /// value indicates success or failure.
 /// By default do not merge blocks if BB's predecessor has multiple successors.

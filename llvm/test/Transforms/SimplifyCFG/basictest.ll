@@ -61,7 +61,6 @@ untaken:
 define void @test4_no_fold(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test4_no_fold(
 ; CHECK-NEXT:  untaken:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret void
 ;
   %cmp1 = icmp eq i32 %a, %b

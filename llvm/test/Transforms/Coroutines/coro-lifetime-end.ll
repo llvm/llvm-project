@@ -96,7 +96,6 @@ define void @BranchWithoutLifetimeEnd() presplitcoroutine {
 ; CHECK-NEXT:    store ptr @BranchWithoutLifetimeEnd.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    call void @consume.i8.array(ptr [[TESTVAL]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @testbool, align 1
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 116
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void

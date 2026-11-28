@@ -233,6 +233,21 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
   return Changed;
 }
 
+void llvm::eraseTerminatorAndDCECond(Instruction *TI, MemorySSAUpdater *MSSAU) {
+  Instruction *Cond = nullptr;
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
+    Cond = dyn_cast<Instruction>(SI->getCondition());
+  } else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
+    Cond = dyn_cast<Instruction>(BI->getCondition());
+  } else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(TI)) {
+    Cond = dyn_cast<Instruction>(IBI->getAddress());
+  }
+
+  TI->eraseFromParent();
+  if (Cond)
+    RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
+}
+
 bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
                                      LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                      MemoryDependenceResults *MemDep,
@@ -361,8 +376,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     // Update branch in the predecessor.
     PredBB_BI->setSuccessor(FallThruPath, NewSucc);
   } else {
-    // Delete the unconditional branch from the predecessor.
-    PredBB->back().eraseFromParent();
+    // Delete the terminator from the predecessor.
+    eraseTerminatorAndDCECond(PredBB->getTerminator(), MSSAU);
 
     // Move terminator instruction.
     BB->back().moveBeforePreserving(*PredBB, PredBB->end());
