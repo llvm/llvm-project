@@ -15,6 +15,13 @@
 # RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
 # RUN:   -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --input-file %t.out
 
+## Check that STABS entries reuse the ordinary symbol's string table offset,
+## both by default and when -no-deduplicate-symbol-strings is passed.
+# RUN: llvm-readobj --syms %t/test | FileCheck %s --check-prefix=STRX
+# RUN: %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o \
+# RUN:   -no-deduplicate-symbol-strings -o %t/test-no-dedup
+# RUN: llvm-readobj --syms %t/test-no-dedup | FileCheck %s --check-prefix=STRX
+
 ## Check that we emit the right modtime even when the object file is in an
 ## archive.
 # RUN: env ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o -o %t/test
@@ -155,6 +162,21 @@
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0010   {{[0-9a-f]+}}      '__mh_execute_header'
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0100   0000000000000000   'dyld_stub_binder'
 # CHECK-EMPTY:
+
+# STRX:      Name: _static_var ([[#STATIC_STRX:]])
+# STRX-NEXT: Type: SymDebugTable (0x26)
+# STRX:      Name: _main ([[#MAIN_STRX:]])
+# STRX-NEXT: Type: SymDebugTable (0x24)
+# STRX:      Name: _global_var ([[#GLOBAL_STRX:]])
+# STRX-NEXT: Type: SymDebugTable (0x20)
+# STRX:      Name: _static_var ([[#STATIC_STRX]])
+# STRX-NEXT: Type: Section
+# STRX:      Name: _main ([[#MAIN_STRX]])
+# STRX-NEXT: Extern
+# STRX-NEXT: Type: Section
+# STRX:      Name: _global_var ([[#GLOBAL_STRX]])
+# STRX-NEXT: Extern
+# STRX-NEXT: Type: Section
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections
 ## when building a PIE (since we have filtered the sections out).
