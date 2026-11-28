@@ -2849,35 +2849,54 @@ public:
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
     case Intrinsic::masked_srem: {
-      unsigned UnmaskedOpc;
       switch (IID) {
       case Intrinsic::masked_udiv:
         ISD = ISD::MASKED_UDIV;
-        UnmaskedOpc = Instruction::UDiv;
         break;
       case Intrinsic::masked_sdiv:
         ISD = ISD::MASKED_SDIV;
-        UnmaskedOpc = Instruction::SDiv;
         break;
       case Intrinsic::masked_urem:
         ISD = ISD::MASKED_UREM;
-        UnmaskedOpc = Instruction::URem;
         break;
       case Intrinsic::masked_srem:
         ISD = ISD::MASKED_SREM;
-        UnmaskedOpc = Instruction::SRem;
         break;
       default:
         llvm_unreachable("Unexpected intrinsic ID");
       }
+      if (RetTy->getScalarSizeInBits() == 1 &&
+          (IID == Intrinsic::masked_sdiv || IID == Intrinsic::masked_srem))
+        return 0;
+      unsigned UnmaskedOpc = Intrinsic::getMaskedIntDivRemOpcode(IID);
       InstructionCost Cost =
           thisT()->getArithmeticInstrCost(UnmaskedOpc, RetTy, CostKind);
 
-      // Expansion generates a (select %mask, %rhs, 1) for the divisor.
+      // Expansion generates a (select %mask, %rhs, 1) for the divisor unless
+      // the target handles the masked operation, or scalarizes a fixed vector
+      // on a trap-free element type without a vector div/rem lowering.
+      const TargetLoweringBase *TLI = getTLI();
       MVT LT = getTypeLegalizationCost(RetTy).second;
-      if (!getTLI()->isOperationLegalOrCustom(ISD, LT)) {
-        Type *CondTy = cast<VectorType>(RetTy)->getWithNewType(
-            IntegerType::getInt1Ty(RetTy->getContext()));
+      bool NeedsMask;
+      if (RetTy->isIntegerTy()) {
+        NeedsMask = !TLI->isIntDivRemTrapFree(EVT::getEVT(RetTy));
+      } else if (TLI->isOperationLegalOrCustom(ISD, LT)) {
+        NeedsMask = false;
+      } else if (isa<FixedVectorType>(RetTy) &&
+                 TLI->isIntDivRemTrapFree(
+                     EVT::getEVT(RetTy->getScalarType()))) {
+        unsigned UnmaskedISD = ISD::getUnmaskedBinOpOpcode(ISD);
+        unsigned DivISD = (UnmaskedISD == ISD::SREM)   ? ISD::SDIV
+                          : (UnmaskedISD == ISD::UREM) ? ISD::UDIV
+                                                       : UnmaskedISD;
+        NeedsMask =
+            LT.isVector() && (TLI->isOperationLegalOrCustom(UnmaskedISD, LT) ||
+                              TLI->isOperationLegalOrCustom(DivISD, LT));
+      } else {
+        NeedsMask = true;
+      }
+      if (NeedsMask) {
+        Type *CondTy = RetTy->getWithNewBitWidth(1);
         Cost += thisT()->getCmpSelInstrCost(
             BinaryOperator::Select, RetTy, CondTy, CmpInst::BAD_ICMP_PREDICATE,
             CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});

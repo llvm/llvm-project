@@ -1827,22 +1827,6 @@ static void reassociateHeaderMask(VPlan &Plan) {
   }
 }
 
-static std::optional<Instruction::BinaryOps>
-getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
-  switch (ID) {
-  case Intrinsic::masked_udiv:
-    return Instruction::UDiv;
-  case Intrinsic::masked_sdiv:
-    return Instruction::SDiv;
-  case Intrinsic::masked_urem:
-    return Instruction::URem;
-  case Intrinsic::masked_srem:
-    return Instruction::SRem;
-  default:
-    return {};
-  }
-}
-
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
@@ -1881,16 +1865,29 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (auto *IntrR = dyn_cast<VPWidenIntrinsicRecipe>(RepOrWidenR)) {
         if (!vputils::onlyFirstLaneUsed(IntrR))
           continue;
-        auto Opc = getUnmaskedDivRemOpcode(IntrR->getVectorIntrinsicID());
+        unsigned Opc =
+            Intrinsic::getMaskedIntDivRemOpcode(IntrR->getVectorIntrinsicID());
         if (!Opc)
           continue;
         VPBuilder Builder(IntrR);
+        if (IntrR->getScalarType()->isIntegerTy(1) &&
+            (Opc == Instruction::SDiv || Opc == Instruction::SRem)) {
+          // Signed i1 masked div/rem is always 0 when defined (0 / 1 or 0 % 1);
+          // 1 is -1 in i1 and would not be a safe fallback divisor.
+          IntrR->replaceAllUsesWith(
+              Plan.getConstantInt(IntrR->getScalarType(), 0));
+          IntrR->eraseFromParent();
+          continue;
+        }
+        // A poison mask cannot make a safe operation undefined, even when
+        // narrowing a vector recipe to a single scalar operation.
+        VPValue *Mask = Builder.createFreeze(IntrR->getOperand(2));
         VPValue *SafeDivisor = Builder.createSelect(
-            IntrR->getOperand(2), IntrR->getOperand(1),
+            Mask, IntrR->getOperand(1),
             Plan.getConstantInt(IntrR->getScalarType(), 1));
         VPValue *Clone = Builder.createNaryOp(
-            *Opc, {IntrR->getOperand(0), SafeDivisor},
-            VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
+            Opc, {IntrR->getOperand(0), SafeDivisor},
+            VPIRFlags::getDefaultFlags(Opc), IntrR->getDebugLoc());
         IntrR->replaceAllUsesWith(Clone);
         IntrR->eraseFromParent();
         continue;
@@ -6295,6 +6292,12 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   if (ID) {
     InstructionCost IntrinsicCost =
         VPWidenIntrinsicRecipe::computeCallCost(ID, Ops, VPI, VF, CostCtx);
+    if (VPI.isMasked() && Intrinsic::getMaskedIntDivRemOpcode(ID)) {
+      Type *MaskTy = toVectorTy(Type::getInt1Ty(CI->getContext()), VF);
+      IntrinsicCost += CostCtx.TTI.getCmpSelInstrCost(
+          Instruction::Select, MaskTy, MaskTy, CmpInst::BAD_ICMP_PREDICATE,
+          CostCtx.CostKind);
+    }
     if (IntrinsicCost.isValid() && ScalarCost >= IntrinsicCost &&
         (!VecFunc || VecCallCost >= IntrinsicCost))
       return CallWideningDecision::KindTy::Intrinsic;
@@ -6338,6 +6341,12 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
         Type *ResultTy = VPI.getScalarType();
+        if (VPI.isMasked() && Intrinsic::getMaskedIntDivRemOpcode(ID)) {
+          VPBuilder Builder(&VPI);
+          // Use logical AND (select) so a disabled block also suppresses a
+          // poison intrinsic mask, rather than enabling UB in that lane.
+          Ops[2] = Builder.createLogicalAnd(VPI.getMask(), Ops[2]);
+        }
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, VPI,
                                                  VPI, VPI.getDebugLoc());
         Widened = true;

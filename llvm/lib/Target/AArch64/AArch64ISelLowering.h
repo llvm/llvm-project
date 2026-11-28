@@ -413,6 +413,13 @@ public:
   getExceptionSelectorRegister(ExceptionHandling EH,
                                const Constant *PersonalityFn) const override;
 
+  // A64 SDIV/UDIV return zero for division by zero and do not trap on signed
+  // overflow. Remainder uses these operations and ordinary ALU instructions.
+  // Wider integers can use libcalls and must keep their guards.
+  bool isIntDivRemTrapFree(EVT VT) const override {
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+  }
+
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,

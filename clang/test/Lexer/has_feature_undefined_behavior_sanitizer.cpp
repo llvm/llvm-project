@@ -16,7 +16,9 @@
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift-base %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-BASE,CHECK-SHIFT %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift-exponent %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-EXPONENT,CHECK-SHIFT %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=shift %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT %s
-// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SIGNED-INTEGER-OVERFLOW %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow-arith %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SIGNED-INTEGER-OVERFLOW-ARITH,CHECK-NO-SIGNED-INTEGER-OVERFLOW-DIVIDE,CHECK-SIGNED-INTEGER-OVERFLOW %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow-divide %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NO-SIGNED-INTEGER-OVERFLOW-ARITH,CHECK-SIGNED-INTEGER-OVERFLOW-DIVIDE,CHECK-SIGNED-INTEGER-OVERFLOW %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SIGNED-INTEGER-OVERFLOW-ARITH,CHECK-SIGNED-INTEGER-OVERFLOW-DIVIDE,CHECK-SIGNED-INTEGER-OVERFLOW %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=unreachable %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-UNREACHABLE %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=vla-bound %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-VLA-BOUND %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=function %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FUNCTION %s
@@ -161,6 +163,18 @@ int ShiftSanitizerEnabled();
 int ShiftSanitizerDisabled();
 #endif
 
+#if __has_feature(signed_integer_overflow_arith_sanitizer)
+int SignedIntegerOverflowArithSanitizerEnabled();
+#else
+int SignedIntegerOverflowArithSanitizerDisabled();
+#endif
+
+#if __has_feature(signed_integer_overflow_divide_sanitizer)
+int SignedIntegerOverflowDivideSanitizerEnabled();
+#else
+int SignedIntegerOverflowDivideSanitizerDisabled();
+#endif
+
 #if __has_feature(signed_integer_overflow_sanitizer)
 int SignedIntegerOverflowSanitizerEnabled();
 #else
@@ -202,6 +216,10 @@ int FunctionSanitizerDisabled();
 // CHECK-SHIFT-BASE: ShiftBaseSanitizerEnabled
 // CHECK-SHIFT-EXPONENT: ShiftExponentSanitizerEnabled
 // CHECK-SHIFT: ShiftSanitizerEnabled
+// CHECK-SIGNED-INTEGER-OVERFLOW-ARITH: SignedIntegerOverflowArithSanitizerEnabled
+// CHECK-NO-SIGNED-INTEGER-OVERFLOW-ARITH: SignedIntegerOverflowArithSanitizerDisabled
+// CHECK-SIGNED-INTEGER-OVERFLOW-DIVIDE: SignedIntegerOverflowDivideSanitizerEnabled
+// CHECK-NO-SIGNED-INTEGER-OVERFLOW-DIVIDE: SignedIntegerOverflowDivideSanitizerDisabled
 // CHECK-SIGNED-INTEGER-OVERFLOW: SignedIntegerOverflowSanitizerEnabled
 // CHECK-UNREACHABLE: UnreachableSanitizerEnabled
 // CHECK-VLA-BOUND: VLABoundSanitizerEnabled

@@ -1183,7 +1183,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
       setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV, ISD::MASKED_UREM,
                           ISD::MASKED_SREM},
-                         VT, Legal);
+                         VT, Custom);
     }
 
     for (MVT VT : VecTupleVTs) {
@@ -9767,17 +9767,28 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::MASKED_SREM: {
     SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
-    MVT ContainerVT = getContainerForFixedLengthVector(VT);
-    SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
+    MVT ContainerVT =
+        VT.isFixedLengthVector() ? getContainerForFixedLengthVector(VT) : VT;
+    auto [DefaultMask, VL] =
+        getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+    // Keep a target vector node so an exceptional inactive lane cannot trigger
+    // a whole-vector fold of an ordinary DAG div/rem. RVV integer division does
+    // not trap, so computing disabled lanes with DefaultMask refines poison.
+    assert(Subtarget.hasVInstructions() &&
+           (ContainerVT.getVectorElementType() != MVT::i64 ||
+            Subtarget.hasVInstructionsI64()) &&
+           "Expected RVV integer division support for custom MASKED_DIV/REM");
+    auto Convert = [&](SDValue V) {
+      return VT.isFixedLengthVector()
+                 ? convertToScalableVector(ContainerVT, V, DAG, Subtarget)
+                 : V;
+    };
     SDValue Res = DAG.getNode(
-        getRISCVVLOp(Op), DL, ContainerVT,
-        convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget),
-        convertToScalableVector(ContainerVT, Op.getOperand(1), DAG, Subtarget),
-        DAG.getUNDEF(ContainerVT),
-        convertToScalableVector(getMaskTypeFor(ContainerVT), Op.getOperand(2),
-                                DAG, Subtarget),
-        VL);
-    return convertFromScalableVector(VT, Res, DAG, Subtarget);
+        getRISCVVLOp(Op), DL, ContainerVT, Convert(Op.getOperand(0)),
+        Convert(Op.getOperand(1)), DAG.getUNDEF(ContainerVT), DefaultMask, VL);
+    return VT.isFixedLengthVector()
+               ? convertFromScalableVector(VT, Res, DAG, Subtarget)
+               : Res;
   }
   case ISD::FABS:
   case ISD::FNEG:
@@ -31293,6 +31304,16 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     }
   }
   return SDValue();
+}
+
+bool RISCVTargetLowering::isIntDivRemTrapFree(EVT VT) const {
+  // The M extension defines results for zero divisors and signed overflow
+  // without trapping, including RV64 word operations. Zmmul alone does not
+  // provide division; software division and wider types must keep guards.
+  // Small integers use native or promoted non-trapping division.
+  return Subtarget.hasStdExtM() &&
+         (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 ||
+          (Subtarget.is64Bit() && VT == MVT::i64));
 }
 
 bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {

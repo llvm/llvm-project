@@ -5099,6 +5099,15 @@ def fdefined_pointer_subtraction :
     "to `char *` before subtracting them rather than relying on this flag."
   >,
   MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
+defm defined_int_divrem : BoolFOption<"defined-int-divrem",
+  LangOpts<"DefinedIntDivRem">, Default<"LangOpts->OpenCL">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Give integer division and remainder by zero, and signed division "
+          "overflow, an unspecified result instead of undefined behavior "
+          "(default for OpenCL)">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Integer division and remainder by zero, and signed division "
+          "overflow, have undefined behavior (default except for OpenCL)">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,

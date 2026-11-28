@@ -2245,6 +2245,35 @@ static void computeKnownBitsFromOperator(const Operator *I,
       switch (II->getIntrinsicID()) {
       default:
         break;
+      // Disabled lanes are poison, so every defined lane obeys the ordinary
+      // division and remainder known-bits rules.
+      case Intrinsic::masked_udiv:
+      case Intrinsic::masked_sdiv:
+      case Intrinsic::masked_urem:
+      case Intrinsic::masked_srem: {
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+        KnownBits Known3(BitWidth);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
+        KnownBits Res(BitWidth);
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::masked_udiv:
+          Res = KnownBits::udiv(Known2, Known3, /*Exact=*/false);
+          break;
+        case Intrinsic::masked_sdiv:
+          Res = KnownBits::sdiv(Known2, Known3, /*Exact=*/false);
+          break;
+        case Intrinsic::masked_urem:
+          Res = KnownBits::urem(Known2, Known3);
+          break;
+        case Intrinsic::masked_srem:
+          Res = KnownBits::srem(Known2, Known3);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+        Known = Known.unionWith(Res);
+        break;
+      }
       case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
@@ -4582,6 +4611,62 @@ static unsigned ComputeNumSignBits(const Value *V, const APInt &DemandedElts,
   return Result;
 }
 
+/// Compute the number of sign bits in a signed division result, or return 0
+/// if nothing better than the generic fallback is known.
+static unsigned computeNumSignBitsSDiv(const Value *Op0, const Value *Op1,
+                                       const APInt &DemandedElts,
+                                       const SimplifyQuery &Q, unsigned Depth,
+                                       unsigned TyBits) {
+  const APInt *Denominator;
+  // sdiv X, C -> adds log(C) sign bits.
+  if (match(Op1, m_APInt(Denominator))) {
+    // Ignore non-positive denominator.
+    if (!Denominator->isStrictlyPositive())
+      return 0;
+
+    // Calculate the incoming numerator bits.
+    unsigned NumBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+
+    // Add floor(log(C)) bits to the numerator bits.
+    return std::min(TyBits, NumBits + Denominator->logBase2());
+  }
+  return 0;
+}
+
+/// Compute the number of sign bits in a signed remainder result.
+static unsigned computeNumSignBitsSRem(const Value *Op0, const Value *Op1,
+                                       const APInt &DemandedElts,
+                                       const SimplifyQuery &Q, unsigned Depth,
+                                       unsigned TyBits) {
+  unsigned Tmp = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+
+  const APInt *Denominator;
+  // srem X, C -> we know that the result is within [-C+1,C) when C is a
+  // positive constant.  This let us put a lower bound on the number of sign
+  // bits.
+  if (match(Op1, m_APInt(Denominator))) {
+    // Ignore non-positive denominator.
+    if (Denominator->isStrictlyPositive()) {
+      // Calculate the leading sign bit constraints by examining the
+      // denominator.  Given that the denominator is positive, there are two
+      // cases:
+      //
+      //  1. The numerator is positive. The result range is [0,C) and
+      //     [0,C) u< (1 << ceilLogBase2(C)).
+      //
+      //  2. The numerator is negative. Then the result range is (-C,0] and
+      //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
+      //
+      // Thus a lower bound on the number of sign bits is `TyBits -
+      // ceilLogBase2(C)`.
+
+      unsigned ResBits = TyBits - Denominator->ceilLogBase2();
+      Tmp = std::max(Tmp, ResBits);
+    }
+  }
+  return Tmp;
+}
+
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign bit
 /// (itself), but other cases can give us information. For example, immediately
@@ -4660,55 +4745,16 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1) +
              Tmp;
 
-    case Instruction::SDiv: {
-      const APInt *Denominator;
-      // sdiv X, C -> adds log(C) sign bits.
-      if (match(U->getOperand(1), m_APInt(Denominator))) {
-
-        // Ignore non-positive denominator.
-        if (!Denominator->isStrictlyPositive())
-          break;
-
-        // Calculate the incoming numerator bits.
-        unsigned NumBits =
-            ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
-
-        // Add floor(log(C)) bits to the numerator bits.
-        return std::min(TyBits, NumBits + Denominator->logBase2());
-      }
+    case Instruction::SDiv:
+      Tmp = computeNumSignBitsSDiv(U->getOperand(0), U->getOperand(1),
+                                   DemandedElts, Q, Depth, TyBits);
+      if (Tmp)
+        return Tmp;
       break;
-    }
 
-    case Instruction::SRem: {
-      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
-
-      const APInt *Denominator;
-      // srem X, C -> we know that the result is within [-C+1,C) when C is a
-      // positive constant.  This let us put a lower bound on the number of sign
-      // bits.
-      if (match(U->getOperand(1), m_APInt(Denominator))) {
-
-        // Ignore non-positive denominator.
-        if (Denominator->isStrictlyPositive()) {
-          // Calculate the leading sign bit constraints by examining the
-          // denominator.  Given that the denominator is positive, there are two
-          // cases:
-          //
-          //  1. The numerator is positive. The result range is [0,C) and
-          //     [0,C) u< (1 << ceilLogBase2(C)).
-          //
-          //  2. The numerator is negative. Then the result range is (-C,0] and
-          //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
-          //
-          // Thus a lower bound on the number of sign bits is `TyBits -
-          // ceilLogBase2(C)`.
-
-          unsigned ResBits = TyBits - Denominator->ceilLogBase2();
-          Tmp = std::max(Tmp, ResBits);
-        }
-      }
-      return Tmp;
-    }
+    case Instruction::SRem:
+      return computeNumSignBitsSRem(U->getOperand(0), U->getOperand(1),
+                                    DemandedElts, Q, Depth, TyBits);
 
     case Instruction::AShr: {
       Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
@@ -4936,6 +4982,15 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         switch (II->getIntrinsicID()) {
         default:
           break;
+        case Intrinsic::masked_sdiv:
+          Tmp = computeNumSignBitsSDiv(U->getOperand(0), U->getOperand(1),
+                                       DemandedElts, Q, Depth, TyBits);
+          if (Tmp)
+            return Tmp;
+          break;
+        case Intrinsic::masked_srem:
+          return computeNumSignBitsSRem(U->getOperand(0), U->getOperand(1),
+                                        DemandedElts, Q, Depth, TyBits);
         case Intrinsic::abs:
           Tmp =
               ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);

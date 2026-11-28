@@ -458,6 +458,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 // Used to deduplicate diagnostics.
   SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
                                        // `-fsanitize-ignore-for-ubsan-feature`.
+  SanitizerMask NotFromUndefined; // Kinds enabled by -fsanitize= other than
+                                  // through the undefined group, and not
+                                  // disabled by a later -fno-sanitize=.
   SanitizerMask Kinds;
 
   // Figure out the base toolchain's sanitizer support so we can diagnose the
@@ -499,6 +502,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     if (Arg->getOption().matches(options::OPT_fsanitize_EQ)) {
       Arg->claim();
       SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
+      NotFromUndefined |=
+          expandSanitizerGroups(Add & ~(SanitizerKind::UndefinedGroup |
+                                        SanitizerKind::UndefinedTrapGroup)) &
+          ~AllRemove;
 
       if (RemoveObjectSizeAtO0) {
         AllRemove |= SanitizerKind::ObjectSize;
@@ -1358,7 +1365,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
-  Sanitizers.Mask |= Kinds;
+  Sanitizers.Mask |= clearGroupBits(Kinds);
+  DivRemOnlyFromUndefined = Kinds & ~NotFromUndefined &
+                            (SanitizerKind::IntegerDivideByZero |
+                             SanitizerKind::SignedIntegerOverflowDivide);
   RecoverableSanitizers.Mask |= RecoverableKinds;
   TrapSanitizers.Mask |= TrappingKinds;
   assert(!(RecoverableKinds & TrappingKinds) &&
@@ -1440,6 +1450,35 @@ static bool hasTargetFeatureMTE(const llvm::opt::ArgStringList &CmdArgs) {
     Start = It;
   }
   return false;
+}
+
+/// Returns whether -fdefined-int-divrem is in effect for a cc1 job for an input
+/// of type \p InputType, i.e. what cc1 will decide.
+static bool isDefinedIntDivRem(const Driver &D, const llvm::opt::ArgList &Args,
+                               types::ID InputType) {
+  // cc1 gets -Xclang arguments after the driver's -f[no-]defined-int-divrem,
+  // so parse them with CC1 visibility to avoid mistaking option values (such as
+  // -Xclang -main-file-name -Xclang -fdefined-int-divrem) for flags.
+  SmallVector<const char *, 8> XclangVals;
+  for (const Arg *A : Args.filtered(options::OPT_Xclang))
+    XclangVals.push_back(A->getValue());
+  bool XclangCLStd = false;
+  if (!XclangVals.empty()) {
+    unsigned MissingArgIndex, MissingArgCount;
+    llvm::opt::InputArgList XArgs =
+        D.getOpts().ParseArgs(XclangVals, MissingArgIndex, MissingArgCount,
+                              llvm::opt::Visibility(options::CC1Option));
+    if (const Arg *A = XArgs.getLastArg(options::OPT_fdefined_int_divrem,
+                                        options::OPT_fno_defined_int_divrem))
+      return A->getOption().matches(options::OPT_fdefined_int_divrem);
+    XclangCLStd = XArgs.hasArg(options::OPT_cl_std_EQ);
+  }
+  // cc1 turns it on for OpenCL (including cl-header), and -cl-std= makes any
+  // source OpenCL.
+  return Args.hasFlagNoClaim(
+      options::OPT_fdefined_int_divrem, options::OPT_fno_defined_int_divrem,
+      types::isOpenCL(InputType) || InputType == types::TY_CLHeader ||
+          Args.hasArgNoClaim(options::OPT_cl_std_EQ) || XclangCLStd);
 }
 
 void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -1550,7 +1589,22 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (Sanitizers.empty())
     return;
-  CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
+
+  // Under -fdefined-int-divrem, which is the default for OpenCL, integer
+  // division by zero and INT_MIN / -1 give an unspecified value instead of
+  // undefined behavior, so -fsanitize=undefined does not check for them. An
+  // explicit request (e.g. -fsanitize=integer or -fsanitize=undefined,
+  // integer-divide-by-zero) still does. Only the enabled set changes: the
+  // recover, trap and other lists keep the two checks, which has no effect
+  // unless they are enabled, so that a request that only cc1 sees
+  // (-Xclang -fsanitize=integer-divide-by-zero) recovers or traps as usual.
+  SanitizerSet Enabled = Sanitizers;
+  if (DivRemOnlyFromUndefined &&
+      isDefinedIntDivRem(TC.getDriver(), Args, InputType))
+    Enabled.clear(DivRemOnlyFromUndefined);
+  std::string EnabledStr = toString(Enabled);
+  if (!EnabledStr.empty())
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + EnabledStr));
 
   if (!SuppressUBSanFeature.empty())
     CmdArgs.push_back(

@@ -45,6 +45,10 @@ bool isValidForAlternation(unsigned Opcode) {
   return !Instruction::isIntDivRem(Opcode);
 }
 
+bool isSLPVectorizableIntrinsic(Intrinsic::ID ID) {
+  return isTriviallyVectorizable(ID) || Intrinsic::getMaskedIntDivRemOpcode(ID);
+}
+
 std::pair<Constant *, unsigned>
 BinOpSameOpcodeHelper::isBinOpWithConstant(const Instruction *I) {
   [[maybe_unused]] unsigned Opcode = I->getOpcode();
@@ -875,7 +879,7 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
-    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
+    if (!isSLPVectorizableIntrinsic(BaseID) && BaseMappings.empty())
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();

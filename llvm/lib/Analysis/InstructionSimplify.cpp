@@ -7579,6 +7579,26 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem: {
+    if (match(Args[2], m_ZeroOrPoison()) || isa<PoisonValue>(Args[0]) ||
+        isa<PoisonValue>(Args[1]))
+      return PoisonValue::get(ReturnType);
+    if (ReturnType->getScalarSizeInBits() == 1 &&
+        (IID == Intrinsic::masked_sdiv || IID == Intrinsic::masked_srem))
+      return Constant::getNullValue(ReturnType);
+
+    // Scalar value simplifications refine an inactive poison result. For
+    // vectors, ordinary UB folds may discard valid neighboring lanes, so use
+    // them only when every lane is enabled.
+    if (ReturnType->isIntegerTy() || match(Args[2], m_AllOnesForbidPoison())) {
+      unsigned Opcode = Intrinsic::getMaskedIntDivRemOpcode(IID);
+      return simplifyBinOp(Opcode, Args[0], Args[1], Q);
+    }
+    return nullptr;
+  }
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];

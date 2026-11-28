@@ -283,8 +283,12 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   if (ID == Intrinsic::not_intrinsic)
     return Intrinsic::not_intrinsic;
 
-  if (isTriviallyVectorizable(ID) || ID == Intrinsic::lifetime_start ||
-      ID == Intrinsic::lifetime_end || ID == Intrinsic::assume ||
+  // Masked div/rem may be widened by vectorizers, but generic lane-wise
+  // transforms must not introduce poison mask/divisor lanes or execute new
+  // lanes.
+  if (Intrinsic::getMaskedIntDivRemOpcode(ID) || isTriviallyVectorizable(ID) ||
+      ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end ||
+      ID == Intrinsic::assume ||
       ID == Intrinsic::experimental_noalias_scope_decl ||
       ID == Intrinsic::sideeffect || ID == Intrinsic::pseudoprobe)
     return ID;

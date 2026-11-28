@@ -20,6 +20,8 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
@@ -164,6 +166,139 @@ static DivRemWorklistTy getWorklist(Function &F) {
   return Worklist;
 }
 
+// Reuse a quotient with the identical mask when it dominates the remainder,
+// or can be moved before it in the same block.
+static bool optimizeMaskedDivRem(Function &F, const TargetTransformInfo &TTI,
+                                 const DominatorTree &DT) {
+  DenseMap<DivRemMapKey, SmallVector<IntrinsicInst *, 2>> Divs;
+  struct Pair {
+    AssertingVH<IntrinsicInst> Div;
+    AssertingVH<Instruction> Rem;
+  };
+  SmallVector<Pair> Pairs;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->hasOperandBundles() || II->isMustTailCall() || II->use_empty())
+          continue;
+        unsigned Opc =
+            Intrinsic::getMaskedIntDivRemOpcode(II->getIntrinsicID());
+        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+          Divs[DivRemMapKey(Opc == Instruction::SDiv, II->getArgOperand(0),
+                            II->getArgOperand(1), II->getArgOperand(2))]
+              .push_back(II);
+      }
+  if (Divs.empty())
+    return false;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->hasOperandBundles() || II->isMustTailCall() || II->use_empty())
+          continue;
+        unsigned Opc =
+            Intrinsic::getMaskedIntDivRemOpcode(II->getIntrinsicID());
+        if (Opc != Instruction::URem && Opc != Instruction::SRem)
+          continue;
+        bool Signed = Opc == Instruction::SRem;
+        if (TTI.hasDivRemOp(II->getType(), Signed))
+          continue;
+        auto It =
+            Divs.find(DivRemMapKey(Signed, II->getArgOperand(0),
+                                   II->getArgOperand(1), II->getArgOperand(2)));
+        if (It == Divs.end())
+          continue;
+        auto CanMoveBeforeRem = [](Instruction *Rem, Instruction *Div) {
+          return llvm::all_of(
+              make_range(Rem->getIterator(), Div->getIterator()),
+              [](const Instruction &Inst) {
+                return isGuaranteedToTransferExecutionToSuccessor(&Inst);
+              });
+        };
+        bool FailedSameBlockMove = false;
+        for (IntrinsicInst *Div : It->second) {
+          if (DT.dominates(Div, II)) {
+            Pairs.push_back({Div, II});
+            break;
+          }
+          if (Div->getParent() == II->getParent()) {
+            if (!FailedSameBlockMove && CanMoveBeforeRem(II, Div)) {
+              Pairs.push_back({Div, II});
+              break;
+            }
+            FailedSameBlockMove = true;
+          }
+        }
+      }
+  // Drop AssertingVH keys before erasing decomposed remainders that may also be
+  // operands of other masked divisions in Divs.
+  Divs.clear();
+
+  // Complete motion before creating operands at each quotient's final position.
+  // Block layout can put a dominated remainder ahead of an earlier same-block
+  // remainder in Pairs.
+  llvm::erase_if(Pairs, [](const Pair &) {
+    return !DebugCounter::shouldExecute(DRPCounter);
+  });
+  for (Pair &P : Pairs) {
+    IntrinsicInst *Div = P.Div;
+    Instruction *Rem = P.Rem;
+    if (Div->getParent() == Rem->getParent() && Rem->comesBefore(Div))
+      Div->moveBefore(Rem->getIterator());
+  }
+
+  bool Changed = false;
+  SmallPtrSet<IntrinsicInst *, 8> PreparedDivs;
+  for (Pair &P : Pairs) {
+    IntrinsicInst *Div = P.Div;
+    Instruction *Rem = P.Rem;
+    IRBuilder<> Builder(Div);
+    if (PreparedDivs.insert(Div).second) {
+      auto Freeze = [&](Value *V) {
+        return isGuaranteedNotToBeUndefOrPoison(V, nullptr, Div, &DT)
+                   ? V
+                   : Builder.CreateFreeze(V);
+      };
+      Value *X = Freeze(Div->getArgOperand(0));
+      Value *Y = Freeze(Div->getArgOperand(1));
+      Value *Mask = Freeze(Div->getArgOperand(2));
+      // Correlate undef operands across the quotient and reconstruction. A
+      // frozen poison dividend may become MIN, so exclude exceptional operands
+      // from the new mask rather than introducing UB in the masked division.
+      Value *Safe =
+          Builder.CreateICmpNE(Y, Constant::getNullValue(Y->getType()));
+      if (Div->getIntrinsicID() == Intrinsic::masked_sdiv) {
+        unsigned Bits = X->getType()->getScalarSizeInBits();
+        Value *LHSNotMin = Builder.CreateICmpNE(
+            X, ConstantInt::get(X->getType(), APInt::getSignedMinValue(Bits)));
+        Value *RHSNotMinusOne =
+            Builder.CreateICmpNE(Y, ConstantInt::getSigned(Y->getType(), -1));
+        Value *NoOverflow = Builder.CreateOr(LHSNotMin, RHSNotMinusOne);
+        Safe = Builder.CreateAnd(Safe, NoOverflow);
+      }
+      Mask = Builder.CreateSelect(Safe, Mask,
+                                  Constant::getNullValue(Mask->getType()));
+      Div->setArgOperand(0, X);
+      Div->setArgOperand(1, Y);
+      Div->setArgOperand(2, Mask);
+      Div->dropPoisonGeneratingAttributes();
+      Div->dropUBImplyingAttrsAndUnknownMetadata();
+    }
+    Value *X = Div->getArgOperand(0);
+    Value *Y = Div->getArgOperand(1);
+
+    Builder.SetInsertPoint(Rem);
+    Value *Result = Builder.CreateSub(X, Builder.CreateMul(Div, Y),
+                                      Rem->getName() + ".decomposed");
+    Rem->replaceAllUsesWith(Result);
+    P.Rem = nullptr;
+    Rem->eraseFromParent();
+    ++NumPairs;
+    ++NumDecomposed;
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Find matching pairs of integer div/rem ops (they have the same numerator,
 /// denominator, and signedness). If they exist in different basic blocks, bring
 /// them together by hoisting or replace the common division operation that is
@@ -180,7 +315,7 @@ static DivRemWorklistTy getWorklist(Function &F) {
 /// that it doesn't quite match the stated objectives of those passes.
 static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
                            const DominatorTree &DT) {
-  bool Changed = false;
+  bool Changed = optimizeMaskedDivRem(F, TTI, DT);
 
   // Get the matching pairs of div-rem instructions. We want this extra
   // indirection to avoid dealing with having to RAUW the keys of the maps.

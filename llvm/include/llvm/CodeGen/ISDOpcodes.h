@@ -1665,7 +1665,8 @@ enum NodeType {
 
   /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
   /// lanes do not have undefined behaviour on division by zero or overflow. The
-  /// first two operands are input vectors, the third operand is the mask.
+  /// first two operands are input vectors, the third operand is a non-poison
+  /// mask (frozen before type legalization).
   MASKED_UDIV,
   MASKED_SDIV,
   MASKED_UREM,

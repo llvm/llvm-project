@@ -32,6 +32,17 @@ class NVPTXTargetLowering : public TargetLowering {
 public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
+
+  /// PTX integer `div` and `rem` produce an unspecified machine-specific value
+  /// on division or remainder by zero, and signed two's-complement `INT_MIN /
+  /// -1` wraps to `INT_MIN` (`INT_MIN % -1` yields `0`) without trapping; see
+  /// PTX ISA, Integer Arithmetic Instructions (`div`, `rem`). Restrict this to
+  /// native `i16`/`i32`/`i64` widths and `i8` (promoted to `i16`), excluding
+  /// `i1` and wider or non-power-of-2 integer expansions.
+  bool isIntDivRemTrapFree(EVT VT) const override {
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+  }
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   MachineBasicBlock *

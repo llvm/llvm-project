@@ -28,7 +28,8 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP16]], i64 [[CONV6]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP16]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP10]], i64 [[CONV6]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i64 [[M]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP8]], [[CONV61]]
@@ -119,7 +120,8 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP7]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[CONV6]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP12]], i64 [[CONV6]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i64 [[M]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP11]], [[CONV61]]

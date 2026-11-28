@@ -86,8 +86,12 @@ FEATURE(shift_base_sanitizer, LangOpts.Sanitize.has(SanitizerKind::ShiftBase))
 FEATURE(shift_exponent_sanitizer, LangOpts.Sanitize.has(SanitizerKind::ShiftExponent))
 FEATURE(shift_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Shift))
+FEATURE(signed_integer_overflow_arith_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::SignedIntegerOverflowArith))
+FEATURE(signed_integer_overflow_divide_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::SignedIntegerOverflowDivide))
 FEATURE(signed_integer_overflow_sanitizer,
-        LangOpts.Sanitize.has(SanitizerKind::SignedIntegerOverflow))
+        LangOpts.Sanitize.hasOneOf(SanitizerKind::SignedIntegerOverflow))
 FEATURE(unreachable_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::Unreachable))
 FEATURE(vla_bound_sanitizer,

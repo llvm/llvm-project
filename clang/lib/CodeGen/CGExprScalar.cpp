@@ -261,7 +261,7 @@ static bool CanElideOverflowCheck(ASTContext &Ctx, const BinOpInfo &Op) {
     return false;
 
   if (Op.Ty->isSignedIntegerType() &&
-      Ctx.isTypeIgnoredBySanitizer(SanitizerKind::SignedIntegerOverflow,
+      Ctx.isTypeIgnoredBySanitizer(SanitizerKind::SignedIntegerOverflowArith,
                                    Op.Ty)) {
     return true;
   }
@@ -848,7 +848,7 @@ public:
         Ops.Ty->isUnsignedIntegerType()) {
       const bool isSigned = Ops.Ty->isSignedIntegerOrEnumerationType();
       const bool hasSan =
-          isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
+          isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowArith)
                    : CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow);
       switch (getOverflowBehaviorConsideringType(CGF, Ops.Ty)) {
       case LangOptions::OB_Wrap:
@@ -911,6 +911,11 @@ public:
   // non powers of two.
   Value *ConstrainShiftValue(Value *LHS, Value *RHS, const Twine &Name);
 
+  /// Emit the integer (scalar or vector) division or remainder \p Opc. Under
+  /// -fdefined-int-divrem, operands that would make it undefined (a zero
+  /// divisor, or INT_MIN / -1) give an unspecified value instead.
+  Value *EmitIntDivRem(const BinOpInfo &Ops, llvm::Instruction::BinaryOps Opc,
+                       const Twine &Name);
   Value *EmitDiv(const BinOpInfo &Ops);
   Value *EmitRem(const BinOpInfo &Ops);
   Value *EmitAdd(const BinOpInfo &Ops);
@@ -1974,7 +1979,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
       if (CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
               SanitizerKind::UnsignedIntegerOverflow) ||
           CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
-              SanitizerKind::SignedIntegerOverflow)) {
+              SanitizerKind::SignedIntegerOverflowArith)) {
         // Only pay the cost for constructing the trap diagnostic if they are
         // going to be used.
         CGF.CGM.BuildTrapReason(diag::trap_ubsan_arith_overflow, TR)
@@ -3295,7 +3300,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   QualType Ty = E->getType();
   const bool isSigned = Ty->isSignedIntegerOrEnumerationType();
   const bool hasSan =
-      isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
+      isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowArith)
                : CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow);
 
   switch (getOverflowBehaviorConsideringType(CGF, Ty)) {
@@ -4304,12 +4309,12 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   }
 
   const auto *BO = cast<BinaryOperator>(Ops.E);
-  if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
+  if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowDivide) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
       Ops.mayHaveIntegerOverflow() &&
       !CGF.getContext().isTypeIgnoredBySanitizer(
-          SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
+          SanitizerKind::SignedIntegerOverflowDivide, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
 
     llvm::Value *IntMin =
@@ -4319,23 +4324,142 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     llvm::Value *LHSCmp = Builder.CreateICmpNE(Ops.LHS, IntMin);
     llvm::Value *RHSCmp = Builder.CreateICmpNE(Ops.RHS, NegOne);
     llvm::Value *NotOverflow = Builder.CreateOr(LHSCmp, RHSCmp, "or");
-    Checks.push_back(
-        std::make_pair(NotOverflow, SanitizerKind::SO_SignedIntegerOverflow));
+    Checks.push_back(std::make_pair(
+        NotOverflow, SanitizerKind::SO_SignedIntegerOverflowDivide));
   }
 
   if (Checks.size() > 0)
     EmitBinOpCheck(Checks, Ops);
 }
 
+/// Returns true if every element of the integer constant (or constant vector)
+/// \p C satisfies \p Pred.
+static bool
+allElementsSatisfy(llvm::Constant *C,
+                   llvm::function_ref<bool(const llvm::APInt &)> Pred) {
+  if (auto *CI = dyn_cast<llvm::ConstantInt>(C))
+    return Pred(CI->getValue());
+  // Any other scalar, e.g. a ptrtoint ConstantExpr or poison, is not known.
+  if (!C->getType()->isVectorTy())
+    return false;
+  if (auto *VTy = dyn_cast<llvm::FixedVectorType>(C->getType())) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+      auto *Elt =
+          dyn_cast_or_null<llvm::ConstantInt>(C->getAggregateElement(I));
+      if (!Elt || !Pred(Elt->getValue()))
+        return false;
+    }
+    return true;
+  }
+  if (auto *Splat = dyn_cast_or_null<llvm::ConstantInt>(C->getSplatValue()))
+    return Pred(Splat->getValue());
+  return false;
+}
+
+Value *ScalarExprEmitter::EmitIntDivRem(const BinOpInfo &Ops,
+                                        llvm::Instruction::BinaryOps Opc,
+                                        const Twine &Name) {
+  Value *LHS = Ops.LHS;
+  Value *RHS = Ops.RHS;
+  if (!CGF.getLangOpts().DefinedIntDivRem)
+    return Builder.CreateBinOp(Opc, LHS, RHS, Name);
+
+  // The operation is undefined for a zero divisor, and for a signed
+  // INT_MIN / -1. Compute a mask that is false exactly for these operands,
+  // leaving out the conditions that constant operands already rule out.
+  using llvm::APInt;
+  auto IsConstantWhere = [](Value *V, bool (*Pred)(const APInt &)) {
+    auto *C = dyn_cast<llvm::Constant>(V);
+    return C && allElementsSatisfy(C, Pred);
+  };
+  auto IsNonZero = [](const APInt &V) { return !V.isZero(); };
+  auto IsMinusOne = [](const APInt &V) { return V.isAllOnes(); };
+  auto IsNotMinusOne = [](const APInt &V) { return !V.isAllOnes(); };
+  auto IsMin = [](const APInt &V) { return V.isMinSignedValue(); };
+  auto IsNotMin = [](const APInt &V) { return !V.isMinSignedValue(); };
+
+  llvm::Type *Ty = LHS->getType();
+  Value *Mask = nullptr;
+  if (!IsConstantWhere(RHS, IsNonZero))
+    Mask = Builder.CreateICmpNE(RHS, llvm::Constant::getNullValue(Ty));
+  bool IsSigned =
+      Opc == llvm::Instruction::SDiv || Opc == llvm::Instruction::SRem;
+  if (IsSigned && !IsConstantWhere(RHS, IsNotMinusOne) &&
+      !IsConstantWhere(LHS, IsNotMin)) {
+    Value *Min = llvm::ConstantInt::get(
+        Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
+    Value *MinusOne = llvm::Constant::getAllOnesValue(Ty);
+    Value *NotOverflow;
+    if (IsConstantWhere(RHS, IsMinusOne)) {
+      NotOverflow = Builder.CreateICmpNE(LHS, Min);
+    } else if (IsConstantWhere(LHS, IsMin)) {
+      NotOverflow = Builder.CreateICmpNE(RHS, MinusOne);
+    } else {
+      Value *LHSNotMin = Builder.CreateICmpNE(LHS, Min);
+      Value *RHSNotMinusOne = Builder.CreateICmpNE(RHS, MinusOne);
+      // Check RHS != -1 via select before LHS != MIN so a poison dividend lane
+      // cannot poison the mask when RHS is not -1.
+      Value *AllTrue =
+          llvm::Constant::getAllOnesValue(RHSNotMinusOne->getType());
+      NotOverflow = Builder.CreateSelect(RHSNotMinusOne, AllTrue, LHSNotMin);
+    }
+    if (Mask) {
+      Value *AllFalse = llvm::Constant::getNullValue(Mask->getType());
+      Mask = Builder.CreateSelect(Mask, NotOverflow, AllFalse);
+    } else {
+      Mask = NotOverflow;
+    }
+  }
+  if (!Mask)
+    return Builder.CreateBinOp(Opc, LHS, RHS, Name);
+
+  // SPIR-V has no instruction for this: OpSDiv and friends are undefined for
+  // these operands, and the consumers of SPIR and SPIR-V modules (such as the
+  // SPIRV-LLVM-Translator) do not know the masked intrinsics. Replace the
+  // divisor by 1 where the mask is false.
+  if (CGF.getTarget().getTriple().isSPIROrSPIRV()) {
+    assert((!IsSigned || Ty->getScalarSizeInBits() != 1) &&
+           "unexpected signed 1-bit integer");
+    Value *SafeRHS =
+        Builder.CreateSelect(Mask, RHS, llvm::ConstantInt::get(Ty, 1));
+    return Builder.CreateBinOp(Opc, LHS, SafeRHS, Name);
+  }
+
+  // The masked intrinsic returns poison where the mask is false, and freezing
+  // it turns that into an arbitrary but fixed value: an unspecified result.
+  llvm::Intrinsic::ID IID;
+  switch (Opc) {
+  case llvm::Instruction::UDiv:
+    IID = llvm::Intrinsic::masked_udiv;
+    break;
+  case llvm::Instruction::SDiv:
+    IID = llvm::Intrinsic::masked_sdiv;
+    break;
+  case llvm::Instruction::URem:
+    IID = llvm::Intrinsic::masked_urem;
+    break;
+  case llvm::Instruction::SRem:
+    IID = llvm::Intrinsic::masked_srem;
+    break;
+  default:
+    llvm_unreachable("not an integer division or remainder");
+  }
+  Value *Result =
+      Builder.CreateIntrinsic(IID, Ty, {LHS, RHS, Mask},
+                              /*FMFSource=*/nullptr, Name + ".masked");
+  return Builder.CreateFreeze(Result, Name);
+}
+
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   {
-    SanitizerDebugLocation SanScope(&CGF,
-                                    {SanitizerKind::SO_IntegerDivideByZero,
-                                     SanitizerKind::SO_SignedIntegerOverflow,
-                                     SanitizerKind::SO_FloatDivideByZero},
-                                    SanitizerHandler::DivremOverflow);
+    SanitizerDebugLocation SanScope(
+        &CGF,
+        {SanitizerKind::SO_IntegerDivideByZero,
+         SanitizerKind::SO_SignedIntegerOverflowDivide,
+         SanitizerKind::SO_FloatDivideByZero},
+        SanitizerHandler::DivremOverflow);
     if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
-         CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
+         CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowDivide)) &&
         Ops.Ty->isIntegerType() &&
         (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
@@ -4377,32 +4501,33 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   else if (Ops.isFixedPointOp())
     return EmitFixedPointBinOp(Ops);
   else if (Ops.Ty->hasUnsignedIntegerRepresentation())
-    return Builder.CreateUDiv(Ops.LHS, Ops.RHS, "div");
+    return EmitIntDivRem(Ops, llvm::Instruction::UDiv, "div");
   else
-    return Builder.CreateSDiv(Ops.LHS, Ops.RHS, "div");
+    return EmitIntDivRem(Ops, llvm::Instruction::SDiv, "div");
 }
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
   if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
-       CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
+       CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowDivide)) &&
       Ops.Ty->isIntegerType() &&
       (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
-    SanitizerDebugLocation SanScope(&CGF,
-                                    {SanitizerKind::SO_IntegerDivideByZero,
-                                     SanitizerKind::SO_SignedIntegerOverflow},
-                                    SanitizerHandler::DivremOverflow);
+    SanitizerDebugLocation SanScope(
+        &CGF,
+        {SanitizerKind::SO_IntegerDivideByZero,
+         SanitizerKind::SO_SignedIntegerOverflowDivide},
+        SanitizerHandler::DivremOverflow);
     llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
     EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
   }
 
   if (Ops.Ty->hasUnsignedIntegerRepresentation())
-    return Builder.CreateURem(Ops.LHS, Ops.RHS, "rem");
+    return EmitIntDivRem(Ops, llvm::Instruction::URem, "rem");
 
   if (CGF.getLangOpts().HLSL && Ops.Ty->hasFloatingRepresentation())
     return Builder.CreateFRem(Ops.LHS, Ops.RHS, "rem");
 
-  return Builder.CreateSRem(Ops.LHS, Ops.RHS, "rem");
+  return EmitIntDivRem(Ops, llvm::Instruction::SRem, "rem");
 }
 
 Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
@@ -4441,7 +4566,7 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
     OpID |= 1;
 
   SanitizerDebugLocation SanScope(&CGF,
-                                  {SanitizerKind::SO_SignedIntegerOverflow,
+                                  {SanitizerKind::SO_SignedIntegerOverflowArith,
                                    SanitizerKind::SO_UnsignedIntegerOverflow},
                                   OverflowKind);
   llvm::Type *opTy = CGF.CGM.getTypes().ConvertType(Ops.Ty);
@@ -4461,10 +4586,10 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
     // arithmetic to result in a trap due to the OverflowBehaviorType attribute
     // which describes overflow behavior on a per-type basis.
     if (isSigned) {
-      if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) {
+      if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowArith)) {
         llvm::Value *NotOf = Builder.CreateNot(overflow);
         EmitBinOpCheck(
-            std::make_pair(NotOf, SanitizerKind::SO_SignedIntegerOverflow),
+            std::make_pair(NotOf, SanitizerKind::SO_SignedIntegerOverflowArith),
             Ops);
       } else
         CGF.EmitTrapCheck(Builder.CreateNot(overflow), OverflowKind);
@@ -4806,7 +4931,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
       op.Ty->isUnsignedIntegerType()) {
     const bool isSigned = op.Ty->isSignedIntegerOrEnumerationType();
     const bool hasSan =
-        isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
+        isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowArith)
                  : CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow);
     switch (getOverflowBehaviorConsideringType(CGF, op.Ty)) {
     case LangOptions::OB_Wrap:
@@ -4966,7 +5091,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
         op.Ty->isUnsignedIntegerType()) {
       const bool isSigned = op.Ty->isSignedIntegerOrEnumerationType();
       const bool hasSan =
-          isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
+          isSigned ? CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflowArith)
                    : CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow);
       switch (getOverflowBehaviorConsideringType(CGF, op.Ty)) {
       case LangOptions::OB_Wrap:

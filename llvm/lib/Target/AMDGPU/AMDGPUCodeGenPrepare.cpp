@@ -136,27 +136,27 @@ public:
   /// Fold select (X == 0 || Y == 0), +0.0, X * Y into fmul_legacy(X, Y).
   bool foldSelectToFMulLegacy(SelectInst &I) const;
 
-  bool divHasSpecialOptimization(BinaryOperator &I,
-                                 Value *Num, Value *Den) const;
-  unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
+  bool divHasSpecialOptimization(Instruction &I, Value *Num, Value *Den) const;
+  unsigned getDivNumBits(Instruction &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
   /// Expands div or rem by using floating-point operations.
   /// Operands must be in the range [-0x400000,0x3FFFFF]
-  Value *expandDivRemToFloat(IRBuilder<> &Builder, BinaryOperator &I,
-                             Value *Num, Value *Den, bool IsDiv,
-                             bool IsSigned) const;
+  Value *expandDivRemToFloat(IRBuilder<> &Builder, Instruction &I, Value *Num,
+                             Value *Den, bool IsDiv, bool IsSigned) const;
 
-  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, BinaryOperator &I,
+  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, Instruction &I,
                                  Value *Num, Value *Den, unsigned NumBits,
                                  bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
-  Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *expandDivRem32(IRBuilder<> &Builder, Instruction &I,
+                        Instruction::BinaryOps Opc, Value *Num,
+                        Value *Den) const;
 
-  Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *shrinkDivRem64(IRBuilder<> &Builder, Instruction &I,
+                        Instruction::BinaryOps Opc, Value *Num,
+                        Value *Den) const;
   void expandDivRem64(BinaryOperator &I) const;
 
   /// Widen a scalar load.
@@ -989,7 +989,7 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 /// \p MaxDivBits is an optimization hint to bypass the second
 /// ComputeNumSignBits/computeKnownBits call if the first one is
 /// insufficient.
-unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
+unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(Instruction &I, Value *Num,
                                                  Value *Den,
                                                  unsigned MaxDivBits,
                                                  bool IsSigned) const {
@@ -1025,9 +1025,8 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
-                                                     BinaryOperator &I,
-                                                     Value *Num, Value *Den,
-                                                     bool IsDiv,
+                                                     Instruction &I, Value *Num,
+                                                     Value *Den, bool IsDiv,
                                                      bool IsSigned) const {
   unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
@@ -1038,7 +1037,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
-    IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
+    IRBuilder<> &Builder, Instruction &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
@@ -1120,7 +1119,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
 // than the general expansion we do here.
 
 // TODO: It would be better to just directly handle those optimizations here.
-bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
+bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(Instruction &I,
                                                          Value *Num,
                                                          Value *Den) const {
   if (Constant *C = dyn_cast<Constant>(Den)) {
@@ -1164,9 +1163,9 @@ static Value *getSign32(Value *V, IRBuilder<> &Builder, const DataLayout DL) {
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *X,
-                                                Value *Y) const {
-  Instruction::BinaryOps Opc = I.getOpcode();
+                                                Instruction &I,
+                                                Instruction::BinaryOps Opc,
+                                                Value *X, Value *Y) const {
   assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SDiv);
 
@@ -1288,12 +1287,11 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *Num,
-                                                Value *Den) const {
+                                                Instruction &I,
+                                                Instruction::BinaryOps Opc,
+                                                Value *Num, Value *Den) const {
   if (!ExpandDiv64InIR && divHasSpecialOptimization(I, Num, Den))
     return nullptr;  // Keep it for later optimization.
-
-  Instruction::BinaryOps Opc = I.getOpcode();
 
   bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
   bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
@@ -1311,7 +1309,7 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     // Otherwise 32-bit division cannot be used safely.
     // -2147483648/1 and -2147483648/-1 are not equal,
     // but they produce the same lower 32-bit result.
-    Narrowed = expandDivRem32(Builder, I, Num, Den);
+    Narrowed = expandDivRem32(Builder, I, Opc, Num, Den);
   }
 
   if (Narrowed) {
@@ -1438,13 +1436,13 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
         Value *NewElt;
         if (ScalarSize <= 32) {
-          NewElt = expandDivRem32(Builder, I, NumEltN, DenEltN);
+          NewElt = expandDivRem32(Builder, I, Opc, NumEltN, DenEltN);
           if (!NewElt)
             NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
         } else {
           // See if this 64-bit division can be shrunk to 32/24-bits before
           // producing the general expansion.
-          NewElt = shrinkDivRem64(Builder, I, NumEltN, DenEltN);
+          NewElt = shrinkDivRem64(Builder, I, Opc, NumEltN, DenEltN);
           if (!NewElt) {
             // The general 64-bit expansion introduces control flow and doesn't
             // return the new value. Just insert a scalar copy and defer
@@ -1464,9 +1462,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
       }
     } else {
       if (ScalarSize <= 32)
-        NewDiv = expandDivRem32(Builder, I, Num, Den);
+        NewDiv = expandDivRem32(Builder, I, Opc, Num, Den);
       else {
-        NewDiv = shrinkDivRem64(Builder, I, Num, Den);
+        NewDiv = shrinkDivRem64(Builder, I, Opc, Num, Den);
         if (!NewDiv)
           Div64ToExpand.push_back(&I);
       }
@@ -2063,6 +2061,110 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   Intrinsic::ID IID = I.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem: {
+    Type *Ty = I.getType();
+    Type *EltTy = Ty->getScalarType();
+    if (!CLOpts.codegenprepare_idiv_expansion || I.hasOperandBundles() ||
+        I.isMustTailCall() ||
+        (!Ty->isIntegerTy() && !isa<FixedVectorType>(Ty)) ||
+        !ST.getTargetLowering()->isIntDivRemTrapFree(EVT::getEVT(EltTy)))
+      return false;
+    Instruction::BinaryOps Opc = static_cast<Instruction::BinaryOps>(
+        Intrinsic::getMaskedIntDivRemOpcode(IID));
+    IRBuilder<> Builder(&I);
+    Value *Num = I.getArgOperand(0), *Den = I.getArgOperand(1);
+    unsigned EltBits = EltTy->getIntegerBitWidth();
+    SimplifyQuery InstSQ = SQ.getWithInstruction(&I);
+    auto IsBitcastKnownZeroLane = [&](Value *Vec, uint64_t Lane) {
+      Value *Src;
+      if (!InstSQ.DL.isLittleEndian() || !match(Vec, m_BitCast(m_Value(Src))) ||
+          !Src->getType()->isIntegerTy())
+        return false;
+      unsigned SrcBits = Src->getType()->getIntegerBitWidth();
+      if (Lane >= SrcBits / EltBits)
+        return false;
+      return computeKnownBits(Src, InstSQ)
+          .extractBits(EltBits, Lane * EltBits)
+          .isZero();
+    };
+    // Reciprocal expansions use wrapping arithmetic, FP conversions and
+    // selects. Exceptional operands yield a value or poison, never IR UB.
+    auto Expand = [&](Value *X, Value *Y) -> Value * {
+      // Avoid the reciprocal expansion when a scalar or extracted divisor is
+      // known zero, so later lowering does not fold it to undef beneath freeze.
+      if (isa<UndefValue>(Y) || computeKnownBits(Y, InstSQ).isZero())
+        return Constant::getNullValue(EltTy);
+      if (auto *EE = dyn_cast<ExtractElementInst>(Y))
+        if (auto *CI = dyn_cast<ConstantInt>(EE->getIndexOperand());
+            CI && CI->getValue().ult(UINT64_MAX) &&
+            IsBitcastKnownZeroLane(EE->getVectorOperand(), CI->getZExtValue()))
+          return Constant::getNullValue(EltTy);
+      return EltBits <= 32 ? expandDivRem32(Builder, I, Opc, X, Y)
+                           : shrinkDivRem64(Builder, I, Opc, X, Y);
+    };
+    Value *NewDiv;
+    if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+      // IR known bits do not look through a bitcast from a scalar integer, such
+      // as OpenCL as_typeN() or an ABI-coerced vector argument, but later
+      // lowering does and can turn that lane into undef.
+      std::optional<KnownBits> BitcastDenBits;
+      if (Value *Src; InstSQ.DL.isLittleEndian() &&
+                      match(Den, m_BitCast(m_Value(Src))) &&
+                      Src->getType()->isIntegerTy())
+        BitcastDenBits = computeKnownBits(Src, InstSQ);
+      const auto *ConstDen = dyn_cast<Constant>(Den);
+      const auto *ConstMask = dyn_cast<Constant>(I.getArgOperand(2));
+      NewDiv = PoisonValue::get(VT);
+      for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
+        Constant *MaskElt =
+            ConstMask ? ConstMask->getAggregateElement(N) : nullptr;
+        Constant *DenElt =
+            ConstDen ? ConstDen->getAggregateElement(N) : nullptr;
+        bool KnownZeroLane =
+            (MaskElt && MaskElt->isNullValue()) ||
+            (DenElt && (isa<UndefValue>(DenElt) || DenElt->isNullValue())) ||
+            (BitcastDenBits &&
+             BitcastDenBits->extractBits(EltBits, N * EltBits).isZero()) ||
+            computeKnownBits(Den, APInt::getOneBitSet(E, N), InstSQ).isZero();
+        Value *Elt = nullptr;
+        if (KnownZeroLane) {
+          Elt = Constant::getNullValue(EltTy);
+        } else {
+          Value *Y = Builder.CreateExtractElement(Den, N);
+          if (isa<UndefValue>(Y) || computeKnownBits(Y, InstSQ).isZero()) {
+            if (auto *YI = dyn_cast<Instruction>(Y); YI && YI->use_empty())
+              YI->eraseFromParent();
+            Elt = Constant::getNullValue(EltTy);
+          } else {
+            Value *X = Builder.CreateExtractElement(Num, N);
+            Elt = Expand(X, Y);
+            if (!Elt) {
+              // Scalarize residual lanes like visitBinaryOperator so generic
+              // CodeGenPrepare can still apply the 64-to-32-bit bypass.
+              Value *Mask = Builder.CreateExtractElement(I.getArgOperand(2), N);
+              Elt = Builder.CreateIntrinsic(IID, {EltTy}, {X, Y, Mask});
+            }
+          }
+        }
+        NewDiv = Builder.CreateInsertElement(NewDiv, Elt, N);
+      }
+    } else {
+      const auto *ConstMask = dyn_cast<Constant>(I.getArgOperand(2));
+      NewDiv = (ConstMask && ConstMask->isNullValue())
+                   ? Constant::getNullValue(EltTy)
+                   : Expand(Num, Den);
+    }
+    if (!NewDiv)
+      return false;
+    // Never use expandDivRem64 here: its operand-dependent branches are unsafe
+    // for poison operands in disabled lanes.
+    I.replaceAllUsesWith(NewDiv);
+    DeadVals.push_back(&I);
+    return true;
+  }
   case Intrinsic::minnum:
   case Intrinsic::minimumnum:
   case Intrinsic::minimum:

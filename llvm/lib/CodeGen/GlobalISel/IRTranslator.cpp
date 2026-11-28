@@ -19,6 +19,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -29,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -84,6 +86,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -3076,6 +3079,97 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   switch (ID) {
   default:
     break;
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem: {
+    bool IsSigned =
+        ID == Intrinsic::masked_sdiv || ID == Intrinsic::masked_srem;
+    unsigned Opcode = ID == Intrinsic::masked_udiv   ? TargetOpcode::G_UDIV
+                      : ID == Intrinsic::masked_sdiv ? TargetOpcode::G_SDIV
+                      : ID == Intrinsic::masked_urem ? TargetOpcode::G_UREM
+                                                     : TargetOpcode::G_SREM;
+
+    if (auto *VT = dyn_cast<FixedVectorType>(CI.getType())) {
+      const LegalizerInfo *LI = MF->getSubtarget().getLegalizerInfo();
+      LLT Ty = getLLTForType(*CI.getType(), *DL);
+      if (!LI || (Ty.isVector() && LI->isLegalOrCustom({Opcode, {Ty}})))
+        return false;
+      LLT EltTy = getLLTForType(*VT->getElementType(), *DL);
+      bool TrapFree = TLI->isIntDivRemTrapFree(
+          TLI->getValueType(*DL, VT->getElementType()));
+      SmallVector<Register> LHS, RHS, Mask;
+      auto UnmergeOrScalar = [&](Value *V, LLT LaneTy,
+                                 SmallVectorImpl<Register> &Out) {
+        Register Reg = getOrCreateVReg(*V);
+        if (!Ty.isVector()) {
+          Out.push_back(Reg);
+          return;
+        }
+        auto Unmerge = MIRBuilder.buildUnmerge(LaneTy, Reg);
+        for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I)
+          Out.push_back(Unmerge.getReg(I));
+      };
+      UnmergeOrScalar(CI.getArgOperand(0), EltTy, LHS);
+      UnmergeOrScalar(CI.getArgOperand(1), EltTy, RHS);
+      if (!TrapFree)
+        UnmergeOrScalar(CI.getArgOperand(2), LLT::integer(1), Mask);
+
+      const auto *ConstRHS = dyn_cast<Constant>(CI.getArgOperand(1));
+      const auto *ConstMask = dyn_cast<Constant>(CI.getArgOperand(2));
+      SmallVector<Register> Results;
+      for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
+        if (IsSigned && EltTy == LLT::integer(1)) {
+          Results.push_back(MIRBuilder.buildConstant(EltTy, 0).getReg(0));
+          continue;
+        }
+        Constant *MaskElt =
+            ConstMask ? ConstMask->getAggregateElement(I) : nullptr;
+        Register Divisor = RHS[I];
+        if (TrapFree &&
+            ((MaskElt && MaskElt->isNullValue()) ||
+             (ConstRHS &&
+              isa_and_present<UndefValue>(ConstRHS->getAggregateElement(I))) ||
+             computeKnownBits(CI.getArgOperand(1), APInt::getOneBitSet(E, I),
+                              SimplifyQuery(*DL, &CI))
+                 .isZero())) {
+          Results.push_back(MIRBuilder.buildConstant(EltTy, 0).getReg(0));
+          continue;
+        }
+        if (!TrapFree) {
+          auto FrozenMask = MIRBuilder.buildFreeze(LLT::integer(1), Mask[I]);
+          auto One = MIRBuilder.buildConstant(EltTy, 1);
+          Divisor =
+              MIRBuilder.buildSelect(EltTy, FrozenMask, Divisor, One).getReg(0);
+        }
+        Results.push_back(
+            MIRBuilder.buildInstr(Opcode, {EltTy}, {LHS[I], Divisor})
+                .getReg(0));
+      }
+      if (!Ty.isVector())
+        MIRBuilder.buildCopy(getOrCreateVReg(CI), Results[0]);
+      else
+        MIRBuilder.buildBuildVector(getOrCreateVReg(CI), Results);
+      return true;
+    }
+    if (!CI.getType()->isIntegerTy() ||
+        !TLI->isIntDivRemTrapFree(TLI->getValueType(*DL, CI.getType())))
+      return false;
+    // On a trap-free type, computing an inactive operation refines its poison
+    // result without adding observable behavior.
+    const auto *ConstMask = dyn_cast<Constant>(CI.getArgOperand(2));
+    if ((ConstMask && ConstMask->isNullValue()) ||
+        isa<UndefValue>(CI.getArgOperand(1)) ||
+        computeKnownBits(CI.getArgOperand(1), SimplifyQuery(*DL, &CI))
+            .isZero()) {
+      MIRBuilder.buildConstant(getOrCreateVReg(CI), 0);
+      return true;
+    }
+    MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
+                          {getOrCreateVReg(*CI.getArgOperand(0)),
+                           getOrCreateVReg(*CI.getArgOperand(1))});
+    return true;
+  }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     // No stack colouring in O0, discard region information.
@@ -4631,6 +4725,24 @@ bool IRTranslatorImpl::translateFreeze(const User &U,
 
   assert(DstRegs.size() == SrcRegs.size() &&
          "Freeze with different source and destination type?");
+
+  if (auto *II = dyn_cast<IntrinsicInst>(U.getOperand(0));
+      II && Intrinsic::getMaskedIntDivRemOpcode(II->getIntrinsicID()) &&
+      isa<FixedVectorType>(U.getType()) &&
+      MRI->getVRegDef(SrcRegs.front())->getOpcode() ==
+          TargetOpcode::G_BUILD_VECTOR) {
+    // Distribute freeze only for the scalarized masked result. Keeping these
+    // lane freezes explicit lets unmerge/build artifacts combine at O0 without
+    // splitting unrelated legal vector arithmetic.
+    LLT EltTy = getLLTForType(*U.getType()->getScalarType(), *DL);
+    auto Parts = MIRBuilder.buildUnmerge(EltTy, SrcRegs.front());
+    SmallVector<Register> Frozen;
+    for (unsigned I = 0; I != Parts->getNumDefs(); ++I)
+      Frozen.push_back(
+          MIRBuilder.buildFreeze(EltTy, Parts.getReg(I)).getReg(0));
+    MIRBuilder.buildBuildVector(DstRegs.front(), Frozen);
+    return true;
+  }
 
   for (unsigned I = 0; I < DstRegs.size(); ++I) {
     MIRBuilder.buildFreeze(DstRegs[I], SrcRegs[I]);

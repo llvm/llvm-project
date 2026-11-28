@@ -8830,29 +8830,89 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                          DAG.getConstant(0, sdl, MVT::i64)));
     return;
   case Intrinsic::masked_udiv:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_UDIV, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
   case Intrinsic::masked_sdiv:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_SDIV, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
   case Intrinsic::masked_urem:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_UREM, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
+  case Intrinsic::masked_srem: {
+    EVT VT = EVT::getEVT(I.getType());
+    unsigned Opcode = Intrinsic == Intrinsic::masked_udiv   ? ISD::MASKED_UDIV
+                      : Intrinsic == Intrinsic::masked_sdiv ? ISD::MASKED_SDIV
+                      : Intrinsic == Intrinsic::masked_urem ? ISD::MASKED_UREM
+                                                            : ISD::MASKED_SREM;
+    SDValue LHS = getValue(I.getArgOperand(0));
+    SDValue RHS = getValue(I.getArgOperand(1));
+    bool TrapFree = TLI.isIntDivRemTrapFree(VT.getScalarType());
+    bool HasVectorLowering = false;
+    if (VT.isFixedLengthVector() && TrapFree) {
+      unsigned UnmaskedOpcode = ISD::getUnmaskedBinOpOpcode(Opcode);
+      unsigned DivOpcode = UnmaskedOpcode == ISD::SREM   ? ISD::SDIV
+                           : UnmaskedOpcode == ISD::UREM ? ISD::UDIV
+                                                         : UnmaskedOpcode;
+      EVT LegalVT = VT;
+      while (LegalVT.isVector() &&
+             TLI.getTypeAction(*DAG.getContext(), LegalVT) !=
+                 TargetLowering::TypeLegal)
+        LegalVT = TLI.getTypeToTransformTo(*DAG.getContext(), LegalVT);
+      // Remainder expansion can preserve vector arithmetic through a legal
+      // vector quotient even when the remainder operation itself is expanded.
+      HasVectorLowering =
+          LegalVT.isVector() &&
+          (TLI.isOperationLegalOrCustom(UnmaskedOpcode, LegalVT) ||
+           TLI.isOperationLegalOrCustom(DivOpcode, LegalVT));
+    }
+    if (!VT.isVector()) {
+      assert(TrapFree &&
+             "Non-trap-free scalar masked div/rem must be lowered before ISel");
+      // The trap-free hardware result refines poison in a disabled lane.
+      // PreISelIntrinsicLowering folds IR-known-zero divisors to 0 before IR
+      // simplification can lose the masked call; also check DAG known bits.
+      const auto *ConstMask = dyn_cast<Constant>(I.getArgOperand(2));
+      if ((ConstMask && ConstMask->isNullValue()) || RHS.isUndef() ||
+          DAG.computeKnownBits(RHS).isZero())
+        setValue(&I, DAG.getConstant(0, sdl, VT));
+      else
+        setValue(&I, DAG.getNode(ISD::getUnmaskedBinOpOpcode(Opcode), sdl, VT,
+                                 LHS, RHS));
+    } else if (VT.isFixedLengthVector() && TrapFree && !HasVectorLowering) {
+      // Scalarize before type legalization can pad odd vectors. An ordinary
+      // vector div/rem node could fold valid lanes away for an inactive zero
+      // divisor, so build only scalar operations. A lane whose mask is
+      // constant false or whose divisor is known zero gets a defined constant:
+      // the scalar DAG would otherwise fold zero divisors to undef, and codegen
+      // does not keep a frozen undef stable across uses. Zeros that neither
+      // known-bits query proves here still reach that generic freeze
+      // limitation.
+      EVT EltVT = VT.getScalarType();
+      const auto *ConstMask = dyn_cast<Constant>(I.getArgOperand(2));
+      SmallVector<SDValue> Results;
+      for (unsigned Lane = 0, NumElts = VT.getVectorNumElements();
+           Lane != NumElts; ++Lane) {
+        Constant *MaskElt =
+            ConstMask ? ConstMask->getAggregateElement(Lane) : nullptr;
+        SDValue Divisor = DAG.getExtractVectorElt(sdl, EltVT, RHS, Lane);
+        // DAG known bits also see through a bitcast from a scalar, which IR
+        // known bits do not.
+        if ((MaskElt && MaskElt->isNullValue()) || Divisor.isUndef() ||
+            computeKnownBits(I.getArgOperand(1),
+                             APInt::getOneBitSet(NumElts, Lane),
+                             SimplifyQuery(DAG.getDataLayout(), &I))
+                .isZero() ||
+            DAG.computeKnownBits(Divisor).isZero()) {
+          Results.push_back(DAG.getConstant(0, sdl, EltVT));
+          continue;
+        }
+        Results.push_back(DAG.getNode(
+            ISD::getUnmaskedBinOpOpcode(Opcode), sdl, EltVT,
+            DAG.getExtractVectorElt(sdl, EltVT, LHS, Lane), Divisor));
+      }
+      setValue(&I, DAG.getBuildVector(VT, sdl, Results));
+    } else {
+      // Freeze before type legalization so predicate combines can eliminate
+      // it, and every expansion can safely use the mask in a divisor select.
+      setValue(&I, DAG.getNode(Opcode, sdl, VT, LHS, RHS,
+                               DAG.getFreeze(getValue(I.getArgOperand(2)))));
+    }
     return;
-  case Intrinsic::masked_srem:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_SREM, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
+  }
   }
 }
 

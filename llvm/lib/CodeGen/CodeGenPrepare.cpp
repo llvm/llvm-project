@@ -483,7 +483,11 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
+        EverMadeChange |= bypassSlowDivision(
+            BB, BypassWidths, DTU, LI, BPI, [this, &F](Type *Ty) {
+              return TLI->isIntDivRemTrapFree(
+                  TLI->getValueType(F.getDataLayout(), Ty));
+            });
       BB = Next;
     }
   }

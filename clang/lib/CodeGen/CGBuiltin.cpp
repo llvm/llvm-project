@@ -2109,7 +2109,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
   SmallVector<SanitizerKind::SanitizerOrdinal, 1> Ordinals;
   SanitizerHandler CheckHandler;
   if (SanitizeOverflow) {
-    Ordinals.push_back(SanitizerKind::SO_SignedIntegerOverflow);
+    Ordinals.push_back(SanitizerKind::SO_SignedIntegerOverflowArith);
     CheckHandler = SanitizerHandler::NegateOverflow;
   } else
     CheckHandler = SanitizerHandler::SubOverflow;
@@ -2125,7 +2125,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
 
   // TODO: support -ftrapv-handler.
   if (SanitizeOverflow) {
-    CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflow}},
+    CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflowArith}},
                   CheckHandler,
                   {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
                    CGF.EmitCheckTypeDescriptor(E->getType())},
@@ -3384,7 +3384,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
   case Builtin::BI__builtin_llabs: {
-    bool SanitizeOverflow = SanOpts.has(SanitizerKind::SignedIntegerOverflow);
+    bool SanitizeOverflow =
+        SanOpts.has(SanitizerKind::SignedIntegerOverflowArith);
 
     Value *Result;
     switch (getLangOpts().getSignedOverflowBehavior()) {

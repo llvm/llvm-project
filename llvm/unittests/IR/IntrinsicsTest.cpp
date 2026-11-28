@@ -428,4 +428,17 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicVarArg) {
       << "experimental_gc_statepoint must be vararg";
 }
 
+TEST_F(IntrinsicsTest, MaskedIntDivRemOpcode) {
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::masked_udiv),
+            unsigned(Instruction::UDiv));
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::masked_sdiv),
+            unsigned(Instruction::SDiv));
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::masked_urem),
+            unsigned(Instruction::URem));
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::masked_srem),
+            unsigned(Instruction::SRem));
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::not_intrinsic), 0u);
+  EXPECT_EQ(Intrinsic::getMaskedIntDivRemOpcode(Intrinsic::umax), 0u);
+}
+
 } // end namespace

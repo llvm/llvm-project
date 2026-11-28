@@ -5,7 +5,7 @@ define <vscale x 8 x i8> @sdiv_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y
 ; CHECK-LABEL: sdiv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i8> @llvm.masked.sdiv(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y, <vscale x 8 x i1> %m)
   ret <vscale x 8 x i8> %res
@@ -15,7 +15,7 @@ define <vscale x 4 x i16> @sdiv_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16
 ; CHECK-LABEL: sdiv_nxv4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i16> @llvm.masked.sdiv(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y, <vscale x 4 x i1> %m)
   ret <vscale x 4 x i16> %res
@@ -25,7 +25,7 @@ define <vscale x 4 x i32> @sdiv_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32
 ; CHECK-LABEL: sdiv_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.masked.sdiv(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y, <vscale x 4 x i1> %m)
   ret <vscale x 4 x i32> %res
@@ -35,7 +35,7 @@ define <vscale x 8 x i32> @sdiv_nxv8i32(<vscale x 8 x i32> %x, <vscale x 8 x i32
 ; CHECK-LABEL: sdiv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i32> @llvm.masked.sdiv(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y, <vscale x 8 x i1> %m)
   ret <vscale x 8 x i32> %res
@@ -45,7 +45,7 @@ define <vscale x 8 x i32> @sdiv_nxv8i32_splat_rhs(<vscale x 8 x i32> %x, i32 %y,
 ; CHECK-LABEL: sdiv_nxv8i32_splat_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vdiv.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vdiv.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %y, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -57,7 +57,7 @@ define <vscale x 8 x i16> @sdiv_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16
 ; CHECK-LABEL: sdiv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i16> @llvm.masked.sdiv(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y, <vscale x 8 x i1> %m)
   ret <vscale x 8 x i16> %res
@@ -67,7 +67,7 @@ define <vscale x 2 x i64> @sdiv_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64
 ; CHECK-LABEL: sdiv_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.masked.sdiv(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %m)
   ret <vscale x 2 x i64> %res
@@ -77,7 +77,7 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; CHECK-LABEL: sdiv_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.masked.sdiv(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m)
   ret <4 x i32> %res
@@ -87,7 +87,7 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ; CHECK-LABEL: sdiv_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.masked.sdiv(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m)
   ret <2 x i64> %res
@@ -97,7 +97,7 @@ define <4 x i64> @sdiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; CHECK-LABEL: sdiv_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %res = call <4 x i64> @llvm.masked.sdiv(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
   ret <4 x i64> %res
@@ -107,7 +107,7 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 ; CHECK-LABEL: sdiv_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.masked.sdiv(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m)
   ret <2 x i32> %res
@@ -117,7 +117,7 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i1> %m) {
 ; CHECK-LABEL: sdiv_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.masked.sdiv(<4 x i16> %x, <4 x i16> %y, <4 x i1> %m)
   ret <4 x i16> %res
@@ -127,7 +127,7 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %x, <1 x i64> %y, <1 x i1> %m) {
 ; CHECK-LABEL: sdiv_v1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %res = call <1 x i64> @llvm.masked.sdiv(<1 x i64> %x, <1 x i64> %y, <1 x i1> %m)
   ret <1 x i64> %res
@@ -229,15 +229,13 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vmv.v.i v10, 7
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vslidedown.vi v9, v9, 1
-; CHECK-NEXT:    vmand.mm v0, v0, v10
 ; CHECK-NEXT:    vsll.vi v8, v8, 6
 ; CHECK-NEXT:    vsll.vi v9, v9, 6
 ; CHECK-NEXT:    vsra.vi v8, v8, 6
 ; CHECK-NEXT:    vsra.vi v9, v9, 6
-; CHECK-NEXT:    vdiv.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vdiv.vv v8, v9, v8
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.x.s a2, v9

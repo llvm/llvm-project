@@ -1213,6 +1213,7 @@ public:
   mlir::Value emitMul(const BinOpInfo &ops);
   mlir::Value emitDiv(const BinOpInfo &ops);
   mlir::Value emitRem(const BinOpInfo &ops);
+  mlir::Value emitIntDivRemDivisor(const BinOpInfo &ops);
   mlir::Value emitAdd(const BinOpInfo &ops);
   mlir::Value emitSub(const BinOpInfo &ops);
   mlir::Value emitShl(const BinOpInfo &ops);
@@ -2311,11 +2312,11 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
       ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createMul(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Undefined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createNSWMul(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Trapping:
@@ -2355,6 +2356,79 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   return cir::MulOp::create(builder, cgf.getLoc(ops.loc),
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
+
+/// Returns the divisor for an integer (scalar or vector) division or
+/// remainder. Under -fdefined-int-divrem, operands that would make the
+/// operation undefined (a zero divisor, or INT_MIN / -1) give an unspecified
+/// value instead: the divisor is replaced by 1 for them. Classic CodeGen emits
+/// a frozen llvm.masked.{s,u}{div,rem} instead, except on SPIR and SPIR-V.
+mlir::Value ScalarExprEmitter::emitIntDivRemDivisor(const BinOpInfo &ops) {
+  if (!cgf.getLangOpts().DefinedIntDivRem)
+    return ops.rhs;
+
+  bool isSigned = ops.compType->hasSignedIntegerRepresentation();
+  auto isSafeConst = [isSigned](mlir::Value v) {
+    if (auto c = v.getDefiningOp<cir::ConstantOp>())
+      if (auto i = mlir::dyn_cast<cir::IntAttr>(c.getValue()))
+        return !i.getValue().isZero() &&
+               (!isSigned || !i.getValue().isAllOnes());
+    return false;
+  };
+  mlir::Value rhsVal = ops.rhs;
+  if (auto splat = rhsVal.getDefiningOp<cir::VecSplatOp>())
+    rhsVal = splat.getValue();
+  if (isSafeConst(rhsVal))
+    return ops.rhs;
+  if (auto vec = rhsVal.getDefiningOp<cir::VecCreateOp>())
+    if (llvm::all_of(vec.getElements(), isSafeConst))
+      return ops.rhs;
+
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  mlir::Type ty = ops.lhs.getType();
+  auto vecTy = mlir::dyn_cast<cir::VectorType>(ty);
+  auto intTy = mlir::cast<cir::IntType>(vecTy ? vecTy.getElementType() : ty);
+  unsigned width = intTy.getWidth();
+  assert((!isSigned || width != 1) && "unexpected signed 1-bit integer");
+  auto getConst = [&](const llvm::APInt &v) -> mlir::Value {
+    mlir::Value c = builder.getConstAPInt(loc, intTy, v);
+    return vecTy ? cir::VecSplatOp::create(builder, loc, vecTy, c) : c;
+  };
+  // Vector comparisons give a vector of signed integers of the same width.
+  mlir::Type cmpTy;
+  if (vecTy)
+    cmpTy = cir::VectorType::get(
+        cir::IntType::get(builder.getContext(), width, /*is_signed=*/true),
+        vecTy.getSize(), vecTy.getKind());
+  auto createNE = [&](mlir::Value lhs, mlir::Value rhs) -> mlir::Value {
+    if (vecTy)
+      return cir::VecCmpOp::create(builder, loc, cmpTy, cir::CmpOpKind::ne, lhs,
+                                   rhs);
+    return builder.createCompare(loc, cir::CmpOpKind::ne, lhs, rhs);
+  };
+
+  auto createSelect = [&](mlir::Value cond, mlir::Value trueVal,
+                          mlir::Value falseVal) -> mlir::Value {
+    if (vecTy)
+      return cir::VecTernaryOp::create(builder, loc, cond, trueVal, falseVal);
+    return builder.createSelect(loc, cond, trueVal, falseVal);
+  };
+
+  mlir::Value one = getConst(llvm::APInt(width, 1));
+  mlir::Value divisor = ops.rhs;
+  if (isSigned) {
+    mlir::Value lhsNotMin =
+        createNE(ops.lhs, getConst(llvm::APInt::getSignedMinValue(width)));
+    mlir::Value rhsNotMinusOne =
+        createNE(ops.rhs, getConst(llvm::APInt::getAllOnes(width)));
+    // Check rhs != -1 via select so a poison dividend lane does not poison
+    // the divisor when rhs is not -1.
+    divisor = createSelect(rhsNotMinusOne, divisor,
+                           createSelect(lhsNotMin, divisor, one));
+  }
+  mlir::Value rhsNotZero = createNE(ops.rhs, getConst(llvm::APInt(width, 0)));
+  return createSelect(rhsNotZero, divisor, one);
+}
+
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
@@ -2381,7 +2455,7 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
     return emitFixedPointBinOp(ops);
 
   return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
-                            ops.lhs, ops.rhs);
+                            ops.lhs, emitIntDivRemDivisor(ops));
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
@@ -2390,7 +2464,7 @@ mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
     return builder.createFRem(loc, ops.lhs, ops.rhs);
   }
   return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
-                            ops.lhs, ops.rhs);
+                            ops.lhs, emitIntDivRemDivisor(ops));
 }
 
 mlir::Value ScalarExprEmitter::emitFixedPointBinOp(const BinOpInfo &ops) {
@@ -2499,11 +2573,11 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
       ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createAdd(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Undefined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createNSWAdd(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Trapping:
@@ -2551,12 +2625,12 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
         ops.compType->isSignedIntegerOrEnumerationType()) {
       switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined: {
-        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
           return builder.createSub(loc, ops.lhs, ops.rhs);
         [[fallthrough]];
       }
       case LangOptions::SOB_Undefined:
-        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
           return builder.createNSWSub(loc, ops.lhs, ops.rhs);
         [[fallthrough]];
       case LangOptions::SOB_Trapping:

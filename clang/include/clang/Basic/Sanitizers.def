@@ -112,7 +112,13 @@ SANITIZER("returns-nonnull-attribute", ReturnsNonnullAttribute)
 SANITIZER("shift-base", ShiftBase)
 SANITIZER("shift-exponent", ShiftExponent)
 SANITIZER_GROUP("shift", Shift, ShiftBase | ShiftExponent)
-SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
+// Signed integer overflow: INT_MIN / -1 and INT_MIN % -1 (divide), and every
+// other signed integer computation (arith): +, -, *, negation, increment,
+// decrement, and the builtins that use these checks, such as __builtin_abs.
+SANITIZER("signed-integer-overflow-arith", SignedIntegerOverflowArith)
+SANITIZER("signed-integer-overflow-divide", SignedIntegerOverflowDivide)
+SANITIZER_GROUP("signed-integer-overflow", SignedIntegerOverflow,
+                SignedIntegerOverflowArith | SignedIntegerOverflowDivide)
 SANITIZER("unreachable", Unreachable)
 SANITIZER("vla-bound", VLABound)
 SANITIZER("vptr", Vptr)
