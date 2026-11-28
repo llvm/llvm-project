@@ -3168,6 +3168,21 @@ let Predicates = [HasSVE_or_SME] in {
               (DECW_ZPiI ZPR:$op, 31, $imm)>;
     def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm i32:$imm))))))),
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
+
+    // Negative vscale multipliers reverse the increment/decrement direction.
+    def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm)))))))),
+              (DECH_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm)))))))),
+              (DECW_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv2i64 (add ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm_neg i32:$imm))))))),
+              (DECD_ZPiI ZPR:$op, 31, $imm)>;
+
+    def : Pat<(nxv8i16 (sub ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm)))))))),
+              (INCH_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv4i32 (sub ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm)))))))),
+              (INCW_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm_neg i32:$imm))))))),
+              (INCD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
   // Some INCB/DECB forms have better latency and throughput than ADDVL, so we

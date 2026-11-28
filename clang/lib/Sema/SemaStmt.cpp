@@ -1433,7 +1433,8 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
   typedef std::vector<std::pair<llvm::APSInt, CaseStmt*> > CaseRangesTy;
   CaseRangesTy CaseRanges;
 
-  // A BPF case with a relocated enumerator, see SemaBPF::verifyCaseExpr(), is
+  // A BPF case with a relocated enumerator or an explicit
+  // __builtin_preserve_enum_value() call, see SemaBPF::verifyCaseExpr(), is
   // compared before the switch, and its value is only known at load time, so
   // it is not checked for duplicates or overlaps. Its local value is used for
   // the other checks. A relocated singleton case is kept out of CaseVals until
@@ -1500,10 +1501,10 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
           break;
         }
         CaseRanges.push_back(std::make_pair(LoVal, CS));
-        if (IsBPF && (SemaBPF::hasPreserveAIEnumeratorRef(Lo) ||
-                      SemaBPF::hasPreserveAIEnumeratorRef(CS->getRHS())))
+        if (IsBPF && (SemaBPF::hasPreserveEnumValue(Lo) ||
+                      SemaBPF::hasPreserveEnumValue(CS->getRHS())))
           RelocatedCaseRanges.insert(CS);
-      } else if (IsBPF && SemaBPF::hasPreserveAIEnumeratorRef(Lo))
+      } else if (IsBPF && SemaBPF::hasPreserveEnumValue(Lo))
         RelocatedCaseVals.push_back(std::make_pair(LoVal, CS));
       else
         CaseVals.push_back(std::make_pair(LoVal, CS));

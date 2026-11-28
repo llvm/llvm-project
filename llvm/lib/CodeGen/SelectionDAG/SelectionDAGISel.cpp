@@ -1528,8 +1528,8 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
 /// Return false if it needs to be emitted.
 static bool isFoldedOrDeadInstruction(const Instruction *I,
                                       const FunctionLoweringInfo &FuncInfo) {
-  return !I->mayWriteToMemory() && // Side-effecting instructions aren't folded.
-         !I->isTerminator() &&     // Terminators aren't folded.
+  return !I->mayHaveSideEffects() &&  // Side-effecting instrs aren't folded.
+         !I->isTerminator() &&        // Terminators aren't folded.
          !I->isEHPad() &&             // EH pad instructions aren't folded.
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }

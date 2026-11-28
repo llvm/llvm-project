@@ -24,7 +24,7 @@ define void @store8(i8 %v, ptr %p) {
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
+; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 0
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP7]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[V]], ptr [[P]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    ret void
@@ -35,7 +35,7 @@ define void @store8(i8 %v, ptr %p) {
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP5]], align 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[V]], ptr [[P]], align 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    ret void
@@ -53,9 +53,9 @@ define void @store16(i16 %v, ptr %p) {
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
+; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 0
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP7]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 1
+; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i64 1
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP8]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    store i16 [[V]], ptr [[P]], align 2
 ; COMBINE_PTR_LABEL-NEXT:    ret void
@@ -66,9 +66,9 @@ define void @store16(i16 %v, ptr %p) {
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP5]], align 1
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i32 1
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i64 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP6]], align 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i16 [[V]], ptr [[P]], align 2
 ; NO_COMBINE_PTR_LABEL-NEXT:    ret void
@@ -86,13 +86,13 @@ define void @store32(i32 %v, ptr %p) {
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
+; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 0
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP7]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 1
+; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i64 1
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP8]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP6]], i32 2
+; COMBINE_PTR_LABEL-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP6]], i64 2
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP9]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i32 3
+; COMBINE_PTR_LABEL-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i64 3
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP3]], ptr [[TMP10]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; COMBINE_PTR_LABEL-NEXT:    ret void
@@ -103,13 +103,13 @@ define void @store32(i32 %v, ptr %p) {
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP5]], align 1
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i32 1
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i64 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP6]], align 1
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i32 2
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i64 2
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP7]], align 1
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP4]], i32 3
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP4]], i64 3
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP8]], align 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; NO_COMBINE_PTR_LABEL-NEXT:    ret void
@@ -135,7 +135,7 @@ define void @store64(i64 %v, ptr %p) {
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP11]], i8 [[TMP3]], i32 5
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP3]], i32 6
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP3]], i32 7
-; COMBINE_PTR_LABEL-NEXT:    [[TMP15:%.*]] = getelementptr <8 x i8>, ptr [[TMP6]], i32 0
+; COMBINE_PTR_LABEL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP6]], i64 0
 ; COMBINE_PTR_LABEL-NEXT:    store <8 x i8> [[TMP14]], ptr [[TMP15]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    store i64 [[V]], ptr [[P]], align 8
 ; COMBINE_PTR_LABEL-NEXT:    ret void
@@ -154,7 +154,7 @@ define void @store64(i64 %v, ptr %p) {
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP10:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP1]], i32 5
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP11:%.*]] = insertelement <8 x i8> [[TMP10]], i8 [[TMP1]], i32 6
 ; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP11]], i8 [[TMP1]], i32 7
-; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP13:%.*]] = getelementptr <8 x i8>, ptr [[TMP4]], i32 0
+; NO_COMBINE_PTR_LABEL-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
 ; NO_COMBINE_PTR_LABEL-NEXT:    store <8 x i8> [[TMP12]], ptr [[TMP13]], align 1
 ; NO_COMBINE_PTR_LABEL-NEXT:    store i64 [[V]], ptr [[P]], align 8
 ; NO_COMBINE_PTR_LABEL-NEXT:    ret void
@@ -170,13 +170,13 @@ define void @store_zero(ptr %p) {
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; COMBINE_PTR_LABEL-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; COMBINE_PTR_LABEL-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 0
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP5]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i32 1
+; COMBINE_PTR_LABEL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i64 1
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP6]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i32 2
+; COMBINE_PTR_LABEL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i64 2
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP7]], align 1
-; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP4]], i32 3
+; COMBINE_PTR_LABEL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP4]], i64 3
 ; COMBINE_PTR_LABEL-NEXT:    store i8 [[TMP1]], ptr [[TMP8]], align 1
 ; COMBINE_PTR_LABEL-NEXT:    store i32 0, ptr [[P]], align 4
 ; COMBINE_PTR_LABEL-NEXT:    ret void

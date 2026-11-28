@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "codegen-common"
 

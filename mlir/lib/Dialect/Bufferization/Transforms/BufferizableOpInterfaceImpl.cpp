@@ -132,7 +132,8 @@ struct AllocTensorOpInterface
       return op->emitError() << "allocating a buffer of type " << *allocType
                              << " is not supported";
     SmallVector<Value> dynamicDims = allocTensorOp.getDynamicSizes();
-    if (allocTensorOp.getCopy()) {
+    // populateDynamicDimSizes supports no buffer type other than a memref.
+    if (allocTensorOp.getCopy() && isa<MemRefType>(copyBuffer.getType())) {
       assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
       populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
     }

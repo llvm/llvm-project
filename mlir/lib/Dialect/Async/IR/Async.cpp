@@ -15,13 +15,6 @@ using namespace mlir::async;
 
 #include "mlir/Dialect/Async/IR/AsyncOpsDialect.cpp.inc"
 
-void AsyncDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
-      >();
-}
-
 //===----------------------------------------------------------------------===//
 /// ExecuteOp
 //===----------------------------------------------------------------------===//

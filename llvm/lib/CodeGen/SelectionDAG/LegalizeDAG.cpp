@@ -4746,19 +4746,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::ATOMIC_FENCE: {
     // If the target didn't lower this, lower it to '__sync_synchronize()' call
     // FIXME: handle "fence singlethread" more efficiently.
-    TargetLowering::ArgListTy Args;
-
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl)
-        .setChain(Node->getOperand(0))
-        .setLibCallee(
-            CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-            DAG.getExternalSymbol("__sync_synchronize",
-                                  TLI.getPointerTy(DAG.getDataLayout())),
-            std::move(Args));
-
-    std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-
+    std::pair<SDValue, SDValue> CallResult =
+        TLI.makeLibCall(DAG, RTLIB::SYNC_SYNCHRONIZE, MVT::isVoid, {},
+                        CallOptions, dl, Node->getOperand(0));
     Results.push_back(CallResult.second);
     break;
   }

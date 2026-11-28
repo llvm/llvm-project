@@ -3647,4 +3647,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Write the result to the file.
   writeResult<ELFT>(ctx);
+
+  // Linux unmaps serially at exit, so drop input file mappings in parallel.
+  if (ctx.e.exitEarly && ctx.arg.threadCount > 1) {
+    parallelForEach(ctx.memoryBuffers, [](std::unique_ptr<MemoryBuffer> &mb) {
+      mb->dontNeedIfMmap();
+    });
+  }
 }

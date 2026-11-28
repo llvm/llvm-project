@@ -100,7 +100,6 @@ mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRExecutionEngineUtils
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
-  MLIROpenMPToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   )
 

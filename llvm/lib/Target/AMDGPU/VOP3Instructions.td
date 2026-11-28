@@ -1940,14 +1940,11 @@ let SubtargetPredicate = isGFX1250Plus in {
         defm V_CVT_SCALE_PK8_BF16_BF8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_bf8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_bf8>;
         defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
         defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
+        defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
+        defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
+        defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
       } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
     } // End Constraints = "@earlyclobber $vdst"
-
-    let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
-      defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
-      defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
-      defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
-    } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
   } // End ReadsModeReg = 0
 
   let Constraints = "@earlyclobber $vdst" in {
@@ -2160,7 +2157,8 @@ let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseRealTrue16Insts in
   defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
 }
 
-let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts in {
+let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts,
+    Constraints = "@earlyclobber $vdst" in {
   defm V_CVT_SCALEF32_PK32_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f32>;
   defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f32>;
 }

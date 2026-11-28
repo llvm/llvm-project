@@ -226,12 +226,10 @@ class MIRVocabulary {
   }
 
   /// Get entity ID (flat index) for a register
-  /// This is used for triplet generation
+  /// This is used for triplet generation. Reg must be a physical or virtual
+  /// register.
   unsigned getEntityIDForRegister(Register Reg,
                                   const MachineRegisterInfo &MRI) const {
-    if (!Reg.isValid() || Reg.isStack())
-      return Layout
-          .VirtRegBase; // Return VirtRegBase for invalid/stack registers
     size_t BaseOffset =
         Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
     return BaseOffset + getRegisterOperandIndex(Reg, MRI);

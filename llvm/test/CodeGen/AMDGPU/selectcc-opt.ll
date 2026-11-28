@@ -1,11 +1,8 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}test_a:
-; EG-NOT: CND
-; EG: SET{{[NEQGTL]+}}_DX10
 
 define amdgpu_kernel void @test_a(ptr addrspace(1) %out, float %in) {
 entry:
@@ -30,12 +27,6 @@ ENDIF:
 
 ; Same as test_a, but the branch labels are swapped to produce the inverse cc
 ; for the icmp instruction
-
-; EG-LABEL: {{^}}test_b:
-; EG: SET{{[GTEQN]+}}_DX10
-; EG-NEXT: 0(0.000000e+00), 0(0.000000e+00)
-; EG-NEXT: PRED_
-; EG-NEXT: ALU clause starting
 define amdgpu_kernel void @test_b(ptr addrspace(1) %out, float %in) {
 entry:
   %0 = fcmp olt float %in, 0.0
@@ -57,9 +48,7 @@ ENDIF:
   ret void
 }
 
-; Test a CND*_INT instruction with float true/false values
-; EG-LABEL: {{^}}test_c:
-; EG: CND{{[GTE]+}}_INT
+; Test a select with float true/false values
 define amdgpu_kernel void @test_c(ptr addrspace(1) %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0

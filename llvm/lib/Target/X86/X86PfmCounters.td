@@ -185,6 +185,19 @@ def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cascadelake", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cannonlake", SkylakeServerPfmCounters>;
 
+// Validation counters for Intel Ice Lake and newer microarchitectures, where
+// MEM_LOAD_UOPS_RETIRED was renamed to MEM_LOAD_RETIRED and the
+// MISS_CAUSES_A_WALK umask was removed in favor of WALK_COMPLETED.
+defvar IceLakePfmValidationCounters = [
+  PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">,
+  PfmValidationCounter<L1DCacheLoadMiss, "MEM_LOAD_RETIRED:L1_MISS">,
+  PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
+  PfmValidationCounter<DataTLBLoadMiss, "DTLB_LOAD_MISSES:WALK_COMPLETED">,
+  PfmValidationCounter<DataTLBStoreMiss, "DTLB_STORE_MISSES:WALK_COMPLETED">,
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:WALK_COMPLETED">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
+];
+
 def IceLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
@@ -197,7 +210,7 @@ def IceLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ICXPort6",  "uops_dispatched:port_6">,
     PfmIssueCounter<"ICXPort78", "uops_dispatched:port_7_8">
   ];
-  let ValidationCounters = DefaultIntelPfmValidationCounters;
+  let ValidationCounters = IceLakePfmValidationCounters;
 }
 def : PfmCountersBinding<"icelake-client", IceLakePfmCounters>;
 def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
@@ -216,7 +229,7 @@ def AlderLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ADLPPort06", "uops_dispatched:port_6">,
     PfmIssueCounter<"ADLPPort07_08", "uops_dispatched:port_7_8">
   ];
-  let ValidationCounters = DefaultIntelPfmValidationCounters;
+  let ValidationCounters = IceLakePfmValidationCounters;
 }
 def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
 
@@ -232,7 +245,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SPRPort06", "uops_dispatched:port_6">,
     PfmIssueCounter<"SPRPort07_08", "uops_dispatched:port_7_8">,
   ];
-  let ValidationCounters = DefaultIntelPfmValidationCounters;
+  let ValidationCounters = IceLakePfmValidationCounters;
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
 def : PfmCountersBinding<"emeraldrapids", SapphireRapidsPfmCounters>;
@@ -254,7 +267,7 @@ def LunarLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"LNLPPort25_26_27", "uops_dispatched:sta">,
     PfmIssueCounter<"LNLPPort10_11", "uops_dispatched:std">
   ];
-  let ValidationCounters = DefaultIntelPfmValidationCounters;
+  let ValidationCounters = IceLakePfmValidationCounters;
 }
 def : PfmCountersBinding<"lunarlake", LunarLakePfmCounters>;
 
@@ -378,8 +391,8 @@ def ZnVer4PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cycles_not_in_halt">;
   let UopsCounter = PfmCounter<"retired_ops">;
   let IssueCounters = [
-    PfmIssueCounter<"Zn4Int", "ops_type_dispatched_from_decoder:int_disp_retire_mode">,
-    PfmIssueCounter<"Zn4FPU", "ops_type_dispatched_from_decoder:fp_disp_retire_mode">,
+    PfmIssueCounter<"Zn4Int", "ops_type_dispatched_from_decoder:integer_dispatch">,
+    PfmIssueCounter<"Zn4FPU", "ops_type_dispatched_from_decoder:fp_dispatch">,
     PfmIssueCounter<"Zn4Load", "ls_dispatch:ld_dispatch">,
     PfmIssueCounter<"Zn4Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn4Divider", "div_op_count">,

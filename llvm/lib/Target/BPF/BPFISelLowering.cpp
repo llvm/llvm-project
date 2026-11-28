@@ -843,7 +843,7 @@ BPFTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-BPFTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+BPFTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   // Store release is not ordered with a later load. xchg is fully ordered.
   if (HasLoadAcqStoreRel &&
       SI->getOrdering() == AtomicOrdering::SequentiallyConsistent)

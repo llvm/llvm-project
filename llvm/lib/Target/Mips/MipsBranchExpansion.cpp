@@ -156,8 +156,9 @@ class MipsBranchExpansionImpl {
   bool handleLoadDelaySlot();
   bool handlePossibleLongBranch();
   bool handleMFLO();
-  template <typename Pred, typename Safe>
-  bool handleMFLOSlot(Pred Predicate, Safe SafeInSlot);
+  unsigned distanceToHILOWrite(MachineBasicBlock &MBB,
+                               MachineBasicBlock::instr_iterator I,
+                               unsigned Dist);
 
   const MipsSubtarget *STI;
   const MipsInstrInfo *TII;
@@ -727,53 +728,29 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
   MBB.removeLiveIn(Mips::R2);
 }
 
-template <typename Pred, typename Safe>
-bool MipsBranchExpansionImpl::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
-  bool Changed = false;
-  bool hasPendingMFLO = false;
-
-  for (MachineFunction::iterator FI = MFp->begin(); FI != MFp->end(); ++FI) {
-    for (Iter I = FI->begin(); I != FI->end(); ++I) {
-
-      if (!Predicate(*I) && !hasPendingMFLO) {
-        continue;
-      }
-
-      Iter IInSlot;
-      bool LastInstInFunction =
-          std::next(I) == FI->end() && std::next(FI) == MFp->end();
-      // We need process several situations:
-      // mflo is last instruction, do not process;
-      // mflo + div, add two nop between them;
-      // mflo + none-div + none-div, do not process;
-      // mflo + none-div + div, add nop between none-div and div.
-      if (!LastInstInFunction) {
-        std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
-        LastInstInFunction |= Res.second;
-        IInSlot = Res.first;
-        if (LastInstInFunction)
-          continue;
-        if (!SafeInSlot(*IInSlot, *I)) {
-          Changed = true;
-          TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
-              ->bundleWithPred();
-          NumInsertedNops++;
-          if (IsMFLOMFHI(I->getOpcode())) {
-            TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
-                ->bundleWithPred();
-            NumInsertedNops++;
-          }
-          if (hasPendingMFLO)
-            hasPendingMFLO = false;
-        } else if (hasPendingMFLO)
-          hasPendingMFLO = false;
-        else if (IsMFLOMFHI(I->getOpcode()))
-          hasPendingMFLO = true;
-      }
-    }
+// Returns how many instructions after an mflo or mfhi the first instruction
+// that writes HI or LO executes, looking at the instructions from I to the end
+// of MBB and then at every successor. Dist is the number of instructions
+// already counted. Returns 0 if no such instruction is within the two that
+// must follow the mflo or mfhi.
+unsigned MipsBranchExpansionImpl::distanceToHILOWrite(
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator I,
+    unsigned Dist) {
+  for (MachineBasicBlock::instr_iterator E = MBB.instr_end(); I != E; ++I) {
+    if (I->isTransient())
+      continue;
+    ++Dist;
+    if (!TII->SafeAfterMflo(*I))
+      return Dist;
+    if (Dist == 2)
+      return 0;
   }
 
-  return Changed;
+  unsigned Min = 0;
+  for (MachineBasicBlock *Succ : MBB.successors())
+    if (unsigned D = distanceToHILOWrite(*Succ, Succ->instr_begin(), Dist))
+      Min = Min ? std::min(Min, D) : D;
+  return Min;
 }
 
 // Returns true if MI is a NOP, either the NOP pseudo or the SLL $zero, $zero, 0
@@ -830,15 +807,60 @@ bool MipsBranchExpansionImpl::handleSlot(Pred Predicate, Safe SafeInSlot) {
 
 bool MipsBranchExpansionImpl::handleMFLO() {
   // mips1-4 require a minimum of 2 instructions between a mflo/mfhi
-  // and the next mul/div instruction.
+  // and the next instruction that writes HI or LO. Check every instruction
+  // that can execute next, including those in delay slots and successors.
   if (STI->hasMips32() || STI->hasMips5())
     return false;
 
-  return handleMFLOSlot(
-      [this](auto &I) -> bool { return TII->IsMfloOrMfhi(I); },
-      [this](auto &IInSlot, auto &I) -> bool {
-        return TII->SafeAfterMflo(IInSlot);
-      });
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : *MFp) {
+    for (MachineBasicBlock::instr_iterator I = MBB.instr_begin(),
+                                           E = MBB.instr_end();
+         I != E; ++I) {
+      if (!TII->IsMfloOrMfhi(*I))
+        continue;
+
+      if (!I->isBundledWithPred()) {
+        unsigned Dist = distanceToHILOWrite(MBB, std::next(I), 0);
+        if (!Dist)
+          continue;
+
+        // If the instruction that writes HI or LO is in this block, add the
+        // nops right before it, or before its branch if it is in a delay
+        // slot, where they can also cover a load delay slot. Otherwise add
+        // them right after the mflo, so they are on every path.
+        MachineBasicBlock::instr_iterator W = std::next(I);
+        for (unsigned N = 0; W != E; ++W)
+          if (!W->isTransient() && ++N == Dist)
+            break;
+        bool InBlock = W != E && !TII->SafeAfterMflo(*W);
+        Iter Pos = InBlock ? Iter(getBundleStart(W)) : std::next(Iter(I));
+        for (; Dist <= 2; ++Dist) {
+          MachineInstrBuilder Nop = TII->insertNop(MBB, Pos, I->getDebugLoc());
+          if (!InBlock)
+            Nop->bundleWithPred();
+          NumInsertedNops++;
+          Changed = true;
+        }
+        continue;
+      }
+
+      // The mflo is in a delay slot and ends the block, so add the nops at
+      // the start of each successor that needs them.
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        unsigned Dist = distanceToHILOWrite(*Succ, Succ->instr_begin(), 0);
+        Iter Pos = Succ->empty() ? Succ->end()
+                                 : getNextMachineInstrInBB(Succ->begin());
+        for (; Dist && Dist <= 2; ++Dist) {
+          TII->insertNop(*Succ, Pos, I->getDebugLoc());
+          NumInsertedNops++;
+          Changed = true;
+        }
+      }
+    }
+  }
+
+  return Changed;
 }
 
 bool MipsBranchExpansionImpl::handleForbiddenSlot() {
@@ -944,8 +966,8 @@ bool MipsBranchExpansionImpl::runOnMachineFunction(MachineFunction &MF) {
   MFp = &MF;
 
   ForceLongBranchFirstPass = STI->getCLOpts().force_mips_long_branch;
-  // Long branch expansion does not create MFLO/MFHI hazards, and handleMFLO()
-  // is not idempotent, so only run it once.
+  // Long branch expansion does not create MFLO/MFHI hazards, so only run
+  // handleMFLO() once.
   bool Changed = handleMFLO();
 
   // Only long branch expansion depends on instruction sizes, so run it last

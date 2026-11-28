@@ -450,20 +450,23 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -2032
 ; LA32-NEXT:    .cfi_def_cfa_offset 2032
 ; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 2032
+; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    lu12i.w $a0, 1
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    .cfi_def_cfa_offset 6128
 ; LA32-NEXT:    addi.w $sp, $sp, -80
-; LA32-NEXT:    .cfi_def_cfa_offset 6208
-; LA32-NEXT:    lu12i.w $a0, 1
-; LA32-NEXT:    ori $a0, $a0, 36
-; LA32-NEXT:    add.w $a0, $sp, $a0
+; LA32-NEXT:    lu12i.w $a0, -1
+; LA32-NEXT:    ori $a0, $a0, 2012
+; LA32-NEXT:    add.w $a0, $fp, $a0
 ; LA32-NEXT:    bl callee_stack_args
 ; LA32-NEXT:    lu12i.w $a0, 1
 ; LA32-NEXT:    ori $a0, $a0, 80
 ; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $fp, $sp, 2024 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 2032
 ; LA32-NEXT:    ret

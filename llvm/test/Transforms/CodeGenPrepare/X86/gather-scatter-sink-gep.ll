@@ -13,10 +13,10 @@ define void @hoisted_gep(ptr %p, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_gep(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[G:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[V]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr <8 x float>, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store <8 x float> [[G]], ptr [[QI]], align 32
@@ -49,11 +49,11 @@ define void @hoisted_nested_gep(ptr %p, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_nested_gep(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[F:%.*]] = getelementptr i8, <8 x ptr> [[V]], i64 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[F:%.*]] = getelementptr [12 x i8], ptr [[TMP0]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[G:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[F]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr <8 x float>, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store <8 x float> [[G]], ptr [[QI]], align 32
@@ -85,13 +85,13 @@ define void @hoisted_nested_gep_scatter(ptr %p, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_nested_gep_scatter(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[F:%.*]] = getelementptr i8, <8 x ptr> [[V]], i64 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr <8 x float>, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    [[X:%.*]] = load <8 x float>, ptr [[QI]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[F:%.*]] = getelementptr [12 x i8], ptr [[TMP0]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> [[X]], <8 x ptr> align 4 [[F]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
@@ -117,21 +117,23 @@ exit:
   ret void
 }
 
-; Several fields share the inner GEP: it is sunk only once into the loop, and
-; every field gets its own scalar base.
+; Several fields share the inner GEP. Each field gets its own scalar base, and
+; accesses to the same field in the loop share the sunk GEP.
 define void @shared_inner_gep(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @shared_inner_gep(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[FB:%.*]] = getelementptr i8, <8 x ptr> [[V]], i64 4
-; CHECK-NEXT:    [[FC:%.*]] = getelementptr i8, <8 x ptr> [[V]], i64 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[A:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[V]], <8 x i1> splat (i1 true), <8 x float> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[FB:%.*]] = getelementptr [12 x i8], ptr [[TMP1]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[FB]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[S:%.*]] = fadd <8 x float> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[FC:%.*]] = getelementptr [12 x i8], ptr [[TMP3]], <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> [[S]], <8 x ptr> align 4 [[FC]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[A2:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[V]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[S2:%.*]] = fadd <8 x float> [[A2]], [[S]]
@@ -171,11 +173,11 @@ define void @hoisted_index(ptr %p, <8 x i32> %idx, ptr %q, i64 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], <8 x i32> [[IDX:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[EXT:%.*]] = sext <8 x i32> [[IDX]] to <8 x i64>
-; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <8 x i64> [[EXT]]
-; CHECK-NEXT:    [[F:%.*]] = getelementptr i8, <8 x ptr> [[V]], i64 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[F:%.*]] = getelementptr [12 x i8], ptr [[TMP0]], <8 x i64> [[EXT]]
 ; CHECK-NEXT:    [[G:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[F]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr <8 x float>, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store <8 x float> [[G]], ptr [[QI]], align 32
@@ -209,12 +211,10 @@ define void @hoisted_splat_base(ptr %p, <4 x i64> %idx, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_splat_base(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i64> [[IDX:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x ptr> poison, ptr [[P]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x ptr> [[INS]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[V:%.*]] = getelementptr i32, <4 x ptr> [[SPLAT]], <4 x i64> [[IDX]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = getelementptr i32, ptr [[P]], <4 x i64> [[IDX]]
 ; CHECK-NEXT:    [[G:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[V]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr <4 x i32>, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store <4 x i32> [[G]], ptr [[QI]], align 16
@@ -243,8 +243,10 @@ exit:
   ret void
 }
 
-; 2-D array a[lane][idx[i]]: only the row GEP is hoisted. It is sunk next to
-; its user in the loop, which both the gather and the scatter share.
+; Negative test: 2-D array a[lane][idx[i]] with only the row GEP hoisted. The
+; two vector indices can't be combined into a single one without emitting index
+; arithmetic, and just sinking the row GEP doesn't expose a uniform base, so
+; nothing is done.
 define void @hoisted_row_gep(ptr %p, ptr %idxp, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_row_gep(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IDXP:%.*]], i64 [[N:%.*]]) {
@@ -287,8 +289,7 @@ exit:
   ret void
 }
 
-; Both GEPs of the 2-D access are hoisted: the whole chain is sunk once and
-; shared by the gather and the scatter.
+; Negative test: same with both GEPs of the 2-D access hoisted.
 define void @hoisted_2d_chain(ptr %p, <4 x i64> %x, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @hoisted_2d_chain(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i64> [[X:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
@@ -331,14 +332,33 @@ define <8 x float> @local_nested_gep(ptr %p, <8 x i32> %idx, <8 x i1> %m) {
 ; CHECK-LABEL: define <8 x float> @local_nested_gep(
 ; CHECK-SAME: ptr [[P:%.*]], <8 x i32> [[IDX:%.*]], <8 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[EXT:%.*]] = sext <8 x i32> [[IDX]] to <8 x i64>
-; CHECK-NEXT:    [[V:%.*]] = getelementptr inbounds [12 x i8], ptr [[P]], <8 x i64> [[EXT]]
-; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds i8, <8 x ptr> [[V]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[F:%.*]] = getelementptr [12 x i8], ptr [[TMP1]], <8 x i64> [[EXT]]
 ; CHECK-NEXT:    [[G:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[F]], <8 x i1> [[M]], <8 x float> poison)
 ; CHECK-NEXT:    ret <8 x float> [[G]]
 ;
   %ext = sext <8 x i32> %idx to <8 x i64>
   %v = getelementptr inbounds [12 x i8], ptr %p, <8 x i64> %ext
   %f = getelementptr inbounds i8, <8 x ptr> %v, i64 8
+  %g = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %f, <8 x i1> %m, <8 x float> poison)
+  ret <8 x float> %g
+}
+
+; Same with a splat base pointer and a splat offset.
+define <8 x float> @local_nested_gep_splat(ptr %p, <8 x i64> %idx, i64 %off, <8 x i1> %m) {
+; CHECK-LABEL: define <8 x float> @local_nested_gep_splat(
+; CHECK-SAME: ptr [[P:%.*]], <8 x i64> [[IDX:%.*]], i64 [[OFF:%.*]], <8 x i1> [[M:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [12 x i8], ptr [[TMP1]], <8 x i64> [[IDX]]
+; CHECK-NEXT:    [[G:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 [[TMP2]], <8 x i1> [[M]], <8 x float> poison)
+; CHECK-NEXT:    ret <8 x float> [[G]]
+;
+  %p.ins = insertelement <8 x ptr> poison, ptr %p, i64 0
+  %p.splat = shufflevector <8 x ptr> %p.ins, <8 x ptr> poison, <8 x i32> zeroinitializer
+  %off.ins = insertelement <8 x i64> poison, i64 %off, i64 0
+  %off.splat = shufflevector <8 x i64> %off.ins, <8 x i64> poison, <8 x i32> zeroinitializer
+  %v = getelementptr [12 x i8], <8 x ptr> %p.splat, <8 x i64> %idx
+  %f = getelementptr i8, <8 x ptr> %v, <8 x i64> %off.splat
   %g = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 %f, <8 x i1> %m, <8 x float> poison)
   ret <8 x float> %g
 }
@@ -377,4 +397,68 @@ loop:
 
 exit:
   ret void
+}
+
+; The hoisted GEP has another use, so it is kept. The gather and the scatter
+; share the GEP sunk into their block.
+define void @hoisted_gep_other_use(ptr %p, <4 x i64> %idx, ptr %out, <4 x i1> %m, i1 %cond) {
+; CHECK-LABEL: define void @hoisted_gep_other_use(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i64> [[IDX:%.*]], ptr [[OUT:%.*]], <4 x i1> [[M:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = getelementptr [12 x i8], ptr [[P]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    [[F:%.*]] = getelementptr i8, <4 x ptr> [[V]], i64 4
+; CHECK-NEXT:    store <4 x ptr> [[F]], ptr [[OUT]], align 32
+; CHECK-NEXT:    br i1 [[COND]], label %[[ACCESS:.*]], label %[[EXIT:.*]]
+; CHECK:       [[ACCESS]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [12 x i8], ptr [[TMP0]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    [[A:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP1]], <4 x i1> [[M]], <4 x i32> poison)
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[A]], splat (i32 1)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[A1]], <4 x ptr> align 4 [[TMP1]], <4 x i1> [[M]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v = getelementptr [12 x i8], ptr %p, <4 x i64> %idx
+  %f = getelementptr i8, <4 x ptr> %v, i64 4
+  store <4 x ptr> %f, ptr %out
+  br i1 %cond, label %access, label %exit
+
+access:
+  %a = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %f, <4 x i1> %m, <4 x i32> poison)
+  %a1 = add <4 x i32> %a, splat (i32 1)
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %a1, <4 x ptr> align 4 %f, <4 x i1> %m)
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The GEP is sunk into each block accessing it.
+define <4 x i32> @multiple_access_blocks(ptr %p, <4 x i64> %idx, <4 x i1> %m, i1 %cond) {
+; CHECK-LABEL: define <4 x i32> @multiple_access_blocks(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i64> [[IDX:%.*]], <4 x i1> [[M:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
+; CHECK:       [[LEFT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    [[A:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> [[M]], <4 x i32> poison)
+; CHECK-NEXT:    ret <4 x i32> [[A]]
+; CHECK:       [[RIGHT]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP1]], <4 x i1> [[M]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <4 x i32> [[B]]
+;
+entry:
+  %v = getelementptr i32, ptr %p, <4 x i64> %idx
+  br i1 %cond, label %left, label %right
+
+left:
+  %a = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %v, <4 x i1> %m, <4 x i32> poison)
+  ret <4 x i32> %a
+
+right:
+  %b = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %v, <4 x i1> %m, <4 x i32> zeroinitializer)
+  ret <4 x i32> %b
 }

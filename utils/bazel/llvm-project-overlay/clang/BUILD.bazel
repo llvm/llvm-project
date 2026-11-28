@@ -878,6 +878,7 @@ cc_library(
     name = "config",
     hdrs = [
         "include/clang/Basic/Version.inc",
+        "include/clang/Config/clang-config.h",
         "include/clang/Config/config.h",
     ],
     defines = select({
@@ -2205,6 +2206,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "codegen_cl_options_gen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenCLOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "lib/CodeGen/CodeGenCLOptions.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_library(
     name = "codegen",
     srcs = glob(
@@ -2232,6 +2242,7 @@ cc_library(
         ":basic_riscv_andes_vector_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
+        ":codegen_cl_options_gen",
         ":codegen_utils",
         ":driver",
         ":frontend",
@@ -2267,6 +2278,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:ObjCARC",
         "//llvm:Object",
+        "//llvm:Option",
         "//llvm:Passes",
         "//llvm:Plugins",
         "//llvm:ProfileData",
@@ -2326,6 +2338,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":config",
         "//llvm:Support",
     ],
 )
@@ -2581,13 +2594,24 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "APINotesTestOptsTableGen",
+    strip_include_prefix = "tools/apinotes-test",
+    tbl_outs = {"tools/apinotes-test/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/apinotes-test/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "apinotes-test",
     testonly = True,
     srcs = ["tools/apinotes-test/APINotesTest.cpp"],
     stamp = 0,
     deps = [
+        ":APINotesTestOptsTableGen",
         ":apinotes",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )
@@ -2744,13 +2768,24 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "ClangDiffOptsTableGen",
+    strip_include_prefix = "tools/clang-diff",
+    tbl_outs = {"tools/clang-diff/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-diff/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "clang-diff",
     srcs = glob(["tools/clang-diff/*.cpp"]),
     stamp = 0,
     deps = [
+        ":ClangDiffOptsTableGen",
         ":ast-diff",
         ":tooling",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )

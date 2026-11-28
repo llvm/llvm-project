@@ -20,6 +20,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
@@ -66,15 +67,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-
-namespace clang {
-// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
-//       by -fsanitize-skip-hot-cutoff
-llvm::cl::opt<bool> ClSanitizeGuardChecks(
-    "ubsan-guard-checks",
-    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
-
-} // namespace clang
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
@@ -4352,7 +4344,7 @@ void CodeGenFunction::EmitCheck(
   // LowerAllowCheckPass.
   for (auto &[Check, Ord] : Checked) {
     llvm::Value *GuardedCheck = Check;
-    if (ClSanitizeGuardChecks ||
+    if (CGM.getCLOpts().ubsan_guard_checks ||
         (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] > 0)) {
       llvm::Value *Allow = Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),

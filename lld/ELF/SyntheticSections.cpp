@@ -3769,36 +3769,105 @@ void MergeNoTailSection::writeTo(uint8_t *buf) {
               [&](size_t i) { shards[i].write(buf + shardOffsets[i]); });
 }
 
-// This function is very hot (i.e. it can take several seconds to finish)
-// because sometimes the number of inputs is in an order of magnitude of
-// millions. So, we use multi-threading.
-//
-// For any strings S and T, we know S is not mergeable with T if S's hash
-// value is different from T's. If that's the case, we can safely put S and
-// T into different string builders without worrying about merge misses.
-// We do it in parallel.
+namespace {
+// The live pieces of a chunk in a shard, and their offsets within the shard.
+struct MergeRefs {
+  SmallVector<CachedHashStringRef, 0> in;
+  SmallVector<uint64_t, 0> out;
+};
+} // namespace
+
+// This is hot: a debug build can have 100M+ pieces. Equal strings have equal
+// hashes, so the pieces are partitioned into shards by hash and each shard is
+// deduplicated independently. A shard sees its pieces in input order, so the
+// layout does not depend on the thread count.
 void MergeNoTailSection::finalizeContents() {
   // Initializes string table builders.
   for (size_t i = 0; i < numShards; ++i)
     shards.emplace_back(StringTableBuilder::RAW, llvm::Align(addralign));
 
-  // Concurrency level. Must be a power of 2 to avoid expensive modulo
-  // operations in the following tight loop.
-  const size_t concurrency =
-      llvm::bit_floor(std::min<size_t>(ctx.arg.threadCount, numShards));
+  // Process the sections in waves of about waveSize pieces to bound the memory
+  // used by MergeRefs (24 bytes per piece, ~100 MiB per wave). Cut each wave
+  // into a few chunks per thread, but not so small that the per-chunk setup
+  // dominates.
+  constexpr size_t waveSize = 1 << 22;
+  size_t numPieces = 0;
+  for (MergeInputSection *sec : sections)
+    numPieces += sec->pieces.size();
+  size_t chunkSize = std::max<size_t>(
+      std::min(numPieces, waveSize) / (4 * parallel::getThreadCount()), 4096);
+  SmallVector<size_t, 0> starts, pieceCounts;
+  SmallVector<std::array<MergeRefs, numShards>, 0> refs;
+  for (size_t next = 0, e = sections.size(); next != e;) {
+    // Serial: cut the "next" wave into chunks of whole sections. A chunk takes
+    // sections up to `chunkSize` pieces and the wave takes chunks up to
+    // `waveSize` pieces, each at least one. Chunk c is sections[starts[c],
+    // starts[c + 1]) with pieceCounts[c] pieces.
+    starts.clear();
+    pieceCounts.clear();
+    size_t wavePieces = 0;
+    do {
+      starts.push_back(next);
+      size_t chunkPieces = 0;
+      do
+        chunkPieces += sections[next++]->pieces.size();
+      while (next != e &&
+             chunkPieces + sections[next]->pieces.size() <= chunkSize);
+      pieceCounts.push_back(chunkPieces);
+      wavePieces += chunkPieces;
+    } while (next != e &&
+             wavePieces + sections[next]->pieces.size() <= waveSize);
+    starts.push_back(next);
+    size_t numChunks = starts.size() - 1;
+    if (refs.size() < numChunks)
+      refs.resize(numChunks);
 
-  // Add section pieces to the builders.
-  parallelFor(0, concurrency, [&](size_t threadId) {
-    for (MergeInputSection *sec : sections) {
-      for (size_t i = 0, e = sec->pieces.size(); i != e; ++i) {
-        if (!sec->pieces[i].live)
-          continue;
-        size_t shardId = getShardId(sec->pieces[i].hash);
-        if ((shardId & (concurrency - 1)) == threadId)
-          sec->pieces[i].outputOff = shards[shardId].add(sec->getData(i));
+    // Phase 1, calculate hash values of live pieces, scattered by shard.
+    parallelFor(0, numChunks, [&](size_t c) {
+      std::array<MergeRefs, numShards> &r = refs[c];
+      // Expect pieceCounts[c] / numShards pieces per shard, plus slack for
+      // uneven hashing.
+      size_t perShard = pieceCounts[c] / numShards;
+      for (MergeRefs &v : r) {
+        v.in.clear();
+        v.in.reserve(perShard + perShard / 8 + 16);
       }
-    }
-  });
+      for (size_t i = starts[c]; i != starts[c + 1]; ++i) {
+        MergeInputSection *sec = sections[i];
+        for (size_t j = 0, e = sec->pieces.size(); j != e; ++j) {
+          if (!sec->pieces[j].live)
+            continue;
+          CachedHashStringRef s = sec->getData(j);
+          r[getShardId(s.hash())].in.push_back(s);
+        }
+      }
+    });
+
+    // Phase 2, deduplicate each shard on one thread, visiting the pieces in
+    // input order, so that the strings are placed in the order of their first
+    // occurrences.
+    parallelFor(0, numShards, [&](size_t shardId) {
+      StringTableBuilder &builder = shards[shardId];
+      for (size_t c = 0; c != numChunks; ++c) {
+        MergeRefs &r = refs[c][shardId];
+        r.out.resize_for_overwrite(r.in.size());
+        for (size_t i = 0, e = r.in.size(); i != e; ++i)
+          r.out[i] = builder.add(r.in[i]);
+      }
+    });
+
+    // Phase 3, parallel over chunks: gather the offsets within the shards,
+    // replaying each chunk in input order with a cursor per shard.
+    parallelFor(0, numChunks, [&](size_t c) {
+      size_t pos[numShards] = {};
+      for (size_t i = starts[c]; i != starts[c + 1]; ++i)
+        for (SectionPiece &piece : sections[i]->pieces)
+          if (piece.live) {
+            size_t shardId = getShardId(piece.hash);
+            piece.outputOff = refs[c][shardId].out[pos[shardId]++];
+          }
+    });
+  }
 
   // Compute an in-section offset for each shard.
   size_t off = 0;

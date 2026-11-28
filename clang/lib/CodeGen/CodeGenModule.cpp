@@ -22,6 +22,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGOpenMPRuntimeGPU.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
@@ -72,7 +73,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -90,10 +90,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-
-static llvm::cl::opt<bool> LimitedCoverage(
-    "limited-coverage-experimental", llvm::cl::Hidden,
-    llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
@@ -350,6 +346,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+/// AMDGCN, and the AMDGCN-flavoured SPIR-V that lowers to it, share one
+/// classifier.
+static bool usesAMDGPUABI(const llvm::Triple &T) {
+  return T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD);
+}
+
 bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
@@ -358,10 +360,12 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
-  // promotion rules and resource types are not modeled yet.
+  if (usesAMDGPUABI(T))
+    return true;
+
+  // HLSL's integer promotion rules and resource types are not modeled yet.
   if (T.isSPIRV())
-    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+    return !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -437,6 +441,19 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
+
+  if (usesAMDGPUABI(T)) {
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.PrivateAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+    Opts.CoerceGenericPtrArgToGlobal =
+        T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   switch (T.getArch()) {
   default:
@@ -582,7 +599,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              const CodeGenOptions &CGO, llvm::Module &M,
                              DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
-    : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
+    : CLOpts(getCodeGenCLOptions(M.getContext())), Context(C),
+      LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
@@ -7158,10 +7176,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   if (DeviceKernelAttr::isOpenCLSpelling(D->getAttr<DeviceKernelAttr>())) {
     if (GD.getKernelReferenceKind() == KernelReferenceKind::Stub &&
-        !D->hasAttr<NoInlineAttr>() &&
-        !Fn->hasFnAttribute(llvm::Attribute::NoInline) &&
-        !D->hasAttr<OptimizeNoneAttr>() &&
-        !Fn->hasFnAttribute(llvm::Attribute::OptimizeNone) &&
+        !D->hasAttr<NoInlineAttr>() && !D->hasAttr<OptimizeNoneAttr>() &&
         !ShouldAddOptNone) {
       Fn->addFnAttr(llvm::Attribute::AlwaysInline);
     }
@@ -8420,9 +8435,10 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
     if (!cast<FunctionDecl>(D)->doesThisDeclarationHaveABody())
       break;
     SourceManager &SM = getContext().getSourceManager();
-    if (LimitedCoverage && SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
+    if (CLOpts.limited_coverage_experimental &&
+        SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
       break;
-    if (!llvm::coverage::SystemHeadersCoverage &&
+    if (!CLOpts.system_headers_coverage &&
         SM.isInSystemHeader(D->getBeginLoc()))
       break;
     DeferredEmptyCoverageMappingDecls.try_emplace(D, true);

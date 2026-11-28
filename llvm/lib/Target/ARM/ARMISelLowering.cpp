@@ -584,9 +584,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
 
-    for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
-                    ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
-                    ISD::FROUNDEVEN, ISD::FTRUNC})
+    for (auto Op :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL, ISD::FFLOOR,
+          ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND, ISD::FROUNDEVEN,
+          ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM, ISD::FSQRT})
       setOperationAction(Op, MVT::bf16, Promote);
 
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
@@ -21431,11 +21432,11 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
   // Get the inputs.
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
 
   if (DAG.getMachineFunction().getFunction().hasFnAttribute(
           "no-stack-arg-probe")) {
-    MaybeAlign Align =
-        cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
     SDValue SP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
@@ -21459,6 +21460,12 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 
   SDValue NewSP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
   Chain = NewSP.getValue(1);
+
+  if (Align) {
+    NewSP = DAG.getNode(ISD::AND, DL, MVT::i32, NewSP,
+                        DAG.getSignedConstant(-Align->value(), DL, MVT::i32));
+    Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, NewSP);
+  }
 
   SDValue Ops[2] = { NewSP, Chain };
   return DAG.getMergeValues(Ops, DL);
@@ -21969,7 +21976,7 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // things go wrong. Cortex M doesn't have ldrexd/strexd though, so don't emit
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+ARMTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;
@@ -21997,7 +22004,7 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // guarantee, see DDI0406C ARM architecture reference manual,
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+ARMTargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;

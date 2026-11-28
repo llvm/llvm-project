@@ -641,4 +641,35 @@ TEST(NamelistTests, GroupEndsAtNextGroup) {
   EXPECT_EQ(*nDesc->ZeroBasedIndexedElement<int>(0), 5);
 }
 
+TEST(NamelistTests, QuoteDelimitedCharacterArray) {
+  OwningPtr<Descriptor> xDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{3}, std::vector<std::string>{"a b", "c\"d", "e  "}, 3)};
+  OwningPtr<Descriptor> aDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{}, std::vector<std::string>{"Z"}, 1)};
+  const NamelistGroup::Item items[]{{"x", *xDesc}, {"a", *aDesc}};
+  const NamelistGroup group{"nml", 2, items};
+  char buffer[40];
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char}, sizeof buffer, buffer, 0,
+      nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDelim)(outCookie, "QUOTE", 5));
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{buffer, sizeof buffer};
+  got.erase(got.find_last_not_of(' ') + 1);
+  EXPECT_EQ(got, " &NML X= \"a b\" \"c\"\"d\" \"e  \",A= \"Z\"/");
+
+  ClearDescriptorStorage(*xDesc);
+  ClearDescriptorStorage(*aDesc);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk) << "namelist input";
+  EXPECT_EQ(std::string(xDesc->OffsetElement<char>(0), 9), "a bc\"de  ");
+  EXPECT_EQ(*aDesc->OffsetElement<char>(0), 'Z');
+}
+
 // TODO: Internal NAMELIST error tests

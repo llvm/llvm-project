@@ -42,7 +42,7 @@ public:
 private:
   QuantityType Quantity = 0;
 
-  explicit CharUnits(QuantityType C) : Quantity(C) {}
+  explicit constexpr CharUnits(QuantityType C) : Quantity(C) {}
 
 public:
   /// A default constructor.
@@ -55,7 +55,7 @@ public:
   static CharUnits One() { return CharUnits(1); }
 
   /// Construct a CharUnits quantity from a raw integer type.
-  static CharUnits fromQuantity(QuantityType Quantity) {
+  static constexpr CharUnits fromQuantity(QuantityType Quantity) {
     return CharUnits(Quantity);
   }
 

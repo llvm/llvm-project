@@ -22,7 +22,6 @@ class Triple;
 class SPIRVMCAsmInfo : public MCAsmInfo {
 public:
   explicit SPIRVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
-  bool shouldOmitSectionDirective(StringRef SectionName) const override;
 };
 } // namespace llvm
 

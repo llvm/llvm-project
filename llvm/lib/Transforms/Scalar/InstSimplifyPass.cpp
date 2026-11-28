@@ -51,8 +51,8 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ) {
         } else if (!I.use_empty()) {
           if (Value *V = simplifyInstruction(&I, SQ)) {
             // Mark all uses for resimplification next time round the loop.
-            for (User *U : I.users())
-              Next->insert(cast<Instruction>(U));
+            for (Instruction *U : I.users())
+              Next->insert(U);
             I.replaceAllUsesWith(V);
             ++NumSimplified;
             Changed = true;

@@ -1217,8 +1217,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // is shifted off the end. That is sufficient with OrZero set, otherwise
     // the result must also be known never to be zero.
 
-    // TODO: Constant splat
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
         return true;
     }
@@ -1231,7 +1231,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     break;
   }
   case TargetOpcode::G_LSHR: {
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (ConstLHS->isSignMask())
         return true;
     }
@@ -1708,9 +1709,7 @@ bool llvm::isNullOrNullSplat(const MachineInstr &MI,
     return FPImm->isZero() && !FPImm->isNegative();
   }
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllZeros assumes undef is OK already
-      return false;
-    return isBuildVectorAllZeros(MI, MRI);
+    return isBuildVectorAllZeros(MI, MRI, AllowUndefs);
   }
 }
 
@@ -1723,9 +1722,7 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
   case TargetOpcode::G_CONSTANT:
     return MI.getOperand(1).getCImm()->isAllOnesValue();
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllOnes assumes undef is OK already
-      return false;
-    return isBuildVectorAllOnes(MI, MRI);
+    return isBuildVectorAllOnes(MI, MRI, AllowUndefs);
   }
 }
 

@@ -173,16 +173,17 @@ static const MachineInstr *
 findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
                                       SPIRV::ModuleAnalysisInfo &MAI) {
 
-  // We iterate over the instructions to find the last OpVariable instruction if
-  // any. The following SPIRV rule is used to terminate the traversal earlier:
-  // SPIR-V 2.16.1, Function Structure: "All OpVariable instructions in a
-  // function must be in the first block in the function. These instructions,
-  // together with any intermixed OpLine and OpNoLine instructions, must be the
-  // first instructions in that block."
+  // We iterate over the instructions to find the last OpVariable (or
+  // OpUntypedVariableKHR) instruction if any. The following SPIRV rule is used
+  // to terminate the traversal earlier: SPIR-V 2.16.1, Function Structure: "All
+  // OpVariable instructions in a function must be in the first block in the
+  // function. These instructions, together with any intermixed OpLine and
+  // OpNoLine instructions, must be the first instructions in that block."
   const MachineInstr *LastOpVariable = nullptr;
   bool SeenOpVariable = false;
   for (const MachineInstr &MI : MF.front()) {
-    if (MI.getOpcode() == SPIRV::OpVariable) {
+    if (MI.getOpcode() == SPIRV::OpVariable ||
+        MI.getOpcode() == SPIRV::OpUntypedVariableKHR) {
       SeenOpVariable = true;
       if (!MAI.getSkipEmission(&MI))
         LastOpVariable = &MI;
@@ -1949,7 +1950,8 @@ void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
     return;
 
   // DebugFunctionDefinition is emitted after the last function-level
-  // OpVariable. If there are none, it is emitted after the entry OpLabel.
+  // OpVariable (or OpUntypedVariableKHR). If there are none, it is emitted
+  // after the entry OpLabel.
   LastFunctionOpVariable =
       findLastFunctionOpVariableDeclaration(*MF, *CurrentMAI);
 
@@ -2012,9 +2014,10 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
 // The spec requires DebugDeclare's Variable operand to be "the <id> of an
 // OpVariable instruction that defines the local variable". MIR has no
 // DBG_DECLARE, so what this looks for is an indirect DBG_VALUE whose location
-// register an OpVariable defines.
+// register an OpVariable defines. \p AllowUntypedVariable allows an exception
+// and also accepts an OpUntypedVariableKHR.
 static std::optional<Register>
-getDebugDeclareStorageReg(const MachineInstr &MI) {
+getDebugDeclareStorageReg(const MachineInstr &MI, bool AllowUntypedVariable) {
   // #dbg_declare is an indirect DBG_VALUE in MIR; #dbg_value is normally a
   // direct one except for the variadic case.
   if (!MI.isIndirectDebugValue())
@@ -2026,8 +2029,8 @@ getDebugDeclareStorageReg(const MachineInstr &MI) {
   if (!LocReg.isVirtual())
     return std::nullopt;
 
-  // DebugDeclare can only encode the address of an OpVariable.
-  // Other legitimate #dbg_declare cannot be encoded.
+  // DebugDeclare can only encode the address of an OpVariable (or
+  // OpUntypedVariableKHR). Other legitimate #dbg_declare cannot be encoded.
   // Examples: an access chain for a field, an OpFunctionParameter for a byval
   // argument, or a module-scope constant for a null or fixed address.
 
@@ -2036,7 +2039,9 @@ getDebugDeclareStorageReg(const MachineInstr &MI) {
   // because LiveDebugVariables normally clears it, but this pipeline has no
   // register allocation, so LiveDebugVariables never runs.
   const MachineInstr *Def = MI.getMF()->getRegInfo().getUniqueVRegDef(LocReg);
-  if (!Def || Def->getOpcode() != SPIRV::OpVariable)
+  if (!Def || (Def->getOpcode() != SPIRV::OpVariable &&
+               !(AllowUntypedVariable &&
+                 Def->getOpcode() == SPIRV::OpUntypedVariableKHR)))
     return std::nullopt;
 
   return LocReg;
@@ -2213,9 +2218,10 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
                                                                   : &MI;
 
   // A #dbg_declare reaches Machine IR as an indirect DBG_VALUE. Its storage is
-  // an OpVariable in the entry block, so it is in the output by the time any
-  // record naming it is reached.
-  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(MI)) {
+  // an OpVariable (or OpUntypedVariableKHR) in the entry block, so it is in the
+  // output by the time any record naming it is reached.
+  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(
+          MI, CLOpts.debug_declare_untyped_variable)) {
     MCRegister StorageReg = MAI.getRegisterAlias(&MF, *LocReg);
     if (StorageReg.isValid())
       placeRecord(SPIRV::NonSemanticExtInst::DebugDeclare, MI, StorageReg,

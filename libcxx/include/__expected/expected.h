@@ -27,6 +27,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_core_convertible.h>
+#include <__type_traits/is_destructible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -35,7 +36,6 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>

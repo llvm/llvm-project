@@ -1155,8 +1155,8 @@ private:
       // broadcast their values to them.
       for (Instruction &I : *SeqStartBB) {
         SmallPtrSet<Instruction *, 4> OutsideUsers;
-        for (User *Usr : I.users()) {
-          Instruction &UsrI = *cast<Instruction>(Usr);
+        for (Instruction *Usr : I.users()) {
+          Instruction &UsrI = *Usr;
           // Ignore outputs to LT intrinsics, code extraction for the merged
           // parallel region will fix them.
           if (UsrI.isLifetimeStartOrEnd())
@@ -5734,7 +5734,6 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     FunctionUsesSharedAlloc = SharedAllocUses && !SharedAllocUses->empty();
   }
   bool HasHeapToStackCandidate = false;
-  const TargetLibraryInfo *TLI = nullptr;
 
   for (auto &I : instructions(F)) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
@@ -5747,10 +5746,7 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
       if (A.Opts.openmp_opt_deglobalization && !HasHeapToStackCandidate) {
-        if (!TLI)
-          TLI = A.getInfoCache().getTargetLibraryInfoForFunction(F);
-        HasHeapToStackCandidate =
-            isRemovableAlloc(CI, TLI) || getFreedOperand(CI, TLI);
+        HasHeapToStackCandidate = isRemovableAlloc(CI) || getFreedOperand(CI);
       }
       if (CI->isIndirectCall())
         A.getOrCreateAAFor<AAIndirectCallInfo>(

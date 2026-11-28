@@ -851,10 +851,11 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
           return !cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode();
         case VPRecipeBase::VPReductionPHISC: {
           auto *RedPhi = cast<VPReductionPHIRecipe>(&R);
-          // TODO: Support FMinNum/FMaxNum, FindLast reductions, and reductions
-          // without underlying values.
+          // TODO: Support FMinNum/FMaxNum, FMinSelectNoFMF/FMaxSelectNoFMF,
+          // FindLast reductions, and reductions without underlying values.
           RecurKind Kind = RedPhi->getRecurrenceKind();
           if (RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
+              RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(Kind) ||
               RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
               !RedPhi->getUnderlyingValue())
             return true;

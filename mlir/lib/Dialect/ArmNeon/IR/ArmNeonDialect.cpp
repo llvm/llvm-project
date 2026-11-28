@@ -17,12 +17,5 @@ using namespace mlir;
 
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.cpp.inc"
 
-void arm_neon::ArmNeonDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ArmNeon/ArmNeon.cpp.inc"
-      >();
-}
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmNeon/ArmNeon.cpp.inc"

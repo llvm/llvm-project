@@ -2,6 +2,11 @@
 # The changes get pushed to a perf/pr-NNNNNN branch on the
 # llvmbot/llvm-project fork, which the compile-time tracker
 # will pick up.
+#
+# For a PR that targets a branch other than main, such as a stacked PR,
+# the base branch is pushed as one extra commit on top of its merge base
+# with main. The PR itself goes on top of that commit. PRs to release
+# branches are not supported.
 
 name: Compile-time tracker
 
@@ -73,10 +78,11 @@ jobs:
               fail('The PR is not open.');
               return;
             }
-            if (pr.base.ref !== defaultBranch) {
-              fail(`The PR targets \`${pr.base.ref}\` instead of \`${defaultBranch}\`, which is not supported.`);
+            if (pr.base.ref.startsWith('release/')) {
+              fail(`The PR targets \`${pr.base.ref}\`, release branches are not supported.`);
               return;
             }
+            const stacked = pr.base.ref !== defaultBranch;
 
             // mergeable is null while GitHub is (re)computing the test merge
             // commit in the background.
@@ -89,8 +95,26 @@ jobs:
               return;
             }
             if (!pr.mergeable) {
-              fail(`The PR has merge conflicts with \`${defaultBranch}\`, please resolve them.`);
+              fail(`The PR has merge conflicts with \`${pr.base.ref}\`, please resolve them.`);
               return;
+            }
+
+            let stackBase = '';
+            if (stacked) {
+              const mergeCommit = (await github.rest.git.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: pr.merge_commit_sha
+              })).data;
+              const stackHead = mergeCommit.parents[0].sha;
+              const comparison = (await github.rest.repos.compareCommitsWithBasehead({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                basehead: `${defaultBranch}...${stackHead}`,
+                per_page: 1
+              })).data;
+              if (comparison.merge_base_commit.sha !== stackHead)
+                stackBase = comparison.merge_base_commit.sha;
             }
 
             // Insert zero-width spaces to prevent the commit in the fork
@@ -109,6 +133,7 @@ jobs:
             fs.writeFileSync(`${tmp}/commit-msg`, protect(message));
 
             core.setOutput('merge-sha', pr.merge_commit_sha);
+            core.setOutput('stack-base', stackBase);
             core.setOutput('author-name', pr.user.login);
             core.setOutput('author-email',
               `${pr.user.id}+${pr.user.login}@users.noreply.github.com`);
@@ -117,6 +142,7 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.issue.number }}
           MERGE_SHA: ${{ steps.get-pr.outputs.merge-sha }}
+          STACK_BASE: ${{ steps.get-pr.outputs.stack-base }}
           GIT_AUTHOR_NAME: ${{ steps.get-pr.outputs.author-name }}
           GIT_AUTHOR_EMAIL: ${{ steps.get-pr.outputs.author-email }}
           GIT_COMMITTER_NAME: llvmbot
@@ -125,14 +151,30 @@ jobs:
         run: |
           git init -q llvm-project
           cd llvm-project
-          # The first parent of the merge commit is main, the second the PR.
-          # Use a blobless clone, blobs needed for the push will be fetched
-          # on demand.
+          # The first parent of the merge commit is the base branch, the
+          # second the PR. Use a blobless clone, blobs needed for the push
+          # will be fetched on demand.
           git fetch --no-tags --progress --depth 2 --filter=blob:none \
             "https://github.com/$GITHUB_REPOSITORY.git" "$MERGE_SHA"
 
+          PARENT="$MERGE_SHA^1"
+          if [ -n "$STACK_BASE" ]; then
+            # Squash the stack below the PR onto the main commit it is based
+            # on. Fixed identity, date and message keep the hash stable, so
+            # the tracker reuses its results for reruns and sibling PRs.
+            git fetch --no-tags --progress --depth 1 --filter=blob:none \
+              "https://github.com/$GITHUB_REPOSITORY.git" "$STACK_BASE"
+            STACK_HEAD=$(git rev-parse "$MERGE_SHA^1")
+            STACK_DATE=$(git log -1 --format=%cI "$STACK_HEAD")
+            PARENT=$(GIT_AUTHOR_NAME=llvmbot GIT_AUTHOR_EMAIL=llvmbot@llvm.org \
+                     GIT_AUTHOR_DATE="$STACK_DATE" GIT_COMMITTER_DATE="$STACK_DATE" \
+                     git commit-tree "$STACK_HEAD^{tree}" -p "$STACK_BASE" \
+                       -m "Stacked PR base at $STACK_HEAD")
+            git show --stat "$PARENT"
+          fi
+
           # Convert merge commit into a non-merge commit.
-          COMMIT=$(git commit-tree "$MERGE_SHA^{tree}" -p "$MERGE_SHA^1" -F "$RUNNER_TEMP/commit-msg")
+          COMMIT=$(git commit-tree "$MERGE_SHA^{tree}" -p "$PARENT" -F "$RUNNER_TEMP/commit-msg")
           git show --stat "$COMMIT"
 
           # As we only have a shallow clone, git doesn't know which objects

@@ -4,7 +4,9 @@
 ; The current function's return address is in the link register.
 define ptr @rt0() norecurse nounwind readnone {
 ; CHECK-LABEL: rt0 DS 0H
-; CHECK:         lgr 3,7
+; CHECK:       * %entry
+; CHECK-NEXT:  * %bb.0:
+; CHECK-NEXT:    lgr 3,7
 ; CHECK-NEXT:    b 2(7)
 entry:
   %0 = tail call ptr @llvm.returnaddress(i32 0)
@@ -14,11 +16,13 @@ entry:
 ; Check the caller's return address.
 define ptr @rtcaller() nounwind "backchain" {
 ; CHECK-LABEL: rtcaller DS 0H
-; CHECK:         stmg 4,7,1920(4)
-; CHECK-NEXT:    L#stack_update0 DS 0H
+; CHECK:       * %entry
+; CHECK-NEXT:  * %bb.0:
+; CHECK-NEXT:    stmg 4,7,1920(4)
+; CHECK-NEXT:  L#stack_update0 DS 0H
 ; CHECK-NEXT:    aghi 4,-128
-; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:    L#end_of_prologue0 DS 0H
+; CHECK-NEXT:  *FENCE
+; CHECK-NEXT:  L#end_of_prologue0 DS 0H
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 3,24(1)
 ; CHECK-NEXT:    lmg 4,7,2048(4)
@@ -31,11 +35,13 @@ entry:
 ; Check the caller's caller's return address.
 define ptr @rtcallercaller() nounwind "backchain" {
 ; CHECK-LABEL: rtcallercaller DS 0H
-; CHECK:         stmg 4,7,1920(4)
-; CHECK-NEXT:    L#stack_update1 DS 0H
+; CHECK:       * %entry
+; CHECK-NEXT:  * %bb.0:
+; CHECK-NEXT:    stmg 4,7,1920(4)
+; CHECK-NEXT:  L#stack_update1 DS 0H
 ; CHECK-NEXT:    aghi 4,-128
-; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:    L#end_of_prologue1 DS 0H
+; CHECK-NEXT:  *FENCE
+; CHECK-NEXT:  L#end_of_prologue1 DS 0H
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 1,0(1)
 ; CHECK-NEXT:    lg 3,24(1)

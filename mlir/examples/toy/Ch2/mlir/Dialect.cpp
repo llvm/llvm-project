@@ -35,19 +35,6 @@ using namespace mlir::toy;
 #include "toy/Dialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// ToyDialect
-//===----------------------------------------------------------------------===//
-
-/// Dialect initialization, the instance will be owned by the context. This is
-/// the point of registration of types and operations for the dialect.
-void ToyDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "toy/Ops.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
 // Toy Operations
 //===----------------------------------------------------------------------===//
 

@@ -371,3 +371,57 @@ loop.latch:
 exit:
   ret void
 }
+
+; The conditional load of %far is 2^63 + 8 bytes from a[iv /u 2], so it must
+; not be grouped with it.
+define void @cond_invariant_and_nonaffine_far_apart(ptr %a, ptr %b, i1 %c) {
+; CHECK-LABEL: 'cond_invariant_and_nonaffine_far_apart'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %far = getelementptr i8, ptr %a, i64 -9223372036854775800
+; CHECK-NEXT:          %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (64 + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nw><%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (-9223372036854775800 + %a) High: (-9223372036854775799 + %a))
+; CHECK-NEXT:            Member: (-9223372036854775800 + %a)
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop.header> /u 2) + %a)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %far = getelementptr i8, ptr %a, i64 -9223372036854775800
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %div = lshr i64 %iv, 1
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %div
+  %l.a = load i8, ptr %gep.a, align 1
+  br i1 %c, label %loop.then, label %loop.latch
+
+loop.then:
+  %l.far = load i8, ptr %far, align 1
+  br label %loop.latch
+
+loop.latch:
+  %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+  store i8 %l.a, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

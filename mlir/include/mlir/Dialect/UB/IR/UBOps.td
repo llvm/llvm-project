@@ -17,6 +17,7 @@ include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 def UB_Dialect : Dialect {
   let name = "ub";
   let cppNamespace = "::mlir::ub";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
   let hasAttributes = 1;

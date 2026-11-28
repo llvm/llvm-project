@@ -464,7 +464,7 @@ private:
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
 struct GVNPassImpl::AvailableValue {
-  enum class ValType {
+  enum class ValType : uint8_t {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
     MemIntrin, // A memory intrinsic which is loaded from.
@@ -478,6 +478,9 @@ struct GVNPassImpl::AvailableValue {
   Value *Val;
   /// Kind of the live-out value.
   ValType Kind;
+  /// Whether V1/V2 is the result of a dominating load from the select's
+  /// address (as opposed to a value forwarded from a store).
+  bool V1IsLoad = false, V2IsLoad = false;
 
   /// Offset - The byte offset in Val that is interesting for the load query.
   unsigned Offset = 0;
@@ -516,13 +519,16 @@ struct GVNPassImpl::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2,
+                                  bool V1IsLoad, bool V2IsLoad) {
     AvailableValue Res;
     Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
     Res.V2 = V2;
+    Res.V1IsLoad = V1IsLoad;
+    Res.V2IsLoad = V2IsLoad;
     return Res;
   }
 
@@ -1484,6 +1490,10 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     // Introduce a new value select for a load from an eligible pointer select.
     SelectInst *Sel = getSelectInstr();
     assert(V1 && V2 && "both value operands of the select must be present");
+    if (V1IsLoad)
+      combineMetadataForCSE(cast<LoadInst>(V1), Load, /*DoesKMove=*/false);
+    if (V2IsLoad)
+      combineMetadataForCSE(cast<LoadInst>(V2), Load, /*DoesKMove=*/false);
     Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
                              InsertPt->getIterator(),
                              ProfcheckDisableMetadataFixes ? nullptr : Sel);
@@ -1591,9 +1601,11 @@ static void reportMayClobberedLoad(LoadInst *Load, Instruction *DepInst,
 // Find a dominating value for Loc memory location in the extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
 // Returns the value from a matching load or a simple store to the same pointer.
+// IsLoad is set to whether the value is the result of a matching load.
 static Value *findDominatingValue(const ScalarOptions &Opts,
                                   const MemoryLocation &Loc, Type *LoadTy,
-                                  Instruction *From, AAResults *AA) {
+                                  Instruction *From, AAResults *AA,
+                                  bool &IsLoad) {
   uint32_t NumVisitedInsts = 0;
   BasicBlock *FromBB = From->getParent();
   BatchAAResults BatchAA(*AA);
@@ -1612,8 +1624,10 @@ static Value *findDominatingValue(const ScalarOptions &Opts,
         return nullptr;
       }
       if (auto *LI = dyn_cast<LoadInst>(Inst))
-        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
+        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy) {
+          IsLoad = true;
           return LI;
+        }
     }
   return nullptr;
 }
@@ -1630,15 +1644,18 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
   // loaded values only if both sides have a dominating, non-clobbered value of
   // the right type in the extended basic block ending at From.
   auto Loc = MemoryLocation::get(Load);
-  Value *V1 = findDominatingValue(*Opts, Loc.getWithNewPtr(TrueAddr),
-                                  Load->getType(), From, getAliasAnalysis());
+  bool V1IsLoad = false, V2IsLoad = false;
+  Value *V1 =
+      findDominatingValue(*Opts, Loc.getWithNewPtr(TrueAddr), Load->getType(),
+                          From, getAliasAnalysis(), V1IsLoad);
   if (!V1)
     return std::nullopt;
-  Value *V2 = findDominatingValue(*Opts, Loc.getWithNewPtr(FalseAddr),
-                                  Load->getType(), From, getAliasAnalysis());
+  Value *V2 =
+      findDominatingValue(*Opts, Loc.getWithNewPtr(FalseAddr), Load->getType(),
+                          From, getAliasAnalysis(), V2IsLoad);
   if (!V2)
     return std::nullopt;
-  return AvailableValue::getSelect(Sel, V1, V2);
+  return AvailableValue::getSelect(Sel, V1, V2, V1IsLoad, V2IsLoad);
 }
 
 std::optional<AvailableValue>
@@ -1730,8 +1747,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst))
     return AvailableValue::get(UndefValue::get(Load->getType()));
 
-  if (Constant *InitVal =
-          getInitialValueOfAllocation(DepInst, TLI, Load->getType()))
+  if (Constant *InitVal = getInitialValueOfAllocation(DepInst, Load->getType()))
     return AvailableValue::get(InitVal);
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {

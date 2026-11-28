@@ -43,7 +43,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///   * pointer-based layout (stable ABI default)
 ///   * size-based layout (unstable ABI alternative)
-//
+///
 /// We describe these layouts below. All vector representations have a pointer that points to where
 /// the memory is allocated (called `__begin_`).
 ///
@@ -75,8 +75,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///    Figure 1: A visual representation of a pointer-based `std::vector<short>`. This vector has
 ///    four elements, with the capacity to store six. Boxes with numbers are valid elements within
-///    the vector, and boxes with `xx` have been allocated, but aren't being used as elements right
-///    now.
+///    the vector, boxes with `------` have been allocated, but aren't being used as elements right
+///    now, and boxes with `???` are not a part of the vector's allocated buffer.
 ///
 /// This is the default layout for libc++.
 ///
@@ -98,8 +98,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///                    ^
 ///                __begin_
 ///
-///    Figure 2: A visual representation of this a size-based layout. Blank boxes are not a part
-///    of the vector's allocated buffer.
+///    Figure 2: A visual representation of a size-based layout. Boxes are interpreted the same
+///    way as in Figure 1.
 ///
 /// **Class design**
 ///

@@ -69,7 +69,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes@3
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::narrowInterleaveGroups
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMask
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMaskAndLastActiveLane
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] printOptimizedVPlan
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMinimumIterationCheck
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceWideCanonicalIVWithWideIV

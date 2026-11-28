@@ -457,6 +457,14 @@ class RetainSummaryManager {
   /// Track sublcasses of OSObject.
   const bool TrackOSObjects;
 
+  /// Whether the TU has an identifier named OSMetaClassBase.
+  const bool MayHaveOSObjects;
+
+  /// Whether the TU has an identifier starting with "isl_".
+  const bool MayHaveISLTypes;
+
+  static bool hasISLIdentifiers(const IdentifierTable &Idents);
+
   /// FuncSummaries - A map from FunctionDecls to summaries.
   FuncSummariesTy FuncSummaries;
 
@@ -485,6 +493,19 @@ class RetainSummaryManager {
   /// SimpleSummaries - Used for uniquing summaries that don't have special
   /// effects.
   llvm::FoldingSet<CachedSummaryNode> SimpleSummaries;
+
+  /// Whether \p D is a subclass of OSObject.
+  bool isOSObjectSubclass(const Decl *D) const;
+
+  /// Whether the type is a pointer to a subclass of OSObject.
+  bool isOSObjectPtr(QualType QT) const;
+
+  /// Whether the method is declared on a subclass of OSObject, or any of its
+  /// parameters is a pointer to a subclass of OSObject.
+  bool isOSObjectRelated(const CXXMethodDecl *MD) const;
+
+  /// Whether the type is printed with an "isl_" prefix.
+  bool isISLObjectRef(QualType Ty) const;
 
   /// Create an OS object at +1.
   const RetainSummary *getOSSummaryCreateRule(const FunctionDecl *FD);
@@ -616,7 +637,9 @@ public:
                        bool trackOSObjects)
       : Ctx(ctx), ARCEnabled((bool)Ctx.getLangOpts().ObjCAutoRefCount),
         TrackObjCAndCFObjects(trackObjCAndCFObjects),
-        TrackOSObjects(trackOSObjects), AF(BPAlloc),
+        TrackOSObjects(trackOSObjects),
+        MayHaveOSObjects(llvm::is_contained(ctx.Idents, "OSMetaClassBase")),
+        MayHaveISLTypes(hasISLIdentifiers(ctx.Idents)), AF(BPAlloc),
         ObjCAllocRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)
                                  : RetEffect::MakeOwned(ObjKind::ObjC)),
         ObjCInitRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)

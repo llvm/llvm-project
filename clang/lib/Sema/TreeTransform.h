@@ -13846,7 +13846,7 @@ TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
   else
     ControllingType = getDerived().TransformType(E->getControllingType());
 
-  if (ControllingExpr.isInvalid() && !ControllingType)
+  if (!ControllingExpr.isUsable() && !ControllingType)
     return ExprError();
 
   SmallVector<Expr *, 4> AssocExprs;

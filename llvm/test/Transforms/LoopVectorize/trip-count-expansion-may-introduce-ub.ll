@@ -9,7 +9,8 @@ define i64 @multi_exit_1_exit_count_with_udiv_by_value_in_header(ptr %dst, i64 %
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP4]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[UMIN]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 4
@@ -137,7 +138,9 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_value_in_block_executed_uncondi
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP4]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP6]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[UMIN]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 4
@@ -862,7 +865,8 @@ define void @single_exit_tc_with_udiv(ptr %dst, i64 %N) {
 ; CHECK-LABEL: define void @single_exit_tc_with_udiv(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

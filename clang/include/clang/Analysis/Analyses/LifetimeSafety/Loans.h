@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -233,7 +234,7 @@ public:
 class LoanManager {
 
 public:
-  LoanManager() = default;
+  explicit LoanManager(llvm::BumpPtrAllocator &Alloc) : LoanAllocator(Alloc) {}
 
   Loan *createLoan(AccessPath Path, const Expr *IssueExpr = nullptr) {
     void *Mem = LoanAllocator.Allocate<Loan>();
@@ -275,7 +276,7 @@ private:
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
   llvm::SmallVector<const Loan *> AllLoans;
-  llvm::BumpPtrAllocator LoanAllocator;
+  llvm::BumpPtrAllocator &LoanAllocator;
 };
 } // namespace clang::lifetimes::internal
 

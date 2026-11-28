@@ -73,7 +73,7 @@ body: |
   bb.2.body:
     successors: %bb.1, %bb.3
 
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     %3:intregs = A2_addi %2, 1
     %9:predregs = C2_cmpgtu %3, %0
     %4:intregs = A2_addi %1, 1

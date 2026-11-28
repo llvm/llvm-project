@@ -1565,7 +1565,9 @@ Currently, only the following parameter attributes are defined:
 
     Additionally, it is possible to specify that some components are only
     captured in certain locations. Currently only the return value (`ret`)
-    and other (default) locations are supported.
+    and other (default) locations are supported. Components that are captured
+    only through the return value require the function's return type to be a
+    pointer.
 
     The {ref}`pointer capture section <pointercapture>` discusses these semantics
     in more detail.
@@ -2147,7 +2149,9 @@ define void @f() "no-sse" { ... }
       will match that of the `allocptr` argument and the `allocptr`
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by `allocptr`.
-      Functions marked as "free" `allockind` must return void.
+      Functions marked as "free" `allockind` must return void or an integer.
+      When it returns an integer, calling the function on the pointer returned
+      by an "alloc" `allockind` call of the matching `alloc-family` must return 0.
     * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.
@@ -2428,6 +2432,12 @@ define void @f() "no-sse" { ... }
     divergence even if its inputs are uniform. A call with no further information
     would normally be considered a source of divergence; setting this attribute
     on a function means that a call to it is not a source of divergence.
+
+`alwaysuniform`
+:   Setting this attribute on a function means that a call to it always returns
+    a {ref}`uniform <convergence-uniformity>` result regardless of the uniformity
+    of the inputs.  If a call to a function with this attribute returns a value
+    that is not uniform, the behavior is undefined.
 
 `noduplicate`
 :   This attribute indicates that calls to the function cannot be
@@ -11780,7 +11790,7 @@ value if it shifts out any bits that disagree with the resultant sign bit.
 <result> = shl i32 4, %var   ; yields i32: 4 << %var
 <result> = shl i32 4, 2      ; yields i32: 16
 <result> = shl i32 1, 10     ; yields i32: 1024
-<result> = shl i32 1, 32     ; undefined
+<result> = shl i32 1, 32     ; yields i32: poison
 <result> = shl <2 x i32> < i32 1, i32 1>, < i32 1, i32 2>   ; yields: result=<2 x i32> < i32 2, i32 4>
 ```
 
@@ -11825,7 +11835,7 @@ a poison value if any of the bits shifted out are non-zero.
 <result> = lshr i32 4, 2   ; yields i32:result = 1
 <result> = lshr i8  4, 3   ; yields i8:result = 0
 <result> = lshr i8 -2, 1   ; yields i8:result = 0x7F
-<result> = lshr i32 1, 32  ; undefined
+<result> = lshr i32 1, 32  ; yields i32:result = poison
 <result> = lshr <2 x i32> < i32 -2, i32 4>, < i32 1, i32 2>   ; yields: result=<2 x i32> < i32 0x7FFFFFFF, i32 1>
 ```
 
@@ -11870,7 +11880,7 @@ a poison value if any of the bits shifted out are non-zero.
 <result> = ashr i32 4, 2   ; yields i32:result = 1
 <result> = ashr i8  4, 3   ; yields i8:result = 0
 <result> = ashr i8 -2, 1   ; yields i8:result = -1
-<result> = ashr i32 1, 32  ; undefined
+<result> = ashr i32 1, 32  ; yields i32:result = poison
 <result> = ashr <2 x i32> < i32 -2, i32 4>, < i32 1, i32 3>   ; yields: result=<2 x i32> < i32 -1, i32 0>
 ```
 

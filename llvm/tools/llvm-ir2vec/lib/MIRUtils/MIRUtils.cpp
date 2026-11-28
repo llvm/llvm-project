@@ -94,6 +94,13 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
 
       unsigned ArgIndex = 0;
       for (const MachineOperand &MO : MI.operands()) {
+        // NoRegister operands (e.g. an absent index register) get a zero
+        // embedding, so they emit no triplet. ArgIndex still advances so that
+        // the remaining operands keep their positions.
+        if (MO.isReg() && !MO.getReg().isValid()) {
+          ++ArgIndex;
+          continue;
+        }
         auto OperandID =
             Vocab->getEntityIDForMachineOperand(MO, MF.getRegInfo());
         unsigned RelationID = MIRArgRelation + ArgIndex;

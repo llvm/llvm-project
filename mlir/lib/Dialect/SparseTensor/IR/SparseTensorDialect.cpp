@@ -2824,10 +2824,6 @@ Operation *SparseTensorDialect::materializeConstant(OpBuilder &builder,
 }
 
 void SparseTensorDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
-      >();
   declarePromisedInterfaces<
       bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
       NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,

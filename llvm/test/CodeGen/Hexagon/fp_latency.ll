@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=hexagon -pipeliner-prune-loop-carried=false < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that there is 1 packet between the FP result and its use.
 

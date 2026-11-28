@@ -175,7 +175,7 @@ llvm.func @callee_returns_twice() attributes { passthrough = ["returns_twice"] }
   llvm.return
 }
 
-llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
+llvm.func @callee_strictfp() attributes { strictfp } {
   llvm.return
 }
 

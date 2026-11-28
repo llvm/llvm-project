@@ -96,7 +96,7 @@ void X86ELFMCAsmInfo::anchor() { }
 
 X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(T, Options) {
   bool is64Bit = T.isX86_64();
   bool isX32 = T.isX32();
 
@@ -114,6 +114,9 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 const MCExpr *

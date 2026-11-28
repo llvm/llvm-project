@@ -142,9 +142,9 @@ define void @store_struct(ptr %p, {i1, i1} %s) {
   ; FAST: [[E0:%.*]] = extractvalue { i8, i8 } [[S]], 0
   ; FAST: [[E1:%.*]] = extractvalue { i8, i8 } [[S]], 1
   ; FAST: [[E:%.*]] = or i8 [[E0]], [[E1]]
-  ; FAST: [[P0:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 0
+  ; FAST: [[P0:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 0
   ; FAST: store i8 [[E]], ptr [[P0]], align 1
-  ; FAST: [[P1:%.*]] = getelementptr i8, ptr [[P]], i32 1
+  ; FAST: [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
   ; FAST: store i8 [[E]], ptr [[P1]], align 1
 
   ; EVENT_CALLBACKS: @store_struct.dfsan
@@ -158,9 +158,9 @@ define void @store_struct(ptr %p, {i1, i1} %s) {
   ; COMBINE_STORE_PTR: [[SL1:%.*]] = extractvalue { i8, i8 } [[SL]], 1
   ; COMBINE_STORE_PTR: [[SL01:%.*]] = or i8 [[SL0]], [[SL1]]
   ; COMBINE_STORE_PTR: [[E:%.*]] = or i8 [[SL01]], [[PL]]
-  ; COMBINE_STORE_PTR: [[P0:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 0
+  ; COMBINE_STORE_PTR: [[P0:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 0
   ; COMBINE_STORE_PTR: store i8 [[E]], ptr [[P0]], align 1
-  ; COMBINE_STORE_PTR: [[P1:%.*]] = getelementptr i8, ptr [[P]], i32 1
+  ; COMBINE_STORE_PTR: [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
   ; COMBINE_STORE_PTR: store i8 [[E]], ptr [[P1]], align 1
 
   store {i1, i1} %s, ptr %p

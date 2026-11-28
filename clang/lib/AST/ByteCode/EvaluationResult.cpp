@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
@@ -190,7 +191,7 @@ static bool isOrHasPtr(const Descriptor *D) {
 }
 
 static void collectBlocks(PtrView Ptr,
-                          llvm::SmallPtrSet<const Block *, 4> &Blocks,
+                          llvm::SmallSetVector<const Block *, 4> &Blocks,
                           bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
@@ -270,7 +271,7 @@ bool EvaluationResult::checkDynamicAllocations(InterpState &S,
 
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
-  llvm::SmallPtrSet<const Block *, 4> Blocks;
+  llvm::SmallSetVector<const Block *, 4> Blocks;
 
   collectBlocks(Ptr.view(), Blocks);
 

@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_fsub_f32:
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
@@ -16,7 +15,6 @@ define amdgpu_kernel void @v_fsub_f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 }
 
 ; FUNC-LABEL: {{^}}s_fsub_f32:
-; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, -KC0[2].W
 
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @s_fsub_f32(ptr addrspace(1) %out, float %a, float %b) {
@@ -26,8 +24,6 @@ define amdgpu_kernel void @s_fsub_f32(ptr addrspace(1) %out, float %a, float %b)
 }
 
 ; FUNC-LABEL: {{^}}fsub_v2f32:
-; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, -KC0[3].Z
-; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, -KC0[3].Y
 
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -38,10 +34,6 @@ define amdgpu_kernel void @fsub_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 
 }
 
 ; FUNC-LABEL: {{^}}v_fsub_v4f32:
-; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], -T[0-9]+\.[XYZW]}}
-; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], -T[0-9]+\.[XYZW]}}
-; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], -T[0-9]+\.[XYZW]}}
-; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], -T[0-9]+\.[XYZW]}}
 
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}

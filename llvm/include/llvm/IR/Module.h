@@ -1251,7 +1251,7 @@ public:
   void setDarwinTargetVariantSDKVersion(VersionTuple Version);
 
   /// Returns target-abi from MDString, null if target-abi is absent.
-  StringRef getTargetABIFromMD();
+  StringRef getTargetABIFromMD() const;
 
   /// Get how unwind information should be generated for x64 Windows.
   WinX64EHUnwindMode getWinX64EHUnwindMode() const;

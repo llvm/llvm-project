@@ -154,9 +154,9 @@ private:
   /// svalBuilder - SValBuilder object that creates SVals from expressions.
   SValBuilder &svalBuilder;
 
-  unsigned int currStmtIdx = 0;
   const StackFrame *CurrStackFrame = nullptr;
   const CFGBlock *CurrBlock = nullptr;
+  std::optional<unsigned> CurrStmtIdx = std::nullopt;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -251,8 +251,12 @@ public:
   /// (elementary analysis step handled by `dispatchWorkItem`).
   const CFGBlock *getCurrBlock() const { return CurrBlock; }
 
+  /// If the current analysis step is the analysis of a `CFGElement`, return a
+  /// reference to it; otherwise return a `ConstCFGElementRef` that cannot be
+  /// dereferenced, but can be used to e.g. distinguish conjured symbols.
   ConstCFGElementRef getCFGElementRef() const {
-    return {getCurrBlock(), currStmtIdx};
+    // CurrStmtIdx is nullopt e.g. when processing a block terminator.
+    return {getCurrBlock(), CurrStmtIdx.value_or(UINT_MAX)};
   }
 
   unsigned getNumVisited(const StackFrame *SF, const CFGBlock *Block) const {
@@ -262,6 +266,12 @@ public:
 
   unsigned getNumVisitedCurrent() const {
     return getNumVisited(getCurrStackFrame(), getCurrBlock());
+  }
+
+  void enqueueStmtNodes(ExplodedNodeSet Nodes) {
+    assert(CurrStmtIdx && "This is only valid when analyzing a CFGElement!");
+    for (ExplodedNode *N : Nodes)
+      Engine.enqueueStmtNode(N, getCurrBlock(), *CurrStmtIdx);
   }
 
   /// Dump graph to the specified filename.
@@ -744,7 +754,11 @@ public:
 
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
-  CFGElement getCurrentCFGElement() { return (*getCurrBlock())[currStmtIdx]; }
+  CFGElement getCurrentCFGElement() {
+    assert(getCurrBlock() && "Not processing a block!");
+    assert(CurrStmtIdx.has_value() && "Not processing a CFGElement!");
+    return (*getCurrBlock())[*CurrStmtIdx];
+  }
 
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.

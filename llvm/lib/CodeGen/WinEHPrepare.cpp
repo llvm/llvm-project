@@ -461,8 +461,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     for (const auto *CatchPad : Handlers) {
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       FuncInfo.EHPadStateMap[CatchPad] = CatchLow;
-      for (const User *U : CatchPad->users()) {
-        const auto *UserI = cast<Instruction>(U);
+      for (const Instruction *UserI : CatchPad->users()) {
         if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
           BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
           if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
@@ -510,8 +509,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
                                  CleanupState);
       }
     }
-    for (const User *U : CleanupPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CleanupPad->users()) {
       if (UserI->isEHPad())
         report_fatal_error("Cleanup funclets for the MSVC++ personality cannot "
                            "contain exceptional actions");
@@ -583,8 +581,7 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // Everything in the __except block unwinds to ParentState, just like code
     // outside the __try.
-    for (const User *U : CatchPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CatchPad->users()) {
       if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
         BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
         if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
@@ -617,8 +614,7 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
                getEHPadFromPredecessor(PredBlock, CleanupPad->getParentPad())))
         calculateSEHStateNumbers(FuncInfo, &*PredBlock->getFirstNonPHIIt(),
                                  CleanupState);
-    for (const User *U : CleanupPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CleanupPad->users()) {
       if (UserI->isEHPad())
         report_fatal_error("Cleanup funclets for the SEH personality cannot "
                            "contain exceptional actions");
@@ -763,10 +759,9 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       int CleanupState = addClrEHHandler(FuncInfo, HandlerParentState, -1,
                                          HandlerType, 0, Pad->getParent());
       // Queue any child EH pads on the worklist.
-      for (const User *U : Cleanup->users())
-        if (const auto *I = dyn_cast<Instruction>(U))
-          if (I->isEHPad())
-            Worklist.emplace_back(I, CleanupState);
+      for (const Instruction *I : Cleanup->users())
+        if (I->isEHPad())
+          Worklist.emplace_back(I, CleanupState);
       // Remember this pad's state.
       FuncInfo.EHPadStateMap[Cleanup] = CleanupState;
     } else {
@@ -787,10 +782,9 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
             addClrEHHandler(FuncInfo, HandlerParentState, FollowerState,
                             ClrHandlerType::Catch, TypeToken, CatchBlock);
         // Queue any child EH pads on the worklist.
-        for (const User *U : Catch->users())
-          if (const auto *I = dyn_cast<Instruction>(U))
-            if (I->isEHPad())
-              Worklist.emplace_back(I, CatchState);
+        for (const Instruction *I : Catch->users())
+          if (I->isEHPad())
+            Worklist.emplace_back(I, CatchState);
         // Remember this catch's state.
         FuncInfo.EHPadStateMap[Catch] = CatchState;
         FollowerState = CatchState;

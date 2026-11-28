@@ -23,6 +23,7 @@ constexpr bool MachineCombinerVerifyPatternOrderDefault = false;
 namespace MISched {
 enum Direction : unsigned;
 } // namespace MISched
+enum class WindowSchedulingFlag;
 } // namespace llvm
 
 #define OPTIONS_STRUCT_DECL

@@ -415,6 +415,10 @@ loop 0
 loope 0
 loopne 0
 
+movw (%rax), %ds
+movl %eax, %ds
+movq %rax, %ds
+
 movsb
 movsw
 movsl
@@ -1402,6 +1406,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                  U     loop	0
 # CHECK-NEXT:  1      1     0.50                  U     loope	0
 # CHECK-NEXT:  1      1     0.50                  U     loopne	0
+# CHECK-NEXT:  1      1     0.25    *             U     movw	(%rax), %ds
+# CHECK-NEXT:  1      1     0.25                  U     movl	%eax, %ds
+# CHECK-NEXT:  1      1     0.25                  U     movq	%rax, %ds
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsl	(%rsi), %es:(%rdi)
@@ -1969,7 +1976,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 236.00 236.00 299.25 331.75 313.75 299.25 392.00  -      -      -      -     34.00
+# CHECK-NEXT: 236.00 236.00 300.00 332.50 314.50 300.00 392.00  -      -      -      -     34.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -2338,6 +2345,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -      -      -      -      -     loop	0
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -      -      -      -      -     loope	0
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -      -      -      -      -     loopne	0
+# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movw	(%rax), %ds
+# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movl	%eax, %ds
+# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movq	%rax, %ds
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     movsl	(%rsi), %es:(%rdi)

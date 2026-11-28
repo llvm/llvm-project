@@ -1077,9 +1077,7 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   for (unsigned PHIId = 0; PHIId != PHIsToSlice.size(); ++PHIId) {
     PHINode *PN = PHIsToSlice[PHIId];
 
-    for (User *U : PN->users()) {
-      Instruction *UserI = cast<Instruction>(U);
-
+    for (Instruction *UserI : PN->users()) {
       // If the user is a PHI, inspect its uses recursively.
       if (PHINode *UserPN = dyn_cast<PHINode>(UserI)) {
         if (PHIsInspected.insert(UserPN).second)

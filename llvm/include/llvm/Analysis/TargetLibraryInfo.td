@@ -692,6 +692,18 @@ def ceilf : TargetLibCall<"ceilf", Flt, [Flt]>;
 /// long double ceill(long double x);
 def ceill : TargetLibCall<"ceill", LDbl, [LDbl]>;
 
+/// void *heap_allocate(Timeout *timeout,
+///                     AllocatorCapability heapCapability, size_t size,
+///                     uint32_t flags);
+def cheriot_heap_allocate
+    : TargetLibCall<"_Z13heap_allocateP7TimeoutU19__sealed_capabilityP24AllocatorCapabilityStatejj",
+                    Ptr, [Ptr, Ptr, SizeT, Int32]>;
+
+/// int heap_free(AllocatorCapability heapCapability, void *ptr);
+def cheriot_heap_free
+    : TargetLibCall<"_Z9heap_freeU19__sealed_capabilityP24AllocatorCapabilityStatePv",
+                    Int, [Ptr, Ptr]>;
+
 /// int chmod(const char *path, mode_t mode);
 def chmod : TargetLibCall<"chmod", Int, [Ptr, IntX]>;
 

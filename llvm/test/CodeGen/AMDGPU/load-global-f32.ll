@@ -3,9 +3,6 @@
 ; RUN: llc -mtriple=amdgpu7.00-amdhsa < %s | FileCheck --check-prefixes=GCN-HSA,FUNC,GCNX3-HSA %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN-NOHSA,FUNC,GCNX3-NOHSA %s
 
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=R600,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck --check-prefixes=R600,FUNC %s
-
 define amdgpu_kernel void @global_load_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-NOHSA-LABEL: global_load_f32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
@@ -805,4 +802,3 @@ attributes #0 = { nounwind }
 ; FUNC: {{.*}}
 ; GCN-NOHSA: {{.*}}
 ; GCNX3-HSA: {{.*}}
-; R600: {{.*}}

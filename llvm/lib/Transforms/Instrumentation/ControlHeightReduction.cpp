@@ -1558,23 +1558,21 @@ static void insertTrivialPHIs(CHRScope *Scope,
   for (BasicBlock *BB : BlocksInScope) {
     for (Instruction &I : *BB) {
       SmallVector<Instruction *, 8> Users;
-      for (User *U : I.users()) {
-        if (auto *UI = dyn_cast<Instruction>(U)) {
-          if (!BlocksInScope.contains(UI->getParent()) &&
-              // Unless there's already a phi for I at the exit block.
-              !(isa<PHINode>(UI) && UI->getParent() == ExitBlock)) {
-            CHR_DEBUG(dbgs() << "V " << I << "\n");
-            CHR_DEBUG(dbgs() << "Used outside scope by user " << *UI << "\n");
-            Users.push_back(UI);
-          } else if (UI->getParent() == EntryBlock && isa<PHINode>(UI)) {
-            // There's a loop backedge from a block that's dominated by this
-            // scope to the entry block.
-            CHR_DEBUG(dbgs() << "V " << I << "\n");
-            CHR_DEBUG(dbgs()
-                      << "Used at entry block (for a back edge) by a phi user "
-                      << *UI << "\n");
-            Users.push_back(UI);
-          }
+      for (Instruction *UI : I.users()) {
+        if (!BlocksInScope.contains(UI->getParent()) &&
+            // Unless there's already a phi for I at the exit block.
+            !(isa<PHINode>(UI) && UI->getParent() == ExitBlock)) {
+          CHR_DEBUG(dbgs() << "V " << I << "\n");
+          CHR_DEBUG(dbgs() << "Used outside scope by user " << *UI << "\n");
+          Users.push_back(UI);
+        } else if (UI->getParent() == EntryBlock && isa<PHINode>(UI)) {
+          // There's a loop backedge from a block that's dominated by this
+          // scope to the entry block.
+          CHR_DEBUG(dbgs() << "V " << I << "\n");
+          CHR_DEBUG(
+              dbgs() << "Used at entry block (for a back edge) by a phi user "
+                     << *UI << "\n");
+          Users.push_back(UI);
         }
       }
       if (Users.size() > 0) {
@@ -1607,10 +1605,9 @@ static void insertTrivialPHIs(CHRScope *Scope,
         }
         // Erase any leftover lifetime annotations for a dynamic alloca.
         if (FoundLifetimeAnnotation) {
-          for (User *U : make_early_inc_range(I.users())) {
-            if (auto *UI = dyn_cast<Instruction>(U))
-              if (UI->isLifetimeStartOrEnd())
-                UI->eraseFromParent();
+          for (Instruction *UI : make_early_inc_range(I.users())) {
+            if (UI->isLifetimeStartOrEnd())
+              UI->eraseFromParent();
           }
         }
       }

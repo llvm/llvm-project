@@ -791,6 +791,7 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::MOV64ri32:
   case X86::MOV8ri:
   case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV:
     return true;
 
   case X86::MOV8rm:
@@ -4513,7 +4514,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
-    assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
+    assert((STI.hasAMXTILE() || STI.hasACEV1()) &&
+           "Using 8*1024-bit register requires AMX-TILE or ACE");
 #define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
@@ -4704,6 +4706,26 @@ static bool isAMXOpcode(unsigned Opc) {
   }
 }
 
+// Palette 2 has no TILELOADD/TILESTORED, so those tiles spill and reload
+// through pseudos that X86LowerTileCopy expands into TILEMOVROW. An ACE target
+// can still hold palette 1 tiles, which spill the AMX way, so the programming
+// model decides this rather than the subtarget.
+static unsigned getACETileSpillOpcode(unsigned Opc, const MachineFunction &MF) {
+  if (MF.getInfo<X86MachineFunctionInfo>()->getACEProgModel() !=
+      ACEProgModelEnum::ACE_ManagedRA)
+    return Opc;
+  switch (Opc) {
+  default:
+    return Opc;
+  case X86::TILELOADD:
+  case X86::TILELOADD_EVEX:
+    return X86::ACE_TILERELOAD;
+  case X86::TILESTORED:
+  case X86::TILESTORED_EVEX:
+    return X86::ACE_TILESPILL;
+  }
+}
+
 void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MI,
                                     unsigned Opc, Register Reg, int FrameIdx,
@@ -4755,6 +4777,7 @@ void X86InstrInfo::storeRegToStackSlot(
       (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
 
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
+  Opc = getACETileSpillOpcode(Opc, MF);
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
@@ -4779,6 +4802,7 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
 
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
+  Opc = getACETileSpillOpcode(Opc, MF);
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else

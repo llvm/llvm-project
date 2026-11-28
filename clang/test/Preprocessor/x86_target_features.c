@@ -547,6 +547,34 @@
 
 // NO-AMX-AVX512-NOT: #define __AMX_AVX512__ 1
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 -x c \
+// RUN: -E -dM -o - %s | FileCheck -check-prefix=ACEV1 \
+// RUN: --implicit-check-not=__AVX10_2 --implicit-check-not=__AMX_AVX512__ \
+// RUN: --implicit-check-not=__AMX_TILE__ %s
+// ACEV1-DAG: #define __ACEV1__ 1
+// ACEV1-DAG: #define __AVX10_1__ 1
+// ACEV1-DAG: #define __AVX512F__ 1
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-acev1 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-ACEV1 %s
+// NO-ACEV1-NOT: #define __ACEV1__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 \
+// RUN: -mno-avx10.2 -x c -E -dM -o - %s | FileCheck \
+// RUN: -check-prefix=ACEV1-BASELINE %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 \
+// RUN: -mno-amx-tile -x c -E -dM -o - %s | FileCheck \
+// RUN: -check-prefix=ACEV1-BASELINE %s
+// ACEV1-BASELINE-DAG: #define __ACEV1__ 1
+// ACEV1-BASELINE-DAG: #define __AVX10_1__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 \
+// RUN: -mno-avx10.1 -x c -E -dM -o - %s | FileCheck -check-prefix=NO-ACEV1 %s
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 \
+// RUN: -mamx-tile -x c -E -dM -o - %s | FileCheck -check-prefix=ACEV1-AMX %s
+// ACEV1-AMX-DAG: #define __ACEV1__ 1
+// ACEV1-AMX-DAG: #define __AMX_TILE__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNI %s
 
 // AVXVNNI: #define __AVX2__ 1

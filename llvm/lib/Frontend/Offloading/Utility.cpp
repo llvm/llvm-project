@@ -22,7 +22,6 @@
 
 using namespace llvm;
 using namespace llvm::offloading;
-using namespace llvm::offloading::sycl;
 
 StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();

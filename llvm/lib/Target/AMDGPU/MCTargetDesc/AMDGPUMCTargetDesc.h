@@ -66,6 +66,8 @@ public:
   unsigned getVgprMSBs() const { return VgprMSBs; }
 };
 
+unsigned getMaxInstLength(const MCSubtargetInfo &STI);
+
 } // namespace AMDGPU
 
 } // namespace llvm

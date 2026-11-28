@@ -115,15 +115,18 @@ MovedLoansAnalysis::MovedLoansAnalysis(
     const CFG &C, AnalysisDeclContext &AC, FactManager &F,
     const LoanPropagationAnalysis &LoanPropagation,
     const LiveOriginsAnalysis &LiveOrigins, const LoanManager &LoanMgr,
-    MovedLoansMap::Factory &MovedLoansMapFactory)
-    : PImpl(std::make_unique<Impl>(C, AC, F, LoanPropagation, LiveOrigins,
-                                   LoanMgr, MovedLoansMapFactory)) {
+    MovedLoansMap::Factory &MovedLoansMapFactory) {
+  // Without moves, no loan is ever moved.
+  if (!F.hasMovedOriginFacts())
+    return;
+  PImpl = std::make_unique<Impl>(C, AC, F, LoanPropagation, LiveOrigins,
+                                 LoanMgr, MovedLoansMapFactory);
   PImpl->run();
 }
 
 MovedLoansAnalysis::~MovedLoansAnalysis() = default;
 
 MovedLoansMap MovedLoansAnalysis::getMovedLoans(ProgramPoint P) const {
-  return PImpl->getMovedLoans(P);
+  return PImpl ? PImpl->getMovedLoans(P) : MovedLoansMap(nullptr);
 }
 } // namespace clang::lifetimes::internal

@@ -13,40 +13,70 @@
 def ol_event_flags_t : Enum {
   let desc = "Event creation flags.";
   let etors = [
-    Etor<"NONE", "Default event behavior (synchronization only).">,
-    Etor<"ENABLE_PROFILING", "Enable timing/profiling for this event.">
+    Etor<"NONE", "The event is used only for synchronization.">,
+    Etor<"ENABLE_PROFILING", "Request that the backend collect timing data for "
+      "use with `olGetEventElapsedTime`. Timing data is available only where "
+      "the backend supports it.">
   ];
 }
 
 def olCreateEvent : Function {
-    let desc = "Enqueue an event to `Queue` and return it.";
+    let desc = "Create an event that tracks the work submitted to a queue.";
     let details = [
-      "This event can be used with `olSyncEvent` and `olWaitEvents`, and will "
-      "be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
-      "To use this event with `olGetEventElapsedTime`, pass OL_EVENT_FLAG_ENABLE_PROFILING in Flags.",
+      "`olCreateEvent` creates an event on `Queue` and stores its handle in "
+      "`Event`.",
+      "The event is complete once all work submitted to `Queue` before the "
+      "`olCreateEvent` call has completed. An event created on a queue with "
+      "no pending work is complete.",
+      "The created event can be customized with `Flags`, see "
+      "`ol_event_flags_t`.",
+      "The caller owns the returned event and must release it with a "
+      "subsequent call to `olDestroyEvent`.",
+      "The event remains valid after `Queue` is destroyed and can still be "
+      "passed to `olSyncEvent`, `olWaitEvents` and `olDestroyEvent`. If the "
+      "context of `Queue` is destroyed first, the event is left in an "
+      "undefined state and must not be used.",
+      "`olCreateEvent` is thread safe."
     ];
     let params = [
-        Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
-        Param<"ol_event_flags_t", "Flags", "event creation flags (0 for sync-only)", PARAM_IN>,
-        Param<"ol_event_handle_t*", "Event", "output pointer for the created event", PARAM_OUT>
+        Param<"ol_queue_handle_t", "Queue", "queue the event is created on", PARAM_IN>,
+        Param<"ol_event_flags_t", "Flags", "event creation flags", PARAM_IN>,
+        Param<"ol_event_handle_t*", "Event", "receives the handle of the created event", PARAM_OUT>
     ];
     let returns = [];
 }
 
 def olDestroyEvent : Function {
-    let desc = "Destroy the event and free all underlying resources.";
-    let details = [];
+    let desc = "Destroy an event.";
+    let details = [
+      "`olDestroyEvent` releases `Event`. After a successful call the handle "
+      "is invalid and must not be used.",
+      "The work tracked by `Event` is not cancelled and runs to completion. "
+      "`olDestroyEvent` does not wait for it.",
+      "If `olDestroyEvent` fails, `Event` is not released. It is left in an "
+      "undefined state and must not be used, including in another call to "
+      "`olDestroyEvent`.",
+      "May be called concurrently with calls that operate on other events. "
+      "The caller must ensure that no other thread uses `Event` during or "
+      "after the `olDestroyEvent` call."
+    ];
     let params = [
-        Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
+        Param<"ol_event_handle_t", "Event", "event to destroy", PARAM_IN>
     ];
     let returns = [];
 }
 
 def olSyncEvent : Function {
-    let desc = "Block the calling thread until the event is complete.";
-    let details = [];
+    let desc = "Block the calling thread until an event is complete.";
+    let details = [
+      "`olSyncEvent` blocks until `Event` is complete. It returns immediately "
+      "if `Event` is already complete.",
+      "`Event` is not released. It can be passed to `olSyncEvent` and "
+      "`olWaitEvents` again.",
+      "`olSyncEvent` is thread safe."
+    ];
     let params = [
-        Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
+        Param<"ol_event_handle_t", "Event", "event to wait for", PARAM_IN>
     ];
     let returns = [];
 }

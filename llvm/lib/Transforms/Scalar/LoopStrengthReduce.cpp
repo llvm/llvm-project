@@ -3317,10 +3317,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
   // they will eventually be used be the current chain, or can be computed
   // from one of the chain increments. To be more precise we could
   // transitively follow its user and only add leaf IV users to the set.
-  for (User *U : IVOper->users()) {
-    Instruction *OtherUse = dyn_cast<Instruction>(U);
-    if (!OtherUse)
-      continue;
+  for (Instruction *OtherUse : IVOper->users()) {
     // Uses in the chain will no longer be uses if the chain is formed.
     // Include the head of the chain in this iteration (not Chain.begin()).
     IVChain::const_iterator IncIter = Chain.Incs.begin();

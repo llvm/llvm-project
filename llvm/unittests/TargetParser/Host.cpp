@@ -453,6 +453,44 @@ CPU revision    : 0
 }
 #endif
 
+TEST(getLinuxHostCPUName, PowerPC) {
+  // An MPC7448.
+  EXPECT_EQ(sys::detail::getHostCPUNameForPowerPC(
+                "processor\t: 0\n"
+                "cpu\t\t: 7448, altivec supported\n"
+                "clock\t\t: 1416.666661MHz\n"
+                "revision\t: 2.2 (pvr 8004 0202)\n"),
+            "7450");
+  std::pair<const char *, const char *> Cases[] = {
+      {"7450, altivec supported", "7450"},
+      {"7455, altivec supported", "7450"},
+      {"7447/7457, altivec supported", "7450"},
+      {"7447A, altivec supported", "7450"},
+      {"7400 (1.1), altivec supported", "7400"},
+      {"7410, altivec supported", "7400"},
+      {"740/750", "750"},
+      {"745/755", "750"},
+      {"750CX", "750"},
+      {"750CXe", "750"},
+      {"750CL", "750"},
+      {"750FX", "750"},
+      {"750GX", "750"},
+      {"604r", "604e"},
+      {"82xx", "603e"},
+      {"G2_LE", "603e"},
+      {"e300c1", "603e"},
+      {"e300c2", "generic"},
+      {"e300c3", "603e"},
+      {"e300c4", "603e"},
+      {"POWER9 (raw), altivec supported", "pwr9"},
+      {"(generic PPC)", "generic"}};
+  for (auto [Name, CPU] : Cases)
+    EXPECT_EQ(sys::detail::getHostCPUNameForPowerPC(
+                  (Twine("cpu\t\t: ") + Name + "\n").str()),
+              CPU)
+        << Name;
+}
+
 TEST(getLinuxHostCPUName, s390x) {
   SmallVector<std::string> ModelIDs(
       {"9175", "3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});

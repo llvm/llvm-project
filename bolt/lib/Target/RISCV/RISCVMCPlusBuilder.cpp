@@ -416,7 +416,8 @@ public:
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
                           MCContext *Ctx) override {
-    createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
+    Seq.emplace_back();
+    createTailCall(Seq.back(), Target, Ctx);
   }
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,

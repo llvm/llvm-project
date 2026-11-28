@@ -599,6 +599,12 @@ int unevaluated_builtin_args(void) {
   return classify + constant + (int)size + (int)dsize + (int)token;
 }
 
+// The for statement has null children.
+int unevaluated_builtin_null_children(void) {
+  int x;
+  return __builtin_constant_p(({ for (;;) break; x; })); // no-warning
+}
+
 // __builtin_os_log_format, not this size query, evaluates the arguments.
 __SIZE_TYPE__ unevaluated_os_log_buffer_size(void) {
   int x;

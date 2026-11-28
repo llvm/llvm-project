@@ -1,28 +1,19 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+zalasr < %s 2>&1 | FileCheck -check-prefixes=CHECK %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+zalasr < %s
 
-# CHECK: error: unrecognized instruction mnemonic
-lw. a1, (t0)
+lw. a1, (t0) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: unrecognized instruction mnemonic
-lw.rl t3, 0(t5)
+lw.rl t3, 0(t5) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: unrecognized instruction mnemonic
-lh.rlaq t4, (t6)
+lh.rlaq t4, (t6) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: unrecognized instruction mnemonic
-sb. a1, (t0)
+sb. a1, (t0) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: unrecognized instruction mnemonic
-sh.aq t3, 0(t5)
+sh.aq t3, 0(t5) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: unrecognized instruction mnemonic
-sh.rlaq t4, (t6)
+sh.rlaq t4, (t6) # expected-error {{unrecognized instruction mnemonic}}
 
-# CHECK: error: optional integer offset must be 0
-lw.aq zero, 1(a0)
+lw.aq zero, 1(a0) # expected-error {{optional integer offset must be 0}}
 
-# CHECK: error: optional integer offset must be 0
-sw.rl t1, 2(s0)
+sw.rl t1, 2(s0) # expected-error {{optional integer offset must be 0}}
 
-# CHECK: error: optional integer offset must be 0
-sb.aqrl sp, 3(s2)
+sb.aqrl sp, 3(s2) # expected-error {{optional integer offset must be 0}}

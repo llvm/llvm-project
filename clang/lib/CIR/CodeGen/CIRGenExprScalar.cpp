@@ -151,18 +151,18 @@ public:
       return {};
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
-      if (e->isGLValue()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "ScalarExprEmitter: constant expr GL Value");
-        return {};
-      }
-
-      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                 mlir::cast<mlir::TypedAttr>(result));
+      mlir::Value val = builder.getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      // This was already converted to an rvalue when it was constant evaluated.
+      if (!e->isGLValue() ||
+          (e->hasAPValueResult() && !e->getAPValueResult().isLValue()))
+        return val;
+      return cgf.emitLoadOfScalar(
+          cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
+          e->getExprLoc());
     }
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
-    return {};
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
@@ -1769,6 +1769,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
 
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, opInfo.fpFeatures);
   CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())

@@ -1099,19 +1099,25 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!ClassDecl)
     return;
 
-  const auto UseFields = [&](const CXXRecordDecl *RD) {
-    for (const auto *Field : RD->fields())
-      if (auto *FieldList = getOriginsList(*Field))
-        CurrentBlockFacts.push_back(
-            FactMgr.createFact<UseFact>(*Call, FieldList));
-  };
+  // Walking the fields visits every member declaration of the class and its
+  // bases, so do it once per class.
+  auto [It, Inserted] = ImplicitObjectFieldLists.try_emplace(ClassDecl);
+  llvm::SmallVectorImpl<OriginList *> &FieldLists = It->second;
+  if (Inserted) {
+    const auto CollectFields = [&](const CXXRecordDecl *RD) {
+      for (const auto *Field : RD->fields())
+        if (auto *FieldList = getOriginsList(*Field))
+          FieldLists.push_back(FieldList);
+    };
+    CollectFields(ClassDecl);
+    ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
+      CollectFields(Base);
+      return true;
+    });
+  }
 
-  UseFields(ClassDecl);
-
-  ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
-    UseFields(Base);
-    return true;
-  });
+  for (OriginList *FieldList : FieldLists)
+    CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(*Call, FieldList));
 }
 
 void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,

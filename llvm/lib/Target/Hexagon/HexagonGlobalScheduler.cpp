@@ -1438,7 +1438,8 @@ bool HexagonGlobalSchedulerImpl::canAddMIToThisPacket(
     }
     // Do not pull a load into a packet with a load from the same bank. The
     // packetizer kept them apart to avoid a bank conflict replay.
-    if (HexagonSubtarget::mayHaveBankConflict(**BI, *MI, *QII)) {
+    if (MF.getSubtarget<HexagonSubtarget>().mayHaveBankConflict(**BI, *MI,
+                                                                *QII)) {
       LLVM_DEBUG(dbgs() << "\tPotential bank conflict with:\n\t";
                  (*BI)->dump());
       return false;

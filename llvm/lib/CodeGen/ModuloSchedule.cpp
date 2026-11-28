@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ModuloSchedule.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -22,10 +23,6 @@
 
 #define DEBUG_TYPE "pipeliner"
 using namespace llvm;
-
-static cl::opt<bool> SwapBranchTargetsMVE(
-    "pipeliner-swap-branch-targets-mve", cl::Hidden, cl::init(false),
-    cl::desc("Swap target blocks of a conditional branch for MVE expander"));
 
 static void eraseBlock(MachineBasicBlock *MBB, LiveIntervals &LIS,
                        MachineDomTreeUpdater &MDTU) {
@@ -2204,9 +2201,9 @@ void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
   LoopInfo->createRemainingIterationsGreaterCondition(RequiredTC, MBB, Cond,
                                                       LastStage0Insts);
 
-  if (SwapBranchTargetsMVE) {
-    // Set SwapBranchTargetsMVE to true if a target prefers to replace TBB and
-    // FBB for optimal performance.
+  if (getCodeGenOptions(MF).pipeliner_swap_branch_targets_mve) {
+    // Set -pipeliner-swap-branch-targets-mve to true if a target prefers to
+    // replace TBB and FBB for optimal performance.
     if (TII->reverseBranchCondition(Cond))
       llvm_unreachable("can not reverse branch condition");
     TII->insertBranch(MBB, &Otherwise, &GreaterThan, Cond, DebugLoc());

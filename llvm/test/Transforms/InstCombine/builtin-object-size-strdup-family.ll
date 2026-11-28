@@ -7,10 +7,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local noalias noundef ptr @malloc(i64 noundef) local_unnamed_addr
 declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg)
-declare noalias ptr @strdup(ptr);
-declare noalias ptr @__strdup(ptr);
-declare noalias ptr @strndup(ptr, i64);
-declare noalias ptr @__strndup(ptr, i64);
+declare noalias ptr @strdup(ptr) allockind("alloc") "alloc-family"="malloc"
+declare noalias ptr @__strdup(ptr) allockind("alloc") "alloc-family"="malloc"
+declare noalias ptr @strndup(ptr, i64) allockind("alloc") "alloc-family"="malloc"
+declare noalias ptr @__strndup(ptr, i64) allockind("alloc") "alloc-family"="malloc"
 
 @str = dso_local constant [11 x i8] c"toulbroc'h\00"
 

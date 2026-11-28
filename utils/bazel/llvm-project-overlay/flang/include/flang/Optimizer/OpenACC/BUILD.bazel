@@ -20,11 +20,13 @@ cc_library(
         "*.h",
         "Support/*.h",
         "Analysis/*.h",
+        "Utils/*.h",
     ]),
     strip_include_prefix = "/flang/include",
     deps = [
         ":FIROpenACCPassesIncGen",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//llvm:Support",
         "//mlir:IR",
         "//mlir:OpenACCDialect",
         "//mlir:Pass",

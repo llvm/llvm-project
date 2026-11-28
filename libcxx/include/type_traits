@@ -500,7 +500,6 @@ namespace std
 #  include <__type_traits/is_member_pointer.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
-#  include <__type_traits/is_nothrow_destructible.h>
 #  include <__type_traits/is_object.h>
 #  include <__type_traits/is_pod.h>
 #  include <__type_traits/is_pointer.h>
@@ -514,7 +513,6 @@ namespace std
 #  include <__type_traits/is_trivially_assignable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
-#  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_union.h>
 #  include <__type_traits/is_unsigned.h>
 #  include <__type_traits/is_void.h>

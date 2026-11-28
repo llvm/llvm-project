@@ -73,9 +73,21 @@ public:
   unsigned getSImm5OpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
+  unsigned getSImm10OpValue(const MCInst &MI, unsigned OpNo,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+  unsigned getSImm11OpValue(const MCInst &MI, unsigned OpNo,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
   unsigned getSImm13OpValue(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
+  unsigned getImm22OpValue(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
+  unsigned getTrapNumOpValue(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
   unsigned getBranchPredTargetOpValue(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const;
@@ -161,17 +173,14 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return 0;
 }
 
-unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
-                                             SmallVectorImpl<MCFixup> &Fixups,
-                                             const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-
+// Encode an immediate operand. A symbolic operand gets a fixup of the given
+// kind, or of its relocation specifier if it has one.
+static unsigned getImmOpValue(const MCOperand &MO,
+                              SmallVectorImpl<MCFixup> &Fixups, uint16_t Kind) {
   if (MO.isImm())
     return MO.getImm();
 
-  assert(MO.isExpr() &&
-         "getSImm5OpValue expects only expressions or an immediate");
-
+  assert(MO.isExpr() && "expected an immediate or an expression");
   const MCExpr *Expr = MO.getExpr();
 
   // Constant value, no fixup is needed
@@ -182,34 +191,50 @@ unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
     addFixup(Fixups, 0, Expr, SExpr->getSpecifier());
     return 0;
   }
-  addFixup(Fixups, 0, Expr, ELF::R_SPARC_5);
+  addFixup(Fixups, 0, Expr, Kind);
   return 0;
+}
+
+unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, ELF::R_SPARC_5);
+}
+
+unsigned
+SparcMCCodeEmitter::getSImm10OpValue(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, ELF::R_SPARC_10);
+}
+
+unsigned
+SparcMCCodeEmitter::getSImm11OpValue(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, ELF::R_SPARC_11);
 }
 
 unsigned
 SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, Sparc::fixup_sparc_13);
+}
 
-  if (MO.isImm())
-    return MO.getImm();
+unsigned SparcMCCodeEmitter::getImm22OpValue(const MCInst &MI, unsigned OpNo,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, ELF::R_SPARC_22);
+}
 
-  assert(MO.isExpr() &&
-         "getSImm13OpValue expects only expressions or an immediate");
-
-  const MCExpr *Expr = MO.getExpr();
-
-  // Constant value, no fixup is needed
-  if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
-    return CE->getValue();
-
-  if (auto *SExpr = dyn_cast<MCSpecifierExpr>(Expr)) {
-    addFixup(Fixups, 0, Expr, SExpr->getSpecifier());
-    return 0;
-  }
-  addFixup(Fixups, 0, Expr, Sparc::fixup_sparc_13);
-  return 0;
+// GNU as uses R_SPARC_13 for a symbolic trap number, but on V9 bits 12-11 of
+// that field are the condition code. R_SPARC_7 covers just the trap number.
+unsigned
+SparcMCCodeEmitter::getTrapNumOpValue(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  return getImmOpValue(MI.getOperand(OpNo), Fixups, ELF::R_SPARC_7);
 }
 
 unsigned SparcMCCodeEmitter::

@@ -30,7 +30,6 @@ struct IndexInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void IndexDialect::initialize() {
-  registerOperations();
   addInterfaces<IndexInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, IndexDialect>();
 }

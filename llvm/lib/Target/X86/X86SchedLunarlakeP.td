@@ -30,8 +30,6 @@ def LunarlakePModel : SchedMachineModel {
   // This flag is set to allow the scheduler to assign a default model to
   // unrecognized opcodes.
   let CompleteModel = 0;
-  // FIXME: Remove when all errors have been fixed.
-  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = LunarlakePModel in {
@@ -1201,9 +1199,6 @@ def : InstRW<[LNLPWriteResGroupX39], (instregex "^J(E|R)CXZ$")>;
 def : InstRW<[LNLPWriteResGroupX39], (instrs CWD)>;
 
 def LNLPWriteResGroupX40 : SchedWriteRes<[LNLPPort00_01_02_03_04_05]>;
-def : InstRW<[LNLPWriteResGroupX40], (instregex "^(LD|ST)_Frr$",
-                                               "^MOV16s(m|r)$",
-                                               "^MOV(32|64)sr$")>;
 def : InstRW<[LNLPWriteResGroupX40], (instrs DEC16r_alt,
                                             SALC,
                                             ST_FPrr,
@@ -1400,8 +1395,6 @@ def LNLPWriteResGroupX78 : SchedWriteRes<[LNLPPort20_21_22]> {
 }
 def : InstRW<[LNLPWriteResGroupX78], (instrs INC32r_alt)>;
 
-def LNLPWriteResGroupX85 : SchedWriteRes<[LNLPPort00_02_04]>;
-def : InstRW<[LNLPWriteResGroupX85], (instrs JMP64r_REX)>;
 def LNLPWriteResGroupX86 : SchedWriteRes<[]> {
   let Latency = 0;
   let NumMicroOps = 0;
@@ -1611,13 +1604,6 @@ def LNLPWriteResGroupX158 : SchedWriteRes<[LNLPVPort00_01_02_03]> {
 }
 def : InstRW<[LNLPWriteResGroupX158], (instregex "^MUL_F(P?)rST0$")>;
 def : InstRW<[LNLPWriteResGroupX158], (instrs MUL_FST0r)>;
-def LNLPWriteResGroupX155 : SchedWriteRes<[LNLPPort01_03_05]>;
-def : InstRW<[LNLPWriteResGroupX155], (instregex "^MOVSX(16|32|64)rr(8|16|32)$")>;
-def : InstRW<[LNLPWriteResGroupX155], (instrs MOVSX32rr8_NOREX)>;
-def LNLPWriteResGroupX173 : SchedWriteRes<[LNLPVPort02_03]>;
-def : InstRW<[LNLPWriteResGroupX173], (instregex "^(V?)PALIGNRrri$",
-                                                "^VPBROADCAST(B|D|Q|W)rr$")>;
-def : InstRW<[LNLPWriteResGroupX173], (instrs VPALIGNRYrri)>;
 def LNLPWriteResGroupX176 : SchedWriteRes<[LNLPVPort02_03, LNLPPort10_11, LNLPPort25_26_27]> {
   let Latency = 12;
   let NumMicroOps = 3;
@@ -1775,11 +1761,6 @@ def LNLPWriteResGroupX218 : SchedWriteRes<[LNLPPort00_01_02_03_04_05, LNLPPort00
   let NumMicroOps = 7;
 }
 def : InstRW<[LNLPWriteResGroupX218], (instrs SERIALIZE)>;
-def LNLPWriteResGroupX219 : SchedWriteRes<[LNLPPort10_11, LNLPPort25_26_27]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-}
-def : InstRW<[LNLPWriteResGroupX219], (instrs SFENCE)>;
 def LNLPWriteResGroupX220 : SchedWriteRes<[LNLPPort00_01_02_03_04_05, LNLPPort01_03_05, LNLPPort10_11, LNLPPort25_26_27]> {
   let ReleaseAtCycles = [1, 2, 2, 2];
   let Latency = 21;
@@ -1938,11 +1919,6 @@ def LNLPWriteResGroupX262 : SchedWriteRes<[LNLPPort10_11, LNLPPort25_26_27]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[LNLPWriteResGroupX262], (instrs VMOVNTPSmr)>;
-def LNLPWriteResGroupX264 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
-  let Latency = 9;
-  let NumMicroOps = 2;
-}
-def : InstRW<[LNLPWriteResGroupX264, ReadAfterVecYLd], (instregex "^VSHUFP(D|S)Yrmi$")>;
 def LNLPWriteResGroupX267 : SchedWriteRes<[LNLPPort01_03_05, LNLPPort00_01_02_03_04_05, LNLPPort00_02_04, LNLPPort01_03_05, LNLPPort01_03_05]> {
   let ReleaseAtCycles = [1, 2, 3, 3, 1];
   let Latency = 16;

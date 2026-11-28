@@ -24,7 +24,7 @@ multiclass intcond_mov_alias<string cond, int condVal, string ccreg,
   // mov<cond> (%icc|%xcc), simm11, rd
   def : InstAlias<!strconcat(!strconcat(!strconcat("mov", cond), ccreg),
                              ", $simm11, $rd"),
-                  (movri IntRegs:$rd, i32imm:$simm11, condVal)>;
+                  (movri IntRegs:$rd, simm11Op:$simm11, condVal)>;
 
   // fmovs<cond> (%icc|%xcc), $rs2, $rd
   def : InstAlias<!strconcat(!strconcat(!strconcat("fmovs", cond), ccreg),
@@ -48,7 +48,7 @@ multiclass fpcond_mov_alias<string cond, int condVal,
 
   // mov<cond> %fcc[0-3], simm11, rd
   def : InstAlias<!strconcat(!strconcat("mov", cond), " $cc, $simm11, $rd"),
-                  (movri IntRegs:$rd, FCCRegs:$cc, i32imm:$simm11, condVal)>;
+                  (movri IntRegs:$rd, FCCRegs:$cc, simm11Op:$simm11, condVal)>;
 
   // fmovs<cond> %fcc[0-3], $rs2, $rd
   def : InstAlias<!strconcat(!strconcat("fmovs", cond), " $cc, $rs2, $rd"),
@@ -71,7 +71,7 @@ multiclass regcond_mov_alias<string rcond, int condVal,
 
   // movr<cond> $rs1, $simm10, $rd
   def : InstAlias<!strconcat(!strconcat("movr", rcond), " $rs1, $simm10, $rd"),
-                  (movrri IntRegs:$rd, I64Regs:$rs1, i32imm:$simm10, condVal)>;
+                  (movrri IntRegs:$rd, I64Regs:$rs1, simm10Op:$simm10, condVal)>;
 
   // fmovrs<cond> $rs1, $rs2, $rd
   def : InstAlias<!strconcat(!strconcat("fmovrs", rcond), " $rs1, $rs2, $rd"),
@@ -234,43 +234,43 @@ multiclass int_cond_alias<string cond, int condVal> {
 
   // t<cond> %icc, imm => t<cond> %icc, G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $imm"),
-                  (TICCri G0, i32imm:$imm, condVal)>,
+                  (TICCri G0, trapnum:$imm, condVal)>,
                   Requires<[HasV9]>;
   def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $imm"),
-                  (TICCri G0, i32imm:$imm, condVal)>,
+                  (TICCri G0, trapnum:$imm, condVal)>,
                   Requires<[HasV9, Is32Bit]>;
 
   // t<cond> %icc, rs1 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $rs1 + $imm"),
-                  (TICCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  (TICCri IntRegs:$rs1, trapnum:$imm, condVal)>,
                   Requires<[HasV9]>;
   def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $imm"),
-                  (TICCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  (TICCri IntRegs:$rs1, trapnum:$imm, condVal)>,
                   Requires<[HasV9, Is32Bit]>;
 
   // t<cond> %xcc, imm => t<cond> %xcc, G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $imm"),
-                  (TXCCri G0, i32imm:$imm, condVal)>,
+                  (TXCCri G0, trapnum:$imm, condVal)>,
                   Requires<[HasV9]>;
   def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $imm"),
-                  (TXCCri G0, i32imm:$imm, condVal)>,
+                  (TXCCri G0, trapnum:$imm, condVal)>,
                   Requires<[HasV9, Is64Bit]>;
 
   // t<cond> %xcc, rs1 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $rs1 + $imm"),
-                  (TXCCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  (TXCCri IntRegs:$rs1, trapnum:$imm, condVal)>,
                   Requires<[HasV9]>;
   def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $imm"),
-                  (TXCCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  (TXCCri IntRegs:$rs1, trapnum:$imm, condVal)>,
                   Requires<[HasV9, Is64Bit]>;
 
   // t<cond> imm => t<cond> G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " $imm"),
-                  (TRAPri G0, i32imm:$imm, condVal)>;
+                  (TRAPri G0, trapnum:$imm, condVal)>;
 
   // t<cond> rs1 + imm => t<cond> rs1 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " $rs1 + $imm"),
-                  (TRAPri IntRegs:$rs1, i32imm:$imm, condVal)>;
+                  (TRAPri IntRegs:$rs1, trapnum:$imm, condVal)>;
 
   // t<cond> rs1 => t<cond> G0 + rs1
   def : InstAlias<!strconcat(!strconcat("t", cond), " $rs1"),

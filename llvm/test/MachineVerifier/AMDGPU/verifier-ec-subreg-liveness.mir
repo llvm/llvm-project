@@ -9,7 +9,7 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-NOT: *** Bad machine code: Inconsistent valno->def ***
-    INLINEASM &"", 0 /* attdialect */,  1179659 /* regdef-ec:VGPR_32 */, def undef early-clobber %0.sub0:vreg_64, 1179658 /* regdef:VGPR_32 */, def undef %0.sub1:vreg_64
+    INLINEASM &"", attdialect,  regdef-ec:VGPR_32, def undef early-clobber %0.sub0:vreg_64, regdef:VGPR_32, def undef %0.sub1:vreg_64
     FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 
@@ -21,7 +21,7 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-NOT: *** Bad machine code: Inconsistent valno->def ***
-    INLINEASM &"", 0 /* attdialect */, 1179658 /* regdef:VGPR_32 */, def undef %0.sub0:vreg_64, 1179659 /* regdef-ec:VGPR_32 */, def undef early-clobber %0.sub1:vreg_64
+    INLINEASM &"", attdialect, regdef:VGPR_32, def undef %0.sub0:vreg_64, regdef-ec:VGPR_32, def undef early-clobber %0.sub1:vreg_64
     FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 

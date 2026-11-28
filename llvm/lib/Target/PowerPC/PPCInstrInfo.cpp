@@ -5692,15 +5692,13 @@ namespace {
 class PPCPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineInstr *Loop, *EndLoop, *LoopCount;
   MachineFunction *MF;
-  const TargetInstrInfo *TII;
   int64_t TripCount;
 
 public:
   PPCPipelinerLoopInfo(MachineInstr *Loop, MachineInstr *EndLoop,
                        MachineInstr *LoopCount)
       : Loop(Loop), EndLoop(EndLoop), LoopCount(LoopCount),
-        MF(Loop->getParent()->getParent()),
-        TII(MF->getSubtarget().getInstrInfo()) {
+        MF(Loop->getParent()->getParent()) {
     // Inspect the Loop instruction up-front, as it may be deleted when we call
     // createTripCountGreaterCondition.
     if (LoopCount->getOpcode() == PPC::LI8 || LoopCount->getOpcode() == PPC::LI)

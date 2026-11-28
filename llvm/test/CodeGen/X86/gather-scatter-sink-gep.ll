@@ -12,25 +12,22 @@
 define void @hoisted_fields(ptr %p, ptr %q, i64 %n) {
 ; SKX-LABEL: hoisted_fields:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vpbroadcastq %rdi, %zmm2
-; SKX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm0 # [0,12,24,36,48,60,72,84]
-; SKX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1 # [4,16,28,40,52,64,76,88]
-; SKX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2 # [8,20,32,44,56,68,80,92]
+; SKX-NEXT:    vmovaps {{.*#+}} ymm0 = [0,12,24,36,48,60,72,84]
 ; SKX-NEXT:    .p2align 4
 ; SKX-NEXT:  .LBB0_1: # %loop
 ; SKX-NEXT:    # =>This Inner Loop Header: Depth=1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    kxnorb %k0, %k0, %k1
+; SKX-NEXT:    vgatherdps (%rdi,%ymm0), %ymm1 {%k1}
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    kxnorb %k0, %k0, %k1
+; SKX-NEXT:    vgatherdps 4(%rdi,%ymm0), %ymm2 {%k1}
 ; SKX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; SKX-NEXT:    kxnorb %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm0), %ymm3 {%k1}
-; SKX-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; SKX-NEXT:    kxnorb %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm1), %ymm4 {%k1}
-; SKX-NEXT:    vxorps %xmm5, %xmm5, %xmm5
-; SKX-NEXT:    kxnorb %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm2), %ymm5 {%k1}
-; SKX-NEXT:    vaddps %ymm4, %ymm3, %ymm3
-; SKX-NEXT:    vaddps %ymm5, %ymm3, %ymm3
-; SKX-NEXT:    vmovaps %ymm3, (%rsi)
+; SKX-NEXT:    vgatherdps 8(%rdi,%ymm0), %ymm3 {%k1}
+; SKX-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; SKX-NEXT:    vaddps %ymm3, %ymm1, %ymm1
+; SKX-NEXT:    vmovaps %ymm1, (%rsi)
 ; SKX-NEXT:    addq $32, %rsi
 ; SKX-NEXT:    decq %rdx
 ; SKX-NEXT:    jne .LBB0_1
@@ -40,41 +37,22 @@ define void @hoisted_fields(ptr %p, ptr %q, i64 %n) {
 ;
 ; AVX2-LABEL: hoisted_fields:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovq %rdi, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm5
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0 # [48,60,72,84]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm1 # [0,12,24,36]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm2 # [52,64,76,88]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm3 # [4,16,28,40]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm4 # [56,68,80,92]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm5 # [8,20,32,44]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [0,12,24,36,48,60,72,84]
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX2-NEXT:    vpcmpeqd %xmm7, %xmm7, %xmm7
-; AVX2-NEXT:    vgatherqps %xmm7, (,%ymm0), %xmm6
-; AVX2-NEXT:    vxorps %xmm7, %xmm7, %xmm7
-; AVX2-NEXT:    vpcmpeqd %xmm8, %xmm8, %xmm8
-; AVX2-NEXT:    vgatherqps %xmm8, (,%ymm1), %xmm7
-; AVX2-NEXT:    vxorps %xmm8, %xmm8, %xmm8
-; AVX2-NEXT:    vpcmpeqd %xmm9, %xmm9, %xmm9
-; AVX2-NEXT:    vgatherqps %xmm9, (,%ymm2), %xmm8
-; AVX2-NEXT:    vxorps %xmm9, %xmm9, %xmm9
-; AVX2-NEXT:    vpcmpeqd %xmm10, %xmm10, %xmm10
-; AVX2-NEXT:    vgatherqps %xmm10, (,%ymm3), %xmm9
-; AVX2-NEXT:    vinsertf128 $1, %xmm6, %ymm7, %ymm6
-; AVX2-NEXT:    vinsertf128 $1, %xmm8, %ymm9, %ymm7
-; AVX2-NEXT:    vaddps %ymm7, %ymm6, %ymm6
-; AVX2-NEXT:    vxorps %xmm7, %xmm7, %xmm7
-; AVX2-NEXT:    vpcmpeqd %xmm8, %xmm8, %xmm8
-; AVX2-NEXT:    vgatherqps %xmm8, (,%ymm4), %xmm7
-; AVX2-NEXT:    vxorps %xmm8, %xmm8, %xmm8
-; AVX2-NEXT:    vpcmpeqd %xmm9, %xmm9, %xmm9
-; AVX2-NEXT:    vgatherqps %xmm9, (,%ymm5), %xmm8
-; AVX2-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; AVX2-NEXT:    vaddps %ymm7, %ymm6, %ymm6
-; AVX2-NEXT:    vmovaps %ymm6, (%rsi)
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vgatherdps %ymm2, (%rdi,%ymm0), %ymm1
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vgatherdps %ymm3, 4(%rdi,%ymm0), %ymm2
+; AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm4, %ymm4
+; AVX2-NEXT:    vgatherdps %ymm4, 8(%rdi,%ymm0), %ymm3
+; AVX2-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vaddps %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX2-NEXT:    addq $32, %rsi
 ; AVX2-NEXT:    decq %rdx
 ; AVX2-NEXT:    jne .LBB0_1
@@ -108,23 +86,19 @@ exit:
 define void @hoisted_index(ptr %p, <8 x i32> %idx, ptr %q, i64 %n) {
 ; SKX-LABEL: hoisted_index:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; SKX-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; SKX-NEXT:    vpmuldq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
-; SKX-NEXT:    vpbroadcastq %rdi, %zmm1
-; SKX-NEXT:    vpaddq %zmm0, %zmm1, %zmm1
-; SKX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
-; SKX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; SKX-NEXT:    .p2align 4
 ; SKX-NEXT:  .LBB1_1: # %loop
 ; SKX-NEXT:    # =>This Inner Loop Header: Depth=1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    kxnorb %k0, %k0, %k1
+; SKX-NEXT:    vgatherqps 4(%rdi,%zmm0), %ymm1 {%k1}
 ; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    kxnorb %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm0), %ymm2 {%k1}
-; SKX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; SKX-NEXT:    kxnorb %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm1), %ymm3 {%k1}
-; SKX-NEXT:    vaddps %ymm3, %ymm2, %ymm2
-; SKX-NEXT:    vmovaps %ymm2, (%rsi)
+; SKX-NEXT:    vgatherqps 8(%rdi,%zmm0), %ymm2 {%k1}
+; SKX-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; SKX-NEXT:    vmovaps %ymm1, (%rsi)
 ; SKX-NEXT:    addq $32, %rsi
 ; SKX-NEXT:    decq %rdx
 ; SKX-NEXT:    jne .LBB1_1
@@ -135,40 +109,30 @@ define void @hoisted_index(ptr %p, <8 x i32> %idx, ptr %q, i64 %n) {
 ; AVX2-LABEL: hoisted_index:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [12,12,12,12]
 ; AVX2-NEXT:    vpmuldq %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vmovq %rdi, %xmm3
-; AVX2-NEXT:    vpbroadcastq %xmm3, %ymm3
-; AVX2-NEXT:    vpaddq %ymm0, %ymm3, %ymm4
-; AVX2-NEXT:    vpmuldq %ymm2, %ymm1, %ymm0
-; AVX2-NEXT:    vpaddq %ymm0, %ymm3, %ymm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
-; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm0
-; AVX2-NEXT:    vpaddq %ymm1, %ymm4, %ymm1
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [8,8,8,8]
-; AVX2-NEXT:    vpaddq %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpmuldq %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB1_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vgatherqps %xmm3, 4(%rdi,%ymm1), %xmm2
+; AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vxorps %xmm5, %xmm5, %xmm5
-; AVX2-NEXT:    vgatherqps %xmm4, (,%ymm0), %xmm5
+; AVX2-NEXT:    vgatherqps %xmm4, 4(%rdi,%ymm0), %xmm3
+; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX2-NEXT:    vgatherqps %xmm4, (,%ymm1), %xmm6
-; AVX2-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm4
+; AVX2-NEXT:    vgatherqps %xmm4, 8(%rdi,%ymm1), %xmm3
+; AVX2-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
-; AVX2-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX2-NEXT:    vgatherqps %xmm5, (,%ymm2), %xmm6
-; AVX2-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
-; AVX2-NEXT:    vxorps %xmm7, %xmm7, %xmm7
-; AVX2-NEXT:    vgatherqps %xmm5, (,%ymm3), %xmm7
-; AVX2-NEXT:    vinsertf128 $1, %xmm6, %ymm7, %ymm5
-; AVX2-NEXT:    vaddps %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vmovaps %ymm4, (%rsi)
+; AVX2-NEXT:    vgatherqps %xmm5, 8(%rdi,%ymm0), %xmm4
+; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX2-NEXT:    vaddps %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vmovaps %ymm2, (%rsi)
 ; AVX2-NEXT:    addq $32, %rsi
 ; AVX2-NEXT:    decq %rdx
 ; AVX2-NEXT:    jne .LBB1_1

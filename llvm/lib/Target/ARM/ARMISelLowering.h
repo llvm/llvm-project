@@ -387,9 +387,9 @@ class VectorType;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+    shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+    shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
