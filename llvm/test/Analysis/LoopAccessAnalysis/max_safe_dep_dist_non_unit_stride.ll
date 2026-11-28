@@ -11,7 +11,7 @@
 define void @foo(i64  %len, ptr %a) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i32 %0, ptr %arrayidx2, align 4 ->
