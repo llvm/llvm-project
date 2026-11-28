@@ -1,10 +1,18 @@
 set(LLVM_LINK_COMPONENTS
+  Option
   support
 )
+
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CIndexTestOptsTableGen)
 
 add_clang_executable(c-index-test
   c-index-test.c
   core_main.cpp
+
+  DEPENDS
+  CIndexTestOptsTableGen
   )
 
 if(NOT MSVC)

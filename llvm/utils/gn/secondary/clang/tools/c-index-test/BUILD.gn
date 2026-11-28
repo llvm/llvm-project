@@ -1,6 +1,14 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":c-index-test" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("c-index-test") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/include/clang/Config",
     "//clang/lib/AST",
     "//clang/lib/Basic",
@@ -11,6 +19,7 @@ executable("c-index-test") {
     "//clang/lib/Serialization",
     "//clang/lib/UnifiedSymbolResolution",
     "//clang/tools/libclang",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xml",
   ]
