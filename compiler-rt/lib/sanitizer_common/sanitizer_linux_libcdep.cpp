@@ -312,7 +312,7 @@ static uptr ThreadDescriptorSizeFallback() {
 #    endif
 
 #    if defined(__alpha__)
-  return 1824;  // from glibc 2.43
+  return 1040;  // offsetof(struct pthread, specific_used), as for s390/sparc
 #    endif
 
 #    if defined(__hppa__)
