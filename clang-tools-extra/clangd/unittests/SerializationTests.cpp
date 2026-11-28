@@ -543,6 +543,81 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
             "malformed or truncated include uri");
 }
 
+// Serializes the YAML fixture as RIFF, replaces its refs chunk with the result
+// of Edit, and reads the edited file back.
+llvm::Expected<IndexFileIn>
+readWithEditedRefs(llvm::function_ref<std::string(llvm::StringRef)> Edit) {
+  auto In = readIndexFile(YAML);
+  if (!In)
+    return In.takeError();
+  IndexFileOut Out(*In);
+  Out.Format = IndexFileFormat::RIFF;
+  std::string Serialized = llvm::to_string(Out);
+  auto Parsed = riff::readFile(Serialized);
+  if (!Parsed)
+    return Parsed.takeError();
+  auto Refs = llvm::find_if(Parsed->Chunks, [](riff::Chunk C) {
+    return C.ID == riff::fourCC("refs");
+  });
+  if (Refs == Parsed->Chunks.end())
+    return llvm::createStringError("no refs chunk");
+  std::string Edited = Edit(Refs->Data);
+  Refs->Data = Edited;
+  return readIndexFile(llvm::to_string(*Parsed));
+}
+
+// The fixture's refs chunk is a single bundle: an 8-byte SymbolID, the number
+// of refs (1, as a one-byte varint), then the ref.
+constexpr size_t RefsBundleHeaderSize = SymbolID::RawSize + 1;
+
+TEST(SerializationTest, RejectsRepeatedRefsBundle) {
+  auto Read = readWithEditedRefs(
+      [](llvm::StringRef Refs) { return (Refs + Refs).str(); });
+  ASSERT_TRUE(!Read);
+  EXPECT_EQ(llvm::toString(Read.takeError()),
+            "malformed refs: repeated symbol");
+}
+
+TEST(SerializationTest, NoCrashOnBadRefsFileURI) {
+  // Give the bundle a second ref whose file URI is not in the string table.
+  auto Read = readWithEditedRefs([](llvm::StringRef Refs) {
+    llvm::StringRef ID = Refs.take_front(SymbolID::RawSize);
+    llvm::StringRef Ref = Refs.drop_front(RefsBundleHeaderSize);
+    EXPECT_EQ(Refs[SymbolID::RawSize], 1);
+    // A ref is: 1 byte kind, varint(stringID) file URI, ... We need the URI to
+    // be encoded in one byte to replace it.
+    EXPECT_LT(static_cast<uint8_t>(Ref[1]), 0x80);
+    std::string BadRef =
+        (Ref.take_front(1) + llvm::fromHex("ffffffff0f") + Ref.drop_front(2))
+            .str();
+    return (ID + "\x02" + Ref + BadRef).str();
+  });
+  ASSERT_TRUE(!Read);
+  EXPECT_EQ(llvm::toString(Read.takeError()), "malformed or truncated refs");
+}
+
+// SymbolID order depends on the host's endianness, so a valid index written on
+// another host can have its refs in a different order.
+TEST(SerializationTest, AcceptsRefsBundlesInAnyOrder) {
+  SymbolID First, Second;
+  auto Read = readWithEditedRefs([&](llvm::StringRef Refs) {
+    std::string OtherID = Refs.take_front(SymbolID::RawSize).str();
+    OtherID.back() ^= 1;
+    SymbolID A = SymbolID::fromRaw(Refs.take_front(SymbolID::RawSize));
+    SymbolID B = SymbolID::fromRaw(OtherID);
+    std::tie(First, Second) = A < B ? std::tie(A, B) : std::tie(B, A);
+    // Write the bundles in decreasing order for this host.
+    llvm::StringRef Rest = Refs.drop_front(SymbolID::RawSize);
+    return (llvm::StringRef(Second.raw()) + Rest + First.raw() + Rest).str();
+  });
+  ASSERT_FALSE(!Read) << Read.takeError();
+  ASSERT_TRUE(Read->Refs);
+  std::vector<SymbolID> IDs;
+  for (const auto &[ID, Refs] : *Read->Refs)
+    IDs.push_back(ID);
+  EXPECT_THAT(IDs, ElementsAre(First, Second));
+}
+
 // Check we detect invalid string table size size without allocating it first.
 // If this detection fails, the test should allocate a huge array and crash.
 TEST(SerializationTest, NoCrashOnBadStringTableSize) {
