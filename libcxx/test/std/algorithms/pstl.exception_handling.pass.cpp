@@ -585,6 +585,33 @@ int main(int, char**) {
       }
 
       {
+        auto mid1    = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+        auto compare = maybe_throw(tokens[6], [](int x, int y) -> bool { return x < y; });
+
+        // partial_sort(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          (void)std::partial_sort(policy, std::move(first1), std::move(mid1), std::move(last1));
+        });
+
+        // partial_sort(first, mid, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::partial_sort(policy, std::move(first1), std::move(mid1), std::move(last1), compare);
+        });
+
+        // partial_sort_copy(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::partial_sort_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // partial_sort_copy(first1, last1, first2, last2, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::partial_sort_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
         auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
         auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
 

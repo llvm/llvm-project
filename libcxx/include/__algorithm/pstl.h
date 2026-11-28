@@ -1142,6 +1142,94 @@ template <class _ExecutionPolicy,
           class _Comp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+void partial_sort(_ExecutionPolicy&& __policy,
+                  _RandomAccessIterator __first,
+                  _RandomAccessIterator __middle,
+                  _RandomAccessIterator __last,
+                  _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "partial_sort requires RandomAccessIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__partial_sort, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__middle),
+      std::move(__last),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _RandomAccessIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+void partial_sort(_ExecutionPolicy&& __policy,
+                  _RandomAccessIterator __first,
+                  _RandomAccessIterator __middle,
+                  _RandomAccessIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "partial_sort requires RandomAccessIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__partial_sort, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__middle), std::move(__last), less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _RandomAccessIterator,
+          class _Comp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_RandomAccessIterator partial_sort_copy(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _RandomAccessIterator __result_first,
+    _RandomAccessIterator __result_last,
+    _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partial_sort_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
+      _RandomAccessIterator, "partial_sort_copy requires RandomAccessIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _RandomAccessIterator, decltype(*__first), "partial_sort_copy requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__partial_sort_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result_first),
+      std::move(__result_last),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _RandomAccessIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_RandomAccessIterator partial_sort_copy(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _RandomAccessIterator __result_first,
+    _RandomAccessIterator __result_last) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partial_sort_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
+      _RandomAccessIterator, "partial_sort_copy requires RandomAccessIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _RandomAccessIterator, decltype(*__first), "partial_sort_copy requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__partial_sort_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result_first),
+      std::move(__result_last),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _RandomAccessIterator,
+          class _Comp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 void sort(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "sort requires RandomAccessIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__sort, __pstl::__current_configuration, _RawPolicy>;

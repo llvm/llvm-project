@@ -367,6 +367,21 @@ struct __none_of;
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __partial_sort;
+// template <class _Policy, class _RandomAccessIterator, class _Comp>
+// optional<__empty>
+// operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __middle,
+//                       _RandomAccessIterator __last, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __partial_sort_copy;
+// template <class _Policy, class _ForwardIterator, class _RandomAccessIterator, class _Comp>
+// optional<_RandomAccessIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _RandomAccessIterator __result_first, _RandomAccessIterator __result_last,
+//                       _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __partition;
 // template <class _Policy, class _ForwardIterator, class _Predicate>
 // optional<_ForwardIterator>

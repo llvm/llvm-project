@@ -410,6 +410,24 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::partial_sort(
+        pol, non_random, non_random, non_random); // expected-error@*:* {{static assertion failed: partial_sort}}
+    (void)std::partial_sort(
+        pol, non_random, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: partial_sort}}
+  }
+
+  {
+    (void)std::partial_sort_copy(
+        pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: partial_sort_copy}}
+    (void)std::partial_sort_copy(
+        pol, it, it, non_random, non_random); // expected-error@*:* {{static assertion failed: partial_sort_copy}}
+    (void)std::partial_sort_copy(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: partial_sort_copy}}
+    (void)std::partial_sort_copy(
+        pol, it, it, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: partial_sort_copy}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }
