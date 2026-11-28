@@ -31,7 +31,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
-#include <cstring>
 
 namespace llvm {
 
