@@ -2411,6 +2411,7 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; SSE-NEXT:    movq %rcx, %rax
 ; SSE-NEXT:    movq %rdx, %r9
 ; SSE-NEXT:    orq %r8, %r9
+; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    bsrq %rsi, %rcx
 ; SSE-NEXT:    orq %rax, %rsi
 ; SSE-NEXT:    bsrq %r8, %r10
@@ -2420,6 +2421,7 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; SSE-NEXT:    orq $64, %r11
 ; SSE-NEXT:    testq %r8, %r8
 ; SSE-NEXT:    cmovneq %r10, %r11
+; SSE-NEXT:    xorl %r10d, %r10d
 ; SSE-NEXT:    bsrq %rdx, %r10
 ; SSE-NEXT:    xorq $63, %r10
 ; SSE-NEXT:    xorq $63, %rcx
@@ -2699,6 +2701,7 @@ define i256 @isolate_msb_i256_vector(<4 x i64> %v0, i256 %idx) nounwind {
 ; SSE2-NEXT:    orq $64, %rsi
 ; SSE2-NEXT:    testq %r8, %r8
 ; SSE2-NEXT:    cmovneq %r9, %rsi
+; SSE2-NEXT:    xorl %r8d, %r8d
 ; SSE2-NEXT:    bsrq %rdx, %r8
 ; SSE2-NEXT:    xorq $63, %r8
 ; SSE2-NEXT:    bsrq %rcx, %rcx
@@ -2757,6 +2760,7 @@ define i256 @isolate_msb_i256_vector(<4 x i64> %v0, i256 %idx) nounwind {
 ; SSE42-NEXT:    orq $64, %rax
 ; SSE42-NEXT:    testq %rsi, %rsi
 ; SSE42-NEXT:    cmovneq %r8, %rax
+; SSE42-NEXT:    xorl %esi, %esi
 ; SSE42-NEXT:    bsrq %rdx, %rsi
 ; SSE42-NEXT:    xorq $63, %rsi
 ; SSE42-NEXT:    bsrq %rcx, %rcx
@@ -3001,6 +3005,7 @@ define i256 @isolate_msb_i256_load(ptr %p0, i256 %idx) nounwind {
 ; SSE2-NEXT:    cmovneq %rcx, %r10
 ; SSE2-NEXT:    bsrq %r9, %r11
 ; SSE2-NEXT:    xorq $63, %r11
+; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    bsrq (%rsi), %rcx
 ; SSE2-NEXT:    xorq $63, %rcx
 ; SSE2-NEXT:    orq $64, %rcx
@@ -3057,6 +3062,7 @@ define i256 @isolate_msb_i256_load(ptr %p0, i256 %idx) nounwind {
 ; SSE42-NEXT:    cmovneq %rcx, %r8
 ; SSE42-NEXT:    movq 8(%rsi), %r9
 ; SSE42-NEXT:    bsrq %r9, %r10
+; SSE42-NEXT:    xorl %ecx, %ecx
 ; SSE42-NEXT:    bsrq (%rsi), %rcx
 ; SSE42-NEXT:    xorq $63, %r10
 ; SSE42-NEXT:    xorq $63, %rcx
