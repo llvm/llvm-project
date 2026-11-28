@@ -483,3 +483,21 @@ func.func @negative_input() -> tensor<?x?x?xf16> {
   %11 = bufferization.alloc_tensor(%c10, %idx-3, %idx27) : tensor<?x?x?xf16>
   return %11 : tensor<?x?x?xf16>
 }
+
+// -----
+
+// A to_buffer of a to_tensor whose buffers are not memrefs is left as it is:
+// the default cast casts memrefs only.
+
+// CHECK-LABEL: func @to_buffer_of_to_tensor_buffer_like(
+//       CHECK:   bufferization.to_tensor
+//       CHECK:   bufferization.to_buffer
+func.func @to_buffer_of_to_tensor_buffer_like(
+    %m: !test.test_memref<[4], f32, strided<[1]>>)
+    -> !test.test_memref<[4], f32> {
+  %t = bufferization.to_tensor %m
+    : !test.test_memref<[4], f32, strided<[1]>> to !test.test_tensor<[4], f32>
+  %b = bufferization.to_buffer %t
+    : !test.test_tensor<[4], f32> to !test.test_memref<[4], f32>
+  return %b : !test.test_memref<[4], f32>
+}

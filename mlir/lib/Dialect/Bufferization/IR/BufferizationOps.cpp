@@ -66,10 +66,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   // ensure that we only generate casts that always succeed at runtime, we check
   // a few extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
-      isGuaranteedCastCompatible(srcType, destType)) {
-    Value casted = *options.castFn(b, value.getLoc(), destType, value);
-    return casted;
-  }
+      isGuaranteedCastCompatible(srcType, destType))
+    return options.castFn(b, value.getLoc(), destType, value);
 
   auto loc = value.getLoc();
   SmallVector<Value, 4> dynamicOperands;
