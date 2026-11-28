@@ -21,9 +21,8 @@ define i32 @class_f16_sgpr_mask_across_call(half inreg %x, i32 inreg %m, half %y
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v41, s0, 0
-; CHECK-NEXT:    s_mov_b32 s0, s1
-; CHECK-NEXT:    v_writelane_b32 v41, s0, 1
-; CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0.l, s0
+; CHECK-NEXT:    v_writelane_b32 v41, s1, 1
+; CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0.l, s1
 ; CHECK-NEXT:    v_writelane_b32 v41, s0, 2
 ; CHECK-NEXT:    s_get_pc_i64 s[0:1]
 ; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], external_void_func_void@rel64+4
