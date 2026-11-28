@@ -1804,7 +1804,8 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   int32_t Src1Val = static_cast<int32_t>(*Src1Imm);
-  if (Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_ADD_U32) {
+  if (Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_ADD_U32 ||
+      Opc == AMDGPU::V_ADD_U32_e64 || Opc == AMDGPU::V_ADD_U32_e32) {
     if (Src1Val == 0) {
       // y = add x, 0 => y = copy x
       MI->removeOperand(Src1Idx);

@@ -247,3 +247,53 @@ body: |
     SI_RETURN_TO_EPILOG %2
 ...
 
+---
+name: v_add_u32_e32_zero
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: v_add_u32_e32_zero
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_ADD_U32_e32 0, %0, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+...
+
+---
+name: v_add_u32_e64_zero
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: v_add_u32_e64_zero
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_ADD_U32_e64 %0, 0, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+...
+
+---
+name: v_add_u32_e64_zero_clamp
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: v_add_u32_e64_zero_clamp
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_ADD_U32_e64 %0, 0, 1, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+...
