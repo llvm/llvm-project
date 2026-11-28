@@ -7996,12 +7996,21 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
       // defined range" we allow.
       Sema::TentativeAnalysisScope Trap(SemaRef);
 
-      if (auto *SpecializedMethod = dyn_cast<CXXMethodDecl>(BestDecl)) {
-        auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE);
+      // Call a member function variant through the same object expression,
+      // and with the same '.' or '->', as the base function. The call is not
+      // necessarily a CXXMemberCallExpr: calls to static member functions, and
+      // member calls in a dependent context, are plain CallExprs with a
+      // MemberExpr callee. A static member function named without an object
+      // expression is called through a DeclRefExpr instead.
+      auto *SpecializedMethod = dyn_cast<CXXMethodDecl>(BestDecl);
+      if (auto *ME =
+              dyn_cast<MemberExpr>(CE->getCallee()->IgnoreParenImpCasts());
+          SpecializedMethod && ME) {
+        bool IsInstance = SpecializedMethod->isInstance();
         BestExpr = MemberExpr::CreateImplicit(
-            Context, MemberCall->getImplicitObjectArgument(),
-            /*IsArrow=*/false, SpecializedMethod, Context.BoundMemberTy,
-            MemberCall->getValueKind(), MemberCall->getObjectKind());
+            Context, ME->getBase(), ME->isArrow(), SpecializedMethod,
+            IsInstance ? Context.BoundMemberTy : SpecializedMethod->getType(),
+            IsInstance ? VK_PRValue : VK_LValue, OK_Ordinary);
       }
       NewCall = SemaRef.BuildCallExpr(Scope, BestExpr, LParenLoc, ArgExprs,
                                       RParenLoc, ExecConfig);
