@@ -94,7 +94,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //       results are not perfectly aligned.
 #ifdef _LIBCPP_INTRINSIC128
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint64_t __mulShift(const uint64_t __m, const uint64_t* const __mul, const int32_t __j) {
+[[nodiscard]] inline uint64_t __mulShift(const uint64_t __m, const uint64_t* const __mul, const int32_t __j) {
   // __m is maximum 55 bits
   uint64_t __high1;                                               // 128
   const uint64_t __low1 = __ryu_umul128(__m, __mul[1], &__high1); // 64
@@ -107,7 +107,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   return __ryu_shiftright128(__sum, __high1, static_cast<uint32_t>(__j - 64));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint64_t __mulShiftAll(const uint64_t __m, const uint64_t* const __mul, const int32_t __j,
+[[nodiscard]] inline uint64_t __mulShiftAll(const uint64_t __m, const uint64_t* const __mul, const int32_t __j,
   uint64_t* const __vp, uint64_t* const __vm, const uint32_t __mmShift) {
   *__vp = __mulShift(4 * __m + 2, __mul, __j);
   *__vm = __mulShift(4 * __m - 1 - __mmShift, __mul, __j);
@@ -116,7 +116,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #else // ^^^ intrinsics available ^^^ / vvv intrinsics unavailable vvv
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_ALWAYS_INLINE uint64_t __mulShiftAll(uint64_t __m, const uint64_t* const __mul, const int32_t __j,
+[[nodiscard]] inline _LIBCPP_ALWAYS_INLINE uint64_t __mulShiftAll(uint64_t __m, const uint64_t* const __mul, const int32_t __j,
   uint64_t* const __vp, uint64_t* const __vm, const uint32_t __mmShift) { // TRANSITION, VSO-634761
   __m <<= 1;
   // __m is maximum 55 bits
@@ -151,7 +151,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #endif // ^^^ intrinsics unavailable ^^^
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __decimalLength17(const uint64_t __v) {
+[[nodiscard]] inline uint32_t __decimalLength17(const uint64_t __v) {
   // This is slightly faster than a loop.
   // The average output length is 16.38 digits, so we check high-to-low.
   // Function precondition: __v is not an 18, 19, or 20-digit number.
@@ -182,7 +182,7 @@ struct __floating_decimal_64 {
   int32_t __exponent;
 };
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline __floating_decimal_64 __d2d(const uint64_t __ieeeMantissa, const uint32_t __ieeeExponent) {
+[[nodiscard]] inline __floating_decimal_64 __d2d(const uint64_t __ieeeMantissa, const uint32_t __ieeeExponent) {
   int32_t __e2;
   uint64_t __m2;
   if (__ieeeExponent == 0) {
@@ -354,7 +354,7 @@ struct __floating_decimal_64 {
   return __fd;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline to_chars_result __to_chars(char* const _First, char* const _Last, const __floating_decimal_64 __v,
+[[nodiscard]] inline to_chars_result __to_chars(char* const _First, char* const _Last, const __floating_decimal_64 __v,
   chars_format _Fmt, const double __f) {
   // Step 5: Print the decimal representation.
   uint64_t _Output = __v.__mantissa;
@@ -658,7 +658,7 @@ struct __floating_decimal_64 {
   return { _First + _Total_scientific_length, errc{} };
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline bool __d2d_small_int(const uint64_t __ieeeMantissa, const uint32_t __ieeeExponent,
+[[nodiscard]] inline bool __d2d_small_int(const uint64_t __ieeeMantissa, const uint32_t __ieeeExponent,
   __floating_decimal_64* const __v) {
   const uint64_t __m2 = (1ull << __DOUBLE_MANTISSA_BITS) | __ieeeMantissa;
   const int32_t __e2 = static_cast<int32_t>(__ieeeExponent) - __DOUBLE_BIAS - __DOUBLE_MANTISSA_BITS;

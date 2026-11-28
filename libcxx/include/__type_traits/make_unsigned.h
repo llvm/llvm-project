@@ -82,7 +82,7 @@ using make_unsigned_t = __make_unsigned_t<_Tp>;
 #endif
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __make_unsigned_t<_Tp> __to_unsigned_like(_Tp __x) _NOEXCEPT {
+_LIBCPP_CONSTEXPR __make_unsigned_t<_Tp> __to_unsigned_like(_Tp __x) _NOEXCEPT {
   return static_cast<__make_unsigned_t<_Tp> >(__x);
 }
 

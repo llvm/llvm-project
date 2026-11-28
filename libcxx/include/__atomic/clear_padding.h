@@ -30,24 +30,23 @@ inline const bool __needs_clear_padding_v =
     !__has_unique_object_representations(_Tp) && !is_same<_Tp, float>::value && !is_same<_Tp, double>::value;
 
 template <class _Tp, __enable_if_t<!__needs_clear_padding_v<__remove_cv_t<_Tp> >, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
+_LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
   return __obj;
 }
 
 template <class _Tp, __enable_if_t<__needs_clear_padding_v<__remove_cv_t<_Tp> >, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
+_LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
   return __libcpp_is_constant_evaluated() ? __obj : (__builtin_clear_padding(std::addressof(__obj)), __obj);
 }
 
 // clang fails to inline the function when the memory order is a constant
 template <class _Tp, class _Up, class _CasFunc, __enable_if_t<!__needs_clear_padding_v<__remove_cv_t<_Tp> >, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE bool
-__atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
+_LIBCPP_ALWAYS_INLINE bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
   return __cas_func(__expected, __value);
 }
 
 template <class _Tp, class _Up, class _CasFunc, __enable_if_t<__needs_clear_padding_v<__remove_cv_t<_Tp> >, int> = 0>
-_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
+bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
   std::__clear_padding_if_needed(__value);
   __remove_cv_t<_Tp> __expected_copy = *__expected;
   std::__clear_padding_if_needed(__expected_copy);
@@ -62,13 +61,12 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up 
 #else // __has_builtin(__builtin_clear_padding)
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
+_LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
   return __obj;
 }
 
 template <class _Tp, class _Up, class _CasFunc>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE bool
-__atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
+_LIBCPP_ALWAYS_INLINE bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
   return __cas_func(__expected, __value);
 }
 

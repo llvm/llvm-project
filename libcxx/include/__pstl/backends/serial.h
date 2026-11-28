@@ -295,7 +295,7 @@ struct __transform_exclusive_scan<__serial_backend_tag, _ExecutionPolicy> {
             class _Tp,
             class _BinaryOperation,
             class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+  optional<_ForwardIterator2> operator()(
       _Policy&&,
       _ForwardIterator1 __first,
       _ForwardIterator1 __last,
@@ -321,7 +321,7 @@ struct __transform_inclusive_scan_init<__serial_backend_tag, _ExecutionPolicy> {
             class _BinaryOperation,
             class _UnaryOperation,
             class _Tp>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+  optional<_ForwardIterator2> operator()(
       _Policy&&,
       _ForwardIterator1 __first,
       _ForwardIterator1 __last,
@@ -504,7 +504,7 @@ struct __set_intersection<__serial_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __partition<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  optional<_ForwardIterator>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     return std::partition(std::move(__first), std::move(__last), std::move(__pred));
   }
@@ -541,7 +541,7 @@ struct __partition_copy<__serial_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __copy_if<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
+  optional<_ForwardOutIterator> operator()(
       _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it, _Predicate __pred)
       const noexcept {
     return std::copy_if(std::move(__first), std::move(__last), std::move(__out_it), std::move(__pred));

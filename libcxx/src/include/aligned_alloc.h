@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // chances are that you want to use `allocator::allocate` instead.
 //
 // Returns the allocated memory, or `nullptr` on failure.
-inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
+inline void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
 #  ifdef _WIN32
   return ::_aligned_malloc(__size, __alignment);
 
@@ -50,7 +50,7 @@ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignmen
 #  endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
+inline void __libcpp_aligned_free(void* __ptr) {
 #  ifdef _WIN32
   ::_aligned_free(__ptr);
 #  else

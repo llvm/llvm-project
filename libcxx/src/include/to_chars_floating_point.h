@@ -95,7 +95,7 @@ struct _Floating_type_traits<double> {
 
 // FUNCTION to_chars (FLOATING-POINT TO STRING)
 template <class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+[[nodiscard]]
 to_chars_result _Floating_to_chars_hex_precision(
     char* _First, char* const _Last, const _Floating _Value, int _Precision) noexcept {
 
@@ -334,7 +334,7 @@ to_chars_result _Floating_to_chars_hex_precision(
 }
 
 template <class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+[[nodiscard]]
 to_chars_result _Floating_to_chars_hex_shortest(
     char* _First, char* const _Last, const _Floating _Value) noexcept {
 
@@ -832,7 +832,7 @@ struct _General_precision_tables<double> {
 };
 
 template <class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+[[nodiscard]]
 to_chars_result _Floating_to_chars_general_precision(
     char* _First, char* const _Last, const _Floating _Value, int _Precision) noexcept {
 
@@ -987,7 +987,7 @@ to_chars_result _Floating_to_chars_general_precision(
 enum class _Floating_to_chars_overload { _Plain, _Format_only, _Format_precision };
 
 template <_Floating_to_chars_overload _Overload, class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+[[nodiscard]]
 to_chars_result _Floating_to_chars(
     char* _First, char* const _Last, _Floating _Value, const chars_format _Fmt, const int _Precision) noexcept {
 

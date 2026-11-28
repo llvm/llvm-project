@@ -26,8 +26,8 @@ struct _LIBCPP_NO_SPECIALIZATIONS type_order {
   static constexpr strong_ordering value = __builtin_type_order(_Tp, _Up);
   using value_type                       = strong_ordering;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr operator value_type() const noexcept { return value; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr value_type operator()() noexcept { return value; }
+  constexpr operator value_type() const noexcept { return value; }
+  [[nodiscard]] static constexpr value_type operator()() noexcept { return value; }
 };
 
 template <class _Tp, class _Up>

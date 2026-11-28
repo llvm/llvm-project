@@ -86,7 +86,7 @@ inline constexpr uint64_t __FLOAT_POW5_SPLIT[47] = {
   1292469707114105741u, 1615587133892632177u, 2019483917365790221u
 };
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __pow5Factor(uint32_t __value) {
+[[nodiscard]] inline uint32_t __pow5Factor(uint32_t __value) {
   uint32_t __count = 0;
   for (;;) {
     _LIBCPP_ASSERT_INTERNAL(__value != 0, "");
@@ -102,19 +102,19 @@ inline constexpr uint64_t __FLOAT_POW5_SPLIT[47] = {
 }
 
 // Returns true if __value is divisible by 5^__p.
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline bool __multipleOfPowerOf5(const uint32_t __value, const uint32_t __p) {
+[[nodiscard]] inline bool __multipleOfPowerOf5(const uint32_t __value, const uint32_t __p) {
   return __pow5Factor(__value) >= __p;
 }
 
 // Returns true if __value is divisible by 2^__p.
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline bool __multipleOfPowerOf2(const uint32_t __value, const uint32_t __p) {
+[[nodiscard]] inline bool __multipleOfPowerOf2(const uint32_t __value, const uint32_t __p) {
   _LIBCPP_ASSERT_INTERNAL(__value != 0, "");
   _LIBCPP_ASSERT_INTERNAL(__p < 32, "");
   // __builtin_ctz doesn't appear to be faster here.
   return (__value & ((1u << __p) - 1)) == 0;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __mulShift(const uint32_t __m, const uint64_t __factor, const int32_t __shift) {
+[[nodiscard]] inline uint32_t __mulShift(const uint32_t __m, const uint64_t __factor, const int32_t __shift) {
   _LIBCPP_ASSERT_INTERNAL(__shift > 32, "");
 
   // The casts here help MSVC to avoid calls to the __allmul library
@@ -142,11 +142,11 @@ inline constexpr uint64_t __FLOAT_POW5_SPLIT[47] = {
 #endif // ^^^ 64-bit ^^^
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __mulPow5InvDivPow2(const uint32_t __m, const uint32_t __q, const int32_t __j) {
+[[nodiscard]] inline uint32_t __mulPow5InvDivPow2(const uint32_t __m, const uint32_t __q, const int32_t __j) {
   return __mulShift(__m, __FLOAT_POW5_INV_SPLIT[__q], __j);
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __mulPow5divPow2(const uint32_t __m, const uint32_t __i, const int32_t __j) {
+[[nodiscard]] inline uint32_t __mulPow5divPow2(const uint32_t __m, const uint32_t __i, const int32_t __j) {
   return __mulShift(__m, __FLOAT_POW5_SPLIT[__i], __j);
 }
 
@@ -156,7 +156,7 @@ struct __floating_decimal_32 {
   int32_t __exponent;
 };
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline __floating_decimal_32 __f2d(const uint32_t __ieeeMantissa, const uint32_t __ieeeExponent) {
+[[nodiscard]] inline __floating_decimal_32 __f2d(const uint32_t __ieeeMantissa, const uint32_t __ieeeExponent) {
   int32_t __e2;
   uint32_t __m2;
   if (__ieeeExponent == 0) {
@@ -295,7 +295,7 @@ struct __floating_decimal_32 {
   return __fd;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline to_chars_result _Large_integer_to_chars(char* const _First, char* const _Last,
+[[nodiscard]] inline to_chars_result _Large_integer_to_chars(char* const _First, char* const _Last,
   const uint32_t _Mantissa2, const int32_t _Exponent2) {
 
   // Print the integer _Mantissa2 * 2^_Exponent2 exactly.
@@ -419,7 +419,7 @@ struct __floating_decimal_32 {
   return { _Result, errc{} };
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline to_chars_result __to_chars(char* const _First, char* const _Last, const __floating_decimal_32 __v,
+[[nodiscard]] inline to_chars_result __to_chars(char* const _First, char* const _Last, const __floating_decimal_32 __v,
   chars_format _Fmt, const uint32_t __ieeeMantissa, const uint32_t __ieeeExponent) {
   // Step 5: Print the decimal representation.
   uint32_t _Output = __v.__mantissa;

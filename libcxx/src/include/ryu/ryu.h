@@ -78,7 +78,7 @@ template <class _Floating>
 }
 
 template <class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI to_chars_result _Floating_to_chars_scientific_precision(
+[[nodiscard]] to_chars_result _Floating_to_chars_scientific_precision(
     char* const _First, char* const _Last, const _Floating _Value, int _Precision) noexcept {
 
     // C11 7.21.6.1 "The fprintf function"/5:
@@ -99,7 +99,7 @@ template <class _Floating>
 }
 
 template <class _Floating>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI to_chars_result _Floating_to_chars_fixed_precision(
+[[nodiscard]] to_chars_result _Floating_to_chars_fixed_precision(
     char* const _First, char* const _Last, const _Floating _Value, int _Precision) noexcept {
 
     // C11 7.21.6.1 "The fprintf function"/5:

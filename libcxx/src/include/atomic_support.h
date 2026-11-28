@@ -25,33 +25,32 @@ enum __libcpp_atomic_order {
 };
 
 template <class _ValueType, class _FromType>
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_atomic_store(_ValueType* __dest, _FromType __val, int __order = _AO_Seq) {
+inline void __libcpp_atomic_store(_ValueType* __dest, _FromType __val, int __order = _AO_Seq) {
   __atomic_store_n(__dest, __val, __order);
 }
 
 template <class _ValueType, class _FromType>
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_relaxed_store(_ValueType* __dest, _FromType __val) {
+inline void __libcpp_relaxed_store(_ValueType* __dest, _FromType __val) {
   __atomic_store_n(__dest, __val, _AO_Relaxed);
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_atomic_load(_ValueType const* __val, int __order = _AO_Seq) {
+inline _ValueType __libcpp_atomic_load(_ValueType const* __val, int __order = _AO_Seq) {
   return __atomic_load_n(__val, __order);
 }
 
 template <class _ValueType, class _AddType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_atomic_add(_ValueType* __val, _AddType __a, int __order = _AO_Seq) {
+inline _ValueType __libcpp_atomic_add(_ValueType* __val, _AddType __a, int __order = _AO_Seq) {
   return __atomic_add_fetch(__val, __a, __order);
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType
-__libcpp_atomic_exchange(_ValueType* __target, _ValueType __value, int __order = _AO_Seq) {
+inline _ValueType __libcpp_atomic_exchange(_ValueType* __target, _ValueType __value, int __order = _AO_Seq) {
   return __atomic_exchange_n(__target, __value, __order);
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange(
+inline bool __libcpp_atomic_compare_exchange(
     _ValueType* __val,
     _ValueType* __expected,
     _ValueType __after,
@@ -61,7 +60,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange(
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+inline bool __libcpp_atomic_compare_exchange_strong(
     _ValueType* __val,
     _ValueType* __expected,
     _ValueType __after,
@@ -75,35 +74,34 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
 enum __libcpp_atomic_order { _AO_Relaxed, _AO_Consume, _AO_Acquire, _AO_Release, _AO_Acq_Rel, _AO_Seq };
 
 template <class _ValueType, class _FromType>
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_atomic_store(_ValueType* __dest, _FromType __val, int = 0) {
+inline void __libcpp_atomic_store(_ValueType* __dest, _FromType __val, int = 0) {
   *__dest = __val;
 }
 
 template <class _ValueType, class _FromType>
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_relaxed_store(_ValueType* __dest, _FromType __val) {
+inline void __libcpp_relaxed_store(_ValueType* __dest, _FromType __val) {
   *__dest = __val;
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_atomic_load(_ValueType const* __val, int = 0) {
+inline _ValueType __libcpp_atomic_load(_ValueType const* __val, int = 0) {
   return *__val;
 }
 
 template <class _ValueType, class _AddType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_atomic_add(_ValueType* __val, _AddType __a, int = 0) {
+inline _ValueType __libcpp_atomic_add(_ValueType* __val, _AddType __a, int = 0) {
   return *__val += __a;
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType
-__libcpp_atomic_exchange(_ValueType* __target, _ValueType __value, int = _AO_Seq) {
+inline _ValueType __libcpp_atomic_exchange(_ValueType* __target, _ValueType __value, int = _AO_Seq) {
   _ValueType old = *__target;
   *__target      = __value;
   return old;
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 __libcpp_atomic_compare_exchange(_ValueType* __val, _ValueType* __expected, _ValueType __after, int = 0, int = 0) {
   if (*__val == *__expected) {
     *__val = __after;
@@ -114,7 +112,7 @@ __libcpp_atomic_compare_exchange(_ValueType* __val, _ValueType* __expected, _Val
 }
 
 template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+inline bool __libcpp_atomic_compare_exchange_strong(
     _ValueType* __val, _ValueType* __expected, _ValueType __after, int = 0, int = 0) {
   if (*__val == *__expected) {
     *__val = __after;
