@@ -38,8 +38,9 @@ namespace analyze_format_string {
 class FormatStringParser {
 protected:
   FormatStringParser(FormatStringHandler &H, const LangOptions &LO,
-                     const TargetInfo &Target, bool IsScanf)
-      : H(H), LO(LO), Target(Target), IsScanf(IsScanf) {}
+                     const TargetInfo &Target, bool IsScanf,
+                     const llvm::TextEncodingConverter &Conv)
+      : H(H), LO(LO), Target(Target), IsScanf(IsScanf), Conv(Conv) {}
 
   OptionalAmount parseAmount(const char *&Beg, const char *E) const;
 
@@ -73,6 +74,7 @@ protected:
   const LangOptions &LO;
   const TargetInfo &Target;
   bool IsScanf;
+  const llvm::TextEncodingConverter &Conv;
 
 private:
   bool parseWidthModifier(const char *&I, const char *E, unsigned &BitWidth,

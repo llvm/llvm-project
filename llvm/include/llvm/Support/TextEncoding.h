@@ -104,6 +104,10 @@ public:
   LLVM_ABI static ErrorOr<TextEncodingConverter> create(StringRef From,
                                                         StringRef To);
 
+  /// Creates a TextEncodingConverter instance that copies its input unchanged.
+  /// \return a TextEncodingConverter instance
+  LLVM_ABI static TextEncodingConverter createNoopConverter();
+
   TextEncodingConverter(const TextEncodingConverter &) = delete;
   TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;
 
