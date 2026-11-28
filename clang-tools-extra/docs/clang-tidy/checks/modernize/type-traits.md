@@ -46,6 +46,12 @@ Note: Fixes will never be emitted for code inside of macros.
 Default is `false`.
 ````
 
+````{option} UseCxx20Aliases
+If `true`, also diagnose C++20 type traits such as `std::remove_cvref_t`.
+
+Default is `true`.
+````
+
 ## Limitations
 
 Does not currently diagnose uses of type traits with nested name

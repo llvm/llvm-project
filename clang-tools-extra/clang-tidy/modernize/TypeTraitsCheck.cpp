@@ -199,7 +199,7 @@ void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Only register matchers for std::remove_cvref_t simplification in c++20
   // mode.
-  if (getLangOpts().CPlusPlus20) {
+  if (UseCxx20Aliases && getLangOpts().CPlusPlus20) {
     Finder->addMatcher(templateSpecializationTypeLoc(
                            loc(qualType(hasDeclaration(
                                namedDecl(hasName("::std::remove_cv_t"))))),
@@ -232,7 +232,8 @@ static bool checkTemplatedDecl(NestedNameSpecifier NNS,
 
 TypeTraitsCheck::TypeTraitsCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
+      UseCxx20Aliases(Options.get("UseCxx20Aliases", true)) {}
 
 void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto EmitValueWarning = [this,
@@ -347,5 +348,6 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
 void TypeTraitsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "UseCxx20Aliases", UseCxx20Aliases);
 }
 } // namespace clang::tidy::modernize

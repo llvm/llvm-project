@@ -345,6 +345,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed a crash when a returned constructor call passes arguments through
     an ellipsis.
 
+- Improved {doc}`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check by adding the
+  {option}`UseCxx20Aliases` option to disable C++20-only type alias diagnostics.
+
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
