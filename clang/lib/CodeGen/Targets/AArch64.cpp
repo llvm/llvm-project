@@ -321,7 +321,14 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
   if (Size <= 32) {
-    llvm::Type *ResType = llvm::Type::getInt32Ty(getVMContext());
+    // AAPCS64 passes integral types in the least significant bits of the
+    // register, independent of the endianness (rule C.9). Widening the vector
+    // to a larger integer requires coercion through memory, which would leave
+    // the value in the most significant bits on big-endian, so coerce to an
+    // integer of exactly the vector's size instead: that is a bitcast.
+    llvm::Type *ResType = getDataLayout().isBigEndian()
+                              ? llvm::IntegerType::get(getVMContext(), Size)
+                              : llvm::Type::getInt32Ty(getVMContext());
     return ABIArgInfo::getDirect(ResType);
   }
   if (Size == 64) {

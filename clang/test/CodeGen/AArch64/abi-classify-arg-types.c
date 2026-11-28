@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,NOHFAALIGN,HUGEVEC,NOANDROID,ILP32 --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64,LE
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64,BE
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64,BE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,GPR64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,GPR64,BE --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID,GPR64,LE
 // RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID,GPR64,LE --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64,WIN64,LE
@@ -280,6 +280,7 @@ void arg_v16i8(v16i8 v) {}
 typedef char v2i8 __attribute__((vector_size(2)));
 void arg_v2i8(v2i8 v) {}
 // ANDROID: define{{.*}} void @arg_v2i8(i16 noundef %{{.*}})
+// BE: define{{.*}} void @arg_v2i8(i16 noundef %{{.*}})
 // NOANDROID: define{{.*}} void @arg_v2i8(i32{{.*}} %{{.*}})
 
 typedef char v3i8 __attribute__((vector_size(3)));

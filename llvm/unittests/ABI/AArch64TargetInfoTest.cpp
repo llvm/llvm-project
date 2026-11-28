@@ -536,6 +536,26 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentIllegalVectorAndroid) {
   expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
 }
 
+// On big-endian, integral types are passed in the least significant bits of
+// the register (AAPCS64 rule C.9), so small illegal vectors are coerced to an
+// integer of exactly their size rather than i32.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentIllegalVectorBigEndian) {
+  AArch64ABIOptions Opts(AArch64ABIKind::AAPCS);
+  Opts.IsBigEndian = true;
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, Void, {V2I8});
+  TI->computeInfo(*FI);
+  expectDirectCoercedInteger(FI->getArgInfo(0).Info, 16);
+
+  for (const ABIType *ArgTy : {V3I8, V4I8}) {
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+  }
+}
+
 // arm64_32 MachO treats vectors larger than 32 bits as legal, including
 // sizes that other AArch64 ABIs pass indirectly. Non-power-of-2 element
 // counts are still illegal.
