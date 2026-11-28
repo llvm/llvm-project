@@ -28,14 +28,10 @@
 #   return s.x + s.y;
 # }
 
-# FIXME: The following variable location have wrong register numbers due to
-# https://github.com/llvm/llvm-project/issues/53575. Fix them after resolving
-# the issue.
-
 # CHECK:      (lldb) image lookup -a 0x140001000 -v
 # CHECK:          LineEntry: [0x0000000140001000-0x0000000140001003): C:\src\test\a.cpp:10
 # CHECK-NEXT: 	     Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001011), name="struct S CreateS(int, char)", mangled="?CreateS@@YA?AUS@@HD@Z"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "p1", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001003) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "p1", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001003) -> DW_OP_reg2 RCX
 # CHECK-NEXT:      Variable: id = {{.*}}, name = "p2", type = "char", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001006) -> DW_OP_regx 0x3f
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001003 -v
@@ -47,29 +43,29 @@
 # CHECK:      (lldb) image lookup -a 0x140001006 -v
 # CHECK:          LineEntry: [0x0000000140001006-0x0000000140001011): C:\src\test\a.cpp:12
 # CHECK-NEXT: 	     Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001011), name="struct S CreateS(int, char)", mangled="?CreateS@@YA?AUS@@HD@Z"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x0000000140001006, 0x0000000140001011) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x0000000140001006, 0x0000000140001011) -> DW_OP_reg2 RCX, DW_OP_piece 0x4, DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001011 -v
 # CHECK:          LineEntry: [0x0000000140001011-0x0000000140001015): C:\src\test\a.cpp:15
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001017) -> DW_OP_reg26 XMM9
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001017) -> DW_OP_reg2 RCX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg1 RDX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001017 -v
 # CHECK:          LineEntry: [0x0000000140001017-0x000000014000101e): C:\src\test\a.cpp:17
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg3 RBX
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg1 RDX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg2 RCX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001019 -v
 # CHECK:          LineEntry: [0x0000000140001017-0x000000014000101e): C:\src\test\a.cpp:17
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg2 RCX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000101e -v
 # CHECK:          LineEntry: [0x000000014000101e-0x0000000140001031): C:\src\test\a.cpp:18
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x000000014000101e, 0x000000014000102c) -> DW_OP_reg24 XMM7, DW_OP_piece 0x4, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x000000014000101e, 0x000000014000102c) -> DW_OP_reg0 RAX, DW_OP_piece 0x4, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000102c -v
 # CHECK:          LineEntry: [0x000000014000101e-0x0000000140001031): C:\src\test\a.cpp:18
@@ -415,7 +411,7 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x140001031 -v
 # CHECK:          LineEntry: [0x0000000140001031-0x0000000140001034): C:\src\test\a.cpp:1000
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "non_overlapped_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001031, 0x0000000140001032) -> DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "non_overlapped_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001031, 0x0000000140001032) -> DW_OP_reg1 RDX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001032 -v
 # CHECK:          LineEntry: [0x0000000140001031-0x0000000140001034): C:\src\test\a.cpp:1000
@@ -448,17 +444,17 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x140001035 -v
 # CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001035, 0x0000000140001036) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001035, 0x0000000140001036) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg0 RAX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001036 -v
 # CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001036, 0x0000000140001037) -> DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001036, 0x0000000140001037) -> DW_OP_piece 0x4, DW_OP_reg0 RAX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001037 -v
 # CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001037, 0x0000000140001039) -> DW_OP_piece 0x4, DW_OP_reg26 XMM9, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001037, 0x0000000140001039) -> DW_OP_piece 0x4, DW_OP_reg2 RCX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 
 # 3. Test overlapped ranges for the whole value.
@@ -477,7 +473,7 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x14000103b -v
 # CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x000000014000103b, 0x000000014000103c) -> DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x000000014000103b, 0x000000014000103c) -> DW_OP_reg1 RDX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000103d -v
 # CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
@@ -531,17 +527,17 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x140001046 -v
 # CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001046, 0x0000000140001047) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001046, 0x0000000140001047) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg0 RAX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001047 -v
 # CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001047, 0x0000000140001048) -> DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001047, 0x0000000140001048) -> DW_OP_reg1 RDX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001048 -v
 # CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001048, 0x0000000140001049) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001048, 0x0000000140001049) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg0 RAX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001049 -v
 # CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
@@ -578,12 +574,12 @@ main:                                   # @main
 # CHECK:      (lldb) image lookup -a 0x14000104e -v
 # CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104e, 0x000000014000104f) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104e, 0x000000014000104f) -> DW_OP_reg2 RCX, DW_OP_piece 0x4, DW_OP_reg0 RAX, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000104f -v
 # CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
 # CHECK-NEXT:        Symbol: id = {{.*}}, range = [0x0000000140001011-0x0000000140001050), name="main"
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104f, 0x0000000140001050) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_piece 0x4
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "long long", valid ranges = <block>, location = [0x000000014000104f, 0x0000000140001050) -> DW_OP_reg2 RCX, DW_OP_piece 0x4, DW_OP_piece 0x4
 # CHECK-EMPTY:
 
 .Ltmp26:
