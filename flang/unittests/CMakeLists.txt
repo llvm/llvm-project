@@ -18,7 +18,7 @@ function(add_flang_unittest test_dirname)
 endfunction()
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_compile_options("-Wno-suggest-override")
+  llvm_add_warning_options(CXX -Wno-suggest-override)
 endif()
 
 function(add_flang_nongtest_unittest test_name)
@@ -37,6 +37,7 @@ function(add_flang_nongtest_unittest test_name)
   set(test_filepath "${test_name}.cpp")
 
   add_executable(${test_name}${suffix} "${test_filepath}")
+  llvm_apply_warning_options(${test_name}${suffix})
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang/Tests/Unit")
   if (FLANG_PARALLEL_COMPILE_JOBS)
     set_property(TARGET ${test_name}${suffix} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)

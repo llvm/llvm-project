@@ -245,6 +245,22 @@ Makes programs 10x faster by doing Special New Thing.
 * The minimum required CMake version to build LLVM has been raised from 3.20.0
   to 3.31.0.
 
+* LLVM's warning flags (`-Wall`, `-Werror` with `LLVM_ENABLE_WERROR`, and the
+  rest of the diagnostic policy) are no longer added to `CMAKE_C_FLAGS` and
+  `CMAKE_CXX_FLAGS`. They are now private compile options of targets created
+  with LLVM's CMake helpers, such as `add_llvm_library()` and
+  `add_llvm_executable()`. Projects that build alongside LLVM, through
+  `LLVM_EXTERNAL_PROJECTS`, `add_subdirectory()`, or an out-of-tree build that
+  includes `HandleLLVMOptions`, no longer inherit these flags on targets they
+  create with plain `add_library()` or `add_executable()`. To keep LLVM's
+  warnings on such a target, call `llvm_apply_warning_options(<target>)`.
+  Projects can add or suppress warnings relative to LLVM's baseline with
+  `llvm_add_warning_options(<lang>... <option>...)`, which adds each option
+  to each named (enabled) language. Options in
+  `CMAKE_<LANG>_FLAGS`, `CMAKE_<LANG>_FLAGS_<CONFIG>` and directory-level
+  `add_compile_options()` now precede LLVM's options, so they no longer
+  override them.
+
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto

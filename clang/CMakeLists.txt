@@ -438,11 +438,11 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
+    llvm_add_warning_options(CXX -pedantic -Wno-long-long)
   endif ()
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+    llvm_add_warning_options(CXX -Wno-nested-anon-types)
   endif ()
 endif ()
 

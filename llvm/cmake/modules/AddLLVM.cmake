@@ -49,7 +49,24 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
   set(LLVM_CXXFLAGS_EH_DISABLE "-qnoeh")
 endif()
 
+# Apply LLVM's diagnostic policy (LLVM_WARNING_OPTIONS_<lang>, see
+# HandleLLVMOptions.cmake) to an LLVM-owned target. The options are PRIVATE, so
+# they are not exported and do not reach targets that merely link against it.
+# Called by llvm_update_compile_flags(); targets created with plain
+# add_library()/add_executable() can call it directly. Call it before adding
+# target-specific options so those can override the policy.
+function(llvm_apply_warning_options name)
+  get_property(langs GLOBAL PROPERTY ENABLED_LANGUAGES)
+  foreach(lang IN LISTS langs)
+    if (LLVM_WARNING_OPTIONS_${lang})
+      target_compile_options(${name} PRIVATE
+        "$<$<COMPILE_LANGUAGE:${lang}>:${LLVM_WARNING_OPTIONS_${lang}}>")
+    endif()
+  endforeach()
+endfunction()
+
 function(llvm_update_compile_flags name)
+  llvm_apply_warning_options(${name})
   set(LLVM_COMPILE_CXXFLAGS "")
 
   # LLVM_REQUIRES_EH is an internal flag that individual targets can use to

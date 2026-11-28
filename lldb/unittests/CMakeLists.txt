@@ -7,7 +7,7 @@ include_directories(${LLDB_SOURCE_ROOT})
 include_directories(${LLDB_PROJECT_ROOT}/unittests)
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_compile_options("-Wno-suggest-override")
+  llvm_add_warning_options(CXX -Wno-suggest-override)
 endif()
 
 if (MSVC)

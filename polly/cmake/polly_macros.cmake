@@ -18,6 +18,7 @@ macro(add_polly_library name)
     set(libkind)
   endif()
   add_library( ${name} ${libkind} ${srcs} )
+  llvm_apply_warning_options(${name})
   set_target_properties(${name} PROPERTIES FOLDER "Polly/Libraries")
 
   if( LLVM_COMMON_DEPENDS )

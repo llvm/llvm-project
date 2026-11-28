@@ -377,6 +377,7 @@ function(build_nanobind_lib)
     # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
     # the super project handle compile options as it wishes.
     _mlir_python_eh_rtti_flags()
+    llvm_apply_warning_options(${NB_LIBRARY_TARGET_NAME})
     target_compile_options(${NB_LIBRARY_TARGET_NAME}
       PRIVATE
         -Wno-c++98-compat-extra-semi
@@ -1031,6 +1032,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
     )
   endif()
+  llvm_apply_warning_options(${libname})
   target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
   target_compile_definitions(${libname}
     PRIVATE
