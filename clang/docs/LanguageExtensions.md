@@ -3186,7 +3186,7 @@ is automatically freed upon function termination.
 **Syntax**:
 
 ```c++
-__builtin_alloca(size_t n)
+void *__builtin_alloca(size_t n);
 ```
 
 **Example of Use**:
@@ -3218,7 +3218,7 @@ function termination.
 **Syntax**:
 
 ```c++
-__builtin_alloca_with_align(size_t n, size_t align)
+void *__builtin_alloca_with_align(size_t n, size_t align);
 ```
 
 **Example of Use**:
@@ -3255,7 +3255,7 @@ invariant that is defined to be true.
 **Syntax**:
 
 ```c++
-__builtin_assume(bool)
+void __builtin_assume(bool);
 ```
 
 **Example of Use**:
@@ -3291,7 +3291,7 @@ knowledge that its two arguments point to separately allocated objects.
 **Syntax**:
 
 ```c++
-__builtin_assume_separate_storage(const volatile void *, const volatile void *)
+void __builtin_assume_separate_storage(const volatile void *, const volatile void *);
 ```
 
 **Example of Use**:
@@ -3328,7 +3328,7 @@ specified number of bytes.
 **Syntax**:
 
 ```c++
-__builtin_assume_dereferenceable(const void *, size_t)
+void __builtin_assume_dereferenceable(const void *, size_t);
 ```
 
 **Example of Use**:
@@ -3366,7 +3366,7 @@ calculates the offset (in bytes) to a given member of the given type.
 **Syntax**:
 
 ```c++
-__builtin_offsetof(type-name, member-designator)
+size_t __builtin_offsetof(type-name, member-designator);
 ```
 
 **Example of Use**:
@@ -3409,7 +3409,7 @@ for directly loading the vtable pointer when on platforms using
 **Syntax**:
 
 ```c++
-__builtin_get_vtable_pointer(PolymorphicClass*)
+void* __builtin_get_vtable_pointer(T*);
 ```
 
 **Example of Use**:
@@ -3441,7 +3441,7 @@ updating the static chain register.
 **Syntax**:
 
 ```c++
-T __builtin_call_with_static_chain(T expr, void* ptr)
+T __builtin_call_with_static_chain(T expr, void *ptr);
 ```
 
 **Example of Use**:
@@ -3468,7 +3468,7 @@ a similar low-latency, high-accuracy clock) on those targets that support it.
 **Syntax**:
 
 ```c++
-__builtin_readcyclecounter()
+unsigned long long __builtin_readcyclecounter();
 ```
 
 **Example of Use**:
@@ -3503,7 +3503,7 @@ frequency is fixed, making it suitable for measuring elapsed time.
 **Syntax**:
 
 ```c++
-__builtin_readsteadycounter()
+unsigned long long __builtin_readsteadycounter();
 ```
 
 **Example of Use**:
@@ -3557,7 +3557,7 @@ Query for this feature with `__has_builtin(__builtin_cpu_supports)`.
 **Syntax**:
 
 ```c++
-__builtin_dump_struct(&some_struct, some_printf_func, args...);
+void __builtin_dump_struct(&some_struct, some_printf_func, args...);
 ```
 
 **Examples**:
@@ -3648,7 +3648,7 @@ for the implementation of various target-specific header files like
 **Syntax**:
 
 ```c++
-__builtin_shufflevector(vec1, vec2, index1, index2, ...)
+T __builtin_shufflevector(T vec1, T vec2, integer index1, integer index2, ...);
 ```
 
 **Examples**:
@@ -3704,7 +3704,7 @@ constant expressions.
 **Syntax**:
 
 ```c++
-__builtin_convertvector(src_vec, dst_vec_type)
+R __builtin_convertvector(T src_vec, type-id R);
 ```
 
 **Examples**:
@@ -3740,15 +3740,14 @@ Query for this feature with `__has_builtin(__builtin_convertvector)`.
 
 ### `__builtin_bitreverse`
 
-- `__builtin_bitreverse8`
-- `__builtin_bitreverse16`
-- `__builtin_bitreverse32`
-- `__builtin_bitreverse64`
-
 **Syntax**:
 
 ```c++
-__builtin_bitreverse32(x)
+uint8_t __builtin_bitreverse8(uint8_t x);
+uint16_t __builtin_bitreverse16(uint16_t x);
+uint32_t __builtin_bitreverse32(uint32_t x);
+uint64_t __builtin_bitreverse64(uint64_t x);
+T __builtin_bitreverseg(T x);
 ```
 
 **Examples**:
@@ -3758,6 +3757,7 @@ uint8_t rev_x = __builtin_bitreverse8(x);
 uint16_t rev_x = __builtin_bitreverse16(x);
 uint32_t rev_y = __builtin_bitreverse32(y);
 uint64_t rev_z = __builtin_bitreverse64(z);
+uint64_t rev_z = __builtin_bitreverseg(z);
 ```
 
 **Description**:
@@ -3768,15 +3768,13 @@ the bitpattern of an integer value; for example, `0b10110110` becomes
 
 ### `__builtin_rotateleft`
 
-- `__builtin_rotateleft8`
-- `__builtin_rotateleft16`
-- `__builtin_rotateleft32`
-- `__builtin_rotateleft64`
-
 **Syntax**:
 
 ```c++
-__builtin_rotateleft32(x, y)
+uint8_t __builtin_rotateleft8(uint8_t x, uint8_t y);
+uint16_t __builtin_rotateleft16(uint16_t x, uint16_t y);
+uint32_t __builtin_rotateleft32(uint32_t x, uint32_t y);
+uint64_t __builtin_rotateleft64(uint32_t x, uint64_t y);
 ```
 
 **Examples**:
@@ -3800,15 +3798,13 @@ expressions.
 
 ### `__builtin_rotateright`
 
-- `__builtin_rotateright8`
-- `__builtin_rotateright16`
-- `__builtin_rotateright32`
-- `__builtin_rotateright64`
-
 **Syntax**:
 
 ```c++
-__builtin_rotateright32(x, y)
+uint8_t __builtin_rotateright8(uint8_t x, uint8_t y);
+uint16_t __builtin_rotateright16(uint16_t x, uint16_t y);
+uint32_t __builtin_rotateright32(uint32_t x, uint32_t y);
+uint64_t __builtin_rotateright64(uint64_t x, uint64_t y);
 ```
 
 **Examples**:
@@ -3835,8 +3831,8 @@ expressions.
 **Syntax**:
 
 ```c
-T __builtin_stdc_rotate_left(T value, count)
-T __builtin_stdc_rotate_right(T value, count)
+T __builtin_stdc_rotate_left(T value, integer count);
+T __builtin_stdc_rotate_right(T value, integer count);
 ```
 
 where `T` is any unsigned integer type and `count` is any integer type.
@@ -3933,7 +3929,7 @@ declared '`noreturn`' should not return" warning.
 **Syntax**:
 
 ```c++
-__builtin_unreachable()
+void __builtin_unreachable();
 ```
 
 **Example of use**:
@@ -3963,7 +3959,7 @@ unpredictable by hardware mechanisms such as branch prediction logic.
 **Syntax**:
 
 ```c++
-__builtin_unpredictable(long long)
+long __builtin_unpredictable(long expr);
 ```
 
 **Example of use**:
@@ -3989,7 +3985,7 @@ anticipated to be the same as a statically known result.
 **Syntax**:
 
 ```c++
-long __builtin_expect(long expr, long val)
+long __builtin_expect(long expr, long val);
 ```
 
 **Example of use**:
@@ -4017,7 +4013,7 @@ takes a probability as third argument.
 **Syntax**:
 
 ```c++
-long __builtin_expect_with_probability(long expr, long val, double p)
+long __builtin_expect_with_probability(long expr, long val, double p);
 ```
 
 **Example of use**:
@@ -4046,7 +4042,7 @@ data into the cache before it gets used.
 **Syntax**:
 
 ```c++
-void __builtin_prefetch(const void *addr, int rw=0, int locality=3)
+void __builtin_prefetch(const void *addr, int rw=0, int locality=3);
 ```
 
 **Example of use**:
@@ -4076,7 +4072,7 @@ Query for this feature with `__has_builtin(__builtin_prefetch)`.
 **Syntax**:
 
 ```c++
-type __sync_swap(type *ptr, type value, ...)
+T __sync_swap(T *ptr, T value, ...);
 ```
 
 **Example of Use**:
@@ -4118,7 +4114,7 @@ template<typename T> constexpr T *addressof(T &value) {
 **Syntax**:
 
 ```c++
-void *__builtin_function_start(function)
+void *__builtin_function_start(function);
 ```
 
 **Example of use**:
@@ -4182,7 +4178,7 @@ Query for this feature with `__has_builtin(__builtin_operator_new)` or
 **Syntax**:
 
 ```c
-T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+T *__builtin_trivially_relocate(T *dest, T *src, size_t count);
 ```
 
 Trivially relocates `count` objects of relocatable, complete type `T`
@@ -4212,7 +4208,7 @@ argument.
 **Syntax**:
 
 ```c
-type __builtin_preserve_access_index(type arg)
+T __builtin_preserve_access_index(T arg);
 ```
 
 **Example of Use**:
@@ -4238,7 +4234,7 @@ __builtin_preserve_access_index(v->j);
 **Syntax**:
 
 ```c++
-__builtin_debugtrap()
+void __builtin_debugtrap();
 ```
 
 **Description**
@@ -4254,7 +4250,7 @@ Query for this feature with `__has_builtin(__builtin_debugtrap)`.
 **Syntax**:
 
 ```c++
-__builtin_trap()
+void __builtin_trap();
 ```
 
 **Description**
@@ -4270,7 +4266,7 @@ Query for this feature with `__has_builtin(__builtin_trap)`.
 **Syntax**:
 
 ```c++
-__builtin_arm_trap(const unsigned short payload)
+void __builtin_arm_trap(const unsigned short payload);
 ```
 
 **Description**
@@ -4286,7 +4282,7 @@ debugger is attached or in a symbolicated crash log.
 **Syntax**:
 
 ```c++
-__builtin_verbose_trap(const char *category, const char *reason)
+void __builtin_verbose_trap(const char *category, const char *reason);
 ```
 
 **Description**
@@ -4339,7 +4335,7 @@ program location should be executed. It is expected to be used to implement
 **Syntax**:
 
 ```c++
-bool __builtin_allow_runtime_check(const char* kind)
+bool __builtin_allow_runtime_check(const char *kind);
 ```
 
 **Example of use**:
@@ -4380,7 +4376,7 @@ Query for this feature with `__has_builtin(__builtin_allow_runtime_check)`.
 **Syntax**:
 
 ```c++
-type __builtin_nondeterministic_value(type x)
+T __builtin_nondeterministic_value(T x);
 ```
 
 **Examples**:
@@ -4426,7 +4422,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 
 ```c
 // Computes a unique stable name for the given type.
-constexpr const char * __builtin_sycl_unique_stable_name( type-id );
+constexpr const char * __builtin_sycl_unique_stable_name(type-id);
 ```
 
 ### `__builtin_popcountg`
@@ -4437,7 +4433,7 @@ argument can be of any unsigned integer type or fixed boolean vector.
 **Syntax**:
 
 ```c++
-int __builtin_popcountg(type x)
+int __builtin_popcountg(T x);
 ```
 
 **Examples**:
@@ -4478,8 +4474,10 @@ only one argument is provided, then the behavior is undefined.
 **Syntax**:
 
 ```c++
-int __builtin_clzg(type x[, int fallback])
-int __builtin_ctzg(type x[, int fallback])
+int __builtin_clzg(T x);
+int __builtin_clzg(T x, int fallback);
+int __builtin_ctzg(T x);
+int __builtin_ctzg(T x, int fallback);
 ```
 
 **Examples**:
@@ -4517,7 +4515,7 @@ returns `(void *)0`.
 **Syntax**:
 
 ```c
-T *__builtin_counted_by_ref(void *array)
+T *__builtin_counted_by_ref(void *array);
 ```
 
 **Examples**:
@@ -4584,7 +4582,7 @@ GCC's builtin of the same name.
 **Syntax**:
 
 ```c++
-void *__builtin_stack_address()
+void *__builtin_stack_address();
 ```
 
 **Example**:
@@ -4663,9 +4661,9 @@ errorcode_t security_critical_application(...) {
 Clang provides the following checked arithmetic builtins:
 
 ```c
-bool __builtin_add_overflow   (type1 x, type2 y, type3 *sum);
-bool __builtin_sub_overflow   (type1 x, type2 y, type3 *diff);
-bool __builtin_mul_overflow   (type1 x, type2 y, type3 *prod);
+bool __builtin_add_overflow   (T x, U y, R *sum);
+bool __builtin_sub_overflow   (T x, U y, R *diff);
+bool __builtin_mul_overflow   (T x, U y, R *prod);
 bool __builtin_uadd_overflow  (unsigned x, unsigned y, unsigned *sum);
 bool __builtin_uaddl_overflow (unsigned long x, unsigned long y, unsigned long *sum);
 bool __builtin_uaddll_overflow(unsigned long long x, unsigned long long y, unsigned long long *sum);
@@ -4712,8 +4710,8 @@ fall into one of the specified floating-point classes.
 **Syntax**:
 
 ```c++
-int __builtin_isfpclass(fp_type expr, int mask)
-int_vector __builtin_isfpclass(fp_vector expr, int mask)
+int __builtin_isfpclass(fp_type expr, int mask);
+int_vector __builtin_isfpclass(fp_vector expr, int mask);
 ```
 
 **Example of use**:
@@ -4808,29 +4806,27 @@ have unexpected behavior. Please see the section on [Accessing the floating poin
 
 ### String builtins
 
+```c
+void    *__builtin_memchr(const void *, int, size_t);
+int      __builtin_memcmp(const void *, const void *, size_t);
+int      __builtin_bcmp(const void *, const void *, size_t); // deprecated BSD / POSIX alias
+char    *__builtin_strchr(const char *, int);
+int      __builtin_strcmp(const char *, const char *);
+size_t   __builtin_strlen(const char *);
+int      __builtin_strncmp(const char *, const char *, size_t);
+
+wchar_t *__builtin_wmemchr(const wchar_t *, wchar_t, size_t);
+int      __builtin_wmemcmp(const wchar_t *, const wchar_t *, size_t);
+wchar_t *__builtin_wcschr(const wchar_t *, wchar_t);
+int      __builtin_wcscmp(const wchar_t *, const wchar_t *);
+size_t   __builtin_wcslen(const wchar_t *);
+int      __builtin_wcsncmp(const wchar_t *, const wchar_t *, size_t);
+wchar_t *__builtin_wmemchr(const wchar_t *, wchar_t, size_t);
+```
+
 Clang provides constant expression evaluation support for builtins forms of
 the following functions from the C standard library headers
-`<string.h>` and `<wchar.h>`:
-
-- `memchr`
-- `memcmp` (and its deprecated BSD / POSIX alias `bcmp`)
-- `strchr`
-- `strcmp`
-- `strlen`
-- `strncmp`
-- `wcschr`
-- `wcscmp`
-- `wcslen`
-- `wcsncmp`
-- `wmemchr`
-- `wmemcmp`
-
-In each case, the builtin form has the name of the C library function prefixed
-by `__builtin_`. Example:
-
-```c
-void *p = __builtin_memchr("foobar", 'b', 5);
-```
+`<string.h>` and `<wchar.h>`.
 
 In addition to the above, one further builtin is provided:
 
@@ -4971,7 +4967,7 @@ A type trait is used to check whether a type can be safely copied by `memcpy`.
 **Syntax**:
 
 ```c++
-bool __is_bitwise_cloneable(Type)
+bool __is_bitwise_cloneable(type-id);
 ```
 
 **Description**:
@@ -5161,7 +5157,7 @@ standard library to implement the `std::coroutine_handle` type.
 void  __builtin_coro_resume(void *addr);
 void  __builtin_coro_destroy(void *addr);
 bool  __builtin_coro_done(void *addr);
-void *__builtin_coro_promise(void *addr, int alignment, bool from_promise)
+void *__builtin_coro_promise(void *addr, int alignment, bool from_promise);
 ```
 
 **Example of use**:
@@ -5201,15 +5197,15 @@ an appropriate value during the emission.
 **Syntax**:
 
 ```c
-size_t __builtin_coro_size()
-void  *__builtin_coro_frame()
-void  *__builtin_coro_free(void *coro_frame)
+size_t __builtin_coro_size();
+void  *__builtin_coro_frame();
+void  *__builtin_coro_free(void *coro_frame);
 
-void  *__builtin_coro_id(int align, void *promise, void *fnaddr, void *parts)
-bool   __builtin_coro_alloc()
-void  *__builtin_coro_begin(void *memory)
-void   __builtin_coro_end(void *coro_frame, bool unwind)
-char   __builtin_coro_suspend(bool final)
+void  *__builtin_coro_id(int align, void *promise, void *fnaddr, void *parts);
+bool   __builtin_coro_alloc();
+void  *__builtin_coro_begin(void *memory);
+void   __builtin_coro_end(void *coro_frame, bool unwind);
+char   __builtin_coro_suspend(bool final);
 ```
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
@@ -5300,9 +5296,9 @@ arithmetic, they can perform semantic checking on the alignment value.
 **Syntax**:
 
 ```c
-Type __builtin_align_up(Type value, size_t alignment);
-Type __builtin_align_down(Type value, size_t alignment);
-bool __builtin_is_aligned(Type value, size_t alignment);
+T __builtin_align_up(T value, size_t alignment);
+T __builtin_align_down(T value, size_t alignment);
+bool __builtin_is_aligned(T value, size_t alignment);
 ```
 
 **Example of use**:
