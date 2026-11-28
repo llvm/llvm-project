@@ -5,3 +5,7 @@
 // CHECK: identifier '$A'
 // CHECK-ASM: identifier 'A'
 $A
+
+#define CAT(A,B) CAT_(A,B)
+#define CAT_(A,B) A ## B
+int CAT(X,CAT(1,$));
