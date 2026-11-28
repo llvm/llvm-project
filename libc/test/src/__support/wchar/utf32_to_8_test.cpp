@@ -68,7 +68,7 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, TwoByte) {
   auto popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xc3);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xbf);
@@ -81,7 +81,7 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, TwoByte) {
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xd6);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x8e);
@@ -106,11 +106,11 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, ThreeByte) {
   auto popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xea);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xb0);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x95);
@@ -123,11 +123,11 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, ThreeByte) {
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xe2);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x99);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xbb);
@@ -152,15 +152,15 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, FourByte) {
   auto popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xf0);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x9f);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xa4);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xa1);
@@ -173,15 +173,15 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, FourByte) {
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xf0);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x92);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0x84);
-  ASSERT_TRUE(!cr.isEmpty());
+  ASSERT_TRUE(cr.isPartiallyPopping());
   popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());
   ASSERT_EQ(static_cast<int>(popped.value()), 0xa1);
@@ -211,36 +211,41 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, CantPushMidConversion) {
 }
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, InvalidState) {
+  using LIBC_NAMESPACE::internal::MBConversionState;
   LIBC_NAMESPACE::internal::mbstate s1;
   LIBC_NAMESPACE::internal::CharacterConverter c1(&s1);
   ASSERT_TRUE(c1.isValidState());
+  ASSERT_TRUE(c1.isEmpty());
+  ASSERT_FALSE(c1.isPartiallyPopping());
 
   LIBC_NAMESPACE::internal::mbstate s2{0, 2, 0};
   LIBC_NAMESPACE::internal::CharacterConverter c2(&s2);
   ASSERT_FALSE(c2.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s3{0x7f, 1, 1};
+  LIBC_NAMESPACE::internal::mbstate s3{0x7f, 1, 1, MBConversionState::FULL};
   LIBC_NAMESPACE::internal::CharacterConverter c3(&s3);
   ASSERT_TRUE(c3.isValidState());
   LIBC_NAMESPACE::internal::mbstate s4{0x80, 1, 1};
   LIBC_NAMESPACE::internal::CharacterConverter c4(&s4);
   ASSERT_FALSE(c4.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s5{0x7ff, 1, 2};
+  LIBC_NAMESPACE::internal::mbstate s5{0x7ff, 1, 2, MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c5(&s5);
   ASSERT_TRUE(c5.isValidState());
   LIBC_NAMESPACE::internal::mbstate s6{0x800, 1, 2};
   LIBC_NAMESPACE::internal::CharacterConverter c6(&s6);
   ASSERT_FALSE(c6.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s7{0xffff, 1, 3};
+  LIBC_NAMESPACE::internal::mbstate s7{0xffff, 1, 3,
+                                       MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c7(&s7);
   ASSERT_TRUE(c7.isValidState());
   LIBC_NAMESPACE::internal::mbstate s8{0x10000, 1, 3};
   LIBC_NAMESPACE::internal::CharacterConverter c8(&s8);
   ASSERT_FALSE(c8.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s9{0x10ffff, 1, 4};
+  LIBC_NAMESPACE::internal::mbstate s9{0x10ffff, 1, 4,
+                                       MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c9(&s9);
   ASSERT_TRUE(c9.isValidState());
   LIBC_NAMESPACE::internal::mbstate s10{0x110000, 1, 2};

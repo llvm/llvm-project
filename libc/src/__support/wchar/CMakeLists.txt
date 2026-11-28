@@ -29,11 +29,13 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.char8_t
+    libc.hdr.types.char16_t
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
     libc.src.__support.math_extras

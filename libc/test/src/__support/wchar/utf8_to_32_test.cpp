@@ -53,6 +53,7 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, TwoBytes) {
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
   auto wch = char_conv.pop<CharType32>();
 
@@ -71,7 +72,9 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, ThreeBytes) {
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[2]));
   auto wch = char_conv.pop<CharType32>();
 
@@ -91,8 +94,11 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, FourBytes) {
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[3]));
   auto wch = char_conv.pop<CharType32>();
 
