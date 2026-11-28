@@ -697,3 +697,23 @@ func.func @load_and_assume(
   %2 = memref.load %arg0_align[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
   func.return %2 : f32
 }
+
+// -----
+
+// The alignment assumption must survive the expansion of the subview.
+
+// CHECK-LABEL: func @subview_load_and_assume(
+// CHECK: %[[DESC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<64x8xf32> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[ALIGNED_PTR:.*]] = llvm.extractvalue %[[DESC]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.intr.assume %{{.*}} ["align"(%[[ALIGNED_PTR]], %{{.*}} : !llvm.ptr, i64)] : i1
+// CHECK: %[[BUFF_ADDR:.*]] = llvm.getelementptr %[[ALIGNED_PTR]][%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[LD_ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[BUFF_ADDR]][%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[LD_ADDR]] : !llvm.ptr -> f32
+func.func @subview_load_and_assume(%arg0: memref<64x8xf32>, %i: index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %0 = memref.assume_alignment %arg0, 32 : memref<64x8xf32>
+  %1 = memref.subview %0[%i, 0] [4, 8] [1, 1]
+    : memref<64x8xf32> to memref<4x8xf32, strided<[8, 1], offset: ?>>
+  %2 = memref.load %1[%c0, %c0] : memref<4x8xf32, strided<[8, 1], offset: ?>>
+  func.return %2 : f32
+}

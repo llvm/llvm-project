@@ -885,6 +885,23 @@ public:
 /// underlying buffer, offset, sizes, or strides, extracting strided metadata
 /// from its result is equivalent to extracting it from its source. This
 /// canonicalization removes the unnecessary indirection.
+///
+/// The alignment assumption must not be lost on the way, as the
+/// `assume_alignment` op is dropped once its result is unused. When the offset
+/// is statically zero, the assumption on the memref is an assumption on its
+/// base buffer, so the new base buffer is wrapped in an `assume_alignment`:
+/// \verbatim
+/// %aligned = memref.assume_alignment %m, 32 : memref<64x8xf32>
+/// %base, %offset, %sizes:2, %strides:2 =
+///     memref.extract_strided_metadata %aligned
+/// \endverbatim
+/// becomes
+/// \verbatim
+/// %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %m
+/// %aligned_base = memref.assume_alignment %base, 32 : memref<f32>
+/// \endverbatim
+/// and the uses of `%base` are replaced with `%aligned_base`. Otherwise, the
+/// pattern only applies when the base buffer is unused.
 struct ExtractStridedMetadataOpAssumeAlignmentFolder
     : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
 public:
@@ -897,8 +914,24 @@ public:
     if (!assumeAlignmentOp)
       return failure();
 
-    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(
-        op, assumeAlignmentOp.getViewSource());
+    bool hasZeroOffset = false;
+    int64_t offset;
+    SmallVector<int64_t> strides;
+    if (succeeded(
+            assumeAlignmentOp.getType().getStridesAndOffset(strides, offset)))
+      hasZeroOffset = offset == 0;
+    if (!hasZeroOffset && !op.getBaseBuffer().use_empty())
+      return rewriter.notifyMatchFailure(
+          op, "the alignment assumption cannot be kept on the base buffer");
+
+    auto newExtractOp = memref::ExtractStridedMetadataOp::create(
+        rewriter, op.getLoc(), assumeAlignmentOp.getViewSource());
+    SmallVector<Value> results(newExtractOp->getResults());
+    if (hasZeroOffset)
+      results[0] = memref::AssumeAlignmentOp::create(
+          rewriter, assumeAlignmentOp.getLoc(), newExtractOp.getBaseBuffer(),
+          assumeAlignmentOp.getAlignment());
+    rewriter.replaceOp(op, results);
     return success();
   }
 };

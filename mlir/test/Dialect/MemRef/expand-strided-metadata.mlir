@@ -1451,3 +1451,60 @@ func.func @negative_memref_view_extract_aligned_pointer(%arg0: memref<?xi8>) -> 
   %1 = memref.extract_aligned_pointer_as_index %0: memref<f32> -> index
   return %1 : index
 }
+
+// -----
+
+// The alignment assumption of a memref with a zero offset is kept on its base
+// buffer when a subview of it is expanded.
+
+//   CHECK-DAG: #[[$OFFSET_MAP:.*]] = affine_map<()[s0] -> (s0 * 8)>
+// CHECK-LABEL: func @extract_strided_metadata_of_subview_of_assume_alignment
+//  CHECK-SAME: (%[[ARG:.*]]: memref<64x8xf32>, %[[I:.*]]: index)
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<64x8xf32> -> memref<f32>, index, index, index, index, index
+//       CHECK: %[[ALIGNED_BASE:.*]] = memref.assume_alignment %[[BASE]], 32 : memref<f32>
+//       CHECK: %[[NEW_OFFSET:.*]] = affine.apply #[[$OFFSET_MAP]]()[%[[I]]]
+//       CHECK: %[[VIEW:.*]] = memref.reinterpret_cast %[[ALIGNED_BASE]] to offset: [%[[NEW_OFFSET]]], sizes: [4, 8], strides: [8, 1] : memref<f32> to memref<4x8xf32, strided<[8, 1], offset: ?>>
+//       CHECK: return %[[VIEW]] : memref<4x8xf32, strided<[8, 1], offset: ?>>
+func.func @extract_strided_metadata_of_subview_of_assume_alignment(
+    %arg0: memref<64x8xf32>, %i: index) -> memref<4x8xf32, strided<[8, 1], offset: ?>> {
+  %0 = memref.assume_alignment %arg0, 32 : memref<64x8xf32>
+  %1 = memref.subview %0[%i, 0] [4, 8] [1, 1]
+    : memref<64x8xf32> to memref<4x8xf32, strided<[8, 1], offset: ?>>
+  return %1 : memref<4x8xf32, strided<[8, 1], offset: ?>>
+}
+
+// -----
+
+// With a non-zero offset, the assumption is not on the base buffer, so the
+// base buffer is not taken from the source of `assume_alignment`. Here the
+// offset is 4 bytes, so a 16-byte aligned memref has a misaligned base.
+
+// CHECK-LABEL: func @extract_strided_metadata_of_assume_alignment_with_offset
+//  CHECK-SAME: (%[[ARG:.*]]: memref<64xf32, strided<[1], offset: 1>>)
+//       CHECK: %[[ALIGNED:.*]] = memref.assume_alignment %[[ARG]], 16 : memref<64xf32, strided<[1], offset: 1>>
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZE:.*]], %[[STRIDE:.*]] = memref.extract_strided_metadata %[[ALIGNED]] : memref<64xf32, strided<[1], offset: 1>> -> memref<f32>, index, index, index
+//       CHECK: return %[[BASE]] : memref<f32>
+func.func @extract_strided_metadata_of_assume_alignment_with_offset(
+    %arg0: memref<64xf32, strided<[1], offset: 1>>) -> memref<f32> {
+  %0 = memref.assume_alignment %arg0, 16 : memref<64xf32, strided<[1], offset: 1>>
+  %base, %offset, %size, %stride = memref.extract_strided_metadata %0
+    : memref<64xf32, strided<[1], offset: 1>> -> memref<f32>, index, index, index
+  return %base : memref<f32>
+}
+
+// -----
+
+// The metadata alone can still be taken from the source.
+
+// CHECK-LABEL: func @extract_strided_metadata_of_assume_alignment_dynamic_offset_no_base
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?xf32, strided<[?], offset: ?>>)
+//   CHECK-NOT: memref.assume_alignment
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZE:.*]], %[[STRIDE:.*]] = memref.extract_strided_metadata %[[ARG]] : memref<?xf32, strided<[?], offset: ?>> -> memref<f32>, index, index, index
+//       CHECK: return %[[OFFSET]], %[[SIZE]], %[[STRIDE]] : index, index, index
+func.func @extract_strided_metadata_of_assume_alignment_dynamic_offset_no_base(
+    %arg0: memref<?xf32, strided<[?], offset: ?>>) -> (index, index, index) {
+  %0 = memref.assume_alignment %arg0, 16 : memref<?xf32, strided<[?], offset: ?>>
+  %base, %offset, %size, %stride = memref.extract_strided_metadata %0
+    : memref<?xf32, strided<[?], offset: ?>> -> memref<f32>, index, index, index
+  return %offset, %size, %stride : index, index, index
+}
