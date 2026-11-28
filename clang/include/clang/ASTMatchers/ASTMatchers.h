@@ -4727,6 +4727,21 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
   return InnerMatcher.matches(*Arg->IgnoreParenImpCasts(), Finder, Builder);
 }
 
+/// Matches the n'th argument of an attribute if it is a string argument with
+/// the given value.
+///
+/// Given
+/// \code
+///   __attribute__((annotate("foo"))) int *p;
+///   __attribute__((annotate("bar"))) int *q;
+/// \endcode
+/// varDecl(has(attr(hasKind(attr::Annotate), hasArgument(0, "foo"))))
+///   matches the declaration of p, but not q.
+AST_MATCHER_P2_OVERLOAD(Attr, hasArgument, unsigned, N, std::string, Value, 1) {
+  std::optional<StringRef> Arg = Node.getStringArgument(N);
+  return Arg && *Arg == Value;
+}
+
 /// Matches the operand that does not contain the parameter pack.
 ///
 /// Example matches `(0 + ... + args)` and `(args * ... * 1)`
@@ -8323,6 +8338,19 @@ AST_MATCHER_P(Decl, hasAttr, attr::Kind, AttrKind) {
       return true;
   }
   return false;
+}
+
+/// Matches attributes of the given kind.
+///
+/// Given
+/// \code
+///   __attribute__((annotate("foo"))) int x;
+/// \endcode
+/// attr(hasKind(attr::Annotate)) matches the annotate attribute. If the
+/// matcher is used from clang-query, attr::Kind parameter should be passed as
+/// a quoted string. e.g., hasKind("attr::Annotate").
+AST_MATCHER_P(Attr, hasKind, attr::Kind, AttrKind) {
+  return Node.getKind() == AttrKind;
 }
 
 /// Matches the return value expression of a return statement

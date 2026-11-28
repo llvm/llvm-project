@@ -33,6 +33,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 
 namespace clang {
 class ASTContext;
@@ -121,6 +122,10 @@ public:
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
+
+  /// Returns the value of the argument at \p Index if that argument is a
+  /// string argument, and std::nullopt otherwise.
+  std::optional<StringRef> getStringArgument(unsigned Index) const;
 
   static StringRef getDocumentation(attr::Kind);
 };

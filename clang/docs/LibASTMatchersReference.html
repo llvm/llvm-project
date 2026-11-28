@@ -3109,6 +3109,29 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;</td><td class="name" onclick="toggle('hasArgument4')"><a name="hasArgument4Anchor">hasArgument</a></td><td>unsigned N, std::string Value</td></tr>
+<tr><td colspan="4" class="doc" id="hasArgument4"><pre>Matches the n'th argument of an attribute if it is a string argument with
+the given value.
+
+Given
+  __attribute__((annotate("foo"))) int *p;
+  __attribute__((annotate("bar"))) int *q;
+varDecl(has(attr(hasKind(attr::Annotate), hasArgument(0, "foo"))))
+  matches the declaration of p, but not q.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;</td><td class="name" onclick="toggle('hasKind0')"><a name="hasKind0Anchor">hasKind</a></td><td>attr::Kind AttrKind</td></tr>
+<tr><td colspan="4" class="doc" id="hasKind0"><pre>Matches attributes of the given kind.
+
+Given
+  __attribute__((annotate("foo"))) int x;
+attr(hasKind(attr::Annotate)) matches the annotate attribute. If the
+matcher is used from clang-query, attr::Kind parameter should be passed as
+a quoted string. e.g., hasKind("attr::Annotate").
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;</td><td class="name" onclick="toggle('isImplicit1')"><a name="isImplicit1Anchor">isImplicit</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isImplicit1"><pre>Matches an entity that has been implicitly added by the compiler (e.g.
 implicit default/copy constructors).

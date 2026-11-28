@@ -104,6 +104,7 @@ RegistryMaps::RegistryMaps() {
                   std::make_unique<internal::MapAnyOfBuilderDescriptor>());
 
   REGISTER_OVERLOADED_2(callee);
+  REGISTER_OVERLOADED_2(hasArgument);
   REGISTER_OVERLOADED_2(hasPrefix);
   REGISTER_OVERLOADED_2(hasType);
   REGISTER_OVERLOADED_2(ignoringParens);
@@ -293,7 +294,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAnyTemplateArgument);
   REGISTER_MATCHER(hasAnyTemplateArgumentLoc);
   REGISTER_MATCHER(hasAnyUsingShadowDecl);
-  REGISTER_MATCHER(hasArgument);
   REGISTER_MATCHER(hasArgumentOfType);
   REGISTER_MATCHER(hasArraySize);
   REGISTER_MATCHER(hasAttr);
@@ -334,6 +334,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasInitializer);
   REGISTER_MATCHER(hasInitStatement);
   REGISTER_MATCHER(hasKeywordSelector);
+  REGISTER_MATCHER(hasKind);
   REGISTER_MATCHER(hasLHS);
   REGISTER_MATCHER(hasLocalQualifiers);
   REGISTER_MATCHER(hasLocalStorage);

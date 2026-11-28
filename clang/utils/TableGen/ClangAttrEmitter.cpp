@@ -3524,6 +3524,43 @@ static void emitProfileFunction(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
+static void emitGetStringArgumentFunction(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  OS << "std::optional<StringRef> Attr::getStringArgument(unsigned Index) "
+        "const {\n";
+  OS << "  switch (getKind()) {\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    std::vector<std::pair<unsigned, std::string>> StringArgs;
+    unsigned Index = 0;
+    for (const auto *Arg : R.getValueAsListOfDefs("Args")) {
+      if (Arg->getValueAsBit("Fake"))
+        continue;
+      if (Arg->isSubClassOf("StringArgument"))
+        StringArgs.emplace_back(
+            Index, createArgument(*Arg, R.getName())->getUpperName().str());
+      ++Index;
+    }
+    if (StringArgs.empty())
+      continue;
+    OS << "  case attr::" << R.getName() << ":\n";
+    OS << "    switch (Index) {\n";
+    for (const auto &[ArgIndex, Name] : StringArgs) {
+      OS << "    case " << ArgIndex << ":\n";
+      OS << "      return cast<" << R.getName() << "Attr>(this)->get" << Name
+         << "();\n";
+    }
+    OS << "    }\n";
+    OS << "    return std::nullopt;\n";
+  }
+  OS << "  default:\n";
+  OS << "    return std::nullopt;\n";
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
@@ -3559,6 +3596,7 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
         "const PrintingPolicy &Policy) const {\n";
   EmitFunc("printPretty(OS, Policy)");
 
+  emitGetStringArgumentFunction(Records, OS);
   emitEquivalenceFunction(Records, OS);
   emitProfileFunction(Records, OS);
 }
