@@ -1,3 +1,4 @@
 add_sycl_unittest(USMTests
-    alloc.cpp
+    alloc_functions.cpp
+    allocator.cpp
 )
