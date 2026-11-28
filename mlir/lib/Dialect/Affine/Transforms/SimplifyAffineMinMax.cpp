@@ -35,7 +35,7 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
   using ComparisonOperator = ValueBoundsConstraintSet::ComparisonOperator;
 
   AffineMap affineMap = affineOp.getMap();
-  ValueRange operands = affineOp.getOperands();
+  SmallVector<Value> operands(affineOp.getOperands());
   static constexpr bool isMin = std::is_same_v<AffineOp, AffineMinOp>;
 
   LDBG() << "analyzing value: `" << affineOp;
@@ -131,9 +131,13 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
   affineMap =
       AffineMap::get(0, affineMap.getNumSymbols() + affineMap.getNumDims(),
                      results, rewriter.getContext());
+  canonicalizeMapAndOperands(&affineMap, &operands);
 
   // Update the affine op.
-  rewriter.modifyOpInPlace(affineOp, [&]() { affineOp.setMap(affineMap); });
+  rewriter.modifyOpInPlace(affineOp, [&]() {
+    affineOp.setMap(affineMap);
+    affineOp->setOperands(operands);
+  });
   LDBG() << "- simplified affine op: `" << affineOp << "`";
   return true;
 }
