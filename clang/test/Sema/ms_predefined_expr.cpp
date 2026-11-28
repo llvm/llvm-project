@@ -206,3 +206,9 @@ void test_in_constexpr_struct_init() {
   } constexpr c1 = { { "F:" __FUNCTION__ } }; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
   ASSERT_EQ("F:" __FUNCTION__, c1.s.F); // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
 }
+
+namespace GH221564 {
+  auto l = [](auto a) { return 42; }; // expected-note{{defined here}}
+  using L = decltype(l);
+  auto L::operator()() const { return {"<="}; } // expected-error{{out-of-line definition of 'operator()' does not match any declaration}}
+}
