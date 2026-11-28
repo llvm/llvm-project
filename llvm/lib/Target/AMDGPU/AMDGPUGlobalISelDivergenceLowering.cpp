@@ -210,10 +210,13 @@ void replaceUsesOfRegInInstWith(Register Reg, MachineInstr *Inst,
 bool DivergenceLoweringHelper::lowerTemporalDivergence() {
   AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(MF);
   DenseMap<Register, Register> TDCache;
+  auto NeedsLowering = [&](Register Reg) {
+    return MRI->getType(Reg) != LLT::scalar(1) && !MUI->isDivergentAtDef(Reg) &&
+           !ILMA.isS32S64LaneMask(Reg);
+  };
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergentAtDef(Reg) ||
-        ILMA.isS32S64LaneMask(Reg))
+    if (!NeedsLowering(Reg) || UseInst->isDebugInstr())
       continue;
 
     Register CachedTDCopy = TDCache.lookup(Reg);
@@ -233,6 +236,28 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
     replaceUsesOfRegInInstWith(Reg, UseInst, VgprReg);
     TDCache[Reg] = VgprReg;
   }
+
+  // Debug uses must not create code, but may use a copy already needed by an
+  // ordinary use. Otherwise the original register no longer describes the
+  // value for lanes that left the cycle, so mark the location unavailable.
+  for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
+    if (!NeedsLowering(Reg) || !UseInst->isDebugInstr())
+      continue;
+    assert(UseInst->isDebugValue() &&
+           "unexpected debug instruction kind before instruction selection");
+    if (!UseInst->isDebugValue())
+      continue;
+
+    Register CachedTDCopy = TDCache.lookup(Reg);
+    if (CachedTDCopy) {
+      replaceUsesOfRegInInstWith(Reg, UseInst, CachedTDCopy);
+      continue;
+    }
+
+    // A DBG_VALUE_LIST becomes unavailable when any of its inputs cannot be
+    // described; setDebugValueUndef() therefore clears all of its locations.
+    UseInst->setDebugValueUndef();
+  }
   return false;
 }
 
@@ -246,8 +271,11 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   // In case of use outside muliple nested cycles or muliple uses we only need
   // to merge lane mask across largest relevant cycle.
   SmallDenseMap<Register, std::pair<CycleRef, Register>> LRCCache;
+  // Debug uses must not widen the cycle across which a lane mask is merged.
   for (auto [Reg, UseInst, LRC] : MUI->getTemporalDivergenceList()) {
     if (MRI->getType(Reg) != LLT::scalar(1))
+      continue;
+    if (UseInst->isDebugInstr())
       continue;
 
     auto [LRCCacheIter, RegNotCached] = LRCCache.try_emplace(Reg);
@@ -289,7 +317,32 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
     if (MRI->getType(Reg) != LLT::scalar(1))
       continue;
 
-    replaceUsesOfRegInInstWith(Reg, UseInst, LRCCache.lookup(Reg).second);
+    auto CacheIt = LRCCache.find(Reg);
+    if (!UseInst->isDebugInstr()) {
+      assert(CacheIt != LRCCache.end() &&
+             "missing lane-mask cache entry for an ordinary use");
+      if (CacheIt == LRCCache.end())
+        continue;
+      replaceUsesOfRegInInstWith(Reg, UseInst, CacheIt->second.second);
+      continue;
+    }
+
+    assert(UseInst->isDebugValue() &&
+           "unexpected debug instruction kind before instruction selection");
+    if (!UseInst->isDebugValue())
+      continue;
+
+    // Reuse a merged mask only when it covers at least the cycle recorded for
+    // the debug use. Otherwise make the location unavailable.
+    if (CacheIt != LRCCache.end() &&
+        CInfo.contains(CacheIt->second.first, Cycle)) {
+      replaceUsesOfRegInInstWith(Reg, UseInst, CacheIt->second.second);
+      continue;
+    }
+
+    // A DBG_VALUE_LIST becomes unavailable when any of its inputs cannot be
+    // described; setDebugValueUndef() therefore clears all of its locations.
+    UseInst->setDebugValueUndef();
   }
 
   return false;
