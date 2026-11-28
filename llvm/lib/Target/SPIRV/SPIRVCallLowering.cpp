@@ -218,6 +218,30 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                   ArgAccessQual, true);
 }
 
+SPIRVTypeInst llvm::getOrCreateFunctionSPIRVType(const Function &F,
+                                                 SPIRVGlobalRegistry *GR,
+                                                 MachineIRBuilder &MIRBuilder) {
+  const auto &ST = cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  SmallVector<SPIRVTypeInst, 4> ArgTypeVRegs;
+  for (unsigned I = 0, E = F.arg_size(); I < E; ++I)
+    ArgTypeVRegs.push_back(getArgSPIRVType(F, I, GR, MIRBuilder, ST));
+  FunctionType *FTy = SPIRV::getOriginalFunctionType(F);
+  Type *FRetTy = FTy->getReturnType();
+  if (isUntypedPointerTy(FRetTy)) {
+    if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
+      TypedPointerType *DerivedTy = TypedPointerType::get(
+          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
+      GR->addReturnType(&F, DerivedTy);
+      FRetTy = DerivedTy;
+    }
+  }
+  SPIRVTypeInst RetTy = GR->getOrCreateSPIRVType(
+      FRetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
+  return GR->getOrCreateOpTypeFunctionWithArgs(FTy, RetTy, ArgTypeVRegs,
+                                               MIRBuilder);
+}
+
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   assert(STI.getEnv() != SPIRVSubtarget::Unknown &&
@@ -359,27 +383,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-  FunctionType *FTy = SPIRV::getOriginalFunctionType(F);
-  Type *FRetTy = FTy->getReturnType();
-  if (isUntypedPointerTy(FRetTy)) {
-    if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
-      TypedPointerType *DerivedTy = TypedPointerType::get(
-          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
-      GR->addReturnType(&F, DerivedTy);
-      FRetTy = DerivedTy;
-    }
-  }
-  SPIRVTypeInst RetTy = GR->getOrCreateSPIRVType(
-      FRetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-  FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
-  SPIRVTypeInst FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
-      FTy, RetTy, ArgTypeVRegs, MIRBuilder);
+  SPIRVTypeInst FuncTy = getOrCreateFunctionSPIRVType(F, GR, MIRBuilder);
   uint32_t FuncControl = getFunctionControl(F, ST);
 
   // Add OpFunction instruction
   MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
                                .addDef(FuncVReg)
-                               .addUse(GR->getSPIRVTypeID(RetTy))
+                               .addUse(FuncTy->getOperand(1).getReg())
                                .addImm(FuncControl)
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));

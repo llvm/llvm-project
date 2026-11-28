@@ -17,8 +17,8 @@
 ;; }
 
 ; CHECK-SPIRV1_4-DAG: OpEntryPoint Kernel %[[#]] "block_kernel" %[[#InterfaceId1:]] %[[#InterfaceId2:]]
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__block_literal_global"
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "block_kernel.b1"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "block_kernel.b1"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__block_literal_global"
 ; CHECK-SPIRV:      OpName %[[#block_invoke:]] "_block_invoke"
 ; CHECK-SPIRV:      %[[#int8:]] = OpTypeInt 8
 ; CHECK-SPIRV:      %[[#int:]] = OpTypeInt 32

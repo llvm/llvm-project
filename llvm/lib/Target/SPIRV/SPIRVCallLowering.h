@@ -54,6 +54,12 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 };
+
+// Get or create the type of the OpFunction of F, which may be a function other
+// than the one being lowered.
+SPIRVTypeInst getOrCreateFunctionSPIRVType(const Function &F,
+                                           SPIRVGlobalRegistry *GR,
+                                           MachineIRBuilder &MIRBuilder);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVCALLLOWERING_H

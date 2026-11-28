@@ -15,6 +15,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
+#include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVRegisterInfo.h"
@@ -7565,10 +7566,15 @@ bool SPIRVInstructionSelector::selectGlobalValue(
           STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
               ? dyn_cast<Function>(GV)
               : nullptr;
-      SPIRVTypeInst ResType = GR.getOrCreateSPIRVPointerType(
-          GVType, I,
-          GVFun ? SPIRV::StorageClass::CodeSectionINTEL
-                : addressSpaceToStorageClass(GV->getAddressSpace(), STI));
+      // A function pointer must point to the exact type of its OpFunction,
+      // which uses the deduced pointee types of pointer arguments.
+      SPIRVTypeInst ResType =
+          GVFun ? GR.getOrCreateSPIRVPointerType(
+                      getOrCreateFunctionSPIRVType(*GVFun, &GR, MIRBuilder),
+                      MIRBuilder, SPIRV::StorageClass::CodeSectionINTEL)
+                : GR.getOrCreateSPIRVPointerType(
+                      GVType, I,
+                      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
       if (GVFun) {
         // References to a function via function pointers generate virtual
         // registers without a definition. We will resolve it later, during
