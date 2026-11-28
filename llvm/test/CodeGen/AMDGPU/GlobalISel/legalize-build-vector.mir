@@ -761,3 +761,17 @@ body: |
     %4:_(<4 x s128>) = G_BUILD_VECTOR %0, %1, %2, %3
     S_NOP 0, implicit %4
 ...
+---
+name: legal_v2s1024_wide_result
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: legal_v2s1024_wide_result
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1024>) = G_BUILD_VECTOR [[DEF]](s1024), [[DEF1]](s1024)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s1024>)
+    %0:_(s1024) = G_IMPLICIT_DEF
+    %1:_(s1024) = G_IMPLICIT_DEF
+    %2:_(<2 x s1024>) = G_BUILD_VECTOR %0, %1
+    S_NOP 0, implicit %2
+...
