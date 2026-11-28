@@ -1969,8 +1969,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b32:
-  case Intrinsic::amdgcn_ds_append:
-  case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
