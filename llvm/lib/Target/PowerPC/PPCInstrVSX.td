@@ -1817,30 +1817,23 @@ let Predicates = [HasVSX, HasP9Vector] in {
 let PPC970_Single = 1, AddedComplexity = 400 in {
 
   def SELECT_CC_VSRC: PPCCustomInserterPseudo<(outs vsrc:$dst),
-                             (ins crrc:$cond, vsrc:$T, vsrc:$F, i32imm:$BROPC),
-                             "#SELECT_CC_VSRC",
-                             []>;
+                             (ins crrc:$cond, vsrc:$T, vsrc:$F, i32imm:$BROPC)>;
   def SELECT_VSRC: PPCCustomInserterPseudo<(outs vsrc:$dst),
                           (ins crbitrc:$cond, vsrc:$T, vsrc:$F),
-                          "#SELECT_VSRC",
                           [(set v2f64:$dst,
                                 (select i1:$cond, v2f64:$T, v2f64:$F))]>;
   def SELECT_CC_VSFRC: PPCCustomInserterPseudo<(outs f8rc:$dst),
                               (ins crrc:$cond, f8rc:$T, f8rc:$F,
-                               i32imm:$BROPC), "#SELECT_CC_VSFRC",
-                              []>;
+                               i32imm:$BROPC)>;
   def SELECT_VSFRC: PPCCustomInserterPseudo<(outs f8rc:$dst),
                            (ins crbitrc:$cond, f8rc:$T, f8rc:$F),
-                           "#SELECT_VSFRC",
                            [(set f64:$dst,
                                  (select i1:$cond, f64:$T, f64:$F))]>;
   def SELECT_CC_VSSRC: PPCCustomInserterPseudo<(outs f4rc:$dst),
                               (ins crrc:$cond, f4rc:$T, f4rc:$F,
-                               i32imm:$BROPC), "#SELECT_CC_VSSRC",
-                              []>;
+                               i32imm:$BROPC)>;
   def SELECT_VSSRC: PPCCustomInserterPseudo<(outs f4rc:$dst),
                            (ins crbitrc:$cond, f4rc:$T, f4rc:$F),
-                           "#SELECT_VSSRC",
                            [(set f32:$dst,
                                  (select i1:$cond, f32:$T, f32:$F))]>;
 }
