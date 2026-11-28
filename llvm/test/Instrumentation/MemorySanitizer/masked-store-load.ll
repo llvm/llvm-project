@@ -85,10 +85,8 @@ entry:
   ret void
 }
 
-; TODO: don't update the origin in the cases where the mask ends up being all
-;       zero (i.e., no bytes stored). For simplicity, we use a zeroinitializer
-;       in this test case, but in the general case, we need to check at
-;       runtime.
+; TODO: Only update origins for active lanes with non-zero shadow; here the
+;       mask is all zero so no memory or origin should be touched.
 define void @Store_ZeroMask(ptr %p, <4 x i64> %v) sanitize_memory {
 ; CHECK-LABEL: @Store_ZeroMask(
 ; CHECK-NEXT:  entry:
