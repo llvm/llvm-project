@@ -237,6 +237,12 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
     return SPIRV::ExecutionModel::GLCompute;
   if (value == "vertex")
     return SPIRV::ExecutionModel::Vertex;
+  if (value == "geometry")
+    return SPIRV::ExecutionModel::Geometry;
+  if (value == "hull")
+    return SPIRV::ExecutionModel::TessellationControl;
+  if (value == "domain")
+    return SPIRV::ExecutionModel::TessellationEvaluation;
   if (value == "pixel")
     return SPIRV::ExecutionModel::Fragment;
 
