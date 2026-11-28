@@ -480,6 +480,17 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     }
   }
 
+  // The exception slots of a coroutine need to be stored outside of the
+  // coroutine frame because they can be triggered before the coroutine frame
+  // exists. Notable examples are failing during the construction of the promise
+  // itself, and in future through contract assertion failures.
+  if (isCoroutine()) {
+    for (llvm::Value *Slot : {ExceptionSlot, (llvm::Value *)EHSelectorSlot})
+      if (auto *AI = dyn_cast_or_null<llvm::AllocaInst>(Slot))
+        AI->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                        llvm::MDNode::get(getLLVMContext(), {}));
+  }
+
   EmitIfUsed(*this, EHResumeBlock);
   EmitIfUsed(*this, TerminateLandingPad);
   EmitIfUsed(*this, TerminateHandler);
