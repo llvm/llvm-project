@@ -797,3 +797,275 @@ for.body:
 for.end:
   ret void
 }
+
+;CHECK-LABEL: @exp2_f32(
+;CHECK: vexp2f{{.*}}<4 x float>
+;CHECK: ret void
+declare float @exp2f(float) nounwind readnone
+define void @exp2_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @exp2f(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @exp2_f32_intrinsic(
+;CHECK: vexp2f{{.*}}<4 x float>
+;CHECK: ret void
+define void @exp2_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.exp2.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @log2_f32(
+;CHECK: vlog2f{{.*}}<4 x float>
+;CHECK: ret void
+declare float @log2f(float) nounwind readnone
+define void @log2_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @log2f(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @log2_f32_intrinsic(
+;CHECK: vlog2f{{.*}}<4 x float>
+;CHECK: ret void
+define void @log2_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.log2.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @pow_f32(
+;CHECK: vpowf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @powf(float, float) nounwind readnone
+define void @pow_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @powf(float %0, float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @pow_f32_intrinsic(
+;CHECK: vpowf{{.*}}<4 x float>
+;CHECK: ret void
+define void @pow_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.pow.f32(float %0, float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @remainder_f32(
+;CHECK: vremainderf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @remainderf(float, float) nounwind readnone
+define void @remainder_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @remainderf(float %0, float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @nextafter_f32(
+;CHECK: vnextafterf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @nextafterf(float, float) nounwind readnone
+define void @nextafter_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @nextafterf(float %0, float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @sinpi_f32(
+;CHECK: vsinpif{{.*}}<4 x float>
+;CHECK: ret void
+declare float @__sinpif(float) nounwind readnone
+define void @sinpi_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @__sinpif(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @cospi_f32(
+;CHECK: vcospif{{.*}}<4 x float>
+;CHECK: ret void
+declare float @__cospif(float) nounwind readnone
+define void @cospi_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @__cospif(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @tanpi_f32(
+;CHECK: vtanpif{{.*}}<4 x float>
+;CHECK: ret void
+declare float @__tanpif(float) nounwind readnone
+define void @tanpi_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @__tanpif(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
