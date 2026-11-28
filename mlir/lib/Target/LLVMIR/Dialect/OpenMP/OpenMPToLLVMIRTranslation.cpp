@@ -33,6 +33,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -1131,6 +1132,143 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Emits a call to `llvm.omp.sync.marker` for each pointer in \p ptrs. The
+/// marker counts as reading and writing the memory its argument points to, but
+/// it doesn't capture the pointer and generates no code. Accesses through the
+/// `noalias` dummy arguments therefore can't be moved across it, while
+/// `noalias` still holds everywhere else. The OpenMP runtime calls don't stop
+/// such moves by themselves: alias analysis knows that they can't access a
+/// `noalias` argument that never escapes.
+static void emitSyncMarkers(llvm::IRBuilderBase &builder,
+                            llvm::ArrayRef<llvm::Value *> ptrs,
+                            llvm::DebugLoc loc) {
+  if (ptrs.empty())
+    return;
+  // The location of a construct like omp.target can belong to the function its
+  // region is outlined into. Use a location in this function instead.
+  llvm::DISubprogram *subprogram =
+      builder.GetInsertBlock()->getParent()->getSubprogram();
+  if (loc && loc->getInlinedAtScope()->getSubprogram() != subprogram)
+    loc = subprogram ? llvm::DebugLoc(llvm::DILocation::get(
+                           subprogram->getContext(), 0, 0, subprogram))
+                     : llvm::DebugLoc();
+  for (llvm::Value *ptr : ptrs)
+    llvm::cast<llvm::CallInst>(
+        builder.CreateIntrinsic(llvm::Intrinsic::omp_sync_marker,
+                                {ptr->getType()}, {ptr}))
+        ->setDebugLoc(loc);
+}
+
+/// Returns true if \p op is nested in a construct whose region is outlined into
+/// a separate function (e.g. omp.parallel or omp.task). The arguments of that
+/// function are not dummy arguments, so there is nothing to mark.
+static bool isInOutlinedRegion(Operation *op) {
+  return static_cast<bool>(
+      op->getParentOfType<omp::OutlineableOpenMPOpInterface>());
+}
+
+/// Returns true if accesses through \p arg must be kept ordered with sync
+/// markers. This holds for `noalias` pointer arguments, which for Fortran are
+/// dummy arguments. A `noalias` argument that is also `readonly` (an INTENT(IN)
+/// dummy at -O1 and above) is skipped: alias analysis already assumes that its
+/// memory doesn't change during the call, so a marker can't help.
+static bool needsSyncMarker(const llvm::Argument &arg) {
+  return arg.getType()->isPointerTy() && arg.hasNoAliasAttr() &&
+         !arg.onlyReadsMemory();
+}
+
+/// Returns true if \p ptr points into an argument of the function being built
+/// that needs sync markers, possibly with an offset.
+static bool isArgumentToMark(llvm::Value *ptr) {
+  auto *arg = llvm::dyn_cast<llvm::Argument>(ptr->stripInBoundsOffsets());
+  return arg && needsSyncMarker(*arg);
+}
+
+/// Collects the arguments of the function that \p op is translated into that
+/// need sync markers; these are the dummy arguments a flush must keep ordered.
+static llvm::SmallVector<llvm::Value *>
+collectArgumentsToMark(Operation *op, llvm::IRBuilderBase &builder) {
+  llvm::SmallVector<llvm::Value *> ptrs;
+  llvm::BasicBlock *insertBB = builder.GetInsertBlock();
+  if (!insertBB || isInOutlinedRegion(op))
+    return ptrs;
+  if (llvm::Function *fn = insertBB->getParent())
+    for (llvm::Argument &arg : fn->args())
+      if (needsSyncMarker(arg))
+        ptrs.push_back(&arg);
+  return ptrs;
+}
+
+/// Returns true if \p op is an atomic operation whose memory order makes it a
+/// release or acquire flush. A relaxed atomic operation only orders accesses
+/// to its own variable.
+static bool isAtomicWithFlush(Operation *op) {
+  // The atomic operations in a capture are translated as part of it.
+  if (isa_and_present<omp::AtomicCaptureOp>(op->getParentOp()))
+    return false;
+  std::optional<omp::ClauseMemoryOrderKind> order =
+      llvm::TypeSwitch<Operation *, std::optional<omp::ClauseMemoryOrderKind>>(
+          op)
+          .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
+                omp::AtomicCaptureOp, omp::AtomicCompareOp>(
+              [](auto atomicOp) { return atomicOp.getMemoryOrder(); })
+          .Default(
+              [](Operation *) -> std::optional<omp::ClauseMemoryOrderKind> {
+                return std::nullopt;
+              });
+  return order && *order != omp::ClauseMemoryOrderKind::Relaxed;
+}
+
+/// Returns true if \p op implies a flush of all variables on entry, on exit or
+/// both: constructs with an implicit barrier, critical and ordered, task
+/// scheduling points (task generation, including target tasks, taskwait,
+/// taskyield, end of taskgroup, start and end of target data), cancellation,
+/// entry to and exit from parallel and teams, and atomic operations that are
+/// not relaxed. For worksharing constructs and scope the flush comes from the
+/// barrier at the end, which `nowait` removes. Explicit `omp.flush` is handled
+/// with the op, since a flush with a list only applies to the listed variables.
+static bool impliesFlushAll(Operation *op, bool isTargetDevice) {
+  if (auto single = dyn_cast<omp::SingleOp>(op))
+    return !single.getNowait();
+  if (auto sections = dyn_cast<omp::SectionsOp>(op))
+    return !sections.getNowait();
+  if (auto wsloop = dyn_cast<omp::WsloopOp>(op))
+    return !wsloop.getNowait();
+  if (auto scope = dyn_cast<omp::ScopeOp>(op))
+    return !scope.getNowait();
+  if (auto workshare = dyn_cast<omp::WorkshareOp>(op))
+    return !workshare.getNowait();
+  if (isa<omp::TargetOp, omp::TargetDataOp, omp::TargetEnterDataOp,
+          omp::TargetExitDataOp, omp::TargetUpdateOp>(op))
+    return !isTargetDevice;
+  if (isAtomicWithFlush(op))
+    return true;
+  return isa<omp::BarrierOp, omp::CriticalOp, omp::OrderedOp,
+             omp::OrderedRegionOp, omp::ParallelOp, omp::TeamsOp, omp::TaskOp,
+             omp::TaskloopContextOp, omp::TaskwaitOp, omp::TaskyieldOp,
+             omp::TaskgroupOp, omp::CancelOp, omp::CancellationPointOp>(op);
+}
+
+/// Converts the region of a critical or ordered construct with sync markers at
+/// the start and the end of the region, so that accesses to the `noalias`
+/// arguments stay between the runtime calls that enter and leave the region.
+static llvm::Error
+convertRegionWithSyncMarkers(Operation &op, Region &region, StringRef blockName,
+                             llvm::IRBuilderBase &builder,
+                             LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::SmallVector<llvm::Value *> ptrs = collectArgumentsToMark(&op, builder);
+  llvm::DebugLoc loc = builder.getCurrentDebugLocation();
+  emitSyncMarkers(builder, ptrs, loc);
+  llvm::Expected<llvm::BasicBlock *> contBlock =
+      convertOmpOpRegions(region, blockName, builder, moduleTranslation);
+  if (!contBlock)
+    return contBlock.takeError();
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  builder.SetInsertPoint((*contBlock)->getFirstInsertionPt());
+  emitSyncMarkers(builder, ptrs, loc);
+  return llvm::Error::success();
+}
+
 /// Converts an OpenMP 'critical' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1146,9 +1284,8 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
     // CriticalOp has only one region associated with it.
     auto &region = cast<omp::CriticalOp>(opInst).getRegion();
     builder.restoreIP(codeGenIP);
-    return convertOmpOpRegions(region, "omp.critical.region", builder,
-                               moduleTranslation)
-        .takeError();
+    return convertRegionWithSyncMarkers(opInst, region, "omp.critical.region",
+                                        builder, moduleTranslation);
   };
 
   // TODO: Perform finalization actions for variables. This has to be
@@ -1549,9 +1686,8 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
     // OrderedOp has only one region associated with it.
     auto &region = cast<omp::OrderedRegionOp>(opInst).getRegion();
     builder.restoreIP(codeGenIP);
-    return convertOmpOpRegions(region, "omp.ordered.region", builder,
-                               moduleTranslation)
-        .takeError();
+    return convertRegionWithSyncMarkers(opInst, region, "omp.ordered.region",
+                                        builder, moduleTranslation);
   };
 
   // TODO: Perform finalization actions for variables. This has to be
@@ -11354,6 +11490,16 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
 
+  // Accesses to the function's noalias dummy arguments must not move across a
+  // construct that implies a flush, so mark them on both sides of it. The
+  // markers get the location of the construct: translating it may leave the
+  // debug location of an outlined function in the builder.
+  llvm::SmallVector<llvm::Value *> syncPtrs;
+  if (impliesFlushAll(op, ompBuilder->Config.isTargetDevice()))
+    syncPtrs = collectArgumentsToMark(op, builder);
+  llvm::DebugLoc opDebugLoc = builder.getCurrentDebugLocation();
+  emitSyncMarkers(builder, syncPtrs, opDebugLoc);
+
   auto result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
           .Case([&](omp::BarrierOp op) -> LogicalResult {
@@ -11381,15 +11527,23 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             if (failed(checkImplementationStatus(*op)))
               return failure();
 
-            // No support in Openmp runtime function (__kmpc_flush) to accept
-            // the argument list.
-            // OpenMP standard states the following:
-            //  "An implementation may implement a flush with a list by ignoring
-            //   the list, and treating it the same as a flush without a list."
-            //
-            // The argument list is discarded so that, flush with a list is
-            // treated same as a flush without a list.
+            // __kmpc_flush ignores the list. Mark the `noalias` dummy arguments
+            // that are listed, or all of them for a flush without a list, so
+            // that their accesses stay ordered across the flush.
+            llvm::SmallVector<llvm::Value *> flushPtrs;
+            if (op.getVarList().empty()) {
+              flushPtrs = collectArgumentsToMark(op, builder);
+            } else if (!isInOutlinedRegion(op)) {
+              for (mlir::Value flushVar : op.getVarList()) {
+                llvm::Value *ptr = moduleTranslation.lookupValue(flushVar);
+                if (isArgumentToMark(ptr) &&
+                    !llvm::is_contained(flushPtrs, ptr))
+                  flushPtrs.push_back(ptr);
+              }
+            }
+            emitSyncMarkers(builder, flushPtrs, opDebugLoc);
             ompBuilder->createFlush(builder);
+            emitSyncMarkers(builder, flushPtrs, opDebugLoc);
             return success();
           })
           .Case([&](omp::ErrorOp op) {
@@ -11591,6 +11745,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             return inst->emitError()
                    << "not yet implemented: " << inst->getName();
           });
+
+  if (succeeded(result))
+    emitSyncMarkers(builder, syncPtrs, opDebugLoc);
 
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPop();
