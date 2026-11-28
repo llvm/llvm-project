@@ -15,6 +15,17 @@
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST16 %s < %t.opt
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST17 %s < %t.opt
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-FORCE-EMIT %s < %t.vtable
+// RUN: %if cir-enabled %{ %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -fclangir -emit-llvm -o %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST8 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST9 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST10 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST11 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST12 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST13 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST14 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST15 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST16 %s < %t.cir.opt %}
+// RUN: %if cir-enabled %{ FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST17 %s < %t.cir.opt %}
 
 
 #include <typeinfo>
