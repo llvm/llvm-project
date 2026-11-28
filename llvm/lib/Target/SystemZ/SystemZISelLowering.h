@@ -419,6 +419,7 @@ private:
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineADD(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
