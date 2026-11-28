@@ -16,7 +16,7 @@
 include "clang/Basic/BuiltinsAArch64Base.td"
 
 // In libgcc
-let Attributes = [RuntimeLibraryFunction] in {
+let Attributes = [RuntimeLibraryFunction, NoAddressSpaceRewrite] in {
     def __clear_cache : AArch64NoPrefixBuiltin<"void (void *, void *)">;
 }
 

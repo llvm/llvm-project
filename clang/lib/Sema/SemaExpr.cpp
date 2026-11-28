@@ -6797,8 +6797,9 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   QualType DeclType = FDecl->getType();
   const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(DeclType);
 
-  if (!Context.BuiltinInfo.hasPtrArgsOrResult(FDecl->getBuiltinID()) || !FT ||
-      ArgExprs.size() < FT->getNumParams())
+  if (!Context.BuiltinInfo.hasPtrArgsOrResult(FDecl->getBuiltinID()) ||
+      Context.BuiltinInfo.hasNoAddressSpaceRewrite(FDecl->getBuiltinID()) ||
+      !FT || ArgExprs.size() < FT->getNumParams())
     return nullptr;
 
   bool NeedsNewDecl = false;

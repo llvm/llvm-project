@@ -79,6 +79,10 @@ def RequireDeclaration : Attribute<"h">;
 // '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
 def RuntimeLibraryFunction : Attribute<"i">;
 
+// Do not retype unqualified pointer parameters to the call argument's address
+// space; the builtin only accepts the default address space.
+def NoAddressSpaceRewrite : Attribute<"k">;
+
 // FIXME: Why is this not simply the min_vector_width attribute?
 // Vector has to be at least N bits wide.
 class RequiredVectorWidth<int N> : IndexedAttribute<"V", N>;

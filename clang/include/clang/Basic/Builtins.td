@@ -1208,7 +1208,7 @@ def StackAddress : Builtin {
 
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, NoAddressSpaceRewrite];
   let Prototype = "void(void*, void*)";
 }
 

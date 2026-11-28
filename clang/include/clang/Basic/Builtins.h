@@ -373,6 +373,12 @@ public:
     return strchr(getTypeString(ID), '*') != nullptr;
   }
 
+  /// Determines whether Sema must not retype this builtin's pointer
+  /// parameters to the address space of the call arguments.
+  bool hasNoAddressSpaceRewrite(unsigned ID) const {
+    return strchr(getAttributesString(ID), 'k') != nullptr;
+  }
+
   /// Return true if this builtin has a result or any arguments which are
   /// reference types.
   bool hasReferenceArgsOrResult(unsigned ID) const {
