@@ -72,8 +72,17 @@ struct TestParallelLoopUnrollingPass
     };
     PatternRewriter rewriter(getOperation()->getContext());
     for (auto loop : loops) {
-      (void)parallelLoopUnrollByFactors(loop, unrollFactors, rewriter,
-                                        annotateFn);
+      SmallPtrSet<Operation *, 8> srcOps;
+      for (Operation &op : loop.getBody()->without_terminator())
+        srcOps.insert(&op);
+      IRMapping clonedToSrcOpsMap;
+      if (failed(parallelLoopUnrollByFactors(loop, unrollFactors, rewriter,
+                                             annotateFn, &clonedToSrcOpsMap)))
+        continue;
+      for (auto [cloned, src] : clonedToSrcOpsMap.getOperationMap())
+        if (mapClonedOps && srcOps.contains(src))
+          cloned->setDiscardableAttr("cloned_from_original",
+                                     rewriter.getUnitAttr());
     }
   }
 
@@ -87,6 +96,10 @@ struct TestParallelLoopUnrollingPass
   Option<bool> annotateLoop{*this, "annotate",
                             llvm::cl::desc("Annotate unrolled iterations."),
                             llvm::cl::init(false)};
+  Option<bool> mapClonedOps{
+      *this, "map-cloned-ops",
+      llvm::cl::desc("Mark the clones mapped to an original op."),
+      llvm::cl::init(false)};
 };
 } // namespace
 
