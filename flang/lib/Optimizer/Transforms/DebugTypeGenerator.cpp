@@ -870,7 +870,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
           convertType(funcTy.getResult(0), fileAttr, scope, declOp));
 
     for (mlir::Type paramTy : funcTy.getInputs())
-      types.push_back(convertType(paramTy, fileAttr, scope, declOp));
+      types.push_back(
+          convertType(fir::unwrapRefType(paramTy), fileAttr, scope, declOp));
 
     auto subroutineTy = mlir::LLVM::DISubroutineTypeAttr::get(
         context, /*callingConvention=*/0, types);
