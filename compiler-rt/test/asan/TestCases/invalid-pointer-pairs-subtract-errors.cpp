@@ -31,6 +31,21 @@ int main() {
   // CHECK: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-subtract-errors.cpp:[[@LINE+1]]
   foo(&stack1, &stack2);
 
+  char large_stack[4096];
+  char *p = &large_stack[0];
+  // CHECK: ERROR: AddressSanitizer: invalid-pointer-pair
+  // CHECK: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-subtract-errors.cpp:[[@LINE+1]]
+  foo(p, p + 4097);
+  // CHECK: ERROR: AddressSanitizer: invalid-pointer-pair
+  // CHECK: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-subtract-errors.cpp:[[@LINE+1]]
+  foo(p - 1, p + 4096);
+
+  char large_stack_unaligned[4095];
+  p = &large_stack_unaligned[0];
+  // CHECK: ERROR: AddressSanitizer: invalid-pointer-pair
+  // CHECK: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-subtract-errors.cpp:[[@LINE+1]]
+  foo(p, p + 4096);
+
   // Mixtures.
   // CHECK: ERROR: AddressSanitizer: invalid-pointer-pair
   // CHECK: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-subtract-errors.cpp:[[@LINE+1]]

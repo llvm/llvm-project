@@ -29,6 +29,12 @@ int main() {
   bar(&stack[0], &stack[100]);
   bar(&stack[1000], &stack[9000]);
   bar(&stack[500], &stack[10]);
+  bar(&stack[0], &stack[10000]);
+  bar(&stack[10000], &stack[0]);
+
+  char stack_unaligned[4095];
+  bar(&stack_unaligned[0], &stack_unaligned[4095]);
+  bar(&stack_unaligned[4095], &stack_unaligned[0]);
 
   return 0;
 }
