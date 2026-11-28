@@ -272,8 +272,8 @@ void SerializeGPUModuleBase::addControlVariables(
     llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
     // Add the ISA control variable.
     addControlVariable("__oclc_ISA_version",
-                       isaVersion.Minor + 100 * isaVersion.Stepping +
-                           1000 * isaVersion.Major,
+                       1000 * isaVersion.Major + 100 * isaVersion.Minor +
+                           isaVersion.Stepping,
                        32);
     addControlVariable("__oclc_ABI_version", abi, 32);
   }

@@ -18,7 +18,10 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Config/Targets.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -56,6 +59,16 @@ protected:
     llvm::SmallString<128> lldPath(rocmPath);
     llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
     return llvm::sys::fs::can_execute(lldPath);
+  }
+
+  // Checks if the ROCm device libraries are available.
+  bool hasROCMDeviceLibs() {
+    StringRef rocmPath = ROCDL::getROCMPath();
+    if (rocmPath.empty())
+      return false;
+    llvm::SmallString<128> ocmlPath(rocmPath);
+    llvm::sys::path::append(ocmlPath, "amdgcn", "bitcode", "ocml.bc");
+    return llvm::sys::fs::is_regular_file(ocmlPath);
   }
 
   // Dialect registry.
@@ -106,6 +119,72 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToLLVM)) {
     ASSERT_TRUE((*llvmModule)->getFunction("rocdl_kernel") != nullptr);
   }
 }
+
+TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(ISAVersionControlVariable)) {
+  if (!(hasROCMDeviceLibs() && hasROCMTools()))
+    GTEST_SKIP() << "ROCm device libraries or tools not found, skipping test.";
+
+  // The call to an `__ocml_` function makes the serializer add the control
+  // variables.
+  const std::string moduleStr = R"mlir(
+      gpu.module @rocdl_test {
+        llvm.func @__ocml_exp_f32(f32) -> f32
+        llvm.func @rocdl_kernel(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+          %0 = llvm.call @__ocml_exp_f32(%arg0) : (f32) -> f32
+          llvm.return
+        }
+      })mlir";
+
+  struct TestCase {
+    StringRef chip;
+    uint64_t isaVersion;
+  };
+  const TestCase testCases[] = {
+      {"gfx908", 9008},   {"gfx90a", 9010},   {"gfx942", 9402},
+      {"gfx950", 9500},   {"gfx1030", 10300}, {"gfx1100", 11000},
+      {"gfx1201", 12001}, {"gfx1250", 12500},
+  };
+
+  for (const TestCase &testCase : testCases) {
+    SCOPED_TRACE(testCase.chip);
+    MLIRContext context(registry);
+    OwningOpRef<ModuleOp> module =
+        parseSourceString<ModuleOp>(moduleStr, &context);
+    ASSERT_TRUE(!!module);
+
+    // Use `-O0` so the optimizer doesn't remove the unused control variable.
+    ROCDL::ROCDLTargetAttr target = ROCDL::ROCDLTargetAttr::get(
+        &context, 0, "amdgcn-amd-amdhsa", testCase.chip, "", "600");
+    auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
+    ASSERT_TRUE(!!serializer);
+
+    gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Offload);
+    std::optional<uint64_t> isaVersion;
+    for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
+      std::optional<mlir::gpu::SerializedObject> object =
+          serializer.serializeToObject(gpuModule, options);
+      ASSERT_TRUE(object != std::nullopt);
+
+      // Read the serialized module and get the control variable.
+      llvm::MemoryBufferRef buffer(
+          StringRef(object->getObject().data(), object->getObject().size()),
+          "module");
+      llvm::LLVMContext llvmContext;
+      llvm::Expected<std::unique_ptr<llvm::Module>> llvmModule =
+          llvm::parseBitcodeFile(buffer, llvmContext);
+      ASSERT_TRUE(!!llvmModule);
+      const llvm::GlobalVariable *global =
+          (*llvmModule)->getNamedGlobal("__oclc_ISA_version");
+      ASSERT_TRUE(global != nullptr);
+      const auto *value = dyn_cast<llvm::ConstantInt>(global->getInitializer());
+      ASSERT_TRUE(value != nullptr);
+      isaVersion = value->getZExtValue();
+    }
+    ASSERT_TRUE(isaVersion.has_value());
+    EXPECT_EQ(*isaVersion, testCase.isaVersion);
+  }
+}
+
 // Test ROCDL serialization to ISA with default code object version.
 TEST_F(MLIRTargetLLVMROCDL,
        SKIP_WITHOUT_AMDGPU(SerializeROCDLToISAWithDefaultCOV)) {
