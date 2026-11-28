@@ -3,7 +3,7 @@
 // Check that the attributes are shifted along with their corresponding arguments
 
 // CHECK-LABEL: func.func @_QMi8Pintrinsic_pack0
-// CHECK-SAME:(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, %arg2: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional})
+// CHECK-SAME:(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.result_arg}, %arg1: !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, %arg2: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional})
 
 func.func @_QMi8Pintrinsic_pack0(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional}) -> !fir.box<!fir.heap<!fir.array<?xi32>>> {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -28,5 +28,5 @@ func.func @_QMi8Pintrinsic_pack0(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.bin
 func.func private @_FortranAPack(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>) -> () attributes {fir.runtime}
 
 // CHECK-LABEL: func.func private @empty
-// CHECK-SAME:(!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional})
+// CHECK-SAME:(!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.result_arg}, !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional})
 func.func private @empty(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional}) -> !fir.box<!fir.heap<!fir.array<?xi32>>> 

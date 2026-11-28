@@ -841,19 +841,40 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly ||
       debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly;
 
+  // A result of derived type, for example, is turned into a hidden argument
+  // pointing to the result buffer, and that argument is marked.
+  std::optional<unsigned> returnByRefArgIdx;
+  for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i)
+    if (funcOp.getArgAttr(i, fir::getResultArgAttrName())) {
+      returnByRefArgIdx = i;
+      break;
+    }
+
   // Dont generate any type at LineTablesOnly and DebugDirectivesOnly level.
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
   if (!lineTableOrDirectivesOnly) {
-    for (auto resTy : funcOp.getResultTypes()) {
-      auto tyAttr =
-          typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
+    // A result passed by reference is described as the return type.
+    if (returnByRefArgIdx) {
+      auto retTy = funcOp.getArgumentTypes()[*returnByRefArgIdx];
+      auto tyAttr = typeGen.convertType(fir::unwrapRefType(retTy), fileAttr,
+                                        cuAttr, /*declOp=*/nullptr);
       types.push_back(tyAttr);
+    } else {
+      for (auto resTy : funcOp.getResultTypes()) {
+        auto tyAttr =
+            typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
+        types.push_back(tyAttr);
+      }
+      // If no return type then add a null type as a place holder for that.
+      if (types.empty())
+        types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
     }
-    // If no return type then add a null type as a place holder for that.
-    if (types.empty())
-      types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
-    for (auto inTy : funcOp.getArgumentTypes()) {
-      auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
+
+    // Leave out the hidden result buffer.
+    for (auto [idx, argTy] : llvm::enumerate(funcOp.getArgumentTypes())) {
+      if (returnByRefArgIdx && idx == *returnByRefArgIdx)
+        continue;
+      auto tyAttr = typeGen.convertType(fir::unwrapRefType(argTy), fileAttr,
                                         cuAttr, /*declOp=*/nullptr);
       types.push_back(tyAttr);
     }

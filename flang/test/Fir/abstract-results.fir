@@ -8,25 +8,25 @@
 
 // ----------------------- Test declaration rewrite ----------------------------
 
-// FUNC-REF-LABEL:  func private @arrayfunc(!fir.ref<!fir.array<?xf32>>, i32)
-// FUNC-BOX-LABEL:  func private @arrayfunc(!fir.box<!fir.array<?xf32>>, i32)
+// FUNC-REF-LABEL:  func private @arrayfunc(!fir.ref<!fir.array<?xf32>> {fir.result_arg}, i32)
+// FUNC-BOX-LABEL:  func private @arrayfunc(!fir.box<!fir.array<?xf32>> {fir.result_arg}, i32)
 func.func private @arrayfunc(i32) -> !fir.array<?xf32>
 
-// FUNC-REF-LABEL:  func private @derivedfunc(!fir.ref<!fir.type<t{x:f32}>>, f32)
-// FUNC-BOX-LABEL:  func private @derivedfunc(!fir.box<!fir.type<t{x:f32}>>, f32)
+// FUNC-REF-LABEL:  func private @derivedfunc(!fir.ref<!fir.type<t{x:f32}>> {fir.result_arg}, f32)
+// FUNC-BOX-LABEL:  func private @derivedfunc(!fir.box<!fir.type<t{x:f32}>> {fir.result_arg}, f32)
 func.func private @derivedfunc(f32) -> !fir.type<t{x:f32}>
 
-// FUNC-REF-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>>, i64)
-// FUNC-BOX-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>>, i64)
+// FUNC-REF-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>> {fir.result_arg}, i64)
+// FUNC-BOX-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>> {fir.result_arg}, i64)
 func.func private @boxfunc(i64) -> !fir.box<!fir.heap<f64>>
 
 
 // ------------------------ Test callee rewrite --------------------------------
 
 // FUNC-REF-LABEL:  func private @arrayfunc_callee(
-// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>>, %[[n:.*]]: index) {
+// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>> {fir.result_arg}, %[[n:.*]]: index) {
 // FUNC-BOX-LABEL:  func private @arrayfunc_callee(
-// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.array<?xf32>>, %[[n:.*]]: index) {
+// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.array<?xf32>> {fir.result_arg}, %[[n:.*]]: index) {
 func.func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
   %buffer = fir.alloca !fir.array<?xf32>, %n
   // Do something with result (res(4) = 42.)
@@ -49,9 +49,9 @@ func.func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
 
 
 // FUNC-REF-LABEL: func @derivedfunc_callee(
-// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t{x:f32}>>, %[[v:.*]]: f32) {
+// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t{x:f32}>> {fir.result_arg}, %[[v:.*]]: f32) {
 // FUNC-BOX-LABEL: func @derivedfunc_callee(
-// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.type<t{x:f32}>>, %[[v:.*]]: f32) {
+// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.type<t{x:f32}>> {fir.result_arg}, %[[v:.*]]: f32) {
 func.func @derivedfunc_callee(%v: f32) -> !fir.type<t{x:f32}> {
   %buffer = fir.alloca !fir.type<t{x:f32}>
   %1 = fir.coordinate_of %buffer, x : (!fir.ref<!fir.type<t{x:f32}>>) -> !fir.ref<f32>
@@ -70,9 +70,9 @@ func.func @derivedfunc_callee(%v: f32) -> !fir.type<t{x:f32}> {
 }
 
 // FUNC-REF-LABEL: func @boxfunc_callee(
-// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>) {
+// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>> {fir.result_arg}) {
 // FUNC-BOX-LABEL: func @boxfunc_callee(
-// FUNC-BOX-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>) {
+// FUNC-BOX-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>> {fir.result_arg}) {
 func.func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
   %alloc = fir.allocmem f64
   %res = fir.embox %alloc : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
@@ -106,9 +106,9 @@ func.func @retcptr() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__addres
 }
 
 // FUNC-REF-LABEL:  func private @arrayfunc_callee_declare(
-// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>>, %[[n:.*]]: index) {
+// FUNC-REF-SAME: %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>> {fir.result_arg}, %[[n:.*]]: index) {
 // FUNC-BOX-LABEL:  func private @arrayfunc_callee_declare(
-// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.array<?xf32>>, %[[n:.*]]: index) {
+// FUNC-BOX-SAME: %[[box:.*]]: !fir.box<!fir.array<?xf32>> {fir.result_arg}, %[[n:.*]]: index) {
 func.func private @arrayfunc_callee_declare(%n : index) -> !fir.array<?xf32> {
   %buffer_alloc = fir.alloca !fir.array<?xf32>, %n
   %shape = fir.shape %n : (index) -> !fir.shape<1>
