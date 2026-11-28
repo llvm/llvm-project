@@ -1528,6 +1528,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SkipSPSourceLocation)
     addSourceLine(SPDie, SP);
 
+  if (SP->isMainSubprogram())
+    addFlag(SPDie, dwarf::DW_AT_main_subprogram);
+
   // Skip the rest of the attributes under -gmlt to save space.
   if (SkipSPAttributes)
     return;
@@ -1619,8 +1622,6 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (SP->isExplicit())
     addFlag(SPDie, dwarf::DW_AT_explicit);
 
-  if (SP->isMainSubprogram())
-    addFlag(SPDie, dwarf::DW_AT_main_subprogram);
   if (SP->isPure())
     addFlag(SPDie, dwarf::DW_AT_pure);
   if (SP->isElemental())

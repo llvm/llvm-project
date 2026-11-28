@@ -1,5 +1,7 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: opt -passes=strip-nonlinetable-debuginfo < %s | %llc_dwarf -O0 -filetype=obj > %t
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; Make sure we're emitting DW_AT_main_subprogram.
 ; CHECK: DW_TAG_subprogram
