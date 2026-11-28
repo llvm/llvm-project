@@ -214,7 +214,9 @@ namespace conversion_operator {
   void test() {
     auto L = [](auto a) -> int { return a; }; // expected-error {{cannot initialize}}
     int (*fp)(int) = L;
-    int (&fp2)(int) = [](auto a) { return a; };  // expected-error{{non-const lvalue}}
+    int (&fp2)(int) = [](auto a) { return a; };
+    // expected-error@-1   {{no viable conversion}}
+    // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(auto){{.*}}' against 'int (int)'}}
     int (&&fp3)(int) = [](auto a) { return a; };
     // expected-error@-1   {{no viable conversion}}
     // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(auto){{.*}}' against 'int (int)'}}
