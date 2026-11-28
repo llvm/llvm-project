@@ -1186,7 +1186,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
   }
 
   return RegularLTO.Mover->move(std::move(Mod.M), Keep, nullptr,
-                                /* IsPerformingImport */ false);
+                                IRMover::MoveKind::FullLink);
 }
 
 // Add a ThinLTO module to the link.
