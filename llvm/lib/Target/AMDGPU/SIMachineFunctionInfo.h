@@ -626,6 +626,15 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
+  // Source locations of instructions fused into another instruction (the Y
+  // component of a VOPD), keyed by the fused instruction. AMDGPUDwarfDebug
+  // emits them to the line table before the fused instruction's own location.
+  // Entries are not removed when an instruction is erased, so a key can be
+  // reused by a new instruction. AMDGPUDwarfDebug only looks up VOPD
+  // instructions, so passes after GCNCreateVOPD must not create VOPD
+  // instructions without updating this map. Not serialized to MIR.
+  DenseMap<const MachineInstr *, DebugLoc> FusedDebugLocs;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -657,6 +666,14 @@ public:
 
   bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
+  }
+
+  void setFusedDebugLoc(const MachineInstr &MI, const DebugLoc &DL) {
+    FusedDebugLocs[&MI] = DL;
+  }
+
+  DebugLoc getFusedDebugLoc(const MachineInstr &MI) const {
+    return FusedDebugLocs.lookup(&MI);
   }
 
 public:
