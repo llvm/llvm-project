@@ -36,6 +36,12 @@ define void @s_wait_event_export_ready() {
   ret void
 }
 
+; CHECK: declare void @llvm.amdgcn.s.wait.idle() #2
+define void @s_wait_idle() {
+  call void @llvm.amdgcn.s.wait.idle()
+  ret void
+}
+
 ; Test assumed range
 ; CHECK: declare noundef range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize() #0
 define i32 @wavefrontsize() {
