@@ -199,11 +199,17 @@ public:
   SparcV9ABIInfo(CodeGenTypes &CGT)
       : ABIInfo(CGT),
         IsComplexGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver23)),
+        IsPackedUnionGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
             LangOptions::ClangABI::Ver23)) {}
 
 private:
   /// Whether how `_Complex` values are passed and returned is GCC-compatible.
   bool IsComplexGnuABI;
+
+  /// Whether the floating-point fields of packed structs and of unions are
+  /// kept out of floating-point registers, as GCC does.
+  bool IsPackedUnionGnuABI;
 
   ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit,
                           unsigned &RegOffset, bool IsVarArg) const;
@@ -229,6 +235,9 @@ private:
     uint64_t Size;
     bool InReg;
     bool IsVarArg;
+    // Bit ranges [Begin, End) whose floating-point elements must be passed in
+    // integer registers.
+    SmallVector<std::pair<uint64_t, uint64_t>, 4> IntRanges;
 
     CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl,
                   bool IsVarArg)
@@ -267,6 +276,11 @@ private:
         return;
       // Unaligned floats are treated as integers.
       if (Offset % Bits)
+        return;
+      // Floats in packed structs and in unions are treated as integers.
+      if (llvm::any_of(IntRanges, [Offset](const auto &R) {
+            return R.first <= Offset && Offset < R.second;
+          }))
         return;
       // The InReg flag is only required if there are any floats < 64 bits.
       if (Bits < 64)
@@ -323,6 +337,75 @@ private:
   };
 };
 } // end anonymous namespace
+
+/// Return true if GCC treats \p FD as a packed field (DECL_PACKED). That is the
+/// case when the field or its record has the packed attribute.
+static bool isPackedField(const ASTContext &Ctx, const FieldDecl *FD) {
+  // The packed attribute has no effect on a byte-aligned non-bit-field.
+  if (!FD->isBitField() &&
+      Ctx.getTypeAlign(FD->getType()) <= Ctx.getCharWidth())
+    return false;
+  if (FD->hasAttr<PackedAttr>())
+    return true;
+  if (!FD->getParent()->hasAttr<PackedAttr>())
+    return false;
+  // A packed class does not pack a field of a non-POD class type, unless that
+  // class is packed itself.
+  const auto *FieldClass =
+      Ctx.getBaseElementType(FD->getType())->getAsCXXRecordDecl();
+  return !FieldClass || FieldClass->isPOD() ||
+         FieldClass->hasAttr<PackedAttr>();
+}
+
+/// Collect the bit ranges of the fields of \p RD, placed at bit \p Offset, that
+/// GCC never passes or returns in floating-point registers.
+///
+/// This follows GCC's traverse_record_type(): a struct with a packed field is
+/// passed in integer registers, and so is everything nested in it, including
+/// its base classes. A union is always passed in integer registers.
+static void
+collectIntRanges(const ASTContext &Ctx, const RecordDecl *RD, uint64_t Offset,
+                 bool Packed,
+                 SmallVectorImpl<std::pair<uint64_t, uint64_t>> &Ranges) {
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+
+  if (RD->isUnion()) {
+    Ranges.emplace_back(Offset, Offset + Ctx.toBits(Layout.getSize()));
+    return;
+  }
+
+  if (!Packed)
+    Packed = llvm::any_of(RD->fields(), [&Ctx](const FieldDecl *FD) {
+      return isPackedField(Ctx, FD);
+    });
+
+  // GCC represents base classes as fields, so they are handled the same way.
+  // Virtual bases are not considered: such a class is never passed in
+  // registers.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+      if (Base.isVirtual())
+        continue;
+      const auto *BaseRD = Base.getType()->castAsCXXRecordDecl();
+      collectIntRanges(Ctx, BaseRD,
+                       Offset + Ctx.toBits(Layout.getBaseClassOffset(BaseRD)),
+                       Packed, Ranges);
+    }
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    uint64_t FieldOffset = Offset + Layout.getFieldOffset(FD->getFieldIndex());
+    if (const auto *FieldRD = FD->getType()->getAsRecordDecl()) {
+      collectIntRanges(Ctx, FieldRD->getDefinitionOrSelf(), FieldOffset, Packed,
+                       Ranges);
+      continue;
+    }
+    // Bit-fields are never floating point.
+    if (Packed && !FD->isBitField())
+      Ranges.emplace_back(FieldOffset,
+                          FieldOffset + Ctx.getTypeSize(FD->getType()));
+  }
+}
 
 ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
                                         unsigned &RegOffset,
@@ -419,6 +502,10 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   }
 
   CoerceBuilder CB(VMContext, getDataLayout(), IsVarArg);
+  if (IsPackedUnionGnuABI)
+    if (const auto *RD = Ty->getAsRecordDecl())
+      collectIntRanges(Context, RD->getDefinitionOrSelf(), /*Offset=*/0,
+                       /*Packed=*/false, CB.IntRanges);
   CB.addStruct(0, StrTy);
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
