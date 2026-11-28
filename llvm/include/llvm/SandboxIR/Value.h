@@ -31,6 +31,7 @@ class Type;
 class GlobalValue;
 class GlobalObject;
 class Module;
+class UnaryInstruction;
 class CmpInst;
 class IntrinsicInst;
 class Operator;
