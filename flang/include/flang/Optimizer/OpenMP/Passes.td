@@ -63,6 +63,10 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::Mod
                clEnumValN(flangomp::DoConcurrentMappingKind::DCMK_Device,
                           "device", "Lower to run in parallel on the GPU")
            )}]>,
+    Option<"devicePureProcedures", "device-pure-procedures", "bool",
+           /*default=*/"false",
+           "When mapping to the device, mark every pure procedure defined in "
+           "the module as implicitly `declare target`">,
   ];
 }
 
