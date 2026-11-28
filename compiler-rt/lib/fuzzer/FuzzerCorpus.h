@@ -290,6 +290,7 @@ public:
     assert(II->U.size() > U.size());
     Hashes.erase(Sha1ToString(II->Sha1));
     DeleteFile(*II);
+    II->MayDeleteFile = true; // libFuzzer writes the replacement.
     ComputeSHA1(U.data(), U.size(), II->Sha1);
     Hashes.insert(Sha1ToString(II->Sha1));
     II->U = U;
