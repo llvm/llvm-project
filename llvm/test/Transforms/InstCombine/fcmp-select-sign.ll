@@ -207,14 +207,15 @@ define <2 x i1> @fcmp_une_select_vec_mixed_mask_no_fold(<2 x i1> %c0, <2 x i1> %
 ; CHECK-LABEL: @fcmp_une_select_vec_mixed_mask_no_fold(
 ; CHECK-NEXT:    [[S0:%.*]] = select <2 x i1> [[C0:%.*]], <2 x double> <double 1.000000e+00, double 2.000000e+00>, <2 x double> <double 3.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[C1:%.*]], <2 x double> <double 1.000000e+00, double 9.000000e+00>, <2 x double> <double 8.000000e+00, double 4.000000e+00>
-; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x double> [[S0]], [[S1]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan une <2 x double> [[S0]], [[S1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
   %s0 = select <2 x i1> %c0,
-               <2 x double> <double 1.0, double 2.0>,
-               <2 x double> <double 3.0, double 4.0>
+  <2 x double> <double 1.0, double 2.0>,
+  <2 x double> <double 3.0, double 4.0>
   %s1 = select <2 x i1> %c1,
-               <2 x double> <double 1.0, double 9.0>,
-               <2 x double> <double 8.0, double 4.0>
+  <2 x double> <double 1.0, double 9.0>,
+  <2 x double> <double 8.0, double 4.0>
   %r = fcmp une <2 x double> %s0, %s1
   ret <2 x i1> %r
 }
@@ -257,7 +258,7 @@ define i1 @fcmp_olt_select_multi_use_no_fold(double %a, double %b) {
 ; CHECK-NEXT:    [[V3:%.*]] = select i1 [[V2]], double -1.000000e+00, double 1.000000e+00
 ; CHECK-NEXT:    call void @use_double(double [[V1]])
 ; CHECK-NEXT:    call void @use_double(double [[V3]])
-; CHECK-NEXT:    [[V4:%.*]] = fcmp olt double [[V1]], [[V3]]
+; CHECK-NEXT:    [[V4:%.*]] = fcmp nnan olt double [[V1]], [[V3]]
 ; CHECK-NEXT:    ret i1 [[V4]]
 ;
   %v0 = fcmp ult double %b, 0.000000e+00
@@ -396,11 +397,11 @@ define <2 x i1> @icmp_eq_select_vec_cond_no_fold(<2 x i1> %c1, <2 x i1> %c2) {
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s1 = select <2 x i1> %c1,
-               <2 x i32> <i32 1, i32 2>,
-               <2 x i32> <i32 3, i32 4>
+  <2 x i32> <i32 1, i32 2>,
+  <2 x i32> <i32 3, i32 4>
   %s2 = select <2 x i1> %c2,
-               <2 x i32> <i32 1, i32 9>,
-               <2 x i32> <i32 8, i32 4>
+  <2 x i32> <i32 1, i32 9>,
+  <2 x i32> <i32 8, i32 4>
   %r = icmp eq <2 x i32> %s1, %s2
   ret <2 x i1> %r
 }
@@ -418,11 +419,11 @@ define <2 x i1> @icmp_eq_mixed_cond_no_fold(<2 x i1> %c1, i1 %c2) {
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s1 = select <2 x i1> %c1,
-               <2 x i32> <i32 1, i32 2>,
-               <2 x i32> <i32 3, i32 4>
+  <2 x i32> <i32 1, i32 2>,
+  <2 x i32> <i32 3, i32 4>
   %s2 = select i1 %c2,
-               <2 x i32> <i32 1, i32 9>,
-               <2 x i32> <i32 8, i32 4>
+  <2 x i32> <i32 1, i32 9>,
+  <2 x i32> <i32 8, i32 4>
   %r = icmp eq <2 x i32> %s1, %s2
   ret <2 x i1> %r
 }
