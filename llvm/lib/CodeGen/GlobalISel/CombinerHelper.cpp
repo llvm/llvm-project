@@ -8988,17 +8988,53 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     }
     return Changed;
   }
-  default:
-    return GiveUp();
+  default: {
+    // Let the target describe the operands its own instructions demand.
+    if (!getTargetLowering().simplifyDemandedBitsForTargetInstr(
+            *this, *DefMI, Demanded, Known, Depth, DoRewrite))
+      return GiveUp();
+    // The hook only guarantees facts about the demanded bits.
+    Known.Zero &= Demanded;
+    Known.One &= Demanded;
+    DropPoisonFlags();
+    InvalidateDebugUses(Demanded);
+    return true;
+  }
   }
 }
 
 bool CombinerHelper::simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
                                           const APInt &DemandedBits,
-                                          KnownBits &Known,
-                                          unsigned Depth) const {
+                                          KnownBits &Known, unsigned Depth,
+                                          bool DoRewrite) const {
   return simplifyDemandedBitsImpl(MI, OpNo, DemandedBits, Known, Depth,
-                                  /*DoRewrite=*/true);
+                                  DoRewrite);
+}
+
+bool CombinerHelper::matchSimplifyDemandedBitsForTargetInstr(
+    MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  if (!VT || MI.getNumExplicitDefs() != 1)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (!Dst.isVirtual())
+    return false;
+  LLT Ty = MRI.getType(Dst);
+  if (!Ty.isScalar())
+    return false;
+
+  APInt Demanded = APInt::getAllOnes(Ty.getScalarSizeInBits());
+  KnownBits Known(Demanded.getBitWidth());
+  if (!getTargetLowering().simplifyDemandedBitsForTargetInstr(
+          *this, MI, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false))
+    return false;
+
+  MatchInfo = [this, &MI, Demanded](MachineIRBuilder &) {
+    KnownBits K(Demanded.getBitWidth());
+    getTargetLowering().simplifyDemandedBitsForTargetInstr(
+        *this, MI, Demanded, K, /*Depth=*/0, /*DoRewrite=*/true);
+  };
+  return true;
 }
 
 bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,

@@ -55,6 +55,14 @@ public:
                                             bool SelfMultiply);
 
 protected:
+  // MIR operands: result, intrinsic ID, src0, src1, vdst_in, word select.
+  static constexpr unsigned CvtPkF8VDstInMIIdx = 4;
+  static constexpr unsigned CvtPkF8WordSelMIIdx = 5;
+
+  /// Return the result bits preserved from vdst_in by a packed FP8/BF8
+  /// conversion intrinsic.
+  static APInt getCvtPkF8VDstInBits(const MachineInstr &MI);
+
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   /// Split a vector store into multiple scalar stores.
@@ -294,6 +302,12 @@ public:
                                          KnownBits &Known,
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
+
+  bool simplifyDemandedBitsForTargetInstr(const CombinerHelper &Helper,
+                                          MachineInstr &MI,
+                                          const APInt &DemandedBits,
+                                          KnownBits &Known, unsigned Depth,
+                                          bool DoRewrite) const override;
 
   void ReplaceNodeResults(SDNode * N,
                           SmallVectorImpl<SDValue> &Results,
