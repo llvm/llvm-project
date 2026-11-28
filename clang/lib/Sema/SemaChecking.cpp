@@ -1787,6 +1787,24 @@ static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
   return false;
 }
 
+// __abnormal_termination() expands to the first parameter of the outlined
+// __finally helper, so it is only valid inside a __finally block that belongs
+// to the function currently being parsed.
+static bool BuiltinSEHFinallyCheck(Sema &SemaRef, CallExpr *TheCall) {
+  if (SemaRef.inTemplateInstantiation())
+    return false;
+
+  Scope *S = SemaRef.getCurScope();
+  if (!SemaRef.CurrentSEHFinally.empty() &&
+      SemaRef.CurrentSEHFinally.back()->getFnParent() == S->getFnParent())
+    return false;
+
+  auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+  SemaRef.Diag(TheCall->getExprLoc(), diag::err_seh___finally_block)
+      << DRE->getDecl()->getIdentifier();
+  return true;
+}
+
 // In OpenCL, __builtin_alloca_* should return a pointer to address space
 // that corresponds to the stack address space i.e private address space.
 static void builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
@@ -3797,6 +3815,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_exception_info:
     if (BuiltinSEHScopeCheck(*this, TheCall, Scope::SEHFilterScope,
                              diag::err_seh___except_filter))
+      return ExprError();
+    break;
+  case Builtin::BI__abnormal_termination:
+  case Builtin::BI_abnormal_termination:
+    if (BuiltinSEHFinallyCheck(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__GetExceptionInfo:

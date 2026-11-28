@@ -664,9 +664,6 @@ private:
   // __except filter expression
   IdentifierInfo *Ident__exception_info, *Ident___exception_info,
       *Ident_GetExceptionInfo;
-  // __finally
-  IdentifierInfo *Ident__abnormal_termination, *Ident___abnormal_termination,
-      *Ident_AbnormalTermination;
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;

@@ -562,10 +562,8 @@ void Parser::Initialize() {
   Ident_except = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;
-  Ident__abnormal_termination = Ident___exception_code = nullptr;
-  Ident___exception_info = Ident___abnormal_termination = nullptr;
+  Ident___exception_code = Ident___exception_info = nullptr;
   Ident_GetExceptionCode = Ident_GetExceptionInfo = nullptr;
-  Ident_AbnormalTermination = nullptr;
 
   if(getLangOpts().Borland) {
     Ident__exception_info        = PP.getIdentifierInfo("_exception_info");
@@ -574,9 +572,6 @@ void Parser::Initialize() {
     Ident__exception_code        = PP.getIdentifierInfo("_exception_code");
     Ident___exception_code       = PP.getIdentifierInfo("__exception_code");
     Ident_GetExceptionCode       = PP.getIdentifierInfo("GetExceptionCode");
-    Ident__abnormal_termination  = PP.getIdentifierInfo("_abnormal_termination");
-    Ident___abnormal_termination = PP.getIdentifierInfo("__abnormal_termination");
-    Ident_AbnormalTermination    = PP.getIdentifierInfo("AbnormalTermination");
 
     PP.SetPoisonReason(Ident__exception_code,diag::err_seh___except_block);
     PP.SetPoisonReason(Ident___exception_code,diag::err_seh___except_block);
@@ -584,9 +579,6 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident__exception_info,diag::err_seh___except_filter);
     PP.SetPoisonReason(Ident___exception_info,diag::err_seh___except_filter);
     PP.SetPoisonReason(Ident_GetExceptionInfo,diag::err_seh___except_filter);
-    PP.SetPoisonReason(Ident__abnormal_termination,diag::err_seh___finally_block);
-    PP.SetPoisonReason(Ident___abnormal_termination,diag::err_seh___finally_block);
-    PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
   }
 
   Actions.Initialize();

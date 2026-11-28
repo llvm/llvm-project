@@ -2960,7 +2960,7 @@ def ExceptionInfo : MSLangBuiltin {
   let Prototype = "void*()";
 }
 
-def AbnormalTermination : MSLangBuiltin {
+def AbnormalTermination : MSOrBorlandLangBuiltin {
   let Spellings = ["__abnormal_termination", "_abnormal_termination"];
   let Attributes = [NoThrow];
   let Prototype = "int()";

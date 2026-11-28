@@ -202,6 +202,7 @@ class LangBuiltin<string languages> : Builtin {
 }
 
 class MSLangBuiltin : LangBuiltin<"ALL_MS_LANGUAGES">;
+class MSOrBorlandLangBuiltin : LangBuiltin<"ALL_MS_OR_BORLAND_LANGUAGES">;
 class CoroLangBuiltin : LangBuiltin<"COR_LANG">;
 class OCLPipeLangBuiltin : LangBuiltin<"OCL_PIPE">;
 class OCL_DSELangBuiltin : LangBuiltin<"OCL_DSE">;

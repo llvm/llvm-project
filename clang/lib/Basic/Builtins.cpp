@@ -172,6 +172,10 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* MSMode Unsupported */
   if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
     return false;
+  /* MSOrBorlandMode Unsupported */
+  if (!(LangOpts.MicrosoftExt || LangOpts.Borland) &&
+      (BuiltinInfo.Langs & MS_OR_BORLAND_LANG))
+    return false;
   /* HLSLMode Unsupported */
   if (!LangOpts.HLSL && (BuiltinInfo.Langs & HLSL_LANG))
     return false;
