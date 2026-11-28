@@ -17,6 +17,7 @@
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class AttributeCommonInfo;
 class ParsedAttr;
 
 class SemaOpenCL : public SemaBase {
@@ -25,6 +26,11 @@ public:
 
   void handleNoSVMAttr(Decl *D, const ParsedAttr &AL);
   void handleAccessAttr(Decl *D, const ParsedAttr &AL);
+
+  Expr *checkWorkGroupSizeArgument(const AttributeCommonInfo &CI, Expr *E,
+                                   unsigned Idx);
+  bool checkWorkGroupSizeDimensions(const AttributeCommonInfo &CI,
+                                    ArrayRef<Expr *> Dims);
 
   // Handles intel_reqd_sub_group_size.
   void handleSubGroupSize(Decl *D, const ParsedAttr &AL);

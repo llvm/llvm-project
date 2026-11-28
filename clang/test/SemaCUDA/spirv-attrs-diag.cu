@@ -54,5 +54,19 @@ __global__ void TestZeroArg1(void) {}
 __attribute__((work_group_size_hint(A, 0, 1))) // expected-error {{attribute must be greater than 0}}
 __global__ void TestZeroArg2(void) {}
 
+template <int N>
+__attribute__((reqd_work_group_size(N, 1, 1))) // expected-error {{'reqd_work_group_size' attribute must be greater than 0}}
+__global__ void required() {}
+template __global__ void required<0>(); // expected-note {{in instantiation of function template specialization 'required<0>' requested here}}
 
+template <int N>
+__attribute__((work_group_size_hint(0, N, 0))) // expected-error {{'work_group_size_hint' attribute must be greater than 0}}
+__global__ void hinted() {}
+template __global__ void hinted<0>();
+template __global__ void hinted<1>(); // expected-note {{in instantiation of function template specialization 'hinted<1>' requested here}}
 
+template <unsigned long long N>
+__attribute__((work_group_size_hint(0xfffffffeU, 1, N))) // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
+__global__ void wide_hint() {}
+template __global__ void wide_hint<4>();
+template __global__ void wide_hint<0x100000000ULL>(); // expected-note {{in instantiation}}
