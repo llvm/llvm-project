@@ -15,6 +15,7 @@ add_llvm_unittest(UtilsTests
   BasicBlockUtilsTest.cpp
   CallPromotionUtilsTest.cpp
   CloningTest.cpp
+  ControlFlowHubTest.cpp
   CodeExtractorTest.cpp
   CodeLayoutTest.cpp
   CodeMoverUtilsTest.cpp
