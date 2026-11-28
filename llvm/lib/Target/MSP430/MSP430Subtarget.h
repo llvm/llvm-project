@@ -66,6 +66,8 @@ public:
   bool hasHWMult32() const { return HWMultMode == MSP430::HWMult::HW32; }
   bool hasHWMultF5() const { return HWMultMode == MSP430::HWMult::F5; }
 
+  bool hasMSP430X() const { return ExtendedInsts; }
+
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
