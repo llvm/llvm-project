@@ -60,7 +60,8 @@ class EntityPointerLevelTranslator
   }
 
   Expected<EntityPointerLevel>
-  createEntityPointerLevelFor(const NamedDecl *ND) {
+  createEntityPointerLevelFor(const NamedDecl *ND,
+                              TUSummaryExtractor &Extractor) {
     std::optional<EntityId> Id = Extractor.addEntity(ND);
     if (!Id)
       return makeErrAtNode(Ctx, ND, "failed to create EntityId for %s",
@@ -69,7 +70,8 @@ class EntityPointerLevelTranslator
   }
 
   Expected<EntityPointerLevel>
-  createEntityPointerLevelForReturn(const FunctionDecl *FD) {
+  createEntityPointerLevelForReturn(const FunctionDecl *FD,
+                                    TUSummaryExtractor &Extractor) {
     std::optional<EntityId> Id = Extractor.addEntityForReturn(FD);
     if (!Id) {
       return makeErrAtNode(Ctx, FD, "failed to create EntityId for function %s",
@@ -91,28 +93,30 @@ class EntityPointerLevelTranslator
     return SubResult;
   }
 
-  TUSummaryExtractor &Extractor;
   ASTContext &Ctx;
 
 public:
-  EntityPointerLevelTranslator(TUSummaryExtractor &Extractor, ASTContext &Ctx)
-      : Extractor(Extractor), Ctx(Ctx) {}
+  EntityPointerLevelTranslator(ASTContext &Ctx) : Ctx(Ctx) {}
 
   Expected<DeclPointerLevelVec> translate(const Expr *E) { return Visit(E); }
-  Expected<EntityPointerLevel> translate(const NamedDecl *D, bool IsRet) {
+  Expected<EntityPointerLevel> translate(const NamedDecl *D, bool IsRet,
+                                         TUSummaryExtractor &Extractor) {
     if (!IsRet)
-      return createEntityPointerLevelFor(D);
+      return createEntityPointerLevelFor(D, Extractor);
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      return createEntityPointerLevelForReturn(FD);
+      return createEntityPointerLevelForReturn(FD, Extractor);
 
     return makeErrAtNode(Ctx, D, "attempt to get entity for return of %s",
                          D->getDeclKindName());
   }
 
   // Converts a `DeclPointerLevel` to an `EntityPointerLevel`
-  Expected<EntityPointerLevel> toEntityPointerLevel(const DeclPointerLevel &D) {
-    Expected<EntityPointerLevel> Base = translate(D.Decl, D.IsReturn);
+  Expected<EntityPointerLevel>
+  toEntityPointerLevel(const DeclPointerLevel &D,
+                       TUSummaryExtractor &Extractor) {
+    Expected<EntityPointerLevel> Base =
+        translate(D.Decl, D.IsReturn, Extractor);
     if (!Base)
       return Base.takeError();
     return buildEntityPointerLevel(Base->getEntity(), D.PointerLevel);
@@ -334,9 +338,8 @@ private:
 } // namespace clang::ssaf
 
 Expected<DeclPointerLevelVec>
-clang::ssaf::translateDeclPointerLevel(const Expr *E, ASTContext &Ctx,
-                                       TUSummaryExtractor &Extractor) {
-  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+clang::ssaf::translateDeclPointerLevel(const Expr *E, ASTContext &Ctx) {
+  EntityPointerLevelTranslator Translator(Ctx);
 
   return Translator.translate(E);
 }
@@ -344,7 +347,7 @@ clang::ssaf::translateDeclPointerLevel(const Expr *E, ASTContext &Ctx,
 Expected<EntityPointerLevelSet>
 clang::ssaf::translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
                                          TUSummaryExtractor &Extractor) {
-  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+  EntityPointerLevelTranslator Translator(Ctx);
   auto DPLs = Translator.translate(E);
   if (!DPLs)
     return DPLs.takeError();
@@ -359,9 +362,9 @@ DeclPointerLevel clang::ssaf::createDeclPointerLevel(const NamedDecl *ND,
 /// Create an EntityPointerLevel from a ValueDecl of a pointer type.
 Expected<EntityPointerLevel> clang::ssaf::createEntityPointerLevel(
     const NamedDecl *ND, TUSummaryExtractor &Extractor, bool IsFunRet) {
-  EntityPointerLevelTranslator Translator(Extractor, ND->getASTContext());
+  EntityPointerLevelTranslator Translator(ND->getASTContext());
 
-  return Translator.translate(ND, IsFunRet);
+  return Translator.translate(ND, IsFunRet, Extractor);
 }
 
 DeclPointerLevelVec
@@ -400,11 +403,12 @@ Expected<EntityPointerLevelSet>
 clang::ssaf::toEntityPointerLevels(const DeclPointerLevelVec &DPLs,
                                    ASTContext &Ctx,
                                    TUSummaryExtractor &Extractor) {
-  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+  EntityPointerLevelTranslator Translator(Ctx);
   EntityPointerLevelSet Result;
 
   for (const auto &DPL : DPLs) {
-    Expected<EntityPointerLevel> EPL = Translator.toEntityPointerLevel(DPL);
+    Expected<EntityPointerLevel> EPL =
+        Translator.toEntityPointerLevel(DPL, Extractor);
     if (!EPL)
       return EPL.takeError();
     Result.insert(*EPL);
@@ -415,8 +419,8 @@ clang::ssaf::toEntityPointerLevels(const DeclPointerLevelVec &DPLs,
 Expected<EntityPointerLevel>
 clang::ssaf::toEntityPointerLevel(const DeclPointerLevel &DPL, ASTContext &Ctx,
                                   TUSummaryExtractor &Extractor) {
-  EntityPointerLevelTranslator Translator(Extractor, Ctx);
-  return Translator.toEntityPointerLevel(DPL);
+  EntityPointerLevelTranslator Translator(Ctx);
+  return Translator.toEntityPointerLevel(DPL, Extractor);
 }
 
 EntityPointerLevel clang::ssaf::buildEntityPointerLevel(EntityId Id,
