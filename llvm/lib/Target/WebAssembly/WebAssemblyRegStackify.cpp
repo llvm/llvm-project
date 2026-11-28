@@ -129,6 +129,12 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
     MI->setDesc(TII->get(WebAssembly::CONST_V128_I64x2));
     MI->addOperand(MachineOperand::CreateImm(0));
     MI->addOperand(MachineOperand::CreateImm(0));
+  } else if (RegClass == &WebAssembly::FUNCREFRegClass) {
+    MI->setDesc(TII->get(WebAssembly::REF_NULL_FUNCREF));
+  } else if (RegClass == &WebAssembly::EXTERNREFRegClass) {
+    MI->setDesc(TII->get(WebAssembly::REF_NULL_EXTERNREF));
+  } else if (RegClass == &WebAssembly::EXNREFRegClass) {
+    MI->setDesc(TII->get(WebAssembly::REF_NULL_EXNREF));
   } else {
     llvm_unreachable("Unexpected reg class");
   }
