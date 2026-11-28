@@ -4044,8 +4044,91 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return Options;
 }
 
+static bool hasCheapBranchlessSelect(const SelectInst &SI,
+                                     const RISCVSubtarget &ST,
+                                     const RISCVTargetLowering &TLI,
+                                     const DataLayout &DL) {
+  Type *Ty = SI.getType();
+  if (!Ty->isIntOrPtrTy())
+    return false;
+
+  MVT XLenVT = ST.getXLenVT();
+  // RISC-V makes all four scalar integer min/max operations legal together.
+  bool HasMinMax = TLI.isOperationLegal(ISD::UMIN, XLenVT);
+  bool HasZicond = ST.hasStdExtZicond();
+  if (!HasMinMax && !HasZicond)
+    return false;
+
+  // Accept values that fit one GPR after promotion. Ordinary null pointers
+  // are zero; wider capability pointers are excluded here.
+  auto [Action, LegalVT] =
+      TLI.getTypeConversion(SI.getContext(), TLI.getValueType(DL, Ty));
+  if (LegalVT != XLenVT || (Action != TargetLowering::TypeLegal &&
+                            Action != TargetLowering::TypePromoteInteger))
+    return false;
+
+  // Preserve integer min/max idioms for SelectionDAGBuilder's matcher.
+  if (HasMinMax && Ty->isIntegerTy()) {
+    const Value *LHS = nullptr, *RHS = nullptr;
+    switch (matchSelectPattern(&SI, LHS, RHS).Flavor) {
+    case SPF_SMIN:
+    case SPF_SMAX:
+    case SPF_UMIN:
+    case SPF_UMAX:
+      return true;
+    default:
+      break;
+    }
+  }
+
+  bool ZeroOnTrue = match(SI.getTrueValue(), m_Zero());
+  if (!ZeroOnTrue && !match(SI.getFalseValue(), m_Zero()))
+    return false;
+  const Value *V = ZeroOnTrue ? SI.getFalseValue() : SI.getTrueValue();
+
+  // Keep the conditional subtract intact for SelectionDAG to fold:
+  // x - (x <u y ? 0 : y) -> minu(x, x - y).
+  const Value *X;
+  if (HasMinMax && SI.hasOneUse() &&
+      match(*SI.user_begin(), m_Sub(m_Value(X), m_Specific(&SI)))) {
+    auto Pred = ZeroOnTrue ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    if (match(SI.getCondition(),
+              m_SpecificICmp(Pred, m_Specific(X), m_Specific(V))))
+      return true;
+  }
+
+  // One zero arm needs only one czero. Favor it when the branch would skip
+  // at most one simple ALU operation, not a more expensive operand slice.
+  if (!HasZicond)
+    return false;
+
+  auto IsCheapOperand = [](const Value *V) {
+    if (const auto *C = dyn_cast<ConstantInt>(V))
+      return C->getValue().isSignedIntN(12);
+    // Branching cannot skip a value that is also used elsewhere.
+    if (const auto *I = dyn_cast<Instruction>(V))
+      return !I->hasOneUse();
+    return isa<Argument>(V);
+  };
+  if (IsCheapOperand(V))
+    return true;
+
+  const auto *BO = dyn_cast<BinaryOperator>(V);
+  return BO &&
+         (BO->getOpcode() == Instruction::Add ||
+          BO->getOpcode() == Instruction::Sub || BO->isBitwiseLogicOp()) &&
+         IsCheapOperand(BO->getOperand(0)) && IsCheapOperand(BO->getOperand(1));
+}
+
 bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
     const Instruction *I) const {
+  // Leave shared conditions and selects with branch weights to the usual
+  // profitability heuristics.
+  if (const auto *SI = dyn_cast<SelectInst>(I);
+      SI && SI->getCondition()->hasOneUse() && !hasBranchWeightMD(*SI) &&
+      hasCheapBranchlessSelect(*SI, *ST, *TLI, DL))
+    return false;
+
   if (ST->getCLOpts().or_like_select) {
     // For the binary operators (e.g. or) we need to be more careful than
     // selects, here we only transform them if they are already at a natural

@@ -37,7 +37,7 @@
 ; the misprediction risk makes branches unprofitable.
 ; HIGHPENALTY-LABEL: @sum_filtered(
 ; HIGHPENALTY:         %cond = icmp slt i64 %v, 0
-; HIGHPENALTY-NEXT:    %sel = select i1 %cond, i64 %v, i64 0
+; HIGHPENALTY-NEXT:    %sel = select i1 %cond, i64 %v, i64 1
 
 ; With a zero mispredict penalty, branch mispredictions carry no cost.
 ; BranchCost (= PredictedPathCost only) is less than SelectCost (which
@@ -62,7 +62,8 @@ loop:
   %ptr = getelementptr i64, ptr %p, i64 %i
   %v = load i64, ptr %ptr
   %cond = icmp slt i64 %v, 0
-  %sel = select i1 %cond, i64 %v, i64 0
+  ; Do not use a native min/max idiom here.
+  %sel = select i1 %cond, i64 %v, i64 1
   %acc.next = add i64 %acc, %sel
   %i.next = add i64 %i, 1
   %cmp = icmp ne i64 %i.next, %n
