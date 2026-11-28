@@ -8042,7 +8042,10 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 
     unsigned AS = StoreNode->getAddressSpace();
     Align Alignment = StoreNode->getAlign();
-    if (Alignment < MemVT.getStoreSize() &&
+    // Type legalization splits these into smaller element-aligned stores.
+    bool SplitByLegalizer =
+        !isTypeLegal(VT) && Alignment >= MemVT.getScalarStoreSize();
+    if (!SplitByLegalizer && Alignment < MemVT.getStoreSize() &&
         !allowsMisalignedMemoryAccesses(MemVT, AS, Alignment,
                                         StoreNode->getMemOperand()->getFlags(),
                                         nullptr)) {

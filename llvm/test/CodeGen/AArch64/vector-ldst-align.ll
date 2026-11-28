@@ -8226,3 +8226,209 @@ define void @store_v2i64_align16_pre32(ptr %ptr, <2 x i64> %val, ptr %writeback)
   store ptr %newptr, ptr %writeback
   ret void
 }
+
+define void @store_v32i8_align1(ptr %ptr, <32 x i8> %val) {
+; NOSTRICTALIGN-LABEL: store_v32i8_align1:
+; NOSTRICTALIGN:       // %bb.0:
+; NOSTRICTALIGN-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-NEXT:    ret
+;
+; STRICTALIGN-LABEL: store_v32i8_align1:
+; STRICTALIGN:       // %bb.0:
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.16b }, [x0]
+; STRICTALIGN-NEXT:    st1 { v1.16b }, [x8]
+; STRICTALIGN-NEXT:    ret
+;
+; NOSTRICTALIGN-BE-LABEL: store_v32i8_align1:
+; NOSTRICTALIGN-BE:       // %bb.0:
+; NOSTRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-BE-NEXT:    ret
+;
+; STRICTALIGN-BE-LABEL: store_v32i8_align1:
+; STRICTALIGN-BE:       // %bb.0:
+; STRICTALIGN-BE-NEXT:    rev64 v1.16b, v1.16b
+; STRICTALIGN-BE-NEXT:    rev64 v0.16b, v0.16b
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v1.16b }, [x8]
+; STRICTALIGN-BE-NEXT:    st1 { v0.16b }, [x0]
+; STRICTALIGN-BE-NEXT:    ret
+  store <32 x i8> %val, ptr %ptr, align 1
+  ret void
+}
+
+define void @store_v32i8_align16(ptr %ptr, <32 x i8> %val) {
+; NOSTRICTALIGN-LABEL: store_v32i8_align16:
+; NOSTRICTALIGN:       // %bb.0:
+; NOSTRICTALIGN-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-NEXT:    ret
+;
+; STRICTALIGN-LABEL: store_v32i8_align16:
+; STRICTALIGN:       // %bb.0:
+; STRICTALIGN-NEXT:    stp q0, q1, [x0]
+; STRICTALIGN-NEXT:    ret
+;
+; NOSTRICTALIGN-BE-LABEL: store_v32i8_align16:
+; NOSTRICTALIGN-BE:       // %bb.0:
+; NOSTRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-BE-NEXT:    ret
+;
+; STRICTALIGN-BE-LABEL: store_v32i8_align16:
+; STRICTALIGN-BE:       // %bb.0:
+; STRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; STRICTALIGN-BE-NEXT:    ret
+  store <32 x i8> %val, ptr %ptr, align 16
+  ret void
+}
+
+define void @store_v8i32_align2(ptr %ptr, <8 x i32> %val) {
+; NOSTRICTALIGN-LABEL: store_v8i32_align2:
+; NOSTRICTALIGN:       // %bb.0:
+; NOSTRICTALIGN-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-NEXT:    ret
+;
+; STRICTALIGN-LABEL: store_v8i32_align2:
+; STRICTALIGN:       // %bb.0:
+; STRICTALIGN-NEXT:    mov w8, v1.s[3]
+; STRICTALIGN-NEXT:    mov w10, v1.s[1]
+; STRICTALIGN-NEXT:    str h1, [x0, #16]
+; STRICTALIGN-NEXT:    mov w9, v1.s[2]
+; STRICTALIGN-NEXT:    mov w11, v0.s[3]
+; STRICTALIGN-NEXT:    str h0, [x0]
+; STRICTALIGN-NEXT:    mov w12, v0.s[2]
+; STRICTALIGN-NEXT:    mov w13, v0.s[1]
+; STRICTALIGN-NEXT:    strh w8, [x0, #28]
+; STRICTALIGN-NEXT:    lsr w8, w8, #16
+; STRICTALIGN-NEXT:    strh w10, [x0, #20]
+; STRICTALIGN-NEXT:    strh w8, [x0, #30]
+; STRICTALIGN-NEXT:    lsr w8, w10, #16
+; STRICTALIGN-NEXT:    fmov w10, s1
+; STRICTALIGN-NEXT:    strh w9, [x0, #24]
+; STRICTALIGN-NEXT:    lsr w9, w9, #16
+; STRICTALIGN-NEXT:    strh w8, [x0, #22]
+; STRICTALIGN-NEXT:    lsr w8, w11, #16
+; STRICTALIGN-NEXT:    strh w9, [x0, #26]
+; STRICTALIGN-NEXT:    lsr w9, w10, #16
+; STRICTALIGN-NEXT:    fmov w10, s0
+; STRICTALIGN-NEXT:    strh w8, [x0, #14]
+; STRICTALIGN-NEXT:    lsr w8, w13, #16
+; STRICTALIGN-NEXT:    strh w9, [x0, #18]
+; STRICTALIGN-NEXT:    lsr w9, w12, #16
+; STRICTALIGN-NEXT:    strh w11, [x0, #12]
+; STRICTALIGN-NEXT:    strh w9, [x0, #10]
+; STRICTALIGN-NEXT:    lsr w9, w10, #16
+; STRICTALIGN-NEXT:    strh w12, [x0, #8]
+; STRICTALIGN-NEXT:    strh w13, [x0, #4]
+; STRICTALIGN-NEXT:    strh w8, [x0, #6]
+; STRICTALIGN-NEXT:    strh w9, [x0, #2]
+; STRICTALIGN-NEXT:    ret
+;
+; NOSTRICTALIGN-BE-LABEL: store_v8i32_align2:
+; NOSTRICTALIGN-BE:       // %bb.0:
+; NOSTRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-BE-NEXT:    ret
+;
+; STRICTALIGN-BE-LABEL: store_v8i32_align2:
+; STRICTALIGN-BE:       // %bb.0:
+; STRICTALIGN-BE-NEXT:    rev64 v1.4s, v1.4s
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    fmov w9, s1
+; STRICTALIGN-BE-NEXT:    mov w10, v1.s[2]
+; STRICTALIGN-BE-NEXT:    mov w8, v1.s[3]
+; STRICTALIGN-BE-NEXT:    mov w11, v1.s[1]
+; STRICTALIGN-BE-NEXT:    mov w12, v0.s[3]
+; STRICTALIGN-BE-NEXT:    mov w13, v0.s[1]
+; STRICTALIGN-BE-NEXT:    str h1, [x0, #18]
+; STRICTALIGN-BE-NEXT:    lsr w9, w9, #16
+; STRICTALIGN-BE-NEXT:    str h0, [x0, #2]
+; STRICTALIGN-BE-NEXT:    strh w10, [x0, #26]
+; STRICTALIGN-BE-NEXT:    lsr w10, w10, #16
+; STRICTALIGN-BE-NEXT:    strh w9, [x0, #16]
+; STRICTALIGN-BE-NEXT:    mov w9, v0.s[2]
+; STRICTALIGN-BE-NEXT:    strh w8, [x0, #30]
+; STRICTALIGN-BE-NEXT:    lsr w8, w8, #16
+; STRICTALIGN-BE-NEXT:    strh w10, [x0, #24]
+; STRICTALIGN-BE-NEXT:    fmov w10, s0
+; STRICTALIGN-BE-NEXT:    strh w11, [x0, #22]
+; STRICTALIGN-BE-NEXT:    lsr w11, w11, #16
+; STRICTALIGN-BE-NEXT:    strh w8, [x0, #28]
+; STRICTALIGN-BE-NEXT:    lsr w8, w12, #16
+; STRICTALIGN-BE-NEXT:    strh w9, [x0, #10]
+; STRICTALIGN-BE-NEXT:    lsr w9, w9, #16
+; STRICTALIGN-BE-NEXT:    strh w11, [x0, #20]
+; STRICTALIGN-BE-NEXT:    lsr w11, w13, #16
+; STRICTALIGN-BE-NEXT:    strh w8, [x0, #12]
+; STRICTALIGN-BE-NEXT:    lsr w8, w10, #16
+; STRICTALIGN-BE-NEXT:    strh w12, [x0, #14]
+; STRICTALIGN-BE-NEXT:    strh w13, [x0, #6]
+; STRICTALIGN-BE-NEXT:    strh w9, [x0, #8]
+; STRICTALIGN-BE-NEXT:    strh w11, [x0, #4]
+; STRICTALIGN-BE-NEXT:    strh w8, [x0]
+; STRICTALIGN-BE-NEXT:    ret
+  store <8 x i32> %val, ptr %ptr, align 2
+  ret void
+}
+
+define void @store_v8i32_align4(ptr %ptr, <8 x i32> %val) {
+; NOSTRICTALIGN-LABEL: store_v8i32_align4:
+; NOSTRICTALIGN:       // %bb.0:
+; NOSTRICTALIGN-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-NEXT:    ret
+;
+; STRICTALIGN-LABEL: store_v8i32_align4:
+; STRICTALIGN:       // %bb.0:
+; STRICTALIGN-NEXT:    add x8, x0, #16
+; STRICTALIGN-NEXT:    st1 { v0.4s }, [x0]
+; STRICTALIGN-NEXT:    st1 { v1.4s }, [x8]
+; STRICTALIGN-NEXT:    ret
+;
+; NOSTRICTALIGN-BE-LABEL: store_v8i32_align4:
+; NOSTRICTALIGN-BE:       // %bb.0:
+; NOSTRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-BE-NEXT:    ret
+;
+; STRICTALIGN-BE-LABEL: store_v8i32_align4:
+; STRICTALIGN-BE:       // %bb.0:
+; STRICTALIGN-BE-NEXT:    rev64 v1.4s, v1.4s
+; STRICTALIGN-BE-NEXT:    rev64 v0.4s, v0.4s
+; STRICTALIGN-BE-NEXT:    add x8, x0, #16
+; STRICTALIGN-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; STRICTALIGN-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; STRICTALIGN-BE-NEXT:    st1 { v1.4s }, [x8]
+; STRICTALIGN-BE-NEXT:    st1 { v0.4s }, [x0]
+; STRICTALIGN-BE-NEXT:    ret
+  store <8 x i32> %val, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_v64i8_align16(ptr %ptr, <64 x i8> %val) {
+; NOSTRICTALIGN-LABEL: store_v64i8_align16:
+; NOSTRICTALIGN:       // %bb.0:
+; NOSTRICTALIGN-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-NEXT:    stp q2, q3, [x0, #32]
+; NOSTRICTALIGN-NEXT:    ret
+;
+; STRICTALIGN-LABEL: store_v64i8_align16:
+; STRICTALIGN:       // %bb.0:
+; STRICTALIGN-NEXT:    stp q0, q1, [x0]
+; STRICTALIGN-NEXT:    stp q2, q3, [x0, #32]
+; STRICTALIGN-NEXT:    ret
+;
+; NOSTRICTALIGN-BE-LABEL: store_v64i8_align16:
+; NOSTRICTALIGN-BE:       // %bb.0:
+; NOSTRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; NOSTRICTALIGN-BE-NEXT:    stp q2, q3, [x0, #32]
+; NOSTRICTALIGN-BE-NEXT:    ret
+;
+; STRICTALIGN-BE-LABEL: store_v64i8_align16:
+; STRICTALIGN-BE:       // %bb.0:
+; STRICTALIGN-BE-NEXT:    stp q0, q1, [x0]
+; STRICTALIGN-BE-NEXT:    stp q2, q3, [x0, #32]
+; STRICTALIGN-BE-NEXT:    ret
+  store <64 x i8> %val, ptr %ptr, align 16
+  ret void
+}
