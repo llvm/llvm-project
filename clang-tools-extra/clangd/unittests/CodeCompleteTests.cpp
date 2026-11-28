@@ -3309,12 +3309,21 @@ TEST(CompletionTest, DeprecatedResults) {
   std::string Body = R"cpp(
     void TestClangd();
     void TestClangc() __attribute__((deprecated("", "")));
+    #define DEPRECATED_MACRO 1
+    #pragma clang deprecated(DEPRECATED_MACRO)
+    #define NORMAL_MACRO 1
   )cpp";
 
   EXPECT_THAT(
       completions(Body + "int main() { TestClang^ }").Completions,
       UnorderedElementsAre(AllOf(named("TestClangd"), Not(deprecated())),
                            AllOf(named("TestClangc"), deprecated())));
+  EXPECT_THAT(
+      completions(Body + "int main() { DEPRECATED_MAC^ }").Completions,
+      UnorderedElementsAre(AllOf(named("DEPRECATED_MACRO"), deprecated())));
+  EXPECT_THAT(
+      completions(Body + "int main() { NORMAL_MAC^ }").Completions,
+      UnorderedElementsAre(AllOf(named("NORMAL_MACRO"), Not(deprecated()))));
 }
 
 TEST(SignatureHelpTest, PartialSpec) {

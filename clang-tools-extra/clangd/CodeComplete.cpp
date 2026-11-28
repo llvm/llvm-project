@@ -524,7 +524,9 @@ struct CodeCompletionBuilder {
     if (Completion.Deprecated) {
       if (C.SemaResult)
         Completion.Deprecated &=
-            C.SemaResult->Availability == CXAvailability_Deprecated;
+            C.SemaResult->Availability == CXAvailability_Deprecated ||
+            (C.SemaResult->Kind == CodeCompletionResult::RK_Macro &&
+             C.SemaResult->Macro && C.SemaResult->Macro->isDeprecatedMacro());
       if (C.IndexResult)
         Completion.Deprecated &=
             bool(C.IndexResult->Flags & Symbol::Deprecated);
@@ -1361,6 +1363,10 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
   IdentifierInfoLookup *PreambleIdentifiers =
       ITable.getExternalIdentifierLookup();
 
+  for (const auto &[Name, Msg] : Preamble.DeprecatedMacros) {
+    auto &II = const_cast<Preprocessor &>(PP).getIdentifierTable().get(Name);
+    II.setIsDeprecatedMacro(true);
+  }
   if (!PreambleIdentifiers || !PreambleMacros)
     return;
   for (const auto &MacroName : Preamble.Macros.Names) {
