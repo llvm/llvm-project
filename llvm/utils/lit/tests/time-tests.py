@@ -7,7 +7,7 @@
 # The slowest-test entries are matched with -DAG in any order to avoid
 # performance-wise flakiness from relying on exact execution-time ordering.
 
-# RUN: %{lit-no-order-opt} --time-tests %{inputs}/time-tests > %t.out
+# RUN: %{lit-no-order-opt-test-time-recording} --time-tests %{inputs}/time-tests > %t.out
 # RUN: FileCheck --check-prefix=DEFAULT < %t.out %s
 # RUN: rm %{inputs}/time-tests/.lit_test_times.txt
 
@@ -22,7 +22,7 @@
 
 ## Check that --time-tests=1 limits the slowest-test list.
 
-# RUN: %{lit-no-order-opt} --time-tests=1 %{inputs}/time-tests > %t.one.out
+# RUN: %{lit-no-order-opt-test-time-recording} --time-tests=1 %{inputs}/time-tests > %t.one.out
 # RUN: FileCheck --check-prefix=ONE < %t.one.out %s
 # RUN: rm %{inputs}/time-tests/.lit_test_times.txt
 
@@ -32,7 +32,7 @@
 
 ## Check that --time-tests=all reports every timed test.
 
-# RUN: %{lit-no-order-opt} --time-tests=all %{inputs}/time-tests > %t.all.out
+# RUN: %{lit-no-order-opt-test-time-recording} --time-tests=all %{inputs}/time-tests > %t.all.out
 # RUN: FileCheck --check-prefix=ALL < %t.all.out %s
 # RUN: rm %{inputs}/time-tests/.lit_test_times.txt
 
@@ -44,12 +44,12 @@
 
 ## Check that invalid --time-tests values are rejected.
 
-# RUN: not %{lit-no-order-opt} --time-tests=0 %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=INVALID
+# RUN: not %{lit-no-order-opt-test-time-recording} --time-tests=0 %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=INVALID
 
 # INVALID: requires positive integer
 
 ## Check that malformed --time-tests values with extra '=' are rejected.
 
-# RUN: not %{lit-no-order-opt} --time-tests=all=foo %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=MALFORMED
+# RUN: not %{lit-no-order-opt-test-time-recording} --time-tests=all=foo %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=MALFORMED
 
 # MALFORMED: requires positive integer, but found 'all=foo'
