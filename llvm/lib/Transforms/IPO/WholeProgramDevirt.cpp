@@ -73,9 +73,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -717,16 +715,11 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return ChangedPA;
   }
 
-  // FIXME: The state of a run should not be kept in the pass. A more resilient
-  // design would create an object in run() that holds the values the run
-  // needs, such as the module, the analyses and the summaries.
-  std::optional<ModuleSummaryIndex> Index;
   ModuleSummaryIndex *Export = ExportSummary;
-  if (!ExportSummary && !ImportSummary && DevirtualizeSpeculatively) {
-    // Build the ExportSummary from the module.
-    ProfileSummaryInfo PSI(M);
-    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
-    Export = &*Index;
+  if (Export && !Export->hasThinLTOModules()) {
+    if (Export->partiallySplitLTOUnits())
+      return PreservedAnalyses::all();
+    Export = nullptr;
   }
   if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
            .run())

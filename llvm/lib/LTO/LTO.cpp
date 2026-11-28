@@ -1259,6 +1259,8 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
 
+  ThinLTO.CombinedIndex.setHasThinLTOModules();
+
   if (!Conf.ThinLTOModulesToCompile.empty()) {
     if (!ThinLTO.ModulesToCompile)
       ThinLTO.ModulesToCompile = ModuleMapType();
