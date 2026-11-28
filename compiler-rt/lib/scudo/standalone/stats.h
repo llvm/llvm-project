@@ -89,6 +89,20 @@ public:
       S[I] = static_cast<sptr>(S[I]) >= 0 ? S[I] : 0;
   }
 
+  // Same as unlink() for every LocalStats where ShouldUnlink returns true.
+  template <typename F> void unlinkIfLocked(F ShouldUnlink) REQUIRES(Mutex) {
+    LocalStats *Next;
+    for (LocalStats *S = StatsList.front(); S != nullptr; S = Next) {
+      Next = S->Next;
+      if (!ShouldUnlink(S))
+        continue;
+      StatsList.remove(S);
+      for (uptr I = 0; I < StatCount; I++)
+        add(static_cast<StatType>(I), S->get(static_cast<StatType>(I)));
+      S->Next = S->Prev = nullptr;
+    }
+  }
+
   void lock() ACQUIRE(Mutex) { Mutex.lock(); }
   void unlock() RELEASE(Mutex) { Mutex.unlock(); }
 

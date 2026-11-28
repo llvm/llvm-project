@@ -14,7 +14,10 @@
 #include <errno.h>
 #include <limits.h>
 #include <malloc.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
 
@@ -910,6 +913,60 @@ TEST_F(ScudoWrappersCTest, DisableForkEnable) {
   }
   waitpid(Pid, nullptr, 0);
   EXPECT_EQ(pthread_join(ThreadId, 0), 0);
+}
+
+static pthread_barrier_t Barrier;
+
+static void *mallocAndWait(UNUSED void *Unused) {
+  // Initialize the allocator for this thread.
+  free(malloc(Size));
+  // Stay alive while the main thread forks.
+  pthread_barrier_wait(&Barrier);
+  pthread_barrier_wait(&Barrier);
+  return nullptr;
+}
+
+static void *mallocAndExit(UNUSED void *Unused) {
+  free(malloc(Size));
+  return nullptr;
+}
+
+// After fork(), the child can create a thread with the TLS of a thread that
+// only existed in the parent. Make sure the allocator handles this correctly.
+TEST_F(ScudoWrappersCTest, ForkReuseThreadLocalStorage) {
+  // Run both threads on the same stack, so that they get the same TLS.
+  constexpr size_t StackSize = 1U << 20;
+  void *Stack = mmap(nullptr, StackSize, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(Stack, MAP_FAILED);
+  pthread_attr_t Attr;
+  ASSERT_EQ(pthread_attr_init(&Attr), 0);
+  ASSERT_EQ(pthread_attr_setstack(&Attr, Stack, StackSize), 0);
+  ASSERT_EQ(pthread_barrier_init(&Barrier, nullptr, 2), 0);
+
+  pthread_t ThreadId;
+  ASSERT_EQ(pthread_create(&ThreadId, &Attr, &mallocAndWait, nullptr), 0);
+  pthread_barrier_wait(&Barrier);
+  pid_t Pid = fork();
+  ASSERT_GE(Pid, 0);
+  if (Pid == 0) {
+    pthread_t ChildThreadId;
+    if (pthread_create(&ChildThreadId, &Attr, &mallocAndExit, nullptr) != 0)
+      _exit(1);
+    pthread_join(ChildThreadId, nullptr);
+    _exit(0);
+  }
+  pthread_barrier_wait(&Barrier);
+  EXPECT_EQ(pthread_join(ThreadId, nullptr), 0);
+
+  int Status;
+  ASSERT_EQ(waitpid(Pid, &Status, 0), Pid);
+  EXPECT_TRUE(WIFEXITED(Status));
+  EXPECT_EQ(WEXITSTATUS(Status), 0);
+
+  EXPECT_EQ(pthread_barrier_destroy(&Barrier), 0);
+  EXPECT_EQ(pthread_attr_destroy(&Attr), 0);
+  EXPECT_EQ(munmap(Stack, StackSize), 0);
 }
 
 #endif // SCUDO_FUCHSIA

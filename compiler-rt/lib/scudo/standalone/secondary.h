@@ -821,6 +821,10 @@ public:
 
   void getStats(ScopedString *Str);
 
+  const LocalStats *getLocalStats() const NO_THREAD_SAFETY_ANALYSIS {
+    return &Stats;
+  }
+
 private:
   typename Config::template CacheT<typename Config::CacheConfig> Cache;
 
