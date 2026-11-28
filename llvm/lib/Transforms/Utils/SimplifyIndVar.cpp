@@ -283,6 +283,10 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
+    // The Cmp may (directly/indirectly) affect an exit of any loop in the nest,
+    // so drop cached SCEV info such as BackedgeTakenCounts.
+    SE->forgetTopmostLoop(L);
+
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
     ++NumElimCmp;
     Changed = true;
