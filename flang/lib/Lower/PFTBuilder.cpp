@@ -2172,6 +2172,13 @@ Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   return parser::CharBlock{range.begin(), 1};
 }
 
+parser::CharBlock
+Fortran::lower::pft::FunctionLikeUnit::getActiveEntrySourceLoc() const {
+  if (Evaluation *entryEval = getEntryEval())
+    return entryEval->position;
+  return getStartingSourceLoc();
+}
+
 //===----------------------------------------------------------------------===//
 // ModuleLikeUnit implementation
 //===----------------------------------------------------------------------===//
