@@ -542,6 +542,7 @@ Emit a warning for each variable declaration that generates code run at startup.
 }
 def BitwiseConditionalParentheses: DiagGroup<"bitwise-conditional-parentheses">;
 def BitwiseOpParentheses: DiagGroup<"bitwise-op-parentheses">;
+def LogicalConditionalParentheses: DiagGroup<"logical-conditional-parentheses">;
 def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
 def LogicalNotParentheses: DiagGroup<"logical-not-parentheses">;
 def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
@@ -1401,6 +1402,7 @@ def ParenthesesOnEquality : DiagGroup<"parentheses-equality">;
 def Parentheses : DiagGroup<"parentheses",
                             [LogicalOpParentheses,
                              LogicalNotParentheses,
+                             LogicalConditionalParentheses,
                              BitwiseConditionalParentheses,
                              BitwiseOpParentheses,
                              ShiftOpParentheses,

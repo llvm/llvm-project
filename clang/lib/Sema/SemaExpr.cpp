@@ -9385,15 +9385,12 @@ static bool IsArithmeticOp(BinaryOperatorKind Opc) {
   // not any of the logical operators.  Bitwise-xor is commonly used as a
   // logical-xor because there is no logical-xor operator.  The logical
   // operators, including uses of xor, have a high false positive rate for
-  // precedence warnings.
+  // general conditional expressions (e.g., `a || b ? 1 : 2`); logical
+  // operators with boolean conditional branches are diagnosed separately in
+  // DiagnoseConditionalPrecedence.
 }
 
-/// IsArithmeticBinaryExpr - Returns true if E is an arithmetic binary
-/// expression, either using a built-in or overloaded operator,
-/// and sets *OpCode to the opcode and *RHSExprs to the right-hand side
-/// expression.
-static bool IsArithmeticBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
-                                   const Expr **RHSExprs) {
+static const Expr *StripImplicitNodesWithoutParens(const Expr *E) {
   // Don't strip parenthesis: we should not warn if E is in parenthesis.
   E = E->IgnoreImpCasts();
   E = E->IgnoreConversionOperatorSingleStep();
@@ -9402,6 +9399,16 @@ static bool IsArithmeticBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
     E = MTE->getSubExpr();
     E = E->IgnoreImpCasts();
   }
+  return E;
+}
+
+/// IsArithmeticBinaryExpr - Returns true if E is an arithmetic binary
+/// expression, either using a built-in or overloaded operator,
+/// and sets *OpCode to the opcode and *RHSExprs to the right-hand side
+/// expression.
+static bool IsArithmeticBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
+                                   const Expr **RHSExprs) {
+  E = StripImplicitNodesWithoutParens(E);
 
   // Built-in binary operator.
   if (const auto *OP = dyn_cast<BinaryOperator>(E);
@@ -9434,6 +9441,22 @@ static bool IsArithmeticBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
   return false;
 }
 
+/// IsLogicalBinaryExpr - Returns true if E is a built-in logical binary
+/// expression ('&&' or '||'), setting *Opcode, *OpLoc, and *RHSExpr.
+static bool IsLogicalBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
+                                SourceLocation *OpLoc, const Expr **RHSExpr) {
+  E = StripImplicitNodesWithoutParens(E);
+
+  if (const auto *OP = dyn_cast<BinaryOperator>(E); OP && OP->isLogicalOp()) {
+    *Opcode = OP->getOpcode();
+    *OpLoc = OP->getOperatorLoc();
+    *RHSExpr = OP->getRHS();
+    return true;
+  }
+
+  return false;
+}
+
 /// ExprLooksBoolean - Returns true if E looks boolean, i.e. it has boolean type
 /// or is a logical expression such as (x==y) which has int type, but is
 /// commonly interpreted as boolean.
@@ -9454,27 +9477,68 @@ static bool ExprLooksBoolean(const Expr *E) {
   return false;
 }
 
+/// ExprLooksBooleanValue - Returns true if E evaluates to a boolean value,
+/// excluding pointers: selecting between pointer arms (e.g.
+/// `const char *s = a && b ? "yes" : "no"` or `T *x = a && b ? p : q`) is
+/// idiomatic and has a different result type from `a && (b ? p : q)`.
+static bool ExprLooksBooleanValue(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+
+  if (E->isTypeDependent())
+    return false;
+  if (E->getType()->isBooleanType())
+    return true;
+  if (const auto *OP = dyn_cast<BinaryOperator>(E))
+    return OP->isComparisonOp() || OP->isLogicalOp();
+  if (const auto *OP = dyn_cast<UnaryOperator>(E))
+    return OP->getOpcode() == UO_LNot;
+
+  return false;
+}
+
+static bool IsBoolLiteralValue(const Expr *E, bool Expected) {
+  if (const auto *BL = dyn_cast<CXXBoolLiteralExpr>(E->IgnoreParenImpCasts()))
+    return BL->getValue() == Expected;
+  return false;
+}
+
 /// DiagnoseConditionalPrecedence - Emit a warning when a conditional operator
 /// and binary operator are mixed in a way that suggests the programmer assumed
 /// the conditional operator has higher precedence, for example:
-/// "int x = a + someBinaryCondition ? 1 : 2".
+/// "int x = a + someBinaryCondition ? 1 : 2" or
+/// "bool r = a || b ? (x > y) : (x != y)".
 static void DiagnoseConditionalPrecedence(Sema &Self, SourceLocation OpLoc,
                                           Expr *Condition, const Expr *LHSExpr,
                                           const Expr *RHSExpr) {
   BinaryOperatorKind CondOpcode;
   const Expr *CondRHS;
+  unsigned DiagID;
 
-  if (!IsArithmeticBinaryExpr(Condition, &CondOpcode, &CondRHS))
-    return;
-  if (!ExprLooksBoolean(CondRHS))
-    return;
-
-  // The condition is an arithmetic binary expression, with a right-
-  // hand side that looks boolean, so warn.
-
-  unsigned DiagID = BinaryOperator::isBitwiseOp(CondOpcode)
-                        ? diag::warn_precedence_bitwise_conditional
-                        : diag::warn_precedence_conditional;
+  if (IsArithmeticBinaryExpr(Condition, &CondOpcode, &CondRHS)) {
+    if (!ExprLooksBoolean(CondRHS))
+      return;
+    // The condition is an arithmetic binary expression, with a right-
+    // hand side that looks boolean, so warn.
+    DiagID = BinaryOperator::isBitwiseOp(CondOpcode)
+                 ? diag::warn_precedence_bitwise_conditional
+                 : diag::warn_precedence_conditional;
+  } else {
+    SourceLocation CondOpLoc;
+    if (!IsLogicalBinaryExpr(Condition, &CondOpcode, &CondOpLoc, &CondRHS))
+      return;
+    if (OpLoc.isMacroID() || CondOpLoc.isMacroID())
+      return;
+    if (Self.inTemplateInstantiation())
+      return;
+    if (!ExprLooksBooleanValue(LHSExpr) || !ExprLooksBooleanValue(RHSExpr))
+      return;
+    // (A || B) ? true : Y is equivalent to A || (B ? true : Y), and
+    // (A && B) ? X : false is equivalent to A && (B ? X : false).
+    if ((CondOpcode == BO_LOr && IsBoolLiteralValue(LHSExpr, true)) ||
+        (CondOpcode == BO_LAnd && IsBoolLiteralValue(RHSExpr, false)))
+      return;
+    DiagID = diag::warn_precedence_logical_conditional;
+  }
 
   Self.Diag(OpLoc, DiagID)
       << Condition->getSourceRange()
