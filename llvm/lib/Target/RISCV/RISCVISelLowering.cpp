@@ -11822,6 +11822,41 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return SDValue();
   }
 
+  // Fold a shuffle that shifts elements up by one followed by an insertion
+  // into element zero into VSLIDE1UP_VL or VFSLIDE1UP_VL.
+  if (VecVT.isFixedLengthVector() &&
+      (VecVT.isFloatingPoint() ||
+       VecVT.getScalarSizeInBits() <= XLenVT.getSizeInBits()) &&
+      isNullConstant(Idx) && Vec.hasOneUse() &&
+      (VecVT.getVectorElementType() != MVT::f16 ||
+       Subtarget.hasVInstructionsF16()) &&
+      (VecVT.getVectorElementType() != MVT::bf16 ||
+       Subtarget.hasVInstructionsBF16())) {
+    if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Vec)) {
+      ArrayRef<int> ShuffleMask = Shuffle->getMask();
+      bool IsSlide = true;
+      for (unsigned I = 1; I != ShuffleMask.size(); ++I)
+        if (ShuffleMask[I] >= 0 && ShuffleMask[I] != int(I - 1)) {
+          IsSlide = false;
+          break;
+        }
+      if (IsSlide) {
+        SDValue SlideSrc = Shuffle->getOperand(0);
+        MVT SlideVT = getContainerForFixedLengthVector(VecVT);
+        SlideSrc = convertToScalableVector(SlideVT, SlideSrc, DAG, Subtarget);
+        auto [Mask, VL] = getDefaultVLOps(VecVT, SlideVT, DL, DAG, Subtarget);
+        unsigned Opcode = VecVT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL
+                                                  : RISCVISD::VSLIDE1UP_VL;
+        SDValue Scalar = Val;
+        if (!VecVT.isFloatingPoint())
+          Scalar = DAG.getAnyExtOrTrunc(Scalar, DL, XLenVT);
+        SDValue Result = DAG.getNode(Opcode, DL, SlideVT, DAG.getUNDEF(SlideVT),
+                                     SlideSrc, Scalar, Mask, VL);
+        return convertFromScalableVector(VecVT, Result, DAG, Subtarget);
+      }
+    }
+  }
+
   MVT ContainerVT = VecVT;
   // If the operand is a fixed-length vector, convert to a scalable one.
   if (VecVT.isFixedLengthVector()) {
