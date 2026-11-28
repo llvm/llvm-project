@@ -30,6 +30,14 @@
 # RUN: ld.lld -e 0 unrecognized_version.o merge_version_test_input.o -o out3 2>&1 | count 0
 # RUN: llvm-readobj --arch-specific out3 | FileCheck %s --check-prefix=CHECK3
 
+## Merging RVE and RVI yields RVI, because RVE is a subset of RVI.
+# RUN: llvm-mc -filetype=obj -triple=riscv32 rv32i.s -o rv32i.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32 rv32e.s -o rv32e.o
+# RUN: ld.lld -e 0 rv32i.o rv32e.o -o rv32ie 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific rv32ie | FileCheck %s --check-prefix=RV32IE
+# RUN: ld.lld -e 0 rv32e.o rv32i.o -o rv32ei 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific rv32ei | FileCheck %s --check-prefix=RV32IE
+
 # RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_arch1.s -o invalid_arch1.o
 # RUN: not ld.lld invalid_arch1.o 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
 # INVALID_ARCH1: error: invalid_arch1.o:(.riscv.attributes): rv64i2: extension lacks version in expected format
@@ -303,6 +311,29 @@
 .byte 5  # Tag_RISCV_arch
 .asciz "rv64i2p1"
 .Lend:
+
+#--- rv32i.s
+.attribute arch, "rv32i2p1"
+
+#--- rv32e.s
+.attribute arch, "rv32e2p0"
+
+# RV32IE:      BuildAttributes {
+# RV32IE-NEXT:   FormatVersion: 0x41
+# RV32IE-NEXT:   Section 1 {
+# RV32IE-NEXT:     SectionLength: 25
+# RV32IE-NEXT:     Vendor: riscv
+# RV32IE-NEXT:     Tag: Tag_File (0x1)
+# RV32IE-NEXT:     Size: 15
+# RV32IE-NEXT:     FileAttributes {
+# RV32IE-NEXT:       Attribute {
+# RV32IE-NEXT:         Tag: 5
+# RV32IE-NEXT:         TagName: arch
+# RV32IE-NEXT:         Value: rv32i2p1{{$}}
+# RV32IE-NEXT:       }
+# RV32IE-NEXT:     }
+# RV32IE-NEXT:   }
+# RV32IE-NEXT: }
 
 #--- invalid_arch1.s
 .section .riscv.attributes,"",@0x70000003
