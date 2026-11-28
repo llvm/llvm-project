@@ -1157,6 +1157,29 @@ DICompositeType *DICompositeType::getImpl(
                        Ops);
 }
 
+static bool hasConflictingSize(const DICompositeType *CT,
+                               Metadata *SizeInBits) {
+  Metadata *ExistingSize = CT->getRawSizeInBits();
+  if (!ExistingSize || !SizeInBits || ExistingSize == SizeInBits)
+    return false;
+  auto getConstantSize = [](const Metadata *MD) -> std::optional<uint64_t> {
+    if (const auto *CMD = dyn_cast<ConstantAsMetadata>(MD))
+      if (const auto *CI = dyn_cast_or_null<ConstantInt>(CMD->getValue()))
+        return CI->getZExtValue();
+    return std::nullopt;
+  };
+  std::optional<uint64_t> ExistingConst = getConstantSize(ExistingSize);
+  std::optional<uint64_t> IncomingConst = getConstantSize(SizeInBits);
+  // Forward declarations commonly encode an unspecified size as ConstantInt(0)
+  // rather than nullptr; treat 0 as unspecified so they still unique/mutate.
+  if ((ExistingConst && *ExistingConst == 0) ||
+      (IncomingConst && *IncomingConst == 0))
+    return false;
+  if (ExistingConst && IncomingConst)
+    return *ExistingConst != *IncomingConst;
+  return true;
+}
+
 DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
@@ -1177,7 +1200,7 @@ DICompositeType *DICompositeType::buildODRType(
                EnumKind, VTableHolder, TemplateParams, &Identifier,
                Discriminator, DataLocation, Associated, Allocated, Rank,
                Annotations, Specification, NumExtraInhabitants, BitStride);
-  if (CT->getTag() != Tag)
+  if (CT->getTag() != Tag || hasConflictingSize(CT, SizeInBits))
     return nullptr;
 
   // Only mutate CT if it's a forward declaration and the new operands aren't.
@@ -1222,7 +1245,7 @@ DICompositeType *DICompositeType::getODRType(
         Associated, Allocated, Rank, Annotations, Specification,
         NumExtraInhabitants, BitStride);
   } else {
-    if (CT->getTag() != Tag)
+    if (CT->getTag() != Tag || hasConflictingSize(CT, SizeInBits))
       return nullptr;
   }
   return CT;

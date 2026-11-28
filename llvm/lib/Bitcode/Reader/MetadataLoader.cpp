@@ -1293,10 +1293,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo) {
 
   bool IsDistinct = false;
-  auto getMD = [&](unsigned ID) -> Metadata * {
+  auto getMD = [&](unsigned ID, bool ForceLazyLoad = false) -> Metadata * {
     if (ID < MDStringRef.size())
       return lazyLoadOneMDString(ID);
-    if (!IsDistinct) {
+    if (!IsDistinct || ForceLazyLoad) {
       if (auto *MD = MetadataList.lookup(ID))
         return MD;
       // If lazy-loading is enabled, we try recursively to load the operand
@@ -1309,16 +1309,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         lazyLoadOneMetadata(ID, Placeholders);
         return MetadataList.lookup(ID);
       }
-      // Return a temporary.
-      return MetadataList.getMetadataFwdRef(ID);
+      if (!IsDistinct)
+        // Return a temporary.
+        return MetadataList.getMetadataFwdRef(ID);
     }
     if (auto *MD = MetadataList.getMetadataIfResolved(ID))
       return MD;
     return &Placeholders.getPlaceholderOp(ID);
   };
-  auto getMDOrNull = [&](unsigned ID) -> Metadata * {
+  auto getMDOrNull = [&](unsigned ID,
+                         bool ForceLazyLoad = false) -> Metadata * {
     if (ID)
-      return getMD(ID - 1);
+      return getMD(ID - 1, ForceLazyLoad);
     return nullptr;
   };
   auto getMDString = [&](unsigned ID) -> MDString * {
@@ -1333,10 +1335,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     return MetadataList.upgradeTypeRef(getMDOrNull(ID));
   };
 
-  auto getMetadataOrConstant = [&](bool IsMetadata,
-                                   uint64_t Entry) -> Metadata * {
+  auto getMetadataOrConstant = [&](bool IsMetadata, uint64_t Entry,
+                                   bool ForceLazyLoad = false) -> Metadata * {
     if (IsMetadata)
-      return getMDOrNull(Entry);
+      return getMDOrNull(Entry, ForceLazyLoad);
     return ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), Entry));
   };
@@ -1878,7 +1880,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() > 24 && Record[24] != dwarf::DW_APPLE_ENUM_KIND_invalid)
       EnumKind = Record[24];
 
-    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[7]);
+    // Eagerly resolve SizeInBits when ODR uniquing is enabled so buildODRType
+    // can compare actual sizes rather than unresolved lazy-load placeholders.
+    Metadata *SizeInBits = getMetadataOrConstant(
+        SizeIsMetadata, Record[7],
+        /*ForceLazyLoad=*/Identifier && Context.isODRUniquingDebugTypes());
 
     DICompositeType *CT = nullptr;
     if (Identifier)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
@@ -180,6 +181,130 @@ TEST(DebugTypeODRUniquingTest, buildODRTypeFields) {
 #undef FOR_EACH_INLINEFIELD
   EXPECT_EQ(DINode::FlagArtificial, CT.getFlags());
   EXPECT_EQ(&UUID, CT.getRawIdentifier());
+}
+
+TEST(DebugTypeODRUniquingTest, sizeConflict) {
+  LLVMContext Context;
+  Context.enableDebugTypeODRUniquing();
+
+  auto makeSize = [&](uint64_t Bits) -> Metadata * {
+    return ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(Context), Bits));
+  };
+  Metadata *Size0 = makeSize(0);
+  Metadata *Size192 = makeSize(192);
+  Metadata *Size320 = makeSize(320);
+
+  // Forward decl with ConstantInt(0) size should mutate into a sized
+  // definition (as produced by DIBuilder::createForwardDecl).
+  MDString &FwdUUID = *MDString::get(Context, "FwdZeroSize");
+  auto &FwdCT = *DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size0, 0, nullptr, nullptr, 0, DINode::FlagFwdDecl,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(FwdCT.isForwardDecl());
+  EXPECT_EQ(0u, FwdCT.getSizeInBits());
+  EXPECT_EQ(&FwdCT,
+            DICompositeType::buildODRType(
+                Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, Size320, 0, nullptr, nullptr, 0,
+                DINode::FlagZero, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(FwdCT.isForwardDecl());
+  EXPECT_EQ(320u, FwdCT.getSizeInBits());
+
+  // A subsequent forward decl with null or zero size still uniques to FwdCT.
+  EXPECT_EQ(&FwdCT,
+            DICompositeType::buildODRType(
+                Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr, nullptr, 0,
+                DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(&FwdCT,
+            DICompositeType::buildODRType(
+                Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, Size0, 0, nullptr, nullptr, 0,
+                DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+
+  // A conflicting non-zero size rejects ODR uniquing (returns nullptr) for both
+  // definitions and forward declarations, leaving the existing node unchanged.
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size192, 0, nullptr, nullptr, 0, DINode::FlagZero,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size192, 0, nullptr, nullptr, 0, DINode::FlagFwdDecl,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(DICompositeType::getODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size192, 0, nullptr, nullptr, 0, DINode::FlagZero,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(320u, FwdCT.getSizeInBits());
+
+  // Same non-zero size still uniques for both buildODRType and getODRType.
+  EXPECT_EQ(&FwdCT,
+            DICompositeType::buildODRType(
+                Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, Size320, 0, nullptr, nullptr, 0,
+                DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(&FwdCT,
+            DICompositeType::getODRType(
+                Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, Size320, 0, nullptr, nullptr, 0,
+                DINode::FlagZero, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+
+  // A sized forward declaration (e.g. ThinLTO-imported) rejects conflicting
+  // sizes but mutates in place on a matching-size definition.
+  MDString &SizedFwdUUID = *MDString::get(Context, "SizedFwd");
+  auto &SizedFwdCT = *DICompositeType::buildODRType(
+      Context, SizedFwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size192, 0, nullptr, nullptr, 0, DINode::FlagFwdDecl,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr);
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, SizedFwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size320, 0, nullptr, nullptr, 0, DINode::FlagFwdDecl,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, SizedFwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, Size320, 0, nullptr, nullptr, 0, DINode::FlagZero,
+      nullptr, 0, std::nullopt, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr));
+  EXPECT_TRUE(SizedFwdCT.isForwardDecl());
+  EXPECT_EQ(192u, SizedFwdCT.getSizeInBits());
+  EXPECT_EQ(&SizedFwdCT,
+            DICompositeType::buildODRType(
+                Context, SizedFwdUUID, dwarf::DW_TAG_structure_type, nullptr,
+                nullptr, 0, nullptr, nullptr, Size192, 0, nullptr, nullptr, 0,
+                DINode::FlagZero, nullptr, 0, std::nullopt, nullptr, nullptr,
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(SizedFwdCT.isForwardDecl());
+  EXPECT_EQ(192u, SizedFwdCT.getSizeInBits());
+
+  // Unresolved placeholders and temporary forward-reference nodes
+  // conservatively reject ODR uniquing against a sized type so mismatched
+  // sizes cannot be silently collapsed.
+  DistinctMDOperandPlaceholder Placeholder(0);
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, &Placeholder, 0, nullptr, nullptr, 0,
+      DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  TempMDTuple TempSize = MDNode::getTemporary(Context, {});
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, TempSize.get(), 0, nullptr, nullptr, 0,
+      DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
 }
 
 } // end namespace
