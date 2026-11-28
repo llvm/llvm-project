@@ -924,14 +924,16 @@ void ValueStack::dump() const {
 #endif
 
 parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
+  size_t frameSize =
+      values.size() - (labelLevel.empty() ? 0 : labelLevel.back().stackIdx);
   LDBG() << "Popping from ValueStack\n"
-         << "  Elements(s) to pop: " << operandTypes.size() << "\n"
-         << "  Current stack size: " << values.size();
-  if (operandTypes.size() > values.size())
-    return emitError(*opLoc,
-                     "stack doesn't contain enough values. trying to get ")
-           << operandTypes.size() << " operands on a stack containing only "
-           << values.size() << " values";
+         << "  Elements to pop: " << operandTypes.size() << "\n"
+         << "  Current stack size: " << values.size() << "\n"
+         << "  Current frame size: " << frameSize;
+  if (operandTypes.size() > frameSize)
+    return emitError(*opLoc, "operand stack underflow: expected ")
+           << operandTypes.size() << ", but the current frame contains "
+           << frameSize;
   size_t stackIdxOffset = values.size() - operandTypes.size();
   SmallVector<Value> res{};
   res.reserve(operandTypes.size());
@@ -945,7 +947,8 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     res.push_back(operand);
   }
   values.resize(values.size() - operandTypes.size());
-  LDBG() << "  Updated stack size: " << values.size();
+  LDBG() << "  Updated stack size: " << values.size() << "\n"
+         << "  Updated frame size: " << frameSize - operandTypes.size();
   return res;
 }
 
