@@ -14,6 +14,7 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -92,6 +93,24 @@ class OverlayCDBTest : public ::testing::Test {
     std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
       return ProjectInfo{testRoot()};
     }
+
+    std::unique_ptr<ProjectModules>
+    getProjectModules(PathRef File) const override {
+      std::string Error;
+      JSON =
+          llvm::formatv(
+              R"json([{{"directory": "{0}", "command": "clang++ -c foo.cc", "file": "{1}"}])json",
+              llvm::sys::path::convert_to_slash(testRoot()),
+              llvm::sys::path::convert_to_slash(testPath("foo.cc")))
+              .str();
+      auto JSONCDB = tooling::JSONCompilationDatabase::loadFromBuffer(
+          testRoot(), JSON, Error, tooling::JSONCommandLineSyntax::AutoDetect);
+      return clang::clangd::getProjectModules(std::move(JSONCDB), TFS);
+    }
+
+  private:
+    MockFS TFS;
+    mutable std::string JSON;
   };
 
 protected:
@@ -177,6 +196,14 @@ TEST_F(OverlayCDBTest, Adjustments) {
   Cmd = CDB.getFallbackCommand("baz.cc");
   EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", "-DA=2", "baz.cc",
                                            "-DFallback", "-DAdjust_baz.cc"));
+}
+
+TEST_F(OverlayCDBTest, GetProjectModulesWithoutMangler) {
+  OverlayCDB CDB(Base.get());
+  auto MDB = CDB.getProjectModules(testPath("foo.cc"));
+  ASSERT_NE(MDB, nullptr);
+  // Invoking ProjectModules queries must not crash when Mangler is empty.
+  EXPECT_TRUE(MDB->getCompileCommand(testPath("foo.cc")));
 }
 
 TEST_F(OverlayCDBTest, ExpandedResponseFiles) {
