@@ -395,6 +395,16 @@ protected:
         });
   }
 
+  virtual Error buildPipelineImpl(PassManagerWrapper &PMW,
+                                  ModuleAnalysisManager &MAM,
+                                  raw_pwrite_stream &Out,
+                                  raw_pwrite_stream *DwoOut,
+                                  CodeGenFileType FileType, MCContext &Ctx);
+
+  Error registerAsmPrinter(ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+                           raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+                           MCContext &Ctx);
+
 private:
   bool runBeforeAdding(StringRef Name) {
     bool ShouldAdd = true;

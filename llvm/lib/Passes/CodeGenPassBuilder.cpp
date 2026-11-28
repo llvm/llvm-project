@@ -238,6 +238,23 @@ void CodeGenPassBuilder::flushFPMsToMPM(PassManagerWrapper &PMW,
   PMW.FPM = FunctionPassManager();
 }
 
+Error CodeGenPassBuilder::registerAsmPrinter(ModuleAnalysisManager &MAM,
+                                             raw_pwrite_stream &Out,
+                                             raw_pwrite_stream *DwoOut,
+                                             CodeGenFileType FileType,
+                                             MCContext &Ctx) {
+  Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
+      TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+  if (!MCStreamerOrErr)
+    return MCStreamerOrErr.takeError();
+  std::unique_ptr<AsmPrinter> Printer(
+      TM.getTarget().createAsmPrinter(TM, std::move(*MCStreamerOrErr)));
+  if (!Printer)
+    return createStringError("failed to create AsmPrinter");
+  MAM.registerPass([&] { return AsmPrinterAnalysis(std::move(Printer)); });
+  return Error::success();
+}
+
 Error CodeGenPassBuilder::buildPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
     raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
@@ -247,10 +264,19 @@ Error CodeGenPassBuilder::buildPipeline(
   setStartStopPasses(*StartStopInfo);
 
   CompletesPipeline = StartStopInfo->StopPass.empty();
-  bool PrintAsm = CompletesPipeline;
-  bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);
+  if (auto Err = buildPipelineImpl(PMW, MAM, Out, DwoOut, FileType, Ctx))
+    return Err;
+
+  return verifyStartStop(*StartStopInfo);
+}
+
+Error CodeGenPassBuilder::buildPipelineImpl(
+    PassManagerWrapper &PMW, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
+  bool PrintAsm = CompletesPipeline;
+  bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   addModulePass(RequireAnalysisPass<MachineModuleAnalysis, Module>(), PMW,
                 /*Force=*/true);
@@ -267,15 +293,8 @@ Error CodeGenPassBuilder::buildPipeline(
   flushFPMsToMPM(PMW);
 
   if (PrintAsm) {
-    Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
-        TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-    if (!MCStreamerOrErr)
-      return MCStreamerOrErr.takeError();
-    std::unique_ptr<AsmPrinter> Printer(
-        TM.getTarget().createAsmPrinter(TM, std::move(*MCStreamerOrErr)));
-    if (!Printer)
-      return createStringError("failed to create AsmPrinter");
-    MAM.registerPass([&] { return AsmPrinterAnalysis(std::move(Printer)); });
+    if (auto Err = registerAsmPrinter(MAM, Out, DwoOut, FileType, Ctx))
+      return Err;
     addAsmPrinterBegin(PMW);
   }
 
@@ -300,7 +319,7 @@ Error CodeGenPassBuilder::buildPipeline(
   else if (PrintMIR)
     addModulePass(PrintMIRPass(Out), PMW, /*Force=*/true);
 
-  return verifyStartStop(*StartStopInfo);
+  return Error::success();
 }
 
 void CodeGenPassBuilder::setStartStopPasses(
