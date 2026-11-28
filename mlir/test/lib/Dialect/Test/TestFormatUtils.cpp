@@ -289,7 +289,8 @@ void test::printSwitchCases(OpAsmPrinter &p, Operation *op,
   for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
     p.printNewline();
     p << "case " << value << ' ';
-    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+    p.printRegion(*region, /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/true, /*printEmptyBlock=*/true);
   }
 }
 
