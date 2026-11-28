@@ -7141,8 +7141,7 @@ public:
         new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(), Inits,
                                Inits.back()->getEndLoc(), /*isExplicit=*/false);
     llvm::APInt ArySize(64, Inits.size());
-    NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr,
-                                              ArraySizeModifier::Normal, 0));
+    NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr));
     return NewInit;
   }
 };

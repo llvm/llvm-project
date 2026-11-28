@@ -2356,8 +2356,7 @@ TypeSystemClang::CreateArrayType(const CompilerType &element_type,
   // a flexible array member).
   if (!element_count)
     return GetType(
-        ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
-                                   clang::ArraySizeModifier::Normal, 0));
+        ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type)));
 
   if (is_vector)
     return GetType(ast.getExtVectorType(ClangUtil::GetQualType(element_type),
@@ -2365,8 +2364,7 @@ TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 
   llvm::APInt ap_element_count(64, *element_count);
   return GetType(ast.getConstantArrayType(ClangUtil::GetQualType(element_type),
-                                          ap_element_count, nullptr,
-                                          clang::ArraySizeModifier::Normal, 0));
+                                          ap_element_count, nullptr));
 }
 
 CompilerType TypeSystemClang::CreateStructForIdentifier(
@@ -4390,11 +4388,9 @@ CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
     clang::ASTContext &ast_ctx = getASTContext();
     if (size != 0)
       return GetType(ast_ctx.getConstantArrayType(
-          qual_type, llvm::APInt(64, size), nullptr,
-          clang::ArraySizeModifier::Normal, 0));
+          qual_type, llvm::APInt(64, size), nullptr));
     else
-      return GetType(ast_ctx.getIncompleteArrayType(
-          qual_type, clang::ArraySizeModifier::Normal, 0));
+      return GetType(ast_ctx.getIncompleteArrayType(qual_type));
   }
 
   return CompilerType();

@@ -7625,7 +7625,7 @@ QualType CodeGenModule::getObjCFastEnumerationStateType() {
         Context.UnsignedLongTy, Context.getPointerType(Context.getObjCIdType()),
         Context.getPointerType(Context.UnsignedLongTy),
         Context.getConstantArrayType(Context.UnsignedLongTy, llvm::APInt(32, 5),
-                                     nullptr, ArraySizeModifier::Normal, 0)};
+                                     nullptr)};
 
     for (size_t i = 0; i < 4; ++i) {
       FieldDecl *Field = FieldDecl::Create(Context,

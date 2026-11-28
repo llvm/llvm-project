@@ -22826,9 +22826,7 @@ static bool actOnOMPReductionKindClause(
       // If we don't have a single element, we must emit a constant array type.
       if (ConstantLengthOASE && !SingleElement) {
         for (llvm::APSInt &Size : ArraySizes)
-          PrivateTy = Context.getConstantArrayType(PrivateTy, Size, nullptr,
-                                                   ArraySizeModifier::Normal,
-                                                   /*IndexTypeQuals=*/0);
+          PrivateTy = Context.getConstantArrayType(PrivateTy, Size, nullptr);
       }
     }
 
@@ -22853,8 +22851,7 @@ static bool actOnOMPReductionKindClause(
       PrivateTy = Context.getVariableArrayType(
           Type,
           new (Context)
-              OpaqueValueExpr(ELoc, Context.getSizeType(), VK_PRValue),
-          ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+              OpaqueValueExpr(ELoc, Context.getSizeType(), VK_PRValue));
     } else if (!ASE && !OASE &&
                Context.getAsArrayType(D->getType().getNonReferenceType())) {
       PrivateTy = D->getType().getNonReferenceType();
@@ -23120,9 +23117,7 @@ static bool actOnOMPReductionKindClause(
         // Build temp array for prefix sum.
         auto *Dim = new (S.Context)
             OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_PRValue);
-        QualType ArrayTy = S.Context.getVariableArrayType(
-            PrivateTy, Dim, ArraySizeModifier::Normal,
-            /*IndexTypeQuals=*/0);
+        QualType ArrayTy = S.Context.getVariableArrayType(PrivateTy, Dim);
         VarDecl *TempArrayVD =
             buildVarDecl(S, ELoc, ArrayTy, D->getName(),
                          D->hasAttrs() ? &D->getAttrs() : nullptr);

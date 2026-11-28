@@ -2417,8 +2417,7 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
   if (DidIt.isValid()) {
     llvm::APInt ArraySize(/*unsigned int numBits=*/32, CopyprivateVars.size());
     QualType CopyprivateArrayTy = C.getConstantArrayType(
-        C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
-        /*IndexTypeQuals=*/0);
+        C.VoidPtrTy, ArraySize, nullptr);
     // Create a list of all private variables for copyprivate.
     Address CopyprivateList = CGF.CreateMemTempWithoutCast(
         CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
@@ -4220,8 +4219,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                     RValue::get(NumOfElements));
       KmpTaskAffinityInfoArrayTy = C.getVariableArrayType(
-          KmpTaskAffinityInfoTy, OVE, ArraySizeModifier::Normal,
-          /*IndexTypeQuals=*/0);
+          KmpTaskAffinityInfoTy, OVE);
       // Properly emit variable-sized array.
       auto *PD = ImplicitParamDecl::Create(C, KmpTaskAffinityInfoArrayTy,
                                            ImplicitParamKind::Other);
@@ -4232,8 +4230,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     } else {
       KmpTaskAffinityInfoArrayTy = C.getConstantArrayType(
           KmpTaskAffinityInfoTy,
-          llvm::APInt(C.getTypeSize(C.getSizeType()), NumAffinities), nullptr,
-          ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+          llvm::APInt(C.getTypeSize(C.getSizeType()), NumAffinities), nullptr);
       AffinitiesArray = CGF.CreateMemTempWithoutCast(KmpTaskAffinityInfoArrayTy,
                                                      ".affs.arr.addr");
       AffinitiesArray = CGF.Builder.CreateConstArrayGEP(AffinitiesArray, 0);
@@ -4679,9 +4676,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
         VK_PRValue);
     CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                   RValue::get(NumOfElements));
-    KmpDependInfoArrayTy =
-        C.getVariableArrayType(KmpDependInfoTy, OVE, ArraySizeModifier::Normal,
-                               /*IndexTypeQuals=*/0);
+    KmpDependInfoArrayTy = C.getVariableArrayType(KmpDependInfoTy, OVE);
     // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
     // Properly emit variable-sized array.
     auto *PD = ImplicitParamDecl::Create(C, KmpDependInfoArrayTy,
@@ -4692,8 +4687,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
                                               /*isSigned=*/false);
   } else {
     KmpDependInfoArrayTy = C.getConstantArrayType(
-        KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies), nullptr,
-        ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+        KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies), nullptr);
     DependenciesArray =
         CGF.CreateMemTempWithoutCast(KmpDependInfoArrayTy, ".dep.arr.addr");
     DependenciesArray = CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0);
@@ -4768,7 +4762,7 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
   } else {
     QualType KmpDependInfoArrayTy = C.getConstantArrayType(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies + 1),
-        nullptr, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+        nullptr);
     CharUnits Sz = C.getTypeSizeInChars(KmpDependInfoArrayTy);
     Size = CGM.getSize(Sz.alignTo(Align));
     NumDepsVal = llvm::ConstantInt::get(CGF.IntPtrTy, NumDependencies);
@@ -5653,8 +5647,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
   QualType ReductionArrayTy = C.getConstantArrayType(
-      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
-      /*IndexTypeQuals=*/0);
+      C.VoidPtrTy, ArraySize, nullptr);
   RawAddress ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   const auto *IPriv = Privates.begin();
@@ -6149,9 +6142,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   CanQualType RDType = C.getCanonicalTagType(RD);
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
-  QualType ArrayRDType =
-      C.getConstantArrayType(RDType, ArraySize, nullptr,
-                             ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+  QualType ArrayRDType = C.getConstantArrayType(RDType, ArraySize, nullptr);
   // kmp_task_red_input_t .rd_input.[Size];
   RawAddress TaskRedInput = CGF.CreateMemTemp(ArrayRDType, ".rd_input.");
   ReductionCodeGen RCG(Data.ReductionVars, Data.ReductionOrigs,
@@ -12725,9 +12716,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     RD = KmpDimTy->castAsRecordDecl();
   }
   llvm::APInt Size(/*numBits=*/32, NumIterations.size());
-  QualType ArrayTy = C.getConstantArrayType(KmpDimTy, Size, nullptr,
-                                            ArraySizeModifier::Normal, 0);
-
+  QualType ArrayTy = C.getConstantArrayType(KmpDimTy, Size, nullptr);
   Address DimsAddr = CGF.CreateMemTemp(ArrayTy, "dims");
   CGF.EmitNullInitialization(DimsAddr, ArrayTy);
   enum { LowerFD = 0, UpperFD, StrideFD };
@@ -12778,7 +12767,7 @@ static void EmitDoacrossOrdered(CodeGenFunction &CGF, CodeGenModule &CGM,
       CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   llvm::APInt Size(/*numBits=*/32, C->getNumLoops());
   QualType ArrayTy = CGM.getContext().getConstantArrayType(
-      Int64Ty, Size, nullptr, ArraySizeModifier::Normal, 0);
+      Int64Ty, Size, nullptr);
   Address CntAddr = CGF.CreateMemTemp(ArrayTy, ".cnt.addr");
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I) {
     const Expr *CounterVal = C->getLoopData(I);

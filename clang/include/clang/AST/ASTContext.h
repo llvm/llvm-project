@@ -1819,8 +1819,8 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArraySizeModifier ASM,
-                                unsigned IndexTypeQuals) const;
+                              ArraySizeModifier ASM = ArraySizeModifier::Normal,
+                                unsigned IndexTypeQuals = 0) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
   /// array of the specified element type.
@@ -1828,19 +1828,21 @@ public:
   /// FIXME: We will need these to be uniqued, or at least comparable, at some
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
-                                      ArraySizeModifier ASM,
-                                      unsigned IndexTypeQuals) const;
+                              ArraySizeModifier ASM = ArraySizeModifier::Normal,
+                                      unsigned IndexTypeQuals = 0) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
-  QualType getIncompleteArrayType(QualType EltTy, ArraySizeModifier ASM,
-                                  unsigned IndexTypeQuals) const;
+  QualType getIncompleteArrayType(QualType EltTy,
+                              ArraySizeModifier ASM = ArraySizeModifier::Normal,
+                                  unsigned IndexTypeQuals = 0) const;
 
   /// Return the unique reference to the type for a constant array of
   /// the specified element type.
   QualType getConstantArrayType(QualType EltTy, const llvm::APInt &ArySize,
-                                const Expr *SizeExpr, ArraySizeModifier ASM,
-                                unsigned IndexTypeQuals) const;
+                                const Expr *SizeExpr,
+                              ArraySizeModifier ASM = ArraySizeModifier::Normal,
+                                unsigned IndexTypeQuals = 0) const;
 
   /// Return a type for a constant array for a string literal of the
   /// specified element type and length.

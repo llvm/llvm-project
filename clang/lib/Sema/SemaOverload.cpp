@@ -5951,8 +5951,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
           return Result;
         }
         llvm::APInt Size(S.Context.getTypeSize(S.Context.getSizeType()), e);
-        ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr,
-                                                ArraySizeModifier::Normal, 0);
+        ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr);
       }
     }
 

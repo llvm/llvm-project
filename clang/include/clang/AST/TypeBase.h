@@ -3825,8 +3825,9 @@ private:
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  ArrayType(TypeClass tc, QualType et, QualType can, ArraySizeModifier sm,
-            unsigned tq, const Expr *sz = nullptr);
+  ArrayType(TypeClass tc, QualType et, QualType can,
+            ArraySizeModifier sm = ArraySizeModifier::Normal, unsigned tq = 0,
+            const Expr *sz = nullptr);
 
 public:
   QualType getElementType() const { return ElementType; }
@@ -3871,7 +3872,8 @@ class ConstantArrayType : public ArrayType {
   };
 
   ConstantArrayType(QualType Et, QualType Can, uint64_t Width, uint64_t Sz,
-                    ArraySizeModifier SM, unsigned TQ)
+                    ArraySizeModifier SM = ArraySizeModifier::Normal,
+                    unsigned TQ = 0)
       : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), Size(Sz) {
     ConstantArrayTypeBits.HasExternalSize = false;
     ConstantArrayTypeBits.SizeWidth = Width / 8;
@@ -3881,7 +3883,8 @@ class ConstantArrayType : public ArrayType {
   }
 
   ConstantArrayType(QualType Et, QualType Can, ExternalSize *SzPtr,
-                    ArraySizeModifier SM, unsigned TQ)
+                    ArraySizeModifier SM = ArraySizeModifier::Normal,
+                    unsigned TQ = 0)
       : ArrayType(ConstantArray, Et, Can, SM, TQ, SzPtr->SizeExpr),
         SizePtr(SzPtr) {
     ConstantArrayTypeBits.HasExternalSize = true;
@@ -3893,8 +3896,9 @@ class ConstantArrayType : public ArrayType {
 
   static ConstantArrayType *Create(const ASTContext &Ctx, QualType ET,
                                    QualType Can, const llvm::APInt &Sz,
-                                   const Expr *SzExpr, ArraySizeModifier SzMod,
-                                   unsigned Qual);
+                                   const Expr *SzExpr,
+                            ArraySizeModifier SzMod = ArraySizeModifier::Normal,
+                                   unsigned Qual = 0);
 
 protected:
   ConstantArrayType(TypeClass Tc, const ConstantArrayType *ATy, QualType Can)
@@ -3977,7 +3981,8 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
                       QualType ET, uint64_t ArraySize, const Expr *SizeExpr,
-                      ArraySizeModifier SizeMod, unsigned TypeQuals);
+                      ArraySizeModifier SizeMod = ArraySizeModifier::Normal,
+                      unsigned TypeQuals = 0);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantArray ||
@@ -4008,7 +4013,8 @@ class IncompleteArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 
   IncompleteArrayType(QualType et, QualType can,
-                      ArraySizeModifier sm, unsigned tq)
+                      ArraySizeModifier sm = ArraySizeModifier::Normal,
+                      unsigned tq = 0)
       : ArrayType(IncompleteArray, et, can, sm, tq) {}
 
 public:
@@ -4027,7 +4033,8 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
-                      ArraySizeModifier SizeMod, unsigned TypeQuals) {
+                      ArraySizeModifier SizeMod = ArraySizeModifier::Normal,
+                      unsigned TypeQuals = 0) {
     ID.AddPointer(ET.getAsOpaquePtr());
     ID.AddInteger(llvm::to_underlying(SizeMod));
     ID.AddInteger(TypeQuals);
@@ -4068,8 +4075,9 @@ class VariableArrayType : public ArrayType {
   /// a function block.
   Stmt *SizeExpr;
 
-  VariableArrayType(QualType et, QualType can, Expr *e, ArraySizeModifier sm,
-                    unsigned tq)
+  VariableArrayType(QualType et, QualType can, Expr *e,
+                    ArraySizeModifier sm = ArraySizeModifier::Normal,
+                    unsigned tq = 0)
       : ArrayType(VariableArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 public:
@@ -4117,7 +4125,8 @@ class DependentSizedArrayType : public ArrayType {
   Stmt *SizeExpr;
 
   DependentSizedArrayType(QualType et, QualType can, Expr *e,
-                          ArraySizeModifier sm, unsigned tq);
+                          ArraySizeModifier sm = ArraySizeModifier::Normal,
+                          unsigned tq = 0);
 
 public:
   friend class StmtIteratorBase;
