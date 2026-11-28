@@ -134,6 +134,9 @@ namespace {
       return is_contained(It->second, MBB);
     }
 
+    // Register units clobbered by each regmask seen in the current function.
+    DenseMap<const uint32_t *, BitVector> RegMaskClobbers;
+
     // Track 'estimated' register pressure.
     SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
@@ -174,6 +177,7 @@ namespace {
       BackTrace.clear();
       CSEMap.clear();
       ExitBlockMap.clear();
+      RegMaskClobbers.clear();
     }
 
   private:
@@ -190,6 +194,8 @@ namespace {
     void HoistRegionPostRA(MachineLoop *CurLoop);
 
     void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop);
+
+    void applyRegMaskClobbers(BitVector &RUClobbers, const uint32_t *Mask);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
                    SmallDenseSet<int> &StoredFIs,
@@ -485,6 +491,19 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
   RUs |= RUsFromRegsNotInMask;
 }
 
+/// Add the register units clobbered by \p Mask to \p RUClobbers. The units are
+/// computed once per mask and function, since walking every register for each
+/// call in a loop is expensive on targets with many registers.
+void MachineLICMImpl::applyRegMaskClobbers(BitVector &RUClobbers,
+                                           const uint32_t *Mask) {
+  auto [It, Inserted] = RegMaskClobbers.try_emplace(Mask);
+  if (Inserted) {
+    It->second.resize(TRI->getNumRegUnits());
+    applyBitsNotInRegMaskToRegUnitsMask(*TRI, It->second, Mask);
+  }
+  RUClobbers |= It->second;
+}
+
 /// Examine the instruction for potential LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
@@ -510,7 +529,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     // We can't hoist an instruction defining a physreg that is clobbered in
     // the loop.
     if (MO.isRegMask()) {
-      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, MO.getRegMask());
+      applyRegMaskClobbers(RUClobbers, MO.getRegMask());
       continue;
     }
 
@@ -603,7 +622,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
 
     // Funclet entry blocks will clobber all registers
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
-      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
+      applyRegMaskClobbers(RUClobbers, Mask);
 
     // EH landing pads clobber exception pointer/selector registers.
     if (BB->isEHPad()) {
