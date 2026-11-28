@@ -13,48 +13,48 @@ define void @unj(i32 %I, i32 %argj, ptr noalias nocapture %A, ptr noalias nocapt
 ; CHECK:       for.outer:
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC:%.*]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[ADD:%.*]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[J_1:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC_1:%.*]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[ADD_1:%.*]], [[FOR_INNER]] ]
 ; CHECK-NEXT:    [[J_2:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC_2:%.*]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi double [ 0.000000e+00, [[FOR_OUTER]] ], [ [[ADD:%.*]], [[FOR_INNER]] ]
 ; CHECK-NEXT:    [[SUM_2:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[ADD_2:%.*]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi double [ 0.000000e+00, [[FOR_OUTER]] ], [ [[ADD_1:%.*]], [[FOR_INNER]] ]
 ; CHECK-NEXT:    [[J_3:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC_3:%.*]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[SUM_4:%.*]] = phi double [ 0.000000e+00, [[FOR_OUTER]] ], [ [[ADD_4:%.*]], [[FOR_INNER]] ]
 ; CHECK-NEXT:    [[SUM_3:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[ADD_3:%.*]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[J]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[SUM]], 10
-; CHECK-NEXT:    [[ADD]] = sub i32 [[SUB]], [[TMP0]]
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[J]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[J_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[SUB_1:%.*]] = add i32 [[SUM_1]], 10
-; CHECK-NEXT:    [[ADD_1]] = sub i32 [[SUB_1]], [[TMP1]]
-; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[J_1]], 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[J_2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[SUB_2:%.*]] = add i32 [[SUM_2]], 10
-; CHECK-NEXT:    [[ADD_2]] = sub i32 [[SUB_2]], [[TMP2]]
+; CHECK-NEXT:    [[SUM_5:%.*]] = phi double [ 0.000000e+00, [[FOR_OUTER]] ], [ [[ADD_5:%.*]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i32 [[J_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[SUB:%.*]] = fadd double [[SUM]], 1.000000e+01
+; CHECK-NEXT:    [[ADD]] = fsub double [[SUB]], [[TMP0]]
 ; CHECK-NEXT:    [[INC_2]] = add nuw i32 [[J_2]], 1
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[J_3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[SUB_3:%.*]] = add i32 [[SUM_3]], 10
-; CHECK-NEXT:    [[ADD_3]] = sub i32 [[SUB_3]], [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds double, ptr [[B]], i32 [[SUM_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
+; CHECK-NEXT:    [[SUB_1:%.*]] = fadd double [[SUM_1]], 1.000000e+01
+; CHECK-NEXT:    [[ADD_1]] = fsub double [[SUB_1]], [[TMP1]]
+; CHECK-NEXT:    [[ADD_2]] = add nuw i32 [[SUM_2]], 1
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds double, ptr [[B]], i32 [[J_3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX_2]], align 8
+; CHECK-NEXT:    [[SUB_2:%.*]] = fadd double [[SUM_4]], 1.000000e+01
+; CHECK-NEXT:    [[ADD_4]] = fsub double [[SUB_2]], [[TMP2]]
 ; CHECK-NEXT:    [[INC_3]] = add nuw i32 [[J_3]], 1
-; CHECK-NEXT:    [[EXITCOND_3:%.*]] = icmp eq i32 [[INC_3]], [[ARGJ]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds double, ptr [[B]], i32 [[SUM_3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[ARRAYIDX_3]], align 8
+; CHECK-NEXT:    [[SUB_3:%.*]] = fadd double [[SUM_5]], 1.000000e+01
+; CHECK-NEXT:    [[ADD_5]] = fsub double [[SUB_3]], [[TMP3]]
+; CHECK-NEXT:    [[ADD_3]] = add nuw i32 [[SUM_3]], 1
+; CHECK-NEXT:    [[EXITCOND_3:%.*]] = icmp eq i32 [[ADD_3]], [[ARGJ]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_3]], label [[FOR_LATCH:%.*]], label [[FOR_INNER]]
 ; CHECK:       for.latch:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[ADD_LCSSA_1:%.*]] = phi i32 [ [[ADD_1]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[ADD_LCSSA_2:%.*]] = phi i32 [ [[ADD_2]], [[FOR_INNER]] ]
-; CHECK-NEXT:    [[ADD_LCSSA_3:%.*]] = phi i32 [ [[ADD_3]], [[FOR_INNER]] ]
-; CHECK-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
-; CHECK-NEXT:    store i32 [[ADD_LCSSA_1]], ptr [[ARRAYIDX6_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
-; CHECK-NEXT:    store i32 [[ADD_LCSSA_2]], ptr [[ARRAYIDX6_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 3
-; CHECK-NEXT:    store i32 [[ADD_LCSSA_3]], ptr [[ARRAYIDX6_3]], align 4
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[ADD_LCSSA_1:%.*]] = phi double [ [[ADD_1]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[ADD_LCSSA_2:%.*]] = phi double [ [[ADD_4]], [[FOR_INNER]] ]
+; CHECK-NEXT:    [[ADD_LCSSA_3:%.*]] = phi double [ [[ADD_5]], [[FOR_INNER]] ]
+; CHECK-NEXT:    store double [[ADD_LCSSA]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX6_1:%.*]] = getelementptr inbounds double, ptr [[A]], i32 1
+; CHECK-NEXT:    store double [[ADD_LCSSA_1]], ptr [[ARRAYIDX6_1]], align 8
+; CHECK-NEXT:    [[ARRAYIDX6_2:%.*]] = getelementptr inbounds double, ptr [[A]], i32 2
+; CHECK-NEXT:    store double [[ADD_LCSSA_2]], ptr [[ARRAYIDX6_2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX6_3:%.*]] = getelementptr inbounds double, ptr [[A]], i32 3
+; CHECK-NEXT:    store double [[ADD_LCSSA_3]], ptr [[ARRAYIDX6_3]], align 8
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -74,18 +74,18 @@ for.outer:
 
 for.inner:
   %j = phi i32 [ 0, %for.outer ], [ %inc, %for.inner ]
-  %sum = phi i32 [ 0, %for.outer ], [ %add, %for.inner ]
-  %arrayidx = getelementptr inbounds i32, ptr %B, i32 %j
-  %0 = load i32, ptr %arrayidx, align 4
-  %sub = add i32 %sum, 10
-  %add = sub i32 %sub, %0
+  %sum = phi double [ 0.000000e+00, %for.outer ], [ %add, %for.inner ]
+  %arrayidx = getelementptr inbounds double, ptr %B, i32 %j
+  %0 = load double, ptr %arrayidx, align 8
+  %sub = fadd double %sum, 1.000000e+01
+  %add = fsub double %sub, %0
   %inc = add nuw i32 %j, 1
   %exitcond = icmp eq i32 %inc, %argj
   br i1 %exitcond, label %for.latch, label %for.inner
 
 for.latch:
-  %arrayidx6 = getelementptr inbounds i32, ptr %A, i32 %i
-  store i32 %add, ptr %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds double, ptr %A, i32 %i
+  store double %add, ptr %arrayidx6, align 8
   %add8 = add nuw nsw i32 %i, 1
   %exitcond23 = icmp eq i32 %add8, 4
   br i1 %exitcond23, label %for.end, label %for.outer
