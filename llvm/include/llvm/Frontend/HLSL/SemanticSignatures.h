@@ -81,6 +81,12 @@ enum class SPIRVInterfaceDecoration : uint32_t {
   Location = 30,
 };
 
+// SPIR-V BuiltIn enumerants used as the operand of a BuiltIn decoration. The
+// values match the SPIR-V specification.
+enum class SPIRVBuiltIn : uint32_t {
+  ViewportIndex = 10,
+};
+
 // SPIR-V Decoration enumerants that control how a fragment shader input is
 // interpolated. The values match the SPIR-V specification.
 enum class SPIRVInterpolationMode : uint32_t {
