@@ -621,20 +621,16 @@ define <2 x i8> @sv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v1.4h, #108
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    shl v2.2s, v0.2s, #24
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    movi v1.8b, #147
 ; CHECK-GI-NEXT:    movi v3.2s, #7
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    smov w8, v1.h[0]
-; CHECK-GI-NEXT:    smov w9, v1.h[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    mul v1.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    smull v1.8h, v2.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    sshr v1.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    uaddw v1.4s, v0.4s, v1.4h
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    mov v1.b[1], w8
@@ -675,19 +671,16 @@ define <2 x i8> @sv2i8_100(<2 x i8> %d, <2 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v1.4h, #41
-; CHECK-GI-NEXT:    shl v2.2s, v0.2s, #24
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    movi v1.8b, #41
 ; CHECK-GI-NEXT:    movi v3.2s, #100
-; CHECK-GI-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    smov w8, v1.h[0]
-; CHECK-GI-NEXT:    smov w9, v1.h[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    mul v1.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    smull v1.8h, v2.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    sshr v1.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #4
 ; CHECK-GI-NEXT:    ushr v2.8b, v1.8b, #7
@@ -701,6 +694,7 @@ define <2 x i8> @sv2i8_100(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v2.s[1], w11
 ; CHECK-GI-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v3.2s
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem <2 x i8> %d, <i8 100, i8 100>
@@ -830,11 +824,9 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-LABEL: sv4i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v1.8b, #147
-; CHECK-GI-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-GI-NEXT:    uzp1 v2.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    movi v3.4h, #7
-; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v2.4h, v1.4h
+; CHECK-GI-NEXT:    smull v1.8h, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    fmov d2, d0
 ; CHECK-GI-NEXT:    ssra v2.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v2.8b, v0.8b
@@ -866,11 +858,9 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-LABEL: sv4i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v1.8b, #41
-; CHECK-GI-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-GI-NEXT:    uzp1 v2.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    movi v3.4h, #100
-; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v2.4h, v1.4h
+; CHECK-GI-NEXT:    smull v1.8h, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #4
@@ -967,13 +957,15 @@ define <2 x i8> @uv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv2i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-NEXT:    movi v2.2s, #37
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    movi v1.8b, #37
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    umull v1.8h, v2.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    ushr v1.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    usubw v2.4s, v0.4s, v1.4h
 ; CHECK-GI-NEXT:    mov w8, v2.s[1]
 ; CHECK-GI-NEXT:    mov v2.b[1], w8
@@ -1015,13 +1007,16 @@ define <2 x i8> @uv2i8_100(<2 x i8> %d, <2 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv2i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-NEXT:    movi v2.2s, #41
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    movi v1.8b, #41
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    umull v1.8h, v2.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    ushr v1.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    movi v2.2s, #100
-; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #4
 ; CHECK-GI-NEXT:    umov w8, v1.b[0]
@@ -1029,6 +1024,7 @@ define <2 x i8> @uv2i8_100(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    mov v1.s[1], w9
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem <2 x i8> %d, <i8 100, i8 100>
@@ -1059,18 +1055,18 @@ define <3 x i8> @uv3i8_7(<3 x i8> %d, <3 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    movi v2.4h, #37
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    and w8, w2, #0xff
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    movi v2.8b, #37
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v0.h[1], w1
-; CHECK-GI-NEXT:    mov v1.h[2], w8
+; CHECK-GI-NEXT:    mov v1.b[1], w1
 ; CHECK-GI-NEXT:    mov v0.h[2], w2
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v2.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[2]
+; CHECK-GI-NEXT:    ushr v1.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    ushr v2.8b, v2.8b, #1
@@ -1122,31 +1118,31 @@ define <3 x i8> @uv3i8_100(<3 x i8> %d, <3 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    movi v1.4h, #41
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    and w8, w2, #0xff
-; CHECK-GI-NEXT:    mov v0.h[1], w9
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ushr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ushr v0.8b, v0.8b, #4
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w1
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    movi v2.8b, #41
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v2.8b
+; CHECK-GI-NEXT:    mov v2.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[2]
+; CHECK-GI-NEXT:    ushr v1.4h, v2.4h, #8
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #4
+; CHECK-GI-NEXT:    mov v0.h[2], w2
+; CHECK-GI-NEXT:    mov b2, v1.b[1]
+; CHECK-GI-NEXT:    mov b3, v1.b[2]
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    movi v2.4h, #100
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mov v1.h[2], w2
-; CHECK-GI-NEXT:    mls v1.4h, v0.4h, v2.4h
-; CHECK-GI-NEXT:    umov w0, v1.h[0]
-; CHECK-GI-NEXT:    umov w1, v1.h[1]
-; CHECK-GI-NEXT:    umov w2, v1.h[2]
+; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s3
+; CHECK-GI-NEXT:    mov v1.h[2], w8
+; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-NEXT:    umov w2, v0.h[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem <3 x i8> %d, <i8 100, i8 100, i8 100>
@@ -1167,11 +1163,9 @@ define <4 x i8> @uv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv4i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    movi v2.8b, #37
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    movi v1.8b, #37
+; CHECK-GI-NEXT:    uzp1 v2.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    umull v1.8h, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
@@ -1202,11 +1196,9 @@ define <4 x i8> @uv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ;
 ; CHECK-GI-LABEL: uv4i8_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    movi v2.8b, #41
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    movi v1.8b, #41
+; CHECK-GI-NEXT:    uzp1 v2.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    umull v1.8h, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    movi v2.4h, #100
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
@@ -1328,13 +1320,11 @@ define <2 x i16> @sv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i16_7:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uzp1 v1.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    adrp x8, .LCPI40_0
-; CHECK-GI-NEXT:    shl v1.2s, v0.2s, #16
 ; CHECK-GI-NEXT:    movi v3.2s, #7
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI40_0]
-; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
-; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #1
@@ -1365,13 +1355,11 @@ define <2 x i16> @sv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i16_100:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uzp1 v1.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
-; CHECK-GI-NEXT:    shl v1.2s, v0.2s, #16
 ; CHECK-GI-NEXT:    movi v3.2s, #100
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
-; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
-; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #3
@@ -1639,12 +1627,10 @@ define <2 x i16> @uv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ;
 ; CHECK-GI-LABEL: uv2i16_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    uzp1 v1.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    adrp x8, .LCPI48_0
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI48_0]
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ushr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
@@ -1680,10 +1666,8 @@ define <2 x i16> @uv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    adrp x8, .LCPI49_0
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI49_0]
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #2
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    movi v2.2s, #100
 ; CHECK-GI-NEXT:    ushr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
@@ -1725,23 +1709,15 @@ define <3 x i16> @uv3i16_7(<3 x i16> %d, <3 x i16> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i16_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    umov w8, v0.h[0]
-; CHECK-GI-NEXT:    umov w9, v0.h[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    umov w8, v0.h[2]
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    mov v1.s[2], w8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI50_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI50_0]
-; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI50_0]
+; CHECK-GI-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    usra v1.4h, v2.4h, #1
 ; CHECK-GI-NEXT:    movi v2.4h, #7
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #2
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem <3 x i16> %d, <i16 7, i16 7, i16 7>
@@ -1775,16 +1751,10 @@ define <3 x i16> @uv3i16_100(<3 x i16> %d, <3 x i16> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i16_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushr v1.4h, v0.4h, #2
-; CHECK-GI-NEXT:    umov w8, v1.h[0]
-; CHECK-GI-NEXT:    umov w9, v1.h[1]
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    umov w8, v1.h[2]
-; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    mov v2.s[2], w8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI51_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI51_0]
-; CHECK-GI-NEXT:    mul v1.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    ushr v1.4h, v0.4h, #2
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI51_0]
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    movi v2.4h, #100
 ; CHECK-GI-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #1
@@ -2001,27 +1971,26 @@ define <3 x i32> @sv3i32_7(<3 x i32> %d, <3 x i32> %e) {
 ;
 ; CHECK-GI-LABEL: sv3i32_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    sdiv w10, w9, w8
-; CHECK-GI-NEXT:    fmov w11, s1
-; CHECK-GI-NEXT:    fmov w13, s0
-; CHECK-GI-NEXT:    sdiv w12, w11, w8
-; CHECK-GI-NEXT:    lsl w14, w10, #3
-; CHECK-GI-NEXT:    sub w10, w14, w10
-; CHECK-GI-NEXT:    sub w9, w9, w10
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    sdiv w8, w13, w8
-; CHECK-GI-NEXT:    lsl w15, w12, #3
-; CHECK-GI-NEXT:    sub w10, w15, w12
-; CHECK-GI-NEXT:    sub w10, w11, w10
-; CHECK-GI-NEXT:    mov v0.s[1], w10
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w8, w13, w8
-; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI58_0
+; CHECK-GI-NEXT:    mov w9, #9363 // =0x2493
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI58_0]
+; CHECK-GI-NEXT:    mov w8, v0.s[2]
+; CHECK-GI-NEXT:    movk w9, #37449, lsl #16
+; CHECK-GI-NEXT:    smull v1.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smull x8, w8, w9
+; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #32
+; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov s1, w10
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    movi v2.4s, #7
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    add v1.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #2
+; CHECK-GI-NEXT:    usra v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem <3 x i32> %d, <i32 7, i32 7, i32 7>
@@ -2045,21 +2014,25 @@ define <3 x i32> @sv3i32_100(<3 x i32> %d, <3 x i32> %e) {
 ;
 ; CHECK-GI-LABEL: sv3i32_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    sdiv w10, w9, w8
-; CHECK-GI-NEXT:    fmov w11, s1
-; CHECK-GI-NEXT:    fmov w13, s0
-; CHECK-GI-NEXT:    sdiv w12, w11, w8
-; CHECK-GI-NEXT:    msub w9, w10, w8, w9
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    sdiv w14, w13, w8
-; CHECK-GI-NEXT:    msub w10, w12, w8, w11
-; CHECK-GI-NEXT:    mov v0.s[1], w10
-; CHECK-GI-NEXT:    msub w8, w14, w8, w13
-; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI59_0
+; CHECK-GI-NEXT:    mov w9, #34079 // =0x851f
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI59_0]
+; CHECK-GI-NEXT:    mov w8, v0.s[2]
+; CHECK-GI-NEXT:    movk w9, #20971, lsl #16
+; CHECK-GI-NEXT:    smull v1.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smull x8, w8, w9
+; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #32
+; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov s1, w10
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    movi v2.4s, #100
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #5
+; CHECK-GI-NEXT:    usra v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem <3 x i32> %d, <i32 100, i32 100, i32 100>
@@ -2212,17 +2185,15 @@ define <3 x i32> @uv3i32_7(<3 x i32> %d, <3 x i32> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i32_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI64_0
 ; CHECK-GI-NEXT:    mov w9, #18725 // =0x4925
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI64_0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI64_0]
 ; CHECK-GI-NEXT:    mov w8, v0.s[2]
 ; CHECK-GI-NEXT:    movk w9, #9362, lsl #16
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    umull x8, w8, w9
-; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    ushr v1.2d, v1.2d, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    fmov s1, w10
@@ -2256,17 +2227,15 @@ define <3 x i32> @uv3i32_100(<3 x i32> %d, <3 x i32> %e) {
 ;
 ; CHECK-GI-LABEL: uv3i32_100:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI65_0
 ; CHECK-GI-NEXT:    mov w9, #34079 // =0x851f
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI65_0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI65_0]
 ; CHECK-GI-NEXT:    mov w8, v0.s[2]
 ; CHECK-GI-NEXT:    movk w9, #20971, lsl #16
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    umull x8, w8, w9
-; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    ushr v1.2d, v1.2d, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    fmov s1, w10
@@ -2382,18 +2351,12 @@ define <2 x i64> @sv2i64_7(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    asr x9, x10, #1
 ; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-GI-NEXT:    asr x8, x8, #1
-; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    lsl x10, x9, #3
 ; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    adrp x8, .LCPI68_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI68_0]
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x9, v2.d[1]
-; CHECK-GI-NEXT:    fmov x10, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d1, x10
+; CHECK-GI-NEXT:    sub x9, x10, x9
+; CHECK-GI-NEXT:    lsl x11, x8, #3
+; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    sub x8, x11, x8
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
@@ -2438,22 +2401,15 @@ define <2 x i64> @sv2i64_100(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    fmov x11, d1
 ; CHECK-GI-NEXT:    smulh x8, x11, x8
 ; CHECK-GI-NEXT:    add x9, x10, x9
+; CHECK-GI-NEXT:    mov w10, #100 // =0x64
 ; CHECK-GI-NEXT:    asr x9, x9, #6
 ; CHECK-GI-NEXT:    add x8, x8, x11
 ; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-GI-NEXT:    asr x8, x8, #6
-; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    mul x9, x9, x10
 ; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    adrp x8, .LCPI69_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI69_0]
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x9, v2.d[1]
-; CHECK-GI-NEXT:    fmov x10, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d1, x10
+; CHECK-GI-NEXT:    mul x8, x8, x10
+; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
@@ -2499,19 +2455,18 @@ define <2 x i64> @uv2i64_7(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    umulh x8, x9, x8
 ; CHECK-GI-NEXT:    fmov d1, x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    adrp x8, .LCPI70_0
 ; CHECK-GI-NEXT:    sub v2.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    usra v1.2d, v2.2d, #1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI70_0]
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x9, v2.d[1]
 ; CHECK-GI-NEXT:    ushr v1.2d, v1.2d, #2
-; CHECK-GI-NEXT:    fmov x10, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d1, x10
-; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    lsl x9, x8, #3
+; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    sub x8, x9, x8
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    lsl x11, x10, #3
+; CHECK-GI-NEXT:    sub x9, x11, x10
+; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2552,16 +2507,13 @@ define <2 x i64> @uv2i64_100(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    mov x9, v1.d[1]
 ; CHECK-GI-NEXT:    umulh x10, x10, x8
 ; CHECK-GI-NEXT:    umulh x8, x9, x8
+; CHECK-GI-NEXT:    mov w9, #100 // =0x64
 ; CHECK-GI-NEXT:    fmov d1, x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    adrp x8, .LCPI71_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI71_0]
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x9, v2.d[1]
 ; CHECK-GI-NEXT:    ushr v1.2d, v1.2d, #2
 ; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
+; CHECK-GI-NEXT:    mul x10, x10, x9
 ; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d1, x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x8

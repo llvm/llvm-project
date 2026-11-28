@@ -535,6 +535,21 @@ void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyCombineTruncOfShuffle(MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  auto *Shuffle = getOpcodeDef<GShuffleVector>(MI.getOperand(1).getReg(), MRI);
+  Register SrcVec1 = Shuffle->getSrc1Reg();
+  Register SrcVec2 = Shuffle->getSrc2Reg();
+  LLT SrcTy = MRI.getType(SrcVec1);
+  LLT DstTy = MRI.getType(DstReg);
+  LLT TruncVT = SrcTy.changeElementType(DstTy.getScalarType());
+
+  SrcVec1 = Builder.buildTrunc(TruncVT, SrcVec1).getReg(0);
+  SrcVec2 = Builder.buildTrunc(TruncVT, SrcVec2).getReg(0);
+  Builder.buildShuffleVector(DstReg, SrcVec1, SrcVec2, Shuffle->getMask());
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
@@ -2148,23 +2163,35 @@ void CombinerHelper::applyLshrOfTruncOfLshr(
 
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) const {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
+  assert((MI.getOpcode() == TargetOpcode::G_MUL ||
+          MI.getOpcode() == TargetOpcode::G_SMULL ||
+          MI.getOpcode() == TargetOpcode::G_UMULL) &&
+         "Expected a Mul variant");
   auto MaybeImmVal =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeImmVal)
     return false;
-
-  ShiftVal = MaybeImmVal->Value.exactLogBase2();
+  APInt C = MaybeImmVal->Value;
+  if (MI.getOpcode() == TargetOpcode::G_SMULL)
+    C = C.sext(MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits());
+  else if (MI.getOpcode() == TargetOpcode::G_UMULL)
+    C = C.zext(MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits());
+  ShiftVal = C.exactLogBase2();
   return (static_cast<int32_t>(ShiftVal) != -1);
 }
 
 void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) const {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
   MachineIRBuilder MIB(MI);
   LLT ShiftTy = MRI.getType(MI.getOperand(0).getReg());
   auto ShiftCst = MIB.buildConstant(ShiftTy, ShiftVal);
   Observer.changingInstr(MI);
+  if (MI.getOpcode() == TargetOpcode::G_SMULL)
+    MI.getOperand(1).setReg(
+        MIB.buildSExt(ShiftTy, MI.getOperand(1).getReg()).getReg(0));
+  else if (MI.getOpcode() == TargetOpcode::G_UMULL)
+    MI.getOperand(1).setReg(
+        MIB.buildZExt(ShiftTy, MI.getOperand(1).getReg()).getReg(0));
   MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
   MI.getOperand(2).setReg(ShiftCst.getReg(0));
   if (ShiftVal == ShiftTy.getScalarSizeInBits() - 1)
@@ -5756,9 +5783,11 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
     if (isPreLegalize()) {
-      // The legalizer can still split a vector G_SMULH or lower it through a
-      // wider G_MUL.
+      // The legalizer can still split a vector G_SMULH, G_SMULL or lower it
+      // through a wider G_MUL.
       if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasFewerElements(
+              {TargetOpcode::G_SMULL, {WideTy, DstTy}}) &&
           !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
         return false;
     } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
@@ -6129,6 +6158,158 @@ void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
       Builder.buildSub(Ty, Builder.buildConstant(Ty, NumEltBits), LogBase2);
   auto Trunc = Builder.buildZExtOrTrunc(ShiftAmtTy, ShiftAmt);
   Builder.buildLShr(Dst, LHS, Trunc);
+  MI.eraseFromParent();
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull
+bool CombinerHelper::matchExtMulToMULL(
+    MachineInstr &MI, MachineRegisterInfo &MRI, GISelValueTracking *KB,
+    std::tuple<bool, Register, Register> &MatchInfo) const {
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  if (I1->getNumOperands() < 2 || I2->getNumOperands() < 2 ||
+      !isPowerOf2_64(EltSize) || EltSize < 16)
+    return false;
+
+  auto isAtLeastDoubleExtend = [&](Register R) {
+    LLT Ty = MRI.getType(R);
+    return EltSize >= Ty.getScalarSizeInBits() * 2;
+  };
+
+  auto isLegalMull = [&](unsigned Opc) {
+    LLT HalfTy = DstTy.changeElementSize(DstTy.getScalarSizeInBits() / 2);
+    auto Action = LI->getAction({Opc, {DstTy, HalfTy}}).Action;
+    return Action != LegalizeActions::Unsupported &&
+           (isPreLegalize() || Action == LegalizeActions::Legal);
+  };
+
+  // If the source operands were EXTENDED before, then {U/S}MULL can be used
+  bool IsZExt1 =
+      I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsZExt2 =
+      I2Opc == TargetOpcode::G_ZEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsZExt1 && IsZExt2 && isAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      isAtLeastDoubleExtend(I2->getOperand(1).getReg()) &&
+      isLegalMull(TargetOpcode::G_UMULL)) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  bool IsSExt1 =
+      I1Opc == TargetOpcode::G_SEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsSExt2 =
+      I2Opc == TargetOpcode::G_SEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsSExt1 && IsSExt2 && isAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      isAtLeastDoubleExtend(I2->getOperand(1).getReg()) &&
+      isLegalMull(TargetOpcode::G_SMULL)) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  // Select UMULL if we can replace the other operand with an extend.
+  unsigned HalfSize = EltSize / 2;
+  APInt Mask = APInt::getHighBitsSet(EltSize, HalfSize);
+  if (KB && (IsZExt1 || IsZExt2) &&
+      isAtLeastDoubleExtend(IsZExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg()) &&
+      isLegalMull(TargetOpcode::G_UMULL)) {
+    Register ZExtOp =
+        IsZExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->maskedValueIsZero(ZExtOp, Mask)) {
+      get<0>(MatchInfo) = true;
+      get<1>(MatchInfo) = IsZExt1 ? I1->getOperand(1).getReg() : ZExtOp;
+      get<2>(MatchInfo) = IsZExt1 ? ZExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  }
+
+  if (KB && (IsSExt1 || IsSExt2) &&
+      isAtLeastDoubleExtend(IsSExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg()) &&
+      isLegalMull(TargetOpcode::G_SMULL)) {
+    Register SExtOp =
+        IsSExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->computeNumSignBits(SExtOp) > HalfSize) {
+      get<0>(MatchInfo) = false;
+      get<1>(MatchInfo) = IsSExt1 ? I1->getOperand(1).getReg() : SExtOp;
+      get<2>(MatchInfo) = IsSExt1 ? SExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull more aggressively, even at the
+// expense of inserting truncates.
+bool CombinerHelper::matchAggressiveExtMulToMULL(
+    MachineInstr &MI, MachineRegisterInfo &MRI, GISelValueTracking *KB,
+    std::tuple<bool, Register, Register> &MatchInfo,
+    std::function<bool(LLT)> Condition) const {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  if (!isPowerOf2_64(EltSize) || EltSize < 16 || !Condition(DstTy))
+    return false;
+
+  unsigned HalfSize = EltSize / 2;
+  APInt Mask = APInt::getHighBitsSet(EltSize, HalfSize);
+
+  // Check UMULL from known-bits
+  if (KB && KB->maskedValueIsZero(MI.getOperand(1).getReg(), Mask) &&
+      KB->maskedValueIsZero(MI.getOperand(2).getReg(), Mask)) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  // Check SMULL from sign-bits
+  if (KB && KB->computeNumSignBits(MI.getOperand(1).getReg()) > HalfSize &&
+      KB->computeNumSignBits(MI.getOperand(2).getReg()) > HalfSize) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  return false;
+}
+
+void CombinerHelper::applyExtMulToMULL(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    GISelChangeObserver &Observer,
+    std::tuple<bool, Register, Register> &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
+         "Expected a G_MUL instruction");
+
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  bool IsZExt = get<0>(MatchInfo);
+  Register Src1Reg = get<1>(MatchInfo);
+  Register Src2Reg = get<2>(MatchInfo);
+  LLT Src1Ty = MRI.getType(Src1Reg);
+  LLT Src2Ty = MRI.getType(Src2Reg);
+  LLT HalfDstTy = DstTy.changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  unsigned ExtOpc = IsZExt ? TargetOpcode::G_ZEXT : TargetOpcode::G_SEXT;
+
+  if (Src1Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src1Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src1Reg}).getReg(0);
+  if (Src2Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src2Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src2Reg}).getReg(0);
+
+  B.buildInstr(IsZExt ? TargetOpcode::G_UMULL : TargetOpcode::G_SMULL,
+               {MI.getOperand(0).getReg()}, {Src1Reg, Src2Reg});
   MI.eraseFromParent();
 }
 

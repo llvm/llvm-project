@@ -270,18 +270,14 @@ define <3 x i32> @umulh_v3i32(<3 x i32> %x, <3 x i32> %y) nounwind {
 ;
 ; CHECK-GI-LABEL: umulh_v3i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    umull v2.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[2]
 ; CHECK-GI-NEXT:    mov w9, v1.s[2]
-; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
-; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
-; CHECK-GI-NEXT:    umull x8, w8, w9
-; CHECK-GI-NEXT:    umull v2.2d, v2.2s, v3.2s
-; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    ushr v2.2d, v2.2d, #32
+; CHECK-GI-NEXT:    umull x8, w8, w9
 ; CHECK-GI-NEXT:    mov d0, v2.d[1]
 ; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    fmov x9, d0
 ; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    mov v0.s[1], w9

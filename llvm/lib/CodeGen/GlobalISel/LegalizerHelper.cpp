@@ -4748,6 +4748,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerSADDE(MI);
   case TargetOpcode::G_SSUBE:
     return lowerSSUBE(MI);
+  case TargetOpcode::G_UMULL:
+  case TargetOpcode::G_SMULL:
+    return lowerSMULL_UMULL(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -5843,6 +5846,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_PTR_ADD:
   case G_SMULH:
   case G_UMULH:
+  case G_SMULL:
+  case G_UMULL:
   case G_FADD:
   case G_FMUL:
   case G_FSUB:
@@ -7190,6 +7195,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
       SrcExtTy = MoreTy;
     }
     moreElementsVectorSrc(MI, SrcExtTy, 1);
+    moreElementsVectorDst(MI, DstExtTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_SMULL:
+  case TargetOpcode::G_UMULL: {
+    Observer.changingInstr(MI);
+    LLT SrcExtTy;
+    LLT DstExtTy;
+    if (TypeIdx == 0) {
+      DstExtTy = MoreTy;
+      SrcExtTy = MoreTy.changeElementType(
+          MRI.getType(MI.getOperand(1).getReg()).getElementType());
+    } else {
+      DstExtTy = MoreTy.changeElementType(
+          MRI.getType(MI.getOperand(0).getReg()).getElementType());
+      SrcExtTy = MoreTy;
+    }
+    moreElementsVectorSrc(MI, SrcExtTy, 1);
+    moreElementsVectorSrc(MI, SrcExtTy, 2);
     moreElementsVectorDst(MI, DstExtTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
@@ -10654,6 +10679,20 @@ LegalizerHelper::lowerReadWriteRegister(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerSMULL_UMULL(MachineInstr &MI) {
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SMULL;
+  unsigned ExtOp = IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  auto LHS = MIRBuilder.buildInstr(ExtOp, {DstTy}, {MI.getOperand(1)});
+  auto RHS = MIRBuilder.buildInstr(ExtOp, {DstTy}, {MI.getOperand(2)});
+  MIRBuilder.buildMul(Dst, LHS, RHS);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerSMULH_UMULH(MachineInstr &MI) {
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SMULH;
   unsigned ExtOp = IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
@@ -10662,11 +10701,25 @@ LegalizerHelper::lowerSMULH_UMULH(MachineInstr &MI) {
   auto SizeInBits = OrigTy.getScalarSizeInBits();
   LLT WideTy = OrigTy.changeElementSize(SizeInBits * 2);
 
-  auto LHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(1)});
-  auto RHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(2)});
-  auto Mul = MIRBuilder.buildMul(WideTy, LHS, RHS);
-  unsigned ShiftOp = IsSigned ? TargetOpcode::G_ASHR : TargetOpcode::G_LSHR;
+  Register Mul;
+  // Generate SMULL / UMULL if supported, or ZExt/SExt + Mul otherwise
+  if (IsSigned &&
+      LI.getAction({TargetOpcode::G_SMULL, {WideTy, OrigTy}}).Action !=
+          LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildSMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
+              .getReg(0);
+  } else if (!IsSigned &&
+             LI.getAction({TargetOpcode::G_UMULL, {WideTy, OrigTy}}).Action !=
+                 LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildUMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
+              .getReg(0);
+  } else {
+    auto LHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(1)});
+    auto RHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(2)});
+    Mul = MIRBuilder.buildMul(WideTy, LHS, RHS).getReg(0);
+  }
 
+  unsigned ShiftOp = IsSigned ? TargetOpcode::G_ASHR : TargetOpcode::G_LSHR;
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, SizeInBits);
   auto Shifted = MIRBuilder.buildInstr(ShiftOp, {WideTy}, {Mul, ShiftAmt});
   MIRBuilder.buildTrunc(Result, Shifted);
@@ -11164,16 +11217,29 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   // TODO: Port other lowering paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
-  if (IsSigned) {
-    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
-    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+
+  Register Mul;
+  // Generate SMULL / UMULL if supported, or ZExt/SExt + Mul otherwise
+  if (IsSigned && LI.getAction({TargetOpcode::G_SMULL, {WideTy, Ty}}).Action !=
+                      LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildSMulL(WideTy, LHS, RHS).getReg(0);
+  } else if (!IsSigned &&
+             LI.getAction({TargetOpcode::G_UMULL, {WideTy, Ty}}).Action !=
+                 LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildUMulL(WideTy, LHS, RHS).getReg(0);
   } else {
-    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
-    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+    MachineInstrBuilder ExtLHS{}, ExtRHS{};
+    if (IsSigned) {
+      ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+      ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+    } else {
+      ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+      ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+    }
+    Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS).getReg(0);
   }
 
-  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  MachineInstrBuilder Shift{};
   if (IsSigned)
     Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
   else

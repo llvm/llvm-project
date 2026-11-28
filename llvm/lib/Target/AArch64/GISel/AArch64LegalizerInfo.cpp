@@ -206,13 +206,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_MUL)
-      .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
+      .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
       .clampNumElements(0, v2s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].getNumElements() <= 2;
@@ -228,7 +227,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return Query.Types[0].getNumElements() <= 16;
           },
           0, s8)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -290,6 +289,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SMULO, G_UMULO})
       .widenScalarToNextPow2(0, /*Min = */ 32)
       .clampScalar(0, s32, s64)
+      .lower();
+
+  getActionDefinitionsBuilder({G_SMULL, G_UMULL})
+      .legalFor({{i64, i32}, {v8i16, v8i8}, {v4i32, v4i16}, {v2i64, v2i32}})
+      .clampNumElements(0, v16s8, v16s8)
+      .clampNumElements(0, v8s16, v8s16)
+      .clampNumElements(0, v4s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0)
       .lower();
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
