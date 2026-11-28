@@ -7809,11 +7809,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     if (MI.getOperand(0).getSubReg())
       return nullptr;
 
-    // Bail out if dst has been assigned a physical register. Otherwise, we
-    // cannot update LiveRegMatrix properly.
+    // If dst differs from the source, folding may insert a COPY that defines
+    // dst. Bail out if dst has been assigned a physical register; otherwise,
+    // we cannot update LiveRegMatrix properly. Also bail out if dst was
+    // created by splitting or spilling: the COPY would make dst live where its
+    // original register is not.
     Register Dst = MI.getOperand(0).getReg();
     if (VRM && Dst != MI.getOperand(1).getReg() &&
-        (!Dst.isVirtual() || VRM->getPhys(Dst)))
+        (!Dst.isVirtual() || VRM->getPhys(Dst) || VRM->getOriginal(Dst) != Dst))
       return nullptr;
   }
 

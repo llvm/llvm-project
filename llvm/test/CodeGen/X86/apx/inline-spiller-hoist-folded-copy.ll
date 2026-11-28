@@ -2,10 +2,11 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+ndd < %s | FileCheck %s
 
 ; With NDD but not prefer-ndd-mem, folding a reload into an NDD instruction
-; emits a COPY of the other source plus the two-address form, and InlineSpiller
-; extends the original live interval back to the COPY. A spill later folded into
-; that COPY is outside HoistSpillHelper's earlier snapshot of the interval,
-; which used to cause a null VNInfo dereference.
+; emits a COPY of the other source plus the two-address form. X86 refuses the
+; fold if the destination was created by splitting or spilling, because the
+; COPY would not be covered by the original live interval. Extending that
+; interval instead used to make a spill later folded into the COPY fall outside
+; HoistSpillHelper's snapshot of it, causing a null VNInfo dereference.
 
 declare i64 @llvm.smax.i64(i64, i64)
 
@@ -87,12 +88,10 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    leaq (%rcx,%rdx,4), %rdx
 ; CHECK-NEXT:    imulq %rdi, %rdx
 ; CHECK-NEXT:    movabsq $9223372036854775800, %rcx # imm = 0x7FFFFFFFFFFFFFF8
-; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
-; CHECK-NEXT:    andq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
-; CHECK-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    andq %rcx, %r13
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; CHECK-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    subq %r13, %rcx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; CHECK-NEXT:    jmp .LBB0_4
@@ -102,9 +101,9 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Folded Reload
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; CHECK-NEXT:    movq (%rsp), %r8 # 8-byte Reload
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Folded Reload
-; CHECK-NEXT:    movq (%rsp), %rsi # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    addq $8, %rsi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Folded Reload
@@ -123,9 +122,9 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rdx, %r9
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-NEXT:    movq %rsi, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rsi, %r12
-; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r8, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movq %r8, %rsi
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:    .p2align 4
