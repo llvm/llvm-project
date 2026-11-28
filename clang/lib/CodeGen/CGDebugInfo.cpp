@@ -6982,7 +6982,7 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
 static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
   std::string Label;
   switch (Handler) {
-#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+#define SANITIZER_CHECK(Enum, Name, Version, Code, Msg)                        \
   case Enum:                                                                   \
     Label = "__ubsan_check_" #Name;                                            \
     break;
