@@ -1,0 +1,96 @@
+## Test that note values are interpreted correctly for FreeDesktop.org packager
+## and dlopen metadata
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefixes=GNU --strict-whitespace
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefixes=LLVM --strict-whitespace
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name:         .note.package
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Notes:
+      - Name: FDO
+        Desc: '7b226b6579223a2276616c7565222c22666f6f223a22626172222c226e756d223a34327d00'
+        Type: FDO_PACKAGING_METADATA
+      - Name: FDO
+        Desc: '7B00'
+        Type: FDO_PACKAGING_METADATA
+  - Name:         .note.dlopen
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Notes:
+      - Name: FDO
+        Desc: '7b226b6579223a2276616c7565222c22666f6f223a22626172222c226e756d223a34327d00'
+        Type: NT_FDO_DLOPEN_METADATA
+      - Name: FDO
+        Desc: '7B00'
+        Type: NT_FDO_DLOPEN_METADATA
+
+# GNU: Displaying notes found in: .note.package
+# GNU-NEXT: Owner                Data size 	Description
+# GNU-NEXT: FDO                  0x00000025	FDO_PACKAGING_METADATA
+# GNU-NEXT:   Packaging Metadata: {"key":"value","foo":"bar","num":42}
+# GNU-NEXT: FDO                  0x00000002	FDO_PACKAGING_METADATA
+# GNU-NEXT:   Packaging Metadata: {
+# GNU-EMPTY:
+# GNU-NEXT: Displaying notes found in: .note.dlopen
+# GNU-NEXT: Owner                Data size 	Description
+# GNU-NEXT: FDO                  0x00000025	FDO_DLOPEN_METADATA
+# GNU-NEXT:   Dlopen Metadata: {"key":"value","foo":"bar","num":42}
+# GNU-NEXT: FDO                  0x00000002	FDO_DLOPEN_METADATA
+# GNU-NEXT:   Dlopen Metadata: {
+
+# LLVM:     NoteSections [
+# LLVM-NEXT:  NoteSection {
+# LLVM-NEXT:    Name: .note.package
+# LLVM-NEXT:    Offset: 0x40
+# LLVM-NEXT:    Size: 0x4C
+# LLVM-NEXT:    Notes [
+# LLVM-NEXT:      {
+# LLVM-NEXT:        Owner: FDO
+# LLVM-NEXT:        Data size: 0x25
+# LLVM-NEXT:        Type: FDO_PACKAGING_METADATA
+# LLVM-NEXT:        Packaging Metadata: {
+# LLVM-NEXT:          "foo": "bar",
+# LLVM-NEXT:          "key": "value",
+# LLVM-NEXT:          "num": 42
+# LLVM-NEXT:        }
+# LLVM-NEXT:      }
+# LLVM-NEXT:      {
+# LLVM-NEXT:        Owner: FDO
+# LLVM-NEXT:        Data size: 0x2
+# LLVM-NEXT:        Type: FDO_PACKAGING_METADATA
+# LLVM-NEXT:        Packaging Metadata: {
+# LLVM-NEXT:      }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:  }
+# LLVM-NEXT:  NoteSection {
+# LLVM-NEXT:    Name: .note.dlopen
+# LLVM-NEXT:    Offset: 0x8C
+# LLVM-NEXT:    Size: 0x4C
+# LLVM-NEXT:    Notes [
+# LLVM-NEXT:      {
+# LLVM-NEXT:        Owner: FDO
+# LLVM-NEXT:        Data size: 0x25
+# LLVM-NEXT:        Type: FDO_DLOPEN_METADATA
+# LLVM-NEXT:        Dlopen Metadata: {
+# LLVM-NEXT:          "foo": "bar",
+# LLVM-NEXT:          "key": "value",
+# LLVM-NEXT:          "num": 42
+# LLVM-NEXT:        }
+# LLVM-NEXT:      }
+# LLVM-NEXT:      {
+# LLVM-NEXT:        Owner: FDO
+# LLVM-NEXT:        Data size: 0x2
+# LLVM-NEXT:        Type: FDO_DLOPEN_METADATA
+# LLVM-NEXT:        Dlopen Metadata: {
+# LLVM-NEXT:      }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:  }
+# LLVM-NEXT:]

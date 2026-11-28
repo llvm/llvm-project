@@ -984,8 +984,9 @@ class OStream {
  public:
   using Block = llvm::function_ref<void()>;
   // If IndentSize is nonzero, output is pretty-printed.
-  explicit OStream(llvm::raw_ostream &OS, unsigned IndentSize = 0)
-      : OS(OS), IndentSize(IndentSize) {
+  explicit OStream(llvm::raw_ostream &OS, unsigned IndentSize = 0,
+                   unsigned IndentLevel = 0)
+      : OS(OS), IndentSize(IndentSize), Indent(IndentSize * IndentLevel) {
     Stack.emplace_back();
   }
   ~OStream() {
@@ -1084,7 +1085,7 @@ private:
   llvm::StringRef PendingComment;
   llvm::raw_ostream &OS;
   unsigned IndentSize;
-  unsigned Indent = 0;
+  unsigned Indent;
 };
 
 /// Serializes this Value to JSON, writing it to the provided stream.
