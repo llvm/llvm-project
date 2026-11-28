@@ -51642,11 +51642,54 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// x / y for f32 vectors whose lanes are integers of magnitude <= 256, through
+// a reciprocal estimate instead of a divide. rcpps is only architected to
+// |rel err| <= 1.5 * 2^-12 (rcp14ps to 2^-14), so scale the estimate by
+// 1 + 2^-11 to keep the product at or above an exact quotient. The overshoot
+// stays far below 1/256, so truncating still gives the exact integer quotient.
+// Scaling the estimate rather than x keeps it loop invariant for a uniform y.
+static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget,
+                                       const SDLoc &DL) {
+  EVT FPVT = X.getValueType();
+  unsigned NumElts = FPVT.getVectorNumElements();
+  // A splat divisor only needs one estimate, which every chunk then shares.
+  bool SplatY =
+      (Y.getOpcode() == ISD::SINT_TO_FP || Y.getOpcode() == ISD::UINT_TO_FP) &&
+      DAG.isSplatValue(Y.getOperand(0));
+  unsigned ChunkElts = Subtarget.useAVX512Regs() ? 16
+                       : Subtarget.hasAVX()      ? 8
+                                                 : 4;
+  // The estimate is a target node and this runs before type legalization, so
+  // build it on legal chunks of y. The multiplies are legalized as usual.
+  unsigned WideElts = std::max<unsigned>(PowerOf2Ceil(NumElts), 4);
+  ChunkElts = std::min(ChunkElts, WideElts);
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), MVT::f32, WideElts);
+  if (WideVT != FPVT)
+    Y = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideVT), Y, 0);
+
+  MVT ChunkVT = MVT::getVectorVT(MVT::f32, ChunkElts);
+  unsigned RcpOpc =
+      (ChunkElts == 16 || Subtarget.hasVLX()) ? X86ISD::RCP14 : X86ISD::FRCP;
+  SmallVector<SDValue, 4> Rcps;
+  for (unsigned I = 0; I != WideElts; I += ChunkElts) {
+    SDValue YC = DAG.getExtractSubvector(DL, ChunkVT, Y, SplatY ? 0 : I);
+    Rcps.push_back(DAG.getNode(RcpOpc, DL, ChunkVT, YC));
+  }
+  SDValue Rcp = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Rcps);
+  if (WideVT != FPVT)
+    Rcp = DAG.getExtractSubvector(DL, FPVT, Rcp, 0);
+
+  Rcp = DAG.getNode(ISD::FMUL, DL, FPVT, Rcp,
+                    DAG.getConstantFP(1.0 + 0x1p-11, DL, FPVT));
+  return DAG.getNode(ISD::FMUL, DL, FPVT, X, Rcp);
+}
+
 // The operands fit the float mantissa exactly so one float divide recovers
 // the exact quotient.
 static SDValue
 combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
-                              bool IsStrict, SelectionDAG &DAG,
+                              bool IsStrict, bool UseRcp, SelectionDAG &DAG,
                               TargetLowering::DAGCombinerInfo &DCI,
                               const X86Subtarget &Subtarget, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
@@ -51706,7 +51749,9 @@ combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
                  : DAG.getZExtOrTrunc(Q, DL, VT);
   } else {
     unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-    Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
+    SDValue Quot = UseRcp ? getFPReciprocalQuotient(X, Y, DAG, Subtarget, DL)
+                          : DAG.getNode(ISD::FDIV, DL, FPVT, X, Y);
+    Q = DAG.getNode(FromFP, DL, VT, Quot);
   }
   if (!IsRem)
     return Q;
@@ -51848,10 +51893,12 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   unsigned EltBits = VT.getScalarSizeInBits();
+  auto FitsBits = [&](SDValue V, unsigned Bits) {
+    return IsSigned ? DAG.ComputeNumSignBits(V) + Bits > EltBits
+                    : DAG.computeKnownBits(V).countMaxActiveBits() <= Bits;
+  };
   auto FitsFP = [&](SDValue V, const fltSemantics &Sem) {
-    unsigned Precision = APFloat::semanticsPrecision(Sem);
-    return IsSigned ? DAG.ComputeNumSignBits(V) + Precision > EltBits
-                    : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
+    return FitsBits(V, APFloat::semanticsPrecision(Sem));
   };
   auto BothFitFP = [&](const fltSemantics &Sem) {
     return FitsFP(Dividend, Sem) && FitsFP(Divisor, Sem);
@@ -51880,6 +51927,13 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (IsStrict && !Subtarget.useAVX512Regs())
     return SDValue();
 
+  // Operands of magnitude <= 256 (i8 and anything known to fit it) stay exact
+  // through a reciprocal estimate, which is much cheaper than a divide. A
+  // single lane scalarizes, where the divide still constant folds.
+  bool UseRcp = !IsStrict && FPSclVT == MVT::f32 &&
+                VT.getVectorNumElements() > 1 && FitsBits(Dividend, 8) &&
+                FitsBits(Divisor, 8);
+
   if (!UseExactFPDiv && (!Subtarget.hasDQI() || !Subtarget.useAVX512Regs()))
     return SDValue();
 
@@ -51899,7 +51953,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   SDValue Res =
       UseExactFPDiv
           ? combineIntDivRemViaExactFPDiv(N, FPSclVT, IsSigned, IsRem, IsStrict,
-                                          DAG, DCI, Subtarget, DL)
+                                          UseRcp, DAG, DCI, Subtarget, DL)
           : combineInt64DivRemViaFPReciprocal(N, IsSigned, IsRem, DAG,
                                               Subtarget, DL);
   // Narrow a widened result back to VT.

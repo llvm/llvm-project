@@ -149,7 +149,33 @@ entry:
   ret void
 }
 
+; A folded broadcast load doesn't make a non-strict FP op look like it may raise
+; an FP exception.
+define <16 x float> @fmul_bcst(<16 x float> %x) #1 {
+entry:
+; CHECK-LABEL: name: fmul_bcst
+; CHECK: [[X:%[0-9]+]]:vr512 = COPY $zmm0
+; CHECK: [[MUL:%[0-9]+]]:vr512 = nofpexcept VMULPSZrmb [[X]], $noreg, 1, $noreg, %const.0, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
+; CHECK: $zmm0 = COPY [[MUL]]
+; CHECK: RET 0, $zmm0
+  %r = fmul <16 x float> %x, splat (float 1.5)
+  ret <16 x float> %r
+}
+
+define <16 x float> @fmul_bcst_strict(<16 x float> %x) #2 {
+entry:
+; CHECK-LABEL: name: fmul_bcst_strict
+; CHECK: [[X:%[0-9]+]]:vr512 = COPY $zmm0
+; CHECK: [[MUL:%[0-9]+]]:vr512 = VMULPSZrmb [[X]], $noreg, 1, $noreg, %const.0, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
+; CHECK: $zmm0 = COPY [[MUL]]
+; CHECK: RET 0, $zmm0
+  %r = call <16 x float> @llvm.experimental.constrained.fmul.v16f32(<16 x float> %x, <16 x float> splat (float 1.5), metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <16 x float> %r
+}
+
 attributes #0 = { strictfp }
+attributes #1 = { "target-features"="+avx512f" }
+attributes #2 = { strictfp "target-features"="+avx512f" }
 
 declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
 declare double @llvm.experimental.constrained.sitofp.f64.i16(i16, metadata, metadata)
@@ -159,3 +185,4 @@ declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
 declare i8 @llvm.experimental.constrained.fptosi.i8.f64(double, metadata)
 declare i16 @llvm.experimental.constrained.fptosi.i16.f64(double, metadata)
 declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
+declare <16 x float> @llvm.experimental.constrained.fmul.v16f32(<16 x float>, <16 x float>, metadata, metadata)

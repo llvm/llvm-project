@@ -75,6 +75,8 @@ public:
 
   bool isTargetMemoryOpcode(unsigned Opcode) const override;
 
+  bool mayRaiseFPException(unsigned Opcode) const override;
+
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
 
