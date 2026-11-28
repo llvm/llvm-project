@@ -873,6 +873,29 @@ static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
   return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
 }
 
+/// Return true if \param Op is an integer/pointer min or max operation.
+static bool isMinMaxOp(AtomicExpr::AtomicOp Op) {
+  switch (Op) {
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_min:
+  case AtomicExpr::AO__atomic_max_fetch:
+  case AtomicExpr::AO__atomic_min_fetch:
+  case AtomicExpr::AO__scoped_atomic_fetch_max:
+  case AtomicExpr::AO__scoped_atomic_fetch_min:
+  case AtomicExpr::AO__scoped_atomic_max_fetch:
+  case AtomicExpr::AO__scoped_atomic_min_fetch:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                          Address Ptr, Address Val1, Address Val2,
                          Address OriginalVal1, llvm::Value *IsWeak,
@@ -1139,7 +1162,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
   QualType RValTy = E->getType().getUnqualifiedType();
   bool ShouldCastToIntPtrTy =
-      shouldCastToInt(ConvertTypeForMem(MemTy), E->isCmpXChg());
+      shouldCastToInt(ConvertTypeForMem(MemTy), E->isCmpXChg()) ||
+      (MemTy->isPointerType() && isMinMaxOp(E->getOp()));
 
   // The inlined atomics only function on iN types, where N is a power of 2. We
   // need to make sure (via temporaries if necessary) that all incoming values
