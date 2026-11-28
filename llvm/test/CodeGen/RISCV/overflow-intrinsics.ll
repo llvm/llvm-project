@@ -1090,15 +1090,15 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    .cfi_offset s5, -28
 ; RV32-NEXT:    .cfi_offset s6, -32
 ; RV32-NEXT:    mv s1, a5
-; RV32-NEXT:    mv s4, a1
-; RV32-NEXT:    andi a1, a5, 1
-; RV32-NEXT:    beqz a1, .LBB32_6
+; RV32-NEXT:    mv s2, a2
+; RV32-NEXT:    andi a2, a5, 1
+; RV32-NEXT:    beqz a2, .LBB32_6
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    mv s0, a4
 ; RV32-NEXT:    mv s3, a3
-; RV32-NEXT:    mv s2, a2
+; RV32-NEXT:    mv s4, a1
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    beq s4, a3, .LBB32_3
+; RV32-NEXT:    beq a1, a3, .LBB32_3
 ; RV32-NEXT:  # %bb.2: # %t
 ; RV32-NEXT:    sltu s6, s4, s3
 ; RV32-NEXT:    j .LBB32_4
@@ -1157,13 +1157,13 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    .cfi_offset s3, -40
 ; RV64-NEXT:    .cfi_offset s4, -48
 ; RV64-NEXT:    mv s1, a3
-; RV64-NEXT:    mv s2, a1
-; RV64-NEXT:    andi a1, a3, 1
-; RV64-NEXT:    beqz a1, .LBB32_3
-; RV64-NEXT:  # %bb.1: # %t
 ; RV64-NEXT:    mv s0, a2
+; RV64-NEXT:    andi a2, a3, 1
+; RV64-NEXT:    beqz a2, .LBB32_3
+; RV64-NEXT:  # %bb.1: # %t
+; RV64-NEXT:    mv s2, a1
 ; RV64-NEXT:    mv s3, a0
-; RV64-NEXT:    sltu s4, a0, s2
+; RV64-NEXT:    sltu s4, a0, a1
 ; RV64-NEXT:    mv a0, s4
 ; RV64-NEXT:    call call
 ; RV64-NEXT:    bgeu s3, s2, .LBB32_3
