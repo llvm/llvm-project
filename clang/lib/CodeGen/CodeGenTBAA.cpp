@@ -337,6 +337,9 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getTypeInfo(MTy->getElementType());
   }
 
+  if (const auto *CMTy = dyn_cast<CooperativeMatrixType>(Ty))
+    return getTypeInfo(CMTy->getElementType());
+
   // Accesses to complex types are accesses to objects of their element types.
   if (const auto *CTy = dyn_cast<ComplexType>(Ty))
     return getTypeInfo(CTy->getElementType());

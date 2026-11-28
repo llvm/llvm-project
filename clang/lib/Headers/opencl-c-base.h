@@ -632,6 +632,28 @@ CLINKAGE int printf(__constant const char *st, ...)
 #undef CLINKAGE
 #endif
 
+#if defined(cl_khr_cooperative_matrix)
+typedef enum coop_matrix_operands_t {
+  CLK_COOPERATIVE_MATRIX_OPERAND_NONE = 0,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED = 0x1,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED = 0x2,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED = 0x4,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED = 0x8,
+  CLK_COOPERATIVE_MATRIX_OPERAND_SATURATING_ACCUMULATION = 0x10
+} coop_matrix_operands_t;
+
+typedef enum coop_matrix_use_t {
+  CLK_COOPERATIVE_MATRIX_A = 0,
+  CLK_COOPERATIVE_MATRIX_B = 1,
+  CLK_COOPERATIVE_MATRIX_ACCUMULATOR = 2
+} coop_matrix_use_t;
+
+typedef enum coop_matrix_layout_t {
+  CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR = 0,
+  CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR = 1
+} coop_matrix_layout_t;
+#endif // defined(cl_khr_cooperative_matrix)
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 
 #define CLK_AVC_ME_MAJOR_16x16_INTEL 0x0

@@ -9932,6 +9932,9 @@ static bool isOpenCLSizeDependentType(ASTContext &C, QualType Ty) {
 }
 
 static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
+  if (PT->isCooperativeMatrixType())
+    return InvalidKernelParam;
+
   if (PT->isDependentType())
     return InvalidKernelParam;
 

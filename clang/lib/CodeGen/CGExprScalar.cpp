@@ -3023,7 +3023,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     CGF.EmitIgnoredExpr(E);
     return nullptr;
   }
-  case CK_MatrixCast: {
+  case CK_MatrixCast:
+  case CK_CoopMatrixCast: {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
