@@ -1124,7 +1124,7 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
 
     // Cast the void pointer and get the address of the globalized variable.
     llvm::Value *CastedVoidPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        VoidPtr, Bld.getPtrTy(0), VD->getName() + "_on_stack");
+        VoidPtr, CGF.DefaultPtrTy, VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
     Rec.second.PrivateAddr = VarAddr.getAddress();
@@ -2097,7 +2097,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   if (isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
     Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, Bld.getPtrTy(0), CGF.SizeTy);
+        Src, CGF.DefaultPtrTy, CGF.SizeTy);
     llvm::Value *LB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -2106,8 +2106,8 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
     Args.emplace_back(LB);
     ++Idx;
     Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
-    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(Src, Bld.getPtrTy(0),
-                                                           CGF.SizeTy);
+    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
+        Src, CGF.DefaultPtrTy, CGF.SizeTy);
     llvm::Value *UB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
