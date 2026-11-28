@@ -111,7 +111,8 @@ LIBC_INLINE_VAR constexpr DoubleDouble ATAN_I[65] = {
 //        + x_lo * (1 - x_hi^2 + x_hi^4)
 // Since p.lo is ~ x^3/3, the relative error from rounding is bounded by:
 //   |(atan(x) - P(x))/atan(x)| < ulp(x^2) <= 2^(-14-52) = 2^-66.
-[[maybe_unused]] LIBC_INLINE DoubleDouble atan_eval(const DoubleDouble &x) {
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DoubleDouble
+atan_eval(const DoubleDouble &x) {
   DoubleDouble p;
   p.hi = x.hi;
   double x_hi_sq = x.hi * x.hi;
@@ -226,7 +227,8 @@ LIBC_INLINE_VAR constexpr DFloat128 ATAN_POLY_F128[] = {
 };
 
 // Approximate atan for |x| <= 2^-7.
-[[maybe_unused]] LIBC_INLINE constexpr DFloat128 atan_eval(const DFloat128 &x) {
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128
+atan_eval(const DFloat128 &x) {
   DFloat128 x_sq = fputil::quick_mul(x, x);
   DFloat128 x3 = fputil::quick_mul(x, x_sq);
   DFloat128 p = fputil::polyeval(x_sq, ATAN_POLY_F128);
@@ -316,7 +318,7 @@ LIBC_INLINE_VAR constexpr double ATAN_K_OVER_16[17] = {
 
 // For |x| <= 1/32 and 0 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
-LIBC_INLINE double atan_eval(double x, unsigned i) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double atan_eval(double x, unsigned i) {
   return fputil::estrin_polyeval</*OFFSET=*/1>(x, ATAN_COEFFS[i]);
 }
 
@@ -333,8 +335,8 @@ LIBC_INLINE_VAR constexpr double ATAN_TAYLOR[4] = {
 // So we let q = (n - d * k/16) / (d + n * k/16),
 // and approximate with Taylor polynomial:
 //   atan(q) ~ q - q^3/3 + q^5/5 - q^7/7 + q^9/9
-LIBC_INLINE double atan_eval_no_table(double num, double den,
-                                      double k_over_16) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+atan_eval_no_table(double num, double den, double k_over_16) {
   double num_r = fputil::sub_multiply(num, den, k_over_16);
   double den_r = fputil::multiply_add(num, k_over_16, den);
   double q = num_r / den_r;

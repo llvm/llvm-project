@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ISNANL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ISNANL_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 
@@ -16,9 +17,12 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 #undef isnanl
-LIBC_INLINE LIBC_CONSTEXPR int isnanl(long double x) {
-#if defined(__LIBC_USE_BUILTIN_ISNAN) && !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_isnan(x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int isnanl(long double x) {
+#if defined(__LIBC_USE_BUILTIN_ISNAN)
+  if (cpp::is_constant_evaluated())
+    return fputil::FPBits<long double>(x).is_nan();
+  else
+    return __builtin_isnan(x);
 #else
   return fputil::FPBits<long double>(x).is_nan();
 #endif

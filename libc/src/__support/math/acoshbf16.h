@@ -28,7 +28,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR bfloat16 acoshbf16(bfloat16 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT bfloat16 acoshbf16(bfloat16 x) {
   using namespace acoshf_internal;
   using FPBits = fputil::FPBits<bfloat16>;
 

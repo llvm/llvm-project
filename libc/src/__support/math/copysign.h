@@ -9,15 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_COPYSIGN_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_COPYSIGN_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double copysign(double x, double y) {
-#if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) && !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_copysign(x, y);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double copysign(double x, double y) {
+#if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT)
+  if (cpp::is_constant_evaluated())
+    return fputil::copysign(x, y);
+  else
+    return __builtin_copysign(x, y);
 #else
   return fputil::copysign(x, y);
 #endif

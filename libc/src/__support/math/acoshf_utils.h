@@ -26,7 +26,7 @@ namespace acoshf_internal {
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
     defined(LIBC_MATH_HAS_SMALL_TABLES)
 
-LIBC_INLINE LIBC_CONSTEXPR double log_eval(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log_eval(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits x_bits(x);
   uint64_t x_u = x_bits.uintval();
@@ -67,7 +67,7 @@ LIBC_INLINE LIBC_CONSTEXPR double log_eval(double x) {
 
 #else // Accurate evaluation.
 
-LIBC_INLINE LIBC_CONSTEXPR double log_eval(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log_eval(double x) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
 
   // For x = 2^ex * (1 + mx)

@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_INLINE float exp10f_mid(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float exp10f_mid(float x) {
   // Range reduction: 10^x = 2^(mid + hi) * 10^lo
   auto rr = exp_b_range_reduc<Exp10Base>(x);
 
@@ -115,7 +115,7 @@ LIBC_COLD LIBC_NOINLINE LIBC_INLINE float exp10f_slow(float x) {
   return exp10f_mid(x);
 }
 
-LIBC_INLINE float exp10f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float exp10f(float x) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 

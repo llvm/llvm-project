@@ -47,7 +47,7 @@ namespace float_eval {
 //    The intermediate product (y * 2^(m + 25)) is normal and computed with
 //    full precision. Then the final multiplication by 2^-25 rounds directly
 //    to the target subnormal precision in a single rounding step.
-LIBC_INLINE float scale_exp2f(float y, int m) {
+LIBC_INLINE constexpr float scale_exp2f(float y, int m) {
   // -126 <= m <= 127: 2^m is a normal float.
   if (LIBC_LIKELY(static_cast<uint32_t>(m + 126) <= 253)) {
     uint32_t scale_bits = static_cast<uint32_t>(m + 127) << 23;
@@ -92,7 +92,7 @@ LIBC_INLINE_VAR constexpr float EXP2F_COEFFS[6] = {
 // p = q0 + u^4 * p2 all round at the exponent of c0 (~2^-1), accumulating
 // rounding errors on non-FMA targets. Evaluating c1..c5 first keeps only a
 // single rounding at c0's scale.
-LIBC_INLINE float exp2f_eval(float u, int m) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float exp2f_eval(float u, int m) {
   float p = fputil::estrin_polyeval</*OFFSET=*/1>(u, EXP2F_COEFFS);
   float y = fputil::polyeval(u, 1.0f, EXP2F_COEFFS[0], p);
 

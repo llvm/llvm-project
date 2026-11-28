@@ -71,7 +71,7 @@ LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) / dx | < 2^-51.
-LIBC_INLINE double poly_approx_d(double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   // c0 = 1 + dx / 2
@@ -99,7 +99,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble COEFFS_DD[] = {
 // Return expm1(dx) / dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) | < 2^-101
-LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE constexpr DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   DoubleDouble p =
       fputil::polyeval(dx, COEFFS_DD[0], COEFFS_DD[1], COEFFS_DD[2],
                        COEFFS_DD[3], COEFFS_DD[4], COEFFS_DD[5], COEFFS_DD[6]);
@@ -121,7 +121,8 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-[[maybe_unused]] LIBC_INLINE DFloat128 poly_approx_f128(const DFloat128 &dx) {
+[[maybe_unused]] LIBC_INLINE constexpr DFloat128
+poly_approx_f128(const DFloat128 &dx) {
   DFloat128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1],
                                  COEFFS_128[2], COEFFS_128[3], COEFFS_128[4],
                                  COEFFS_128[5], COEFFS_128[6]);
@@ -145,8 +146,8 @@ LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // Compute exp(x) - 1 using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-[[maybe_unused]] LIBC_INLINE DFloat128 expm1_f128(double x, double kd, int idx1,
-                                                  int idx2) {
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128
+expm1_f128(double x, double kd, int idx1, int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -197,9 +198,9 @@ LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 }
 
 // Compute exp(x) - 1 with double-double precision.
-LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
-                                           const DoubleDouble &exp_mid,
-                                           const DoubleDouble &hi_part) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DoubleDouble
+exp_double_double(double x, double kd, const DoubleDouble &exp_mid,
+                  const DoubleDouble &hi_part) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -227,7 +228,7 @@ LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
-LIBC_INLINE double set_exceptional(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -279,7 +280,7 @@ LIBC_INLINE double set_exceptional(double x) {
 
 } // namespace expm1_internal
 
-LIBC_INLINE double expm1(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double expm1(double x) {
   using namespace expm1_internal;
 
   using FPBits = typename fputil::FPBits<double>;

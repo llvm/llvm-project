@@ -51,7 +51,7 @@ LIBC_INLINE_VAR constexpr float EXP2_MID[16] = {
 };
 } // namespace exp2bf16_internal
 
-LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT bfloat16 exp2bf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits x_bits(x);
   uint16_t x_uint = x_bits.uintval();

@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE double pow(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double pow(double x, double y) {
   using namespace common_constants_internal;
   using namespace pow_internal;
   using FPBits = fputil::FPBits<double>;

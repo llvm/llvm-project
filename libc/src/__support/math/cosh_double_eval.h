@@ -38,7 +38,8 @@ LIBC_INLINE_VAR constexpr uint64_t COSH_OVERFLOW_BOUND =
 
 // Handle tiny (|x| <= 2^-27), overflow (|x| >= 0x1.633ce8fb9f87ep+9), inf, and
 // nan for cosh(x):
-LIBC_NOINLINE LIBC_INLINE double cosh_exceptional(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+cosh_exceptional(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -62,7 +63,7 @@ LIBC_NOINLINE LIBC_INLINE double cosh_exceptional(double x) {
   return fputil::set_overflow<double>();
 }
 
-LIBC_ALWAYS_INLINE double cosh(double x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double cosh(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 

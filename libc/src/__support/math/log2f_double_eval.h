@@ -75,7 +75,7 @@ LIBC_INLINE_VAR constexpr double COEFFS[5] = {
 
 } // namespace log2f_internal
 
-LIBC_INLINE float log2f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float log2f(float x) {
   using namespace common_constants_internal;
   using namespace log2f_internal;
   using FPBits = typename fputil::FPBits<float>;

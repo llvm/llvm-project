@@ -114,7 +114,7 @@ LIBC_INLINE_VAR constexpr float POWF_LOG2_Q_COEFFS[5] = {
     -0x1.715476p-1f, 0x1.ec70ap-2f, -0x1.715b5p-2f, 0x1.279932p-2f,
     -0x1.cbc178p-3f};
 
-LIBC_INLINE float powf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float powf(float x, float y) {
   using FPBits = fputil::FPBits<float>;
   using namespace powf_internal;
 

@@ -53,7 +53,7 @@ LIBC_INLINE_VAR constexpr double COEFFS[7] = {
 
 } // namespace log1pf_internal
 
-LIBC_INLINE float log1pf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float log1pf(float x) {
   using namespace log1pf_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

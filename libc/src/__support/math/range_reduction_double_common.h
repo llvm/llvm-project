@@ -44,7 +44,8 @@ using DFloat128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 // Error bound:
 //   |(x - k * pi/128) - (u_hi + u_lo)| <= max(ulp(ulp(u_hi)), 2^-119)
 //                                      <= 2^-111.
-LIBC_INLINE unsigned range_reduction_small(double x, DoubleDouble &u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT unsigned
+range_reduction_small(double x, DoubleDouble &u) {
   // Values of -pi/128 used for inputs with absolute value <= 2^16.
   // The first 3 parts are generated with (53 - 21 = 32)-bit precision, so that
   // the product k * MPI_OVER_128[i] is exact.
@@ -253,10 +254,10 @@ struct LargeRangeReduction {
 
   // To be implemented in range_reduction_double_fma.h and
   // range_reduction_double_nofma.h.
-  unsigned fast(double x, DoubleDouble &u);
+  LIBC_CONSTEXPR_DEFAULT unsigned fast(double x, DoubleDouble &u);
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  LIBC_INLINE DFloat128 accurate() const {
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128 accurate() const {
     constexpr DFloat128 PI_OVER_128_F128 = {
         Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
 
@@ -285,7 +286,8 @@ private:
 };
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE DFloat128 range_reduction_small_f128(double x) {
+LIBC_INLINE
+LIBC_CONSTEXPR_DEFAULT DFloat128 range_reduction_small_f128(double x) {
   constexpr DFloat128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;

@@ -121,7 +121,7 @@ LIBC_INLINE_VAR constexpr DFloat128 EXCEPTS[3][3][2] = {
 
 } // namespace atan2f128_internal
 
-LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT Float128 atan2f128(Float128 y, Float128 x) {
   using namespace atan_internal;
   using namespace atan2f128_internal;
   using FPBits = fputil::FPBits<Float128>;

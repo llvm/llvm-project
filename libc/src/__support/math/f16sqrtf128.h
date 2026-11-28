@@ -22,7 +22,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float16 f16sqrtf128(float128 x) { return fputil::sqrt<float16>(x); }
+LIBC_INLINE constexpr float16 f16sqrtf128(float128 x) {
+  return fputil::sqrt<float16>(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

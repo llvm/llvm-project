@@ -47,7 +47,7 @@ LIBC_INLINE_VAR constexpr double COEFFS[] = {
 
 } // namespace expm1f_internal
 
-LIBC_INLINE float expm1f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float expm1f(float x) {
   using namespace common_constants_internal;
   using namespace expm1f_internal;
   using FPBits = typename fputil::FPBits<float>;
