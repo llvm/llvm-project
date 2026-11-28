@@ -56,5 +56,5 @@ block data
   integer :: bd_array(5)
   common /initblock/ bd_array
   data bd_array /1, 2, 3, 4, 5/
-  ! CHECK-DAG: fir.global @initblock_ <{alignment = 4 : i64}> : tuple<!fir.array<5xi32>>
+  ! CHECK-DAG: fir.global @initblock_ <{alignment = 4 : i64}> : !fir.type<_QBTinitblock_<{m0:!fir.array<5xi32>}>>
 end block data

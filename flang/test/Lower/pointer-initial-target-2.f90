@@ -11,14 +11,14 @@ block data
   real, save, target :: b
   common /a/ p
   data p /b/
-! CHECK-LABEL: fir.global @a_ <{alignment = 8 : i64}> : tuple<!fir.box<!fir.ptr<f32>>>
-  ! CHECK: %[[undef:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<f32>>>
+! CHECK-LABEL: fir.global @a_ <{alignment = 8 : i64}> : !fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>
+  ! CHECK: %[[undef:.*]] = fir.zero_bits !fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>
   ! CHECK: %[[bAddr:.*]] = fir.address_of(@_QEb) : !fir.ref<f32>
   ! CHECK: %[[b:.*]]:2 = hlfir.declare %[[bAddr]] {{.*}} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! CHECK: %[[box:.*]] = fir.embox %[[b]]#0 : (!fir.ref<f32>) -> !fir.box<f32>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<f32>) -> !fir.box<!fir.ptr<f32>>
-  ! CHECK: %[[a:.*]] = fir.insert_value %[[undef]], %[[rebox]], [0 : index] : (tuple<!fir.box<!fir.ptr<f32>>>, !fir.box<!fir.ptr<f32>>) -> tuple<!fir.box<!fir.ptr<f32>>>
-  ! CHECK: fir.has_value %[[a]] : tuple<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[a:.*]] = fir.insert_value %[[undef]], %[[rebox]], ["m0", !fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>] : (!fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>, !fir.box<!fir.ptr<f32>>) -> !fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>
+  ! CHECK: fir.has_value %[[a]] : !fir.type<_QBTa_<{m0:!fir.box<!fir.ptr<f32>>}>>
 end block data
 
 ! Test two common depending on each others because of initial data
@@ -30,10 +30,10 @@ block data tied
   real, pointer :: p2 => x1
   common /c1/ x1, p1
   common /c2/ x2, p2
-! CHECK-LABEL: fir.global @c1_ <{alignment = 8 : i64}> : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
-  ! CHECK: fir.address_of(@c2_) : !fir.ref<tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>>
-! CHECK-LABEL: fir.global @c2_ <{alignment = 8 : i64}> : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
-  ! CHECK: fir.address_of(@c1_) : !fir.ref<tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>>
+! CHECK-LABEL: fir.global @c1_ <{alignment = 8 : i64}> : !fir.type<_QBTc1_<{m0:f32,m1:!fir.box<!fir.ptr<f32>>}>>
+  ! CHECK: fir.address_of(@c2_) : !fir.ref<!fir.type<_QBTc2_<{m0:f32,m1:!fir.box<!fir.ptr<f32>>}>>>
+! CHECK-LABEL: fir.global @c2_ <{alignment = 8 : i64}> : !fir.type<_QBTc2_<{m0:f32,m1:!fir.box<!fir.ptr<f32>>}>>
+  ! CHECK: fir.address_of(@c1_) : !fir.ref<!fir.type<_QBTc1_<{m0:f32,m1:!fir.box<!fir.ptr<f32>>}>>>
 end block data
 
 ! Test pointer in a common with initial target in the same common.
@@ -41,18 +41,18 @@ block data bdsnake
   integer, target :: b = 42
   integer, pointer :: p => b
   common /snake/ p, b
-! CHECK-LABEL: fir.global @snake_ <{alignment = 8 : i64}> : tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: %[[tuple0:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: %[[snakeAddr:.*]] = fir.address_of(@snake_) : !fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>
-  ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>) -> !fir.ref<!fir.array<28xi8>>
+! CHECK-LABEL: fir.global @snake_ <{alignment = 8 : i64}> : !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>
+  ! CHECK: %[[tuple0:.*]] = fir.zero_bits !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>
+  ! CHECK: %[[snakeAddr:.*]] = fir.address_of(@snake_) : !fir.ref<!fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>>
+  ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<!fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>>) -> !fir.ref<!fir.array<28xi8>>
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[byteView]], %c24{{.*}} : (!fir.ref<!fir.array<28xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[bAddr:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ref<i32>
   ! CHECK: %[[bDecl:.*]]:2 = hlfir.declare %[[bAddr]] storage(%[[byteView]][24]) {{.*}} : (!fir.ref<i32>, !fir.ref<!fir.array<28xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[box:.*]] = fir.embox %[[bDecl]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<i32>) -> !fir.box<!fir.ptr<i32>>
-  ! CHECK: %[[tuple1:.*]] = fir.insert_value %[[tuple0]], %[[rebox]], [0 : index] : (tuple<!fir.box<!fir.ptr<i32>>, i32>, !fir.box<!fir.ptr<i32>>) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: %[[tuple2:.*]] = fir.insert_value %[[tuple1]], %c42{{.*}}, [1 : index] : (tuple<!fir.box<!fir.ptr<i32>>, i32>, i32) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: fir.has_value %[[tuple2]] : tuple<!fir.box<!fir.ptr<i32>>, i32>
+  ! CHECK: %[[tuple1:.*]] = fir.insert_value %[[tuple0]], %[[rebox]], ["m0", !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>] : (!fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>, !fir.box<!fir.ptr<i32>>) -> !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>
+  ! CHECK: %[[tuple2:.*]] = fir.insert_value %[[tuple1]], %c42{{.*}}, ["m1", !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>] : (!fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>, i32) -> !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>
+  ! CHECK: fir.has_value %[[tuple2]] : !fir.type<_QBTsnake_<{m0:!fir.box<!fir.ptr<i32>>,m1:i32}>>
 end block data
 
 ! Test pointer initial data target in modules

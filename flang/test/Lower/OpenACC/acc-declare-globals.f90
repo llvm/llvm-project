@@ -4,7 +4,7 @@
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 module acc_declare_common_test
-! CHECK-LABEL: fir.global @numbers_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_declare_device_resident>} : tuple<f32, f32> {
+! CHECK-LABEL: fir.global @numbers_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_declare_device_resident>} : !fir.type<_QBTnumbers_<{m0:f32,m1:f32}>> {
 ! CHECK: acc.global_ctor @numbers__acc_ctor
 ! CHECK: acc.global_dtor @numbers__acc_dtor
  REAL :: one = 1
@@ -12,7 +12,7 @@ module acc_declare_common_test
  COMMON /numbers/ one, two
  !$acc declare device_resident(/numbers/)
 
-! CHECK-LABEL: fir.global @numbers_create_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_create>} : tuple<f32, f32> {
+! CHECK-LABEL: fir.global @numbers_create_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.type<_QBTnumbers_create_<{m0:f32,m1:f32}>> {
 ! CHECK: acc.global_ctor @numbers_create__acc_ctor
 ! CHECK: acc.global_dtor @numbers_create__acc_dtor
  REAL :: one_create = 1
@@ -20,7 +20,7 @@ module acc_declare_common_test
  COMMON /numbers_create/ one_create, two_create
  !$acc declare create(/numbers_create/)
 
-! CHECK-LABEL: fir.global @numbers_in_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_copyin>} : tuple<f32, f32> {
+! CHECK-LABEL: fir.global @numbers_in_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.type<_QBTnumbers_in_<{m0:f32,m1:f32}>> {
 ! CHECK: acc.global_ctor @numbers_in__acc_ctor
 ! CHECK: acc.global_dtor @numbers_in__acc_dtor
  REAL :: one_in = 1
@@ -28,7 +28,7 @@ module acc_declare_common_test
  COMMON /numbers_in/ one_in, two_in
  !$acc declare copyin(/numbers_in/)
 
-! CHECK-LABEL: fir.global @numbers_link_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_declare_link>} : tuple<f32, f32> {
+! CHECK-LABEL: fir.global @numbers_link_ <{alignment = 4 : i64}> {acc.declare = #acc.declare<dataClause = acc_declare_link>} : !fir.type<_QBTnumbers_link_<{m0:f32,m1:f32}>> {
 ! CHECK: acc.global_ctor @numbers_link__acc_ctor
  REAL :: one_link = 1
  REAL :: two_link = 2

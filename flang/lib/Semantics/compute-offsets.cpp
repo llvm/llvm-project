@@ -95,9 +95,10 @@ private:
   void DoEquivalenceSet(const EquivalenceSet &);
   SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
-  // Returns amount of padding that was needed for alignment
-  std::size_t DoSymbol(
-      Symbol &, std::optional<const size_t> newAlign = std::nullopt);
+  // If "packed" is true, no padding is inserted before the symbol, but its
+  // alignment still contributes to the alignment of the enclosing storage.
+  void DoSymbol(Symbol &, std::optional<const size_t> newAlign = std::nullopt,
+      bool packed = false);
   SizeAndAlignment GetSizeAndAlignment(const Symbol &, bool entire);
   std::size_t Align(std::size_t, std::size_t);
   std::optional<size_t> CompAlignment(const Symbol &);
@@ -327,11 +328,9 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     Symbol &symbol{object->GetUltimate()};
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
-    if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
-      context_.Warn(common::UsageWarning::CommonBlockPadding, errorSite,
-          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
-          commonBlock.name(), padding, symbol.name());
-    }
+    // Members of a COMMON block are placed sequentially with no padding
+    // between them, as ifx and XLF do.
+    DoSymbol(symbol.GetUltimate(), std::nullopt, /*packed=*/true);
     previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
@@ -483,10 +482,10 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
   return result;
 }
 
-std::size_t ComputeOffsetsHelper::DoSymbol(
-    Symbol &symbol, std::optional<const size_t> newAlign) {
+void ComputeOffsetsHelper::DoSymbol(
+    Symbol &symbol, std::optional<const size_t> newAlign, bool packed) {
   if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
-    return 0;
+    return;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   // Oversized standalone objects are left to object emission.
@@ -498,18 +497,17 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
     // address rather than always returning the block base (offset 0).
     symbol.set_size(0);
     symbol.set_offset(offset_);
-    return 0;
+    return;
   }
-  std::size_t previousOffset{offset_};
   size_t alignVal{newAlign.value_or(s.alignment)};
-  offset_ = Align(offset_, alignVal);
+  if (!packed) {
+    offset_ = Align(offset_, alignVal);
+  }
   sizeOverflow_ |= IsTooBig(offset_);
-  std::size_t padding{offset_ - previousOffset};
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
   offset_ = AddSizes(offset_, s.size, sizeOverflow_);
   alignment_ = std::max(alignment_, alignVal);
-  return padding;
 }
 
 auto ComputeOffsetsHelper::GetSizeAndAlignment(

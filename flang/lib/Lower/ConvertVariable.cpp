@@ -2154,17 +2154,22 @@ commonBlockHasInit(const Fortran::semantics::MutableSymbolVector &cmnBlkMems) {
   return false;
 }
 
-/// Build a tuple type for a common block based on the common block
+/// Build a packed record type for a common block based on the common block
 /// members and the common block size.
 /// This type is only needed to build common block initializers where
 /// the initial value is the collection of the member initial values.
-static mlir::TupleType getTypeOfCommonWithInit(
+/// COMMON block members are laid out without padding by semantics, so the
+/// type must be packed and any gap between members is explicit.
+static fir::RecordType getTypeOfCommonWithInit(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::MutableSymbolVector &cmnBlkMems,
-    std::size_t commonSize) {
+    std::size_t commonSize, llvm::StringRef commonName) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  llvm::SmallVector<mlir::Type> members;
+  fir::RecordType::TypeVector members;
   std::size_t counter = 0;
+  auto addMember = [&](mlir::Type ty) {
+    members.emplace_back("m" + std::to_string(members.size()), ty);
+  };
   for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
     if (const auto *memDet =
             mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
@@ -2172,13 +2177,11 @@ static mlir::TupleType getTypeOfCommonWithInit(
         fir::SequenceType::Shape len = {
             static_cast<fir::SequenceType::Extent>(mem->offset() - counter)};
         mlir::IntegerType byteTy = builder.getIntegerType(8);
-        auto memTy = fir::SequenceType::get(len, byteTy);
-        members.push_back(memTy);
+        addMember(fir::SequenceType::get(len, byteTy));
         counter = mem->offset();
       }
       if (memDet->init()) {
-        mlir::Type memTy = converter.genType(*mem);
-        members.push_back(memTy);
+        addMember(converter.genType(*mem));
         counter = mem->offset() + mem->size();
       }
     }
@@ -2187,10 +2190,13 @@ static mlir::TupleType getTypeOfCommonWithInit(
     fir::SequenceType::Shape len = {
         static_cast<fir::SequenceType::Extent>(commonSize - counter)};
     mlir::IntegerType byteTy = builder.getIntegerType(8);
-    auto memTy = fir::SequenceType::get(len, byteTy);
-    members.push_back(memTy);
+    addMember(fir::SequenceType::get(len, byteTy));
   }
-  return mlir::TupleType::get(builder.getContext(), members);
+  auto recTy =
+      fir::RecordType::get(builder.getContext(), "_QBT" + commonName.str());
+  recTy.pack(true);
+  recTy.finalize(/*lenPList=*/{}, members);
+  return recTy;
 }
 
 /// Common block members may have aliases. They are not in the common block
@@ -2289,8 +2295,8 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
   // generating the type and initializer.
   std::sort(cmnBlkMems.begin(), cmnBlkMems.end(),
             [](auto &s1, auto &s2) { return s1->offset() < s2->offset(); });
-  mlir::TupleType commonTy =
-      getTypeOfCommonWithInit(converter, cmnBlkMems, commonSize);
+  fir::RecordType commonTy =
+      getTypeOfCommonWithInit(converter, cmnBlkMems, commonSize, commonName);
   // Create the global object, the initial value will be added later.
   global = builder.createGlobal(loc, commonTy, commonName);
   global.setAlignment(details->alignment());
@@ -2305,18 +2311,17 @@ static void finalizeCommonBlockDefinition(
     fir::GlobalOp global,
     const Fortran::semantics::MutableSymbolVector &cmnBlkMems) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::TupleType commonTy = mlir::cast<mlir::TupleType>(global.getType());
+  fir::RecordType commonTy = mlir::cast<fir::RecordType>(global.getType());
   auto initFunc = [&](fir::FirOpBuilder &builder) {
-    mlir::IndexType idxTy = builder.getIndexType();
     mlir::Value cb = fir::ZeroOp::create(builder, loc, commonTy);
-    unsigned tupIdx = 0;
+    unsigned fieldIdx = 0;
     std::size_t offset = 0;
     LLVM_DEBUG(llvm::dbgs() << "block {\n");
     for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
       if (const auto *memDet =
               mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
         if (mem->offset() > offset) {
-          ++tupIdx;
+          ++fieldIdx;
           offset = mem->offset();
         }
         if (memDet->init()) {
@@ -2328,12 +2333,14 @@ static void finalizeCommonBlockDefinition(
                   ? Fortran::lower::genInitialDataTarget(
                         converter, loc, converter.genType(*mem), initExpr)
                   : genInitializerExprValue(converter, loc, initExpr);
-          mlir::IntegerAttr offVal = builder.getIntegerAttr(idxTy, tupIdx);
-          mlir::Value castVal = builder.createConvert(
-              loc, commonTy.getType(tupIdx), fir::getBase(initVal));
-          cb = fir::InsertValueOp::create(builder, loc, commonTy, cb, castVal,
-                                          builder.getArrayAttr(offVal));
-          ++tupIdx;
+          auto [fieldName, fieldTy] = commonTy.getTypeList()[fieldIdx];
+          mlir::Value castVal =
+              builder.createConvert(loc, fieldTy, fir::getBase(initVal));
+          cb = fir::InsertValueOp::create(
+              builder, loc, commonTy, cb, castVal,
+              builder.getArrayAttr({builder.getStringAttr(fieldName),
+                                    mlir::TypeAttr::get(commonTy)}));
+          ++fieldIdx;
           offset = mem->offset() + mem->size();
         }
       }

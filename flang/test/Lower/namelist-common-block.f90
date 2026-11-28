@@ -18,9 +18,9 @@ contains
 end
 
 ! CHECK-LABEL: fir.global linkonce @_QFNt.list <{alignment = 64 : i64}> constant : !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>> {
-! CHECK: %[[CB_ADDR:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<56xi8>>
-! CHECK: %[[CB_CAST:.*]] = fir.convert %[[CB_ADDR]] : (!fir.ref<!fir.array<56xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK: %[[OFFSET:.*]] = arith.constant 8 : index
+! CHECK: %[[CB_ADDR:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<52xi8>>
+! CHECK: %[[CB_CAST:.*]] = fir.convert %[[CB_ADDR]] : (!fir.ref<!fir.array<52xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK: %[[OFFSET:.*]] = arith.constant 4 : index
 ! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[CB_CAST]], %[[OFFSET]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK: %[[CAST_BOX:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[CAST_BOX_NONE:.*]] = fir.convert %[[CAST_BOX]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>

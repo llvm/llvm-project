@@ -29,25 +29,25 @@ subroutine test1
   use data2
 end subroutine test1
 ! ALL-LABEL:     func.func @_QPtest1() {
-! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
-! HLFIR:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<35xi8>>
+! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common1_) : !fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>
+! HLFIR:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<35xi8>>
 ! HLFIR:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<!fir.array<35xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<5xf32>>
 ! HLFIR:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5]](%{{.*}}) storage(%[[VAL_2]][0]) uniq_name("_QMdata1Em1") : (!fir.ref<!fir.array<5xf32>>, !fir.shape<1>, !fir.ref<!fir.array<35xi8>>) -> (!fir.ref<!fir.array<5xf32>>, !fir.ref<!fir.array<5xf32>>)
-! HLFIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<35xi8>>
+! HLFIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<35xi8>>
 ! HLFIR:           %[[VAL_10:.*]] = arith.constant 20 : index
 ! HLFIR:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_10]] : (!fir.ref<!fir.array<35xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<3x!fir.char<1,5>>>
 ! HLFIR:           %[[VAL_13:.*]] = arith.constant 5 : index
 ! HLFIR:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_12]](%{{.*}}) typeparams %[[VAL_13]] storage(%[[VAL_9]][20]) uniq_name("_QMdata1Em2") : (!fir.ref<!fir.array<3x!fir.char<1,5>>>, !fir.shape<1>, index, !fir.ref<!fir.array<35xi8>>) -> (!fir.ref<!fir.array<3x!fir.char<1,5>>>, !fir.ref<!fir.array<3x!fir.char<1,5>>>)
-! HLFIR:           %[[VAL_17:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
-! HLFIR:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<32xi8>>
+! HLFIR:           %[[VAL_17:.*]] = fir.address_of(@common1_) : !fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>
+! HLFIR:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<32xi8>>
 ! HLFIR:           %[[VAL_19:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_18]], %[[VAL_19]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! HLFIR:           %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_21]] storage(%[[VAL_18]][0]) uniq_name("_QMdata2Em3") : (!fir.ref<i32>, !fir.ref<!fir.array<32xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! HLFIR:           %[[VAL_23:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<32xi8>>
+! HLFIR:           %[[VAL_23:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<32xi8>>
 ! HLFIR:           %[[VAL_24:.*]] = arith.constant 4 : index
 ! HLFIR:           %[[VAL_25:.*]] = fir.coordinate_of %[[VAL_23]], %[[VAL_24]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<7xf32>>
@@ -57,15 +57,15 @@ end subroutine test1
 ! FIR:           %[[VAL_3:.*]] = arith.constant 20 : index
 ! FIR:           %[[VAL_4:.*]] = arith.constant 5 : index
 ! FIR:           %[[VAL_5:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_7:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
-! FIR:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<35xi8>>
+! FIR:           %[[VAL_7:.*]] = fir.address_of(@common1_) : !fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>
+! FIR:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<35xi8>>
 ! FIR:           %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_5]] : (!fir.ref<!fir.array<35xi8>>, index) -> !fir.ref<i8>
 ! FIR:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<5xf32>>
 ! FIR:           %[[VAL_12:.*]] = fir.declare %[[VAL_10]](%{{.*}}) storage(%[[VAL_8]][0]) uniq_name("_QMdata1Em1") : (!fir.ref<!fir.array<5xf32>>, !fir.shape<1>, !fir.ref<!fir.array<35xi8>>) -> !fir.ref<!fir.array<5xf32>>
 ! FIR:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_3]] : (!fir.ref<!fir.array<35xi8>>, index) -> !fir.ref<i8>
 ! FIR:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<3x!fir.char<1,5>>>
 ! FIR:           %[[VAL_16:.*]] = fir.declare %[[VAL_14]](%{{.*}}) typeparams %[[VAL_4]] storage(%[[VAL_8]][20]) uniq_name("_QMdata1Em2") : (!fir.ref<!fir.array<3x!fir.char<1,5>>>, !fir.shape<1>, index, !fir.ref<!fir.array<35xi8>>) -> !fir.ref<!fir.array<3x!fir.char<1,5>>>
-! FIR:           %[[VAL_17:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<32xi8>>
+! FIR:           %[[VAL_17:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<32xi8>>
 ! FIR:           %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_5]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! FIR:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! FIR:           %[[VAL_20:.*]] = fir.declare %[[VAL_19]] storage(%[[VAL_17]][0]) uniq_name("_QMdata2Em3") : (!fir.ref<i32>, !fir.ref<!fir.array<32xi8>>) -> !fir.ref<i32>
@@ -79,16 +79,16 @@ subroutine test2
   common /common1/ x
 end subroutine test2
 ! ALL-LABEL:     func.func @_QPtest2() {
-! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
-! HLFIR:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common1_) : !fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>
+! HLFIR:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<f32>
 ! HLFIR:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] storage(%[[VAL_2]][0]) uniq_name("_QFtest2Ex") : (!fir.ref<f32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 ! FIR:           %[[VAL_0:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_2:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
-! FIR:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<tuple<i32, !fir.array<31xi8>>>) -> !fir.ref<!fir.array<4xi8>>
+! FIR:           %[[VAL_2:.*]] = fir.address_of(@common1_) : !fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>
+! FIR:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.type<_QBTcommon1_<{m0:i32,m1:!fir.array<31xi8>}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! FIR:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! FIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<f32>
 ! FIR:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]] storage(%[[VAL_3]][0]) uniq_name("_QFtest2Ex") : (!fir.ref<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ref<f32>

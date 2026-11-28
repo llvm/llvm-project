@@ -151,6 +151,18 @@ page](https://llvm.org/releases/).
   range, so conforming code is flagged and the warning is disabled by
   default.
 
+- The members of a COMMON block are now placed one after another with no
+  padding inserted for alignment, which is the default layout of ifx and XLF.
+  Previously flang padded a member to its natural alignment. A member can
+  therefore be misaligned, a zero-size member does not affect the offset of
+  the following member, and the size of a block is the sum of its member
+  sizes. The alignment of the block itself is still the largest alignment of
+  its members. The `-Wcommon-block-padding` warning is no longer issued, so the
+  option is still accepted but has no effect. It should be removed in a future
+  change. This changes the layout of COMMON blocks, so code that shares a
+  COMMON block with objects compiled by an earlier flang, or by a compiler
+  that pads (for example, gfortran), must be recompiled consistently.
+
 ## New Compiler Flags
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
   rejecting an out-of-range constant subscript with an error. See the entry above
