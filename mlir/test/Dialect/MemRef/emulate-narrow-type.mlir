@@ -196,6 +196,45 @@ func.func @rank_zero_memref() -> i4 {
 
 // -----
 
+// A rank-0 memref with a non-zero offset must stay rank-0 after emulation:
+// the converted strided layout carries the scaled offset and no strides.
+
+func.func @rank_zero_memref_static_offset(%arg0: memref<i4, strided<[], offset: 8>>) -> i4 {
+  %0 = memref.load %arg0[] : memref<i4, strided<[], offset: 8>>
+  return %0 : i4
+}
+// CHECK-LABEL: func @rank_zero_memref_static_offset(
+//  CHECK-SAME:     %[[ARG0:.+]]: memref<i8, strided<[], offset: 4>>
+//       CHECK:   %[[LOAD:.+]] = memref.load %[[ARG0]][] : memref<i8, strided<[], offset: 4>>
+//       CHECK:   %[[TRUNC:.+]] = arith.trunci %[[LOAD]] : i8 to i4
+//       CHECK:   return %[[TRUNC]]
+
+// CHECK32-LABEL: func @rank_zero_memref_static_offset(
+//  CHECK32-SAME:     %[[ARG0:.+]]: memref<i32, strided<[], offset: 1>>
+//       CHECK32:   %[[LOAD:.+]] = memref.load %[[ARG0]][] : memref<i32, strided<[], offset: 1>>
+//       CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[LOAD]] : i32 to i4
+//       CHECK32:   return %[[TRUNC]]
+
+// -----
+
+func.func @rank_zero_memref_dynamic_offset(%arg0: memref<i4, strided<[], offset: ?>>) -> i4 {
+  %0 = memref.load %arg0[] : memref<i4, strided<[], offset: ?>>
+  return %0 : i4
+}
+// CHECK-LABEL: func @rank_zero_memref_dynamic_offset(
+//  CHECK-SAME:     %[[ARG0:.+]]: memref<i8, strided<[], offset: ?>>
+//       CHECK:   %[[LOAD:.+]] = memref.load %[[ARG0]][] : memref<i8, strided<[], offset: ?>>
+//       CHECK:   %[[TRUNC:.+]] = arith.trunci %[[LOAD]] : i8 to i4
+//       CHECK:   return %[[TRUNC]]
+
+// CHECK32-LABEL: func @rank_zero_memref_dynamic_offset(
+//  CHECK32-SAME:     %[[ARG0:.+]]: memref<i32, strided<[], offset: ?>>
+//       CHECK32:   %[[LOAD:.+]] = memref.load %[[ARG0]][] : memref<i32, strided<[], offset: ?>>
+//       CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[LOAD]] : i32 to i4
+//       CHECK32:   return %[[TRUNC]]
+
+// -----
+
 func.func @memref_strided_i4(%idx : index) -> i4 {
   %arr = memref.alloc() : memref<128xi4>
   %subview = memref.subview %arr[32] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset:32>>
