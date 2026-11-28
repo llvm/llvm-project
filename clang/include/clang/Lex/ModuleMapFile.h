@@ -31,9 +31,10 @@ struct ExportDecl;
 /// All declarations that can appear in a `module` declaration.
 using Decl =
     std::variant<struct RequiresDecl, struct HeaderDecl, struct UmbrellaDirDecl,
-                 struct ModuleDecl, struct ExcludeDecl, struct ExportDecl,
-                 struct ExportAsDecl, struct ExternModuleDecl, struct UseDecl,
-                 struct LinkDecl, struct ConfigMacrosDecl, struct ConflictDecl>;
+                 struct ExcludeDirDecl, struct ModuleDecl, struct ExcludeDecl,
+                 struct ExportDecl, struct ExportAsDecl,
+                 struct ExternModuleDecl, struct UseDecl, struct LinkDecl,
+                 struct ConfigMacrosDecl, struct ConflictDecl>;
 
 struct RequiresFeature {
   StringRef Feature;
@@ -63,6 +64,11 @@ struct HeaderDecl {
 };
 
 struct UmbrellaDirDecl {
+  StringRef Path;
+  SourceLocation Location;
+};
+
+struct ExcludeDirDecl {
   StringRef Path;
   SourceLocation Location;
 };
