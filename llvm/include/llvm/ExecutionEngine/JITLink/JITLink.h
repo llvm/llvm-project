@@ -1800,36 +1800,6 @@ private:
   AddrToBlockMap AddrToBlock;
 };
 
-/// A map of addresses to Symbols.
-class SymbolAddressMap {
-public:
-  using SymbolVector = SmallVector<Symbol *, 1>;
-
-  /// Add a symbol to the SymbolAddressMap.
-  void addSymbol(Symbol &Sym) {
-    AddrToSymbols[Sym.getAddress()].push_back(&Sym);
-  }
-
-  /// Add all symbols in a given range to the SymbolAddressMap.
-  template <typename SymbolPtrCollection>
-  void addSymbols(SymbolPtrCollection &&Symbols) {
-    for (auto *Sym : Symbols)
-      addSymbol(*Sym);
-  }
-
-  /// Returns the list of symbols that start at the given address, or nullptr if
-  /// no such symbols exist.
-  const SymbolVector *getSymbolsAt(orc::ExecutorAddr Addr) const {
-    auto I = AddrToSymbols.find(Addr);
-    if (I == AddrToSymbols.end())
-      return nullptr;
-    return &I->second;
-  }
-
-private:
-  std::map<orc::ExecutorAddr, SymbolVector> AddrToSymbols;
-};
-
 /// A function for mutating LinkGraphs.
 using LinkGraphPassFunction = unique_function<Error(LinkGraph &)>;
 

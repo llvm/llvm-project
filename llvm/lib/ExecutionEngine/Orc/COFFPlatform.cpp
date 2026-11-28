@@ -117,11 +117,6 @@ public:
   void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override {}
 
 private:
-  struct HeaderSymbol {
-    const char *Name;
-    uint64_t Offset;
-  };
-
   struct NTHeader {
     support::ulittle32_t PEMagic;
     object::coff_file_header FileHeader;
