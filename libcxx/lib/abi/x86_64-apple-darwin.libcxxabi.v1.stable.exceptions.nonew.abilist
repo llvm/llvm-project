@@ -1582,6 +1582,8 @@
 {'is_defined': True, 'name': '__ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__134__construct_barrier_algorithm_baseERl', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__136__asymmetric_thread_fence_heavy_implENS_12memory_orderE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__139__asymmetric_thread_fence_is_asymmetricE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__13cinE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr15memory_resourceD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr15memory_resourceD1Ev', 'type': 'FUNC'}

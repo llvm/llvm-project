@@ -578,6 +578,8 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__atomic_notify_one_global_tableEPKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__136__asymmetric_thread_fence_heavy_implENS_12memory_orderE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__139__asymmetric_thread_fence_is_asymmetricE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__139__atomic_wait_global_table_with_timeoutEPKvlm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13cinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
