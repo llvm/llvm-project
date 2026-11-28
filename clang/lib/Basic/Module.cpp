@@ -45,7 +45,8 @@ Module::Module(ModuleConstructorTag, StringRef Name,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NamedModuleHasInit(true), NameVisibility(Hidden) {
+      NamedModuleHasInit(true), UnresolvedWildcardExport(false),
+      NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -600,6 +601,12 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
+  if (UnresolvedWildcardExport) {
+    OS.indent(Indent + 2);
+    OS << "export *\n";
+  }
+
+  ArrayRef<UnresolvedExportDecl> UnresolvedExports = getUnresolvedExports();
   for (unsigned I = 0, N = UnresolvedExports.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "export ";
