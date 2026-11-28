@@ -224,7 +224,8 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         if (!RC || !TRI.isVGPRClass(RC))
           continue;
 
-        if (MI.isCall() || MI.isMetaInstruction())
+        if (MI.isCall() || MI.isMetaInstruction() ||
+            !SIRegisterInfo::countsTowardRegisterUsage(MO))
           continue;
 
         unsigned Width =
