@@ -3476,14 +3476,30 @@ Pointer Authentication operand bundles are characterized by the
 
 #### KCFI Operand Bundles
 
-A `"kcfi"` operand bundle on an indirect call indicates that the call will
-be preceded by a runtime type check, which validates that the call target is
-prefixed with a {ref}`type identifier<md_kcfi_type>` that matches the operand
-bundle attribute. For example:
+A `"kcfi"` operand bundle on an indirect call indicates that the call will be
+preceded by a runtime type check, which validates that the call target is
+prefixed with a {ref}`type identifier<md_kcfi_type>` that matches the first
+`i32` operand bundle input. For example:
 
 ```llvm
 call void %0() ["kcfi"(i32 1234)]
 ```
+
+When a mismatch should call the UBSan CFI check failure handler instead of
+trapping, the operand bundle takes two additional operands: an unqualified
+(`addrspace(0)`) pointer to the UBSan check data global (which may be `null`
+only when minimal-runtime bit `0x2` is set) and an `i32` flags bitmask (`0x1` =
+recover, `0x2` = minimal runtime, `0x4` = `preserve_all` handler calling
+convention (requires `0x1` and `0x2`), `0x8` = `nomerge`). All other flag bits
+must be zero:
+
+```llvm
+call void %0() ["kcfi"(i32 1234, ptr @data, i32 0)]
+```
+
+Three-operand `"kcfi"` operand bundles must be lowered by the `kcfi` IR pass
+before instruction selection; target back-ends only lower single-operand
+trapping bundles.
 
 Clang emits KCFI operand bundles and the necessary metadata with
 `-fsanitize=kcfi`.

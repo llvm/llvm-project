@@ -23,6 +23,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "call-lowering"
@@ -227,6 +228,9 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
 
   auto Bundle = CB.getOperandBundle(LLVMContext::OB_kcfi);
   if (Bundle && CB.isIndirectCall()) {
+    if (Bundle->Inputs.size() != 1)
+      reportFatalInternalError(
+          "Diagnostic kcfi operand bundles must be lowered by KCFIPass");
     Info.CFIType = cast<ConstantInt>(Bundle->Inputs[0]);
     assert(Info.CFIType->getType()->isIntegerTy(32) && "Invalid CFI type");
   }

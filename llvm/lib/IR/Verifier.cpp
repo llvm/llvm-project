@@ -4559,11 +4559,40 @@ void Verifier::visitCallBase(CallBase &Call) {
     } else if (Tag == LLVMContext::OB_kcfi) {
       Check(!FoundKCFIBundle, "Multiple kcfi operand bundles", Call);
       FoundKCFIBundle = true;
-      Check(BU.Inputs.size() == 1, "Expected exactly one kcfi bundle operand",
-            Call);
+      Check(BU.Inputs.size() == 1 || BU.Inputs.size() == 3,
+            "Expected one or three kcfi bundle operands", Call);
       Check(isa<ConstantInt>(BU.Inputs[0]) &&
                 BU.Inputs[0]->getType()->isIntegerTy(32),
             "Kcfi bundle operand must be an i32 constant", Call);
+      if (BU.Inputs.size() == 3) {
+        Check(BU.Inputs[1]->getType() ==
+                  PointerType::getUnqual(Call.getContext()),
+              "Kcfi bundle data operand must be an unqualified pointer", Call);
+        auto *Flags = dyn_cast<ConstantInt>(BU.Inputs[2]);
+        Check(Flags && Flags->getType()->isIntegerTy(32),
+              "Kcfi bundle flags operand must be an i32 constant", Call);
+        constexpr uint32_t ValidMask = static_cast<uint32_t>(
+            KCFIBundleFlags::Recover | KCFIBundleFlags::MinimalRuntime |
+            KCFIBundleFlags::PreserveAllRegs | KCFIBundleFlags::NoMerge);
+        uint64_t FlagVal = Flags->getZExtValue();
+        Check((FlagVal & ~uint64_t(ValidMask)) == 0,
+              "Unknown kcfi bundle flags", Call);
+        auto BundleFlags = static_cast<KCFIBundleFlags>(FlagVal);
+        Check(!isa<ConstantPointerNull>(BU.Inputs[1]) ||
+                  (BundleFlags & KCFIBundleFlags::MinimalRuntime) !=
+                      KCFIBundleFlags::None,
+              "Kcfi bundle data operand cannot be null without minimal "
+              "runtime flag",
+              Call);
+        constexpr KCFIBundleFlags PreserveAllReq =
+            KCFIBundleFlags::Recover | KCFIBundleFlags::MinimalRuntime;
+        Check((BundleFlags & KCFIBundleFlags::PreserveAllRegs) ==
+                      KCFIBundleFlags::None ||
+                  (BundleFlags & PreserveAllReq) == PreserveAllReq,
+              "Kcfi bundle preserve-all flag requires recoverable minimal "
+              "runtime",
+              Call);
+      }
     } else if (Tag == LLVMContext::OB_preallocated) {
       Check(!FoundPreallocatedBundle, "Multiple preallocated operand bundles",
             Call);

@@ -9463,6 +9463,9 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   ConstantInt *CFIType = nullptr;
   if (CB.isIndirectCall()) {
     if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_kcfi)) {
+      if (Bundle->Inputs.size() != 1)
+        reportFatalInternalError(
+            "Diagnostic kcfi operand bundles must be lowered by KCFIPass");
       if (!TLI.supportKCFIBundles())
         report_fatal_error(
             "Target doesn't support calls with kcfi operand bundles.");

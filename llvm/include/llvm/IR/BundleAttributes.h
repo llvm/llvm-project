@@ -9,9 +9,11 @@
 #ifndef LLVM_IR_BUNDLE_ATTRIBUTES_H
 #define LLVM_IR_BUNDLE_ATTRIBUTES_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/InstrTypes.h"
+#include <cstdint>
 
 enum class BundleAttr {
   None,
@@ -77,6 +79,17 @@ AssumeSeparateStorageInfo getAssumeSeparateStorageInfo(OperandBundleUse);
 LLVM_ABI bool assumeBundleImpliesNonNull(const Value *Val,
                                          const Function *Context,
                                          OperandBundleUse OBU);
+
+/// Bitmask flags encoded in the third operand of a diagnostic "kcfi" operand
+/// bundle: [ "kcfi"(i32 <ExpectedHash>, ptr <CFICheckFailData>, i32 <Flags>) ].
+enum class KCFIBundleFlags : uint32_t {
+  None = 0,
+  Recover = 1U << 0,
+  MinimalRuntime = 1U << 1,
+  PreserveAllRegs = 1U << 2,
+  NoMerge = 1U << 3,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoMerge),
+};
 
 } // namespace llvm
 
