@@ -440,13 +440,12 @@ static bool checkSelfIvarsForInvariantViolation(ProgramStateRef State,
   if (!ID)
     return false;
 
-  for (const auto *IvarDecl : ID->ivars()) {
+  auto HasInvariantViolation = [&](const ObjCIvarDecl *IvarDecl) {
     SVal LV = State->getLValue(IvarDecl, SelfVal);
-    if (checkValueAtLValForInvariantViolation(State, LV, IvarDecl->getType())) {
-      return true;
-    }
-  }
-  return false;
+    return checkValueAtLValForInvariantViolation(State, LV,
+                                                 IvarDecl->getType());
+  };
+  return llvm::any_of(ID->ivars(), HasInvariantViolation);
 }
 
 static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
