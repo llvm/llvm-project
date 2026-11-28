@@ -8002,7 +8002,8 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
       return true;
 
     if (I->getOpcode() == Instruction::Add ||
-        I->getOpcode() == Instruction::Sub)
+        I->getOpcode() == Instruction::Sub ||
+        I->getOpcode() == Instruction::GetElementPtr)
       return true;
   }
   return BaseT::shouldTreatInstructionLikeSelect(I);
