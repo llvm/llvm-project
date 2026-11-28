@@ -23,7 +23,8 @@ enum class TombstoneKind {
   MaxPC,     /// -1/-2. Assumed to match with
              /// http://www.dwarfstd.org/ShowIssue.php?issue=200609.1.
   Universal, /// both: BFD + MaxPC
-  Exec,      /// match with address range of executable sections.
+  Exec,      /// match functions to executable sections and variables
+             /// to allocated sections.
 };
 
 /// The kind of accelerator table.
