@@ -208,8 +208,7 @@ def main():
         type=strtobool,
         nargs="?",
         const=True,
-        help="Use colors in diagnostics, overriding clang-tidy's default behavior "
-        "and the 'UseColor' option in .clang-tidy, if any.",
+        help="Use colors in output",
     )
     parser.add_argument(
         "-path", dest="build_path", help="Path used to read a compile command database."
