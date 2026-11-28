@@ -929,6 +929,19 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   if (Worklist.empty() || (TTI && !SeenExtFromIllegalType))
     return MinBWs;
 
+  const auto AddDemandedBits =
+      [&DBits](Value *Leader,
+               APInt MemberDemandedBits) -> std::optional<uint64_t> {
+    // If we encounter a type that is larger than 64 bits, we can't represent
+    // it so bail out.
+    if (MemberDemandedBits.getBitWidth() > 64)
+      return std::nullopt;
+
+    uint64_t V = MemberDemandedBits.getZExtValue();
+    DBits[Leader] |= V;
+    return V;
+  };
+
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
@@ -937,19 +950,13 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (!Visited.insert(I).second)
       continue;
 
-    // If we encounter a type that is larger than 64 bits, we can't represent
-    // it so bail out.
-    if (DB.getDemandedBits(I).getBitWidth() > 64)
+    if (const auto V = AddDemandedBits(Leader, DB.getDemandedBits(I)))
+      DBits[I] = *V;
+    else
       return MapVector<Instruction *, uint64_t>();
 
-    uint64_t V = DB.getDemandedBits(I).getZExtValue();
-    DBits[Leader] |= V;
-    DBits[I] = V;
-
-    // Casts, loads and instructions outside of our range terminate a chain
-    // successfully.
-    if (isa<SExtInst>(I) || isa<ZExtInst>(I) || isa<LoadInst>(I) ||
-        !InstructionSet.count(I))
+    // Casts and loads terminate a chain successfully.
+    if (isa<SExtInst>(I) || isa<ZExtInst>(I) || isa<LoadInst>(I))
       continue;
 
     // Unsafe casts terminate a chain unsuccessfully. We can't do anything
@@ -976,10 +983,29 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       // All bits demanded, no point continuing.
       continue;
 
-    for (Value *O : I->operands()) {
-      ECs.unionSets(Leader, O);
-      if (auto *OI = dyn_cast<Instruction>(O))
+    for (Use &U : I->operands()) {
+      // We care for three types of the operands:
+      //
+      //   * in-loop instructions
+      //   * live-in values
+      //
+      // In both cases, we add the value into the current EC.
+      // We do it even if it's a live-in because we shouldn't create two split
+      // values of different bitwidths depending on the EC using it.
+      ECs.unionSets(Leader, U);
+
+      auto *OI = dyn_cast<Instruction>(U);
+      if (!OI)
+        continue;
+
+      // In-loop instructions should be traversed further.
+      if (InstructionSet.contains(OI))
         Worklist.push_back(OI);
+      // Live-ins should contribute demanded bits. We can limit demanded bits
+      // for it to this concrete use and exclude bits demanded by the
+      // out-of-the-loop users.
+      else if (!AddDemandedBits(Leader, DB.getDemandedBits(&U)))
+        return MapVector<Instruction *, uint64_t>();
     }
   }
 
