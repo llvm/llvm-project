@@ -503,12 +503,6 @@ function(add_link_opts target_name)
   if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     target_link_options(${target_name} PRIVATE "LINKER:-brtl")
   endif()
-
-  # Check for existence of symbolic functions flag. Not supported
-  # by the older BFD linker (such as on some OpenBSD archs), the
-  # MinGW driver for LLD, and the Solaris native linker.
-  check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
-                    LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
 endfunction(add_link_opts)
 
 # Set each output directory according to ${CMAKE_CONFIGURATION_TYPES}.

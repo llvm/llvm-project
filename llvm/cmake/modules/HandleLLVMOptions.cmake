@@ -1210,6 +1210,14 @@ if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIP
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
+# Check for existence of symbolic functions flag. Not supported
+# by the older BFD linker (such as on some OpenBSD archs), the
+# MinGW driver for LLD, and the Solaris native linker.
+# Used by llvm-shlib and clang-shlib.
+include(CheckLinkerFlag)
+check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
+                  LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
+
 # Add flags for add_dead_strip().
 # FIXME: With MSVS, consider compiling with /Gy and linking with /OPT:REF?
 # But MinSizeRel seems to add that automatically, so maybe disable these
