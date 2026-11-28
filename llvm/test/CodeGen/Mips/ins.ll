@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck %s --check-prefixes=MIPS32R2
 ; RUN: llc -O3 -mcpu=mips64r2 -mtriple=mips64el  < %s \
 ; RUN:   | FileCheck %s --check-prefixes=MIPS64R2
+; RUN: llc -O3 -mcpu=mips64r6 -mtriple=mips64el < %s \
+; RUN:   | FileCheck %s --check-prefix=MIPS64R6
+; RUN: llc -O3 -mcpu=mips3 -mtriple=mips64el < %s \
+; RUN:   | FileCheck %s --check-prefix=MIPS3
 
 define i32 @or_and_shl(i32 %a, i32 %b) {
 ; MIPS32R2-LABEL: or_and_shl:
@@ -19,6 +23,24 @@ define i32 @or_and_shl(i32 %a, i32 %b) {
 ; MIPS64R2-NEXT:    ins $2, $1, 31, 1
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: or_and_shl:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    ins $2, $1, 31, 1
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: or_and_shl:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    lui $1, 32767
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    sll $2, $5, 0
+; MIPS3-NEXT:    sll $2, $2, 31
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
 entry:
   %shl = shl i32 %b, 31
   %and = and i32 %a, 2147483647
@@ -41,6 +63,24 @@ define i32 @or_shl_and(i32 %a, i32 %b) {
 ; MIPS64R2-NEXT:    ins $2, $1, 31, 1
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: or_shl_and:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    ins $2, $1, 31, 1
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: or_shl_and:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    lui $1, 32767
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    sll $2, $5, 0
+; MIPS3-NEXT:    sll $2, $2, 31
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
 entry:
   %shl = shl i32 %b, 31
   %and = and i32 %a, 2147483647
@@ -64,6 +104,21 @@ define i64 @dinsm(i64 %a, i64 %b) {
 ; MIPS64R2-NEXT:    dinsm $2, $5, 17, 47
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: dinsm:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 17, 47
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: dinsm:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    lui $1, 1
+; MIPS3-NEXT:    dsll $2, $5, 17
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
 entry:
   %shl = shl i64 %b, 17
   %and = and i64 %a, 131071
@@ -86,9 +141,874 @@ define i64 @dinsu(i64 %a, i64 %b) {
 ; MIPS64R2-NEXT:    dinsu $2, $5, 35, 29
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: dinsu:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsu $2, $5, 35, 29
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: dinsu:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    daddiu $1, $zero, 1
+; MIPS3-NEXT:    dsll $2, $5, 35
+; MIPS3-NEXT:    dsll $1, $1, 35
+; MIPS3-NEXT:    daddiu $1, $1, -1
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
 entry:
   %shl = shl i64 %b, 35
   %and = and i64 %a, 34359738367
   %or = or i64 %shl, %and
   ret i64 %or
+}
+
+; The masked field can appear on either side of OR.
+define i32 @masked_insert32(i32 %a, i32 %b) {
+; MIPS32R2-LABEL: masked_insert32:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $2, $5, 15, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert32:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    sll $2, $4, 0
+; MIPS64R2-NEXT:    sll $1, $5, 0
+; MIPS64R2-NEXT:    ins $2, $1, 15, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert32:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    ins $2, $1, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert32:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 32768
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    sll $3, $5, 0
+; MIPS3-NEXT:    ori $1, $1, 32767
+; MIPS3-NEXT:    sll $3, $3, 15
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    lui $2, 32767
+; MIPS3-NEXT:    ori $2, $2, 32768
+; MIPS3-NEXT:    and $2, $3, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
+  %keep = and i32 %a, 2147516415
+  %shift = shl i32 %b, 15
+  %field = and i32 %shift, 2147450880
+  %result = or i32 %keep, %field
+  ret i32 %result
+}
+
+define i32 @masked_insert32_commuted(i32 %a, i32 %b) {
+; MIPS32R2-LABEL: masked_insert32_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $2, $5, 15, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert32_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    sll $2, $4, 0
+; MIPS64R2-NEXT:    sll $1, $5, 0
+; MIPS64R2-NEXT:    ins $2, $1, 15, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert32_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    ins $2, $1, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert32_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 32768
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    sll $3, $5, 0
+; MIPS3-NEXT:    ori $1, $1, 32767
+; MIPS3-NEXT:    sll $3, $3, 15
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    lui $2, 32767
+; MIPS3-NEXT:    ori $2, $2, 32768
+; MIPS3-NEXT:    and $2, $3, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i32 %a, 2147516415
+  %shift = shl i32 %b, 15
+  %field = and i32 %shift, 2147450880
+  %result = or i32 %field, %keep
+  ret i32 %result
+}
+
+define i64 @masked_insert64(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert64:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    ins $2, $6, 15, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert64:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dins $2, $5, 15, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert64:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dins $2, $5, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert64:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 32767
+; MIPS3-NEXT:    dsll $2, $5, 15
+; MIPS3-NEXT:    ori $1, $1, 32768
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    lui $2, 32768
+; MIPS3-NEXT:    ori $2, $2, 32767
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 18446744071562100735
+  %shift = shl i64 %b, 15
+  %field = and i64 %shift, 2147450880
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert64_commuted(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert64_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    ins $2, $6, 15, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert64_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dins $2, $5, 15, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert64_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dins $2, $5, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert64_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 32768
+; MIPS3-NEXT:    lui $2, 32767
+; MIPS3-NEXT:    dsll $3, $5, 15
+; MIPS3-NEXT:    ori $1, $1, 32767
+; MIPS3-NEXT:    ori $2, $2, 32768
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    and $2, $3, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 18446744071562100735
+  %shift = shl i64 %b, 15
+  %field = and i64 %shift, 2147450880
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+; Exercise the DINSM and DINSU encodings across the 32-bit boundary.
+define i64 @masked_insert_middle_commuted(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_middle_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 32768
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    srl $3, $6, 1
+; MIPS32R2-NEXT:    and $1, $5, $1
+; MIPS32R2-NEXT:    ins $2, $6, 31, 1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $3, $1
+;
+; MIPS64R2-LABEL: masked_insert_middle_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsm $2, $5, 31, 32
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_middle_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 31, 32
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_middle_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    daddiu $2, $zero, 1
+; MIPS3-NEXT:    dsll $1, $5, 31
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    daddiu $3, $2, -1
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $2, $2, 31
+; MIPS3-NEXT:    dsll $3, $3, 31
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $1, $1, $3
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
+  %keep = and i64 %a, 9223372039002259455
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_middle(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_middle:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 32768
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    srl $3, $6, 1
+; MIPS32R2-NEXT:    and $1, $5, $1
+; MIPS32R2-NEXT:    ins $2, $6, 31, 1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $1, $3
+;
+; MIPS64R2-LABEL: masked_insert_middle:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsm $2, $5, 31, 32
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_middle:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 31, 32
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_middle:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    daddiu $2, $zero, 1
+; MIPS3-NEXT:    dsll $1, $5, 31
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    daddiu $3, $2, -1
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $2, $2, 31
+; MIPS3-NEXT:    dsll $3, $3, 31
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $1, $1, $3
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 9223372039002259455
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_upper_commuted(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_upper_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 65535
+; MIPS32R2-NEXT:    andi $3, $6, 65535
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    and $1, $5, $1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $3, $1
+;
+; MIPS64R2-LABEL: masked_insert_upper_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsu $2, $5, 32, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_upper_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsu $2, $5, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_upper_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    ori $1, $zero, 65535
+; MIPS3-NEXT:    dsll $2, $5, 32
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    lui $2, 65535
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
+  %keep = and i64 %a, 18446462603027808255
+  %shift = shl i64 %b, 32
+  %field = and i64 %shift, 281470681743360
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_upper(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_upper:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    andi $1, $6, 65535
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $3, $1, 0, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert_upper:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsu $2, $5, 32, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_upper:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsu $2, $5, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_upper:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    ori $1, $zero, 65535
+; MIPS3-NEXT:    dsll $2, $5, 32
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    and $1, $2, $1
+; MIPS3-NEXT:    lui $2, 65535
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 18446462603027808255
+  %shift = shl i64 %b, 32
+  %field = and i64 %shift, 281470681743360
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+; A field extending to bit 63 has a different DINSM immediate encoding.
+define i64 @masked_insert_tail(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_tail:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    srl $1, $6, 31
+; MIPS32R2-NEXT:    sll $3, $7, 1
+; MIPS32R2-NEXT:    ins $2, $6, 1, 31
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $3, $1
+;
+; MIPS64R2-LABEL: masked_insert_tail:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsm $2, $5, 1, 63
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_tail:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 1, 63
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_tail:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    dsll $1, $5, 1
+; MIPS3-NEXT:    andi $2, $4, 1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 1
+  %shift = shl i64 %b, 1
+  %field = and i64 %shift, 18446744073709551614
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_tail_commuted(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_tail_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    srl $1, $6, 31
+; MIPS32R2-NEXT:    sll $3, $7, 1
+; MIPS32R2-NEXT:    ins $2, $6, 1, 31
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $3, $1
+;
+; MIPS64R2-LABEL: masked_insert_tail_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsm $2, $5, 1, 63
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_tail_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 1, 63
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_tail_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    andi $1, $4, 1
+; MIPS3-NEXT:    dsll $2, $5, 1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, 1
+  %shift = shl i64 %b, 1
+  %field = and i64 %shift, 18446744073709551614
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+; The field can be positioned already, or supplied as a constant.
+define i64 @masked_insert_positioned_commuted(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_positioned_commuted:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 65535
+; MIPS32R2-NEXT:    andi $3, $7, 65535
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    and $1, $5, $1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $3, $3, $1
+;
+; MIPS64R2-LABEL: masked_insert_positioned_commuted:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    ori $1, $zero, 65535
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dsll $1, $1, 32
+; MIPS64R2-NEXT:    and $1, $5, $1
+; MIPS64R2-NEXT:    dsrl $1, $1, 32
+; MIPS64R2-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_positioned_commuted:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    ori $1, $zero, 65535
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dsll $1, $1, 32
+; MIPS64R6-NEXT:    and $1, $5, $1
+; MIPS64R6-NEXT:    dsrl $1, $1, 32
+; MIPS64R6-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_positioned_commuted:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $2, 65535
+; MIPS3-NEXT:    ori $1, $zero, 65535
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    and $1, $5, $1
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
+  %keep = and i64 %a, -281470681743361
+  %field = and i64 %b, 281470681743360
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_positioned(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_positioned:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    andi $1, $7, 65535
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $3, $1, 0, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert_positioned:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    ori $1, $zero, 65535
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dsll $1, $1, 32
+; MIPS64R2-NEXT:    and $1, $5, $1
+; MIPS64R2-NEXT:    dsrl $1, $1, 32
+; MIPS64R2-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_positioned:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    ori $1, $zero, 65535
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dsll $1, $1, 32
+; MIPS64R6-NEXT:    and $1, $5, $1
+; MIPS64R6-NEXT:    dsrl $1, $1, 32
+; MIPS64R6-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_positioned:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $2, 65535
+; MIPS3-NEXT:    ori $1, $zero, 65535
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    and $1, $5, $1
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -281470681743361
+  %field = and i64 %b, 281470681743360
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_constant(i64 %a) {
+; MIPS32R2-LABEL: masked_insert_constant:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    addiu $1, $zero, 4660
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $3, $1, 0, 16
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    nop
+;
+; MIPS64R2-LABEL: masked_insert_constant:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    daddiu $1, $zero, 4660
+; MIPS64R2-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    nop
+;
+; MIPS64R6-LABEL: masked_insert_constant:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    daddiu $1, $zero, 4660
+; MIPS64R6-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: masked_insert_constant:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 65535
+; MIPS3-NEXT:    daddiu $2, $zero, 1165
+; MIPS3-NEXT:    daddiu $1, $1, 1
+; MIPS3-NEXT:    dsll $2, $2, 34
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    daddiu $1, $1, -1
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $1, $2
+  %keep = and i64 %a, -281470681743361
+  %result = or i64 %keep, 20014547599360
+  ret i64 %result
+}
+
+; The inputs remain live after insertion.
+define i64 @masked_insert_live_inputs(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_live_inputs:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    move $1, $4
+; MIPS32R2-NEXT:    srl $3, $6, 1
+; MIPS32R2-NEXT:    ins $1, $6, 31, 1
+; MIPS32R2-NEXT:    xor $1, $1, $4
+; MIPS32R2-NEXT:    xor $2, $1, $6
+; MIPS32R2-NEXT:    lui $1, 32768
+; MIPS32R2-NEXT:    and $1, $5, $1
+; MIPS32R2-NEXT:    or $1, $3, $1
+; MIPS32R2-NEXT:    xor $1, $1, $5
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    xor $3, $1, $7
+;
+; MIPS64R2-LABEL: masked_insert_live_inputs:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    move $1, $4
+; MIPS64R2-NEXT:    dinsm $1, $5, 31, 32
+; MIPS64R2-NEXT:    xor $1, $1, $4
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    xor $2, $1, $5
+;
+; MIPS64R6-LABEL: masked_insert_live_inputs:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    move $1, $4
+; MIPS64R6-NEXT:    dinsm $1, $5, 31, 32
+; MIPS64R6-NEXT:    xor $1, $1, $4
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    xor $2, $1, $5
+;
+; MIPS3-LABEL: masked_insert_live_inputs:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    daddiu $2, $zero, 1
+; MIPS3-NEXT:    dsll $1, $5, 31
+; MIPS3-NEXT:    dsll $2, $2, 32
+; MIPS3-NEXT:    daddiu $3, $2, -1
+; MIPS3-NEXT:    daddiu $2, $2, 1
+; MIPS3-NEXT:    dsll $2, $2, 31
+; MIPS3-NEXT:    dsll $3, $3, 31
+; MIPS3-NEXT:    daddiu $2, $2, -1
+; MIPS3-NEXT:    and $1, $1, $3
+; MIPS3-NEXT:    and $2, $4, $2
+; MIPS3-NEXT:    or $1, $1, $2
+; MIPS3-NEXT:    xor $1, $1, $4
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    xor $2, $1, $5
+  %keep = and i64 %a, -9223372034707292161
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %insert = or i64 %field, %keep
+  %x = xor i64 %insert, %a
+  %result = xor i64 %x, %b
+  ret i64 %result
+}
+
+; Do not insert when the masks overlap or when ANDi is cheaper.
+define i64 @masked_insert_overlap(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_overlap:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 65408
+; MIPS32R2-NEXT:    sll $2, $6, 16
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    ori $1, $1, 65535
+; MIPS32R2-NEXT:    and $1, $4, $1
+; MIPS32R2-NEXT:    lui $4, 255
+; MIPS32R2-NEXT:    and $2, $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R2-LABEL: masked_insert_overlap:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    lui $1, 65408
+; MIPS64R2-NEXT:    dsll $2, $5, 16
+; MIPS64R2-NEXT:    lui $3, 255
+; MIPS64R2-NEXT:    ori $1, $1, 65535
+; MIPS64R2-NEXT:    and $2, $2, $3
+; MIPS64R2-NEXT:    and $1, $4, $1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R6-LABEL: masked_insert_overlap:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    lui $1, 65408
+; MIPS64R6-NEXT:    dsll $2, $5, 16
+; MIPS64R6-NEXT:    lui $3, 255
+; MIPS64R6-NEXT:    ori $1, $1, 65535
+; MIPS64R6-NEXT:    and $2, $2, $3
+; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    or $2, $2, $1
+;
+; MIPS3-LABEL: masked_insert_overlap:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 65408
+; MIPS3-NEXT:    dsll $2, $5, 16
+; MIPS3-NEXT:    lui $3, 255
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $2, $2, $3
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -8323073
+  %shift = shl i64 %b, 16
+  %field = and i64 %shift, 16711680
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_misaligned(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_misaligned:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 65280
+; MIPS32R2-NEXT:    sll $2, $6, 17
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    ori $1, $1, 65535
+; MIPS32R2-NEXT:    and $1, $4, $1
+; MIPS32R2-NEXT:    lui $4, 254
+; MIPS32R2-NEXT:    and $2, $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R2-LABEL: masked_insert_misaligned:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    lui $1, 65280
+; MIPS64R2-NEXT:    dsll $2, $5, 17
+; MIPS64R2-NEXT:    lui $3, 254
+; MIPS64R2-NEXT:    ori $1, $1, 65535
+; MIPS64R2-NEXT:    and $2, $2, $3
+; MIPS64R2-NEXT:    and $1, $4, $1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R6-LABEL: masked_insert_misaligned:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    lui $1, 65280
+; MIPS64R6-NEXT:    dsll $2, $5, 17
+; MIPS64R6-NEXT:    lui $3, 254
+; MIPS64R6-NEXT:    ori $1, $1, 65535
+; MIPS64R6-NEXT:    and $2, $2, $3
+; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    or $2, $2, $1
+;
+; MIPS3-LABEL: masked_insert_misaligned:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 65280
+; MIPS3-NEXT:    dsll $2, $5, 17
+; MIPS3-NEXT:    lui $3, 254
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $2, $2, $3
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -16711681
+  %shift = shl i64 %b, 17
+  %field = and i64 %shift, 16711680
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_sparse(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_sparse:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    lui $1, 65450
+; MIPS32R2-NEXT:    sll $2, $6, 16
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    ori $1, $1, 65535
+; MIPS32R2-NEXT:    and $1, $4, $1
+; MIPS32R2-NEXT:    lui $4, 85
+; MIPS32R2-NEXT:    and $2, $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R2-LABEL: masked_insert_sparse:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    lui $1, 65450
+; MIPS64R2-NEXT:    dsll $2, $5, 16
+; MIPS64R2-NEXT:    lui $3, 85
+; MIPS64R2-NEXT:    ori $1, $1, 65535
+; MIPS64R2-NEXT:    and $2, $2, $3
+; MIPS64R2-NEXT:    and $1, $4, $1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R6-LABEL: masked_insert_sparse:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    lui $1, 65450
+; MIPS64R6-NEXT:    dsll $2, $5, 16
+; MIPS64R6-NEXT:    lui $3, 85
+; MIPS64R6-NEXT:    ori $1, $1, 65535
+; MIPS64R6-NEXT:    and $2, $2, $3
+; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    or $2, $2, $1
+;
+; MIPS3-LABEL: masked_insert_sparse:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    lui $1, 65450
+; MIPS3-NEXT:    dsll $2, $5, 16
+; MIPS3-NEXT:    lui $3, 85
+; MIPS3-NEXT:    ori $1, $1, 65535
+; MIPS3-NEXT:    and $2, $2, $3
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -5570561
+  %shift = shl i64 %b, 16
+  %field = and i64 %shift, 5570560
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_small(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_small:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    addiu $1, $zero, -3
+; MIPS32R2-NEXT:    andi $2, $6, 2
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    and $1, $4, $1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R2-LABEL: masked_insert_small:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    daddiu $1, $zero, -3
+; MIPS64R2-NEXT:    andi $2, $5, 2
+; MIPS64R2-NEXT:    and $1, $4, $1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R6-LABEL: masked_insert_small:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    daddiu $1, $zero, -3
+; MIPS64R6-NEXT:    andi $2, $5, 2
+; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    or $2, $2, $1
+;
+; MIPS3-LABEL: masked_insert_small:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    daddiu $1, $zero, -3
+; MIPS3-NEXT:    andi $2, $5, 2
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -3
+  %field = and i64 %b, 2
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_small_wider(i64 %a, i64 %b) {
+; MIPS32R2-LABEL: masked_insert_small_wider:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    addiu $1, $zero, -7
+; MIPS32R2-NEXT:    andi $2, $6, 6
+; MIPS32R2-NEXT:    move $3, $5
+; MIPS32R2-NEXT:    and $1, $4, $1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R2-LABEL: masked_insert_small_wider:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    daddiu $1, $zero, -7
+; MIPS64R2-NEXT:    andi $2, $5, 6
+; MIPS64R2-NEXT:    and $1, $4, $1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    or $2, $2, $1
+;
+; MIPS64R6-LABEL: masked_insert_small_wider:
+; MIPS64R6:       # %bb.0:
+; MIPS64R6-NEXT:    daddiu $1, $zero, -7
+; MIPS64R6-NEXT:    andi $2, $5, 6
+; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    or $2, $2, $1
+;
+; MIPS3-LABEL: masked_insert_small_wider:
+; MIPS3:       # %bb.0:
+; MIPS3-NEXT:    daddiu $1, $zero, -7
+; MIPS3-NEXT:    andi $2, $5, 6
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    or $2, $2, $1
+  %keep = and i64 %a, -7
+  %field = and i64 %b, 6
+  %result = or i64 %field, %keep
+  ret i64 %result
 }
