@@ -43,7 +43,7 @@ function(add_ocaml_library name)
          "${bin}/lib${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
     if ( BUILD_SHARED_LIBS )
       list(APPEND ocaml_outputs
-           "${bin}/dll${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+           "${bin}/dll${name}${OCAML_EXT_DLL}")
     endif()
   endif()
   if( HAVE_OCAMLOPT )
@@ -206,9 +206,9 @@ function(add_ocaml_library name)
     if( NOT (ext STREQUAL ".cmo" OR
              ext STREQUAL ".ml" OR
              ext STREQUAL CMAKE_C_OUTPUT_EXTENSION OR
-             ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX) )
+             ext STREQUAL OCAML_EXT_DLL) )
       list(APPEND install_files "${ocaml_output}")
-    elseif( ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX)
+    elseif( ext STREQUAL OCAML_EXT_DLL)
       list(APPEND install_shlibs "${ocaml_output}")
     endif()
   endforeach()

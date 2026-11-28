@@ -4,7 +4,7 @@ This directory contains LLVM bindings for the OCaml programming language
 Prerequisites
 -------------
 
-* OCaml 4.00.0+.
+* OCaml 4.08.0+.
 * ctypes 0.4+.
 * CMake (to build LLVM).
 
