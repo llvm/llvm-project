@@ -1,0 +1,29 @@
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC -I%S/../../../lib \
+# RUN:   -x assembler-with-cpp -c \
+# RUN:   %S/../../../lib/sanitizer_common/sanitizer_common_interceptors_vfork_arm.inc.S \
+# RUN:   -o %t-vfork-pic.o
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC \
+# RUN:   -D__ARM_PIC_DATA_STATIC_BASE=1 -I%S/../../../lib \
+# RUN:   -x assembler-with-cpp -c \
+# RUN:   %S/../../../lib/sanitizer_common/sanitizer_common_interceptors_vfork_arm.inc.S \
+# RUN:   -o %t-vfork-static-base.o
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC \
+# RUN:   -D__ARM_PIC_DATA_STATIC_BASE=1 -I%S/../../../lib \
+# RUN:   -x assembler-with-cpp -E \
+# RUN:   %S/../../../lib/sanitizer_common/sanitizer_common_interceptors_vfork_arm.inc.S | \
+# RUN:   FileCheck %s --check-prefix=VFORK
+
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC \
+# RUN:   -x assembler-with-cpp -c %S/../../../lib/xray/xray_trampoline_arm.S \
+# RUN:   -o %t-xray-pic.o
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC \
+# RUN:   -D__ARM_PIC_DATA_STATIC_BASE=1 -x assembler-with-cpp -c \
+# RUN:   %S/../../../lib/xray/xray_trampoline_arm.S \
+# RUN:   -o %t-xray-static-base.o
+# RUN: %clang --target=armv7-unknown-linux-gnueabihf -fPIC \
+# RUN:   -D__ARM_PIC_DATA_STATIC_BASE=1 -x assembler-with-cpp -E \
+# RUN:   %S/../../../lib/xray/xray_trampoline_arm.S | \
+# RUN:   FileCheck %s --check-prefix=XRAY
+
+# VFORK: .long _ZN14__interception10real_vforkE(GOT)
+# XRAY: .long _ZN6__xray19XRayPatchedFunctionE(GOT)

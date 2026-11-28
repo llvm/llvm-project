@@ -407,6 +407,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.SeparateNamedSections = CodeGenOpts.SeparateNamedSections;
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
+  Options.PicDataIsTextRelative = CodeGenOpts.PicDataIsTextRelative;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
   Options.StackUsageFile = CodeGenOpts.StackUsageFile;

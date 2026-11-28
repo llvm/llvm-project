@@ -47,8 +47,17 @@
 //
 // CHECK-NO-PIC-DATA-TEXT-REL: "-mcmodel=medium"
 // CHECK-PIC-DATA-TEXT-REL-NOT: "-mcmodel=medium"
-// CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ: error: unsupported option '-mno-pic-data-is-text-relative' for target 'arm-arm-none-eabi'
-// CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ: error: unsupported option '-mpic-data-is-text-relative' for target 'arm-arm-none-eabi'
+// CHECK-NO-PIC-DATA-TEXT-REL-ARM: "-mno-pic-data-is-text-relative"
+// CHECK-PIC-DATA-TEXT-REL-ARM: "-mpic-data-is-text-relative"
+// CHECK-NO-PIC-DATA-TEXT-REL-THUMB: "-mno-pic-data-is-text-relative"
+// CHECK-PIC-DATA-TEXT-REL-THUMB: "-mpic-data-is-text-relative"
+// CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ-ARM: error: unsupported option '-mno-pic-data-is-text-relative' for target 'i386-unknown-unknown'
+// CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ-ARM: error: unsupported option '-mpic-data-is-text-relative' for target 'i386-unknown-unknown'
+// CHECK-NO-PIC-DATA-TEXT-REL-NO-PIC: error: invalid argument '-mno-pic-data-is-text-relative' only allowed with '-fpic/-fpie'
+// CHECK-NO-PIC-DATA-TEXT-REL-FIXED-R9: error: invalid argument '-mno-pic-data-is-text-relative' not allowed with '-ffixed-r9'
+// CHECK-NO-PIC-DATA-TEXT-REL-ROPI-RWPI: error: embedded and GOT-based position independence are incompatible
+// CHECK-MULTILIB-NO-PIC-DATA-TEXT-REL-ARM: -mno-pic-data-is-text-relative
+// CHECK-MULTILIB-PIC-DATA-TEXT-REL-ARM: -mpic-data-is-text-relative
 //
 // RUN: %clang -c %s -target i386-unknown-unknown -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
@@ -319,10 +328,30 @@
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL
 // RUN: %clang -fpic -c --target=s390x-linux-gnu -mpic-data-is-text-relative %s -### \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL
-// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
-// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ
-// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
-// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ
+// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-ARM
+// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-ARM
+// RUN: %clang -fpic -mthumb -c --target=arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-THUMB
+// RUN: %clang -fpic -mthumb -c --target=arm-none-eabi -mpic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-THUMB
+// RUN: not %clang -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NO-PIC
+// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative -ffixed-r9 %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-FIXED-R9
+// RUN: not %clang -fpic -fropi -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-ROPI-RWPI
+// RUN: not %clang -fpic -frwpi -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-ROPI-RWPI
+// RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###' --target=armv7-unknown-none-eabi -fPIC -mno-pic-data-is-text-relative 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-MULTILIB-NO-PIC-DATA-TEXT-REL-ARM
+// RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###' --target=armv7-unknown-none-eabi -fPIC 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-MULTILIB-PIC-DATA-TEXT-REL-ARM
+// RUN: not %clang -fpic -c --target=i386-unknown-unknown -mno-pic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ-ARM
+// RUN: not %clang -fpic -c --target=i386-unknown-unknown -mpic-data-is-text-relative %s \
+// RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ-ARM
 
 // On Haiku, PIC is enabled by default, and PIE is disabled by default.
 // RUN: %clang -c %s --target=x86_64-unknown-haiku -### 2>&1 \
