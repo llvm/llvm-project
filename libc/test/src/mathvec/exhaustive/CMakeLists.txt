@@ -10,6 +10,20 @@ add_header_library(
 )
 
 add_fp_unittest(
+  checker_test
+  SUITE
+    libc-mathvec-tests
+  SRCS
+    checker_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   acosf_test
   SUITE
     libc-mathvec-exhaustive-tests
