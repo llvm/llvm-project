@@ -14,6 +14,8 @@ bool callTheFD();
 void scream();
 bool isFireFighterComing();
 bool someOtherCondition();
+bool hasEmergencyExits();
+bool powerCutOff();
 
 //===--- Basic Positives --------------------------------------------------===//
 
@@ -404,7 +406,221 @@ void positive_indirect_outer_and_rhs_inner_or_rhs() {
     }
   }
 }
+void positive_direct_UO_LNot_else() {
+  bool onFire = isBurning();
+  if (onFire) {
+    if (!onFire) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^ *$}}
+      scream();
+      // CHECK-FIXES: {{^ *$}}
+    }else{
+      // CHECK-FIXES: {{^\ *$}}
+      tryToExtinguishByVal(true);
+    }
+    // CHECK-FIXES: {{^ *$}}
+  }
+}
+// ===--- Long Conjuction-disjunction Chain Positives --- ===//
+void positive_direct_first_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if(onFire){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
 
+void positive_direct_second_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(fireFighters<10 && onFire &&!hasEmergencyExit && isPowerSupplyOn){
+    if(onFire){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_direct_third_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if(hasntEmergencyExit){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_direct_fourth_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if(isPowerSupplyOn){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+          // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_indirect_first_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(onFire){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_indirect_second_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(fireFighters<10 && onFire &&!hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(onFire){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }  
+  }
+}
+
+void positive_indirect_third_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(hasntEmergencyExit){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }  
+  }
+}
+
+void positive_indirect_fourth_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(isPowerSupplyOn){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_direct_inner_disj_outer_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if(isCollapsing() ||hasntEmergencyExit){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES:isCollapsing() ;
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+    
+  }
+}
+
+void positive_direct_inner_disj_outer_conj_chain_UO_Lnot(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasEmergencyExit && isPowerSupplyOn){
+    if( isCollapsing() ||!hasEmergencyExit){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: if( isCollapsing() ){
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+    
+  }
+}
+void positive_direct_inner_conj_chain_outer_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasEmergencyExit && isPowerSupplyOn){
+    if(onFire && hasEmergencyExit && isPowerSupplyOn){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+      // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^ *$}}
+    scream();
+    }
+  }
+}
+void positive_direct_inner_conj_disj_chain_outer_sideeffect_conj(){
+  bool onFire=isBurning();
+  if(onFire){
+    if(( (powerCutOff() || onFire) && (isCollapsing()  || onFire) )){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES:if(( (powerCutOff() || onFire) && (isCollapsing()  || true) )){
+      scream();
+       // CHECK-FIXES: {{^\ *$}}
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+void positive_direct_inner_conj_disj_chain_outer_sideeffect_UO_Lnot(){
+  bool onFire=isBurning();
+  if(onFire){
+    if(( (powerCutOff() || onFire) && (isCollapsing()  || onFire) && !onFire )){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES:( (powerCutOff() || onFire) && (isCollapsing()  || onFire) );
+      scream();
+       // CHECK-FIXES: {{^ *$}}
+    }
+    // CHECK-FIXES: {{^ *$}}
+  }
+}
+void positive_direct_inner_conj_disj_chain_outer_sideeffect_disj_UO_Lnot(){
+  bool onFire=isBurning();
+  if(onFire){
+    if(( (powerCutOff() || onFire) || (isCollapsing()  && !onFire) )){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES:if(( (powerCutOff() || onFire) || (isCollapsing()  && false) )){
+      scream();
+       // CHECK-FIXES: {{^ *$}}
+    }
+    // CHECK-FIXES: {{^ *$}}
+  }
+}
 //===--- Basic Negatives --------------------------------------------------===//
 
 void negative_direct() {
@@ -997,6 +1213,20 @@ void negative_reassigned() {
   }
 }
 
+// ===--- Long Conjuction-disjunction Chain Negatives --- ===//
+
+void negative_direct__outer_disj_inner_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 || hasntEmergencyExit && isPowerSupplyOn){
+    if(onFire && hasntEmergencyExit && isPowerSupplyOn){
+      // NO-MESSAGE:Fire may have been extinguished
+    scream();
+    }
+  }
+}
+
 //===--- Special Positives ------------------------------------------------===//
 
 // Condition variable mutated in or after the inner loop
@@ -1074,7 +1304,7 @@ void positive_or_rhs_with_side_effect() {
   if (onFire) {
     if (onFire || callTheFD()) {
       // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
-      // CHECK-FIXES: callTheFD();
+      // CHECK-FIXES: {{^$}}
       scream();
     }
     // CHECK-FIXES: {{^\ *$}}
@@ -1185,6 +1415,67 @@ void positive_loop_around_both_ifs() {
   }
 }
 
+
+void positive_loop_not_mutated_UO_LNot() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (!onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_loop_mutated_after_loop_UO_LNot() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (!onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+    tryToExtinguish(onFire);
+  }
+}
+
+void positive_loop_around_both_ifs_UO_LNot() {
+  bool onFire = isBurning();
+  while (someOtherCondition()) {
+    if (onFire) {
+      if (!onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+    tryToExtinguish(onFire);
+  }
+}
+void positive_loop_not_mutated_UO_LNot_else() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (!onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+         // CHECK-FIXES: {{^\ *$}}
+      }else{
+         // CHECK-FIXES: {{^\ *$}}
+        doSomething();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
 //===--- Special Negatives ------------------------------------------------===//
 
 // Aliasing
