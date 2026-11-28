@@ -25,6 +25,7 @@ StringRef Sparc::getSpecifierName(uint16_t S) {
   case 0:                          return {};
   case ELF::R_SPARC_LO10:          return "lo";
   case ELF::R_SPARC_HI22:          return "hi";
+  case ELF::R_SPARC_H34:           return "h34";
   case ELF::R_SPARC_H44:           return "h44";
   case ELF::R_SPARC_M44:           return "m44";
   case ELF::R_SPARC_L44:           return "l44";
@@ -37,7 +38,12 @@ StringRef Sparc::getSpecifierName(uint16_t S) {
   case ELF::R_SPARC_GOT22:         return "hi";
   case ELF::R_SPARC_GOT10:         return "lo";
   case ELF::R_SPARC_GOT13:         return {};
+  case ELF::R_SPARC_DISP8:         return "r_disp8";
+  case ELF::R_SPARC_DISP16:        return "r_disp16";
   case ELF::R_SPARC_DISP32:        return "r_disp32";
+  case ELF::R_SPARC_DISP64:        return "r_disp64";
+  case ELF::R_SPARC_PLT32:         return "r_plt32";
+  case ELF::R_SPARC_PLT64:         return "r_plt64";
   case ELF::R_SPARC_TLS_DTPOFF32:  return "r_tls_dtpoff32";
   case ELF::R_SPARC_TLS_DTPOFF64:  return "r_tls_dtpoff64";
   case ELF::R_SPARC_TLS_GD_HI22:   return "tgd_hi22";
@@ -72,6 +78,9 @@ uint16_t Sparc::parseSpecifier(StringRef name) {
   return StringSwitch<uint16_t>(name)
       .Case("lo", ELF::R_SPARC_LO10)
       .Case("hi", ELF::R_SPARC_HI22)
+      .Case("h34", ELF::R_SPARC_H34)
+      // GNU as alias of %l44
+      .Case("l34", ELF::R_SPARC_L44)
       .Case("h44", ELF::R_SPARC_H44)
       .Case("m44", ELF::R_SPARC_M44)
       .Case("l44", ELF::R_SPARC_L44)
@@ -115,7 +124,12 @@ uint16_t Sparc::parseSpecifier(StringRef name) {
 
 uint16_t Sparc::parseDataSpecifier(StringRef name) {
   return StringSwitch<uint16_t>(name)
+      .Case("r_disp8", ELF::R_SPARC_DISP8)
+      .Case("r_disp16", ELF::R_SPARC_DISP16)
       .Case("r_disp32", ELF::R_SPARC_DISP32)
+      .Case("r_disp64", ELF::R_SPARC_DISP64)
+      .Case("r_plt32", ELF::R_SPARC_PLT32)
+      .Case("r_plt64", ELF::R_SPARC_PLT64)
       .Case("r_tls_dtpoff32", ELF::R_SPARC_TLS_DTPOFF32)
       .Case("r_tls_dtpoff64", ELF::R_SPARC_TLS_DTPOFF64)
       .Default(0);

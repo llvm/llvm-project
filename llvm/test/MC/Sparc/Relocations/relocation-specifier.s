@@ -57,6 +57,16 @@ or %o1, %pc10(sym), %o1
 sethi %pc22(main), %o1
 or %o1, %pc10(main), %o1
 
+## %l34 is a GNU as alias of %l44.
+# ASM:      sethi %h34(sym), %l0
+# ASM-NEXT: or %g1, %l44(sym), %g3
+# OBJDUMP:      sethi 0x0, %l0
+# OBJDUMP-NEXT:   R_SPARC_H34 sym
+# OBJDUMP-NEXT: or %g1, 0x0, %g3
+# OBJDUMP-NEXT:   R_SPARC_L44 sym
+sethi %h34(sym), %l0
+or %g1, %l34(sym), %g3
+
 ## GNU as has no %got operators, so these do not round-trip through ASM output.
 # ASM:      sethi %hi(sym), %o1
 # ASM-NEXT: or %o1, %lo(sym), %o1
@@ -116,6 +126,7 @@ ldx [%l7 + %l1], %l2, %gdop(sym)
 
 .set abs, 0xfedcba98
 .set abs48, 0xfedcba987654
+.set abs34, 0x323456789
 zero = 0
 
 ## FIXME: Don't emit GOT relocations when -position-independent is specified.
@@ -138,6 +149,11 @@ seven = 7
 sethi %h44(abs48), %o0
 or %o0, %m44(abs48), %o0
 ld [%o0 + %l44(abs48)], %o0
+
+# OBJDUMP-NEXT: sethi 0x323456, %o0
+# OBJDUMP-NEXT: ld [%o0+0x789], %o0
+sethi %h34(abs34), %o0
+ld [%o0 + %l34(abs34)], %o0
 
 # OBJDUMP-NEXT: sethi 0x0, %o0
 # OBJDUMP-NEXT: sethi 0x3fb72e, %o0

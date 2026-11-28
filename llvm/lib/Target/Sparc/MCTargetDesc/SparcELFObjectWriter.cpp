@@ -64,23 +64,46 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
     if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
       static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
+  case ELF::R_SPARC_DISP8:
+  case ELF::R_SPARC_DISP16:
   case ELF::R_SPARC_DISP32:
-    if (Kind == FK_Data_4)
-      return ELF::R_SPARC_DISP32;
-    reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
-                                    " can only be used in a .word directive");
-    return ELF::R_SPARC_NONE;
+  case ELF::R_SPARC_DISP64:
+  case ELF::R_SPARC_PLT32:
+  case ELF::R_SPARC_PLT64:
   case ELF::R_SPARC_TLS_DTPOFF32:
   case ELF::R_SPARC_TLS_DTPOFF64: {
-    bool Is64 = Spec == ELF::R_SPARC_TLS_DTPOFF64;
-    if (Kind != (Is64 ? FK_Data_8 : FK_Data_4)) {
+    // Data relocation specifiers name the size of the data directive.
+    MCFixupKind DataKind;
+    StringRef Directive;
+    switch (Spec) {
+    case ELF::R_SPARC_DISP8:
+      DataKind = FK_Data_1;
+      Directive = ".byte";
+      break;
+    case ELF::R_SPARC_DISP16:
+      DataKind = FK_Data_2;
+      Directive = ".half";
+      break;
+    case ELF::R_SPARC_DISP32:
+    case ELF::R_SPARC_PLT32:
+    case ELF::R_SPARC_TLS_DTPOFF32:
+      DataKind = FK_Data_4;
+      Directive = ".word";
+      break;
+    default:
+      DataKind = FK_Data_8;
+      Directive = ".xword";
+      break;
+    }
+    if (Kind != DataKind) {
       reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
-                                      " can only be used in a ." +
-                                      (Is64 ? "xword" : "word") + " directive");
+                                      " can only be used in a " + Directive +
+                                      " directive");
       return ELF::R_SPARC_NONE;
     }
-    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
-      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
+    if (Spec == ELF::R_SPARC_TLS_DTPOFF32 || Spec == ELF::R_SPARC_TLS_DTPOFF64)
+      if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+        static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     return Spec;
   }
   default:
