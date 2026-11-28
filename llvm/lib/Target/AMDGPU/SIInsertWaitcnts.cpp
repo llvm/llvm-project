@@ -590,6 +590,7 @@ public:
   void recordAsyncMark(MachineInstr &MI, AMDGPU::AsyncStages Stages);
 
   HWEvents getPendingEvents() const { return PendingEvents; }
+  void setExecKnownNonZero() { ExecKnownNonZero = true; }
   bool hasPendingEvent() const { return PendingEvents.any(); }
   bool hasPendingEvent(HWEvents E) const { return PendingEvents.contains(E); }
   bool hasPendingEvent(AMDGPU::InstCounterType T) const {
@@ -800,6 +801,8 @@ private:
   // VA_VDST increments by always-issued VALUs so far. Only differences between
   // values are meaningful.
   unsigned AlwaysIssuedCount = 0;
+  // In a kernel, no EXEC write that may produce zero has been seen yet.
+  bool ExecKnownNonZero = false;
 
   // The score tracking logic is fragmented as follows:
   // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
@@ -948,6 +951,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 // VALUs issued after an EXEC write may be skipped, so they cannot credit
 // accesses that are already pending.
 void WaitcntBrackets::recordExecWrite() {
+  ExecKnownNonZero = false;
   for (auto T : {AMDGPU::VA_VDST_RD, AMDGPU::VA_VDST_WR}) {
     bool IsWrite = T == AMDGPU::VA_VDST_WR;
     for (auto &[ID, Info] : VMem) {
@@ -963,6 +967,9 @@ void WaitcntBrackets::recordExecWrite() {
 // \p MI is issued even when EXEC is zero, but later VALUs may be skipped.
 void WaitcntBrackets::recordAlwaysIssuedVALU(const MachineInstr &MI) {
   AlwaysIssuedCount += getVAVDSTIncrement(MI);
+  // Later VALUs are issued as well.
+  if (ExecKnownNonZero)
+    return;
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() ||
         !Context->TRI.isVectorRegister(Context->MRI, Op.getReg()))
@@ -3141,7 +3148,8 @@ bool WaitcntBrackets::mergeVAVDSTCredit(AMDGPU::InstCounterType T, VMEMID ID,
 /// Returns whether the merge resulted in a change that requires tighter waits
 /// (i.e. the merged brackets strictly dominate the original brackets).
 bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
-  bool StrictDom = false;
+  bool StrictDom = ExecKnownNonZero && !Other.ExecKnownNonZero;
+  ExecKnownNonZero &= Other.ExecKnownNonZero;
 
   // Check if "other" has keys we don't have, and create default entries for
   // those. If they remain empty after merging, we will clean it up after.
@@ -3856,6 +3864,15 @@ bool SIInsertWaitcnts::run() {
     Modified = true;
   }
 
+  // Waves are launched with a nonzero EXEC. A block that may clear this fact
+  // must reach its successors even with nothing pending.
+  const bool TrackExecNonZero = IsExpertMode && MFI->isEntryFunction();
+  if (TrackExecNonZero) {
+    auto KernelInitialState = std::make_unique<WaitcntBrackets>(this);
+    KernelInitialState->setExecKnownNonZero();
+    BlockInfos[&EntryBB].Incoming = std::move(KernelInitialState);
+  }
+
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
@@ -3895,7 +3912,7 @@ bool SIInsertWaitcnts::run() {
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 
-      if (Brackets->hasPendingEvent()) {
+      if (Brackets->hasPendingEvent() || TrackExecNonZero) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : MBB->successors()) {
           auto *SuccBII = BlockInfos.find(Succ);

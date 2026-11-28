@@ -1040,7 +1040,7 @@ body: |
     ; CHECK-NEXT: $vgpr30 = V_WRITELANE_B32 $sgpr0, 0, $vgpr30
     ; CHECK-NEXT: $vgpr33 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr34 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_2
     ; CHECK-NEXT: DS_WRITE_B32_gfx9 $vgpr96, $vgpr30, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr30 = V_WRITELANE_B32 $sgpr0, 0, $vgpr30
@@ -1066,7 +1066,7 @@ body: |
     ; CHECK-NEXT: $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, $vgpr0, $vcc_lo, 0, implicit $exec
     ; CHECK-NEXT: $vgpr33 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr34 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_2
     ; CHECK-NEXT: DS_WRITE_B32_gfx9 $vgpr96, $vgpr3, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, $vgpr0, $vcc_lo, 0, implicit $exec
@@ -1122,7 +1122,7 @@ body: |
     ; CHECK-NEXT: $vgpr30 = V_WRITELANE_B32 $sgpr0, 0, $vgpr30
     ; CHECK-NEXT: $vgpr33 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr34 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_2
     ; CHECK-NEXT: DS_WRITE_B32_gfx9 $vgpr96, $vgpr30, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $exec_lo = S_OR_B32 $exec_lo, $sgpr8, implicit-def $scc
