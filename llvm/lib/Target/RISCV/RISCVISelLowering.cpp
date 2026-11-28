@@ -29825,6 +29825,15 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         MF.getFunction(),
         "Return address register required, but has been reserved."});
 
+  // Libcalls created during SelectionDAG expansion (for example from
+  // llvm.memset or llvm.sin) have no CallBase. Classify those by their callee
+  // node instead.
+  bool IsDirectCall;
+  if (CLI.CB)
+    IsDirectCall = !CLI.CB->isIndirectCall();
+  else
+    IsDirectCall = isa<GlobalAddressSDNode, ExternalSymbolSDNode>(Callee);
+
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
@@ -29877,7 +29886,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool NeedSWGuardedTail = false;
   bool NeedSWGuardedCall = false;
   if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol)) {
+      (IsDirectCall || CalleeIsLargeExternalSymbol)) {
     NeedSWGuardedTail = true;
     if (getTargetMachine().getCodeModel() == CodeModel::Large)
       NeedSWGuardedCall = true;
