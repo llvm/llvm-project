@@ -683,3 +683,63 @@ func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+/// A read whose result is used again in a dominated block can be CSE'd even
+/// though the two reads live in different blocks, as long as no write occurs
+/// on the path between them.
+// CHECK-LABEL: @cross_block_dominating_read
+func.func @cross_block_dominating_read(%arg0: memref<?xi32>, %arg1: index)
+    -> (i32, i32) {
+  // CHECK: %[[V:.*]] = memref.load
+  %0 = memref.load %arg0[%arg1] : memref<?xi32>
+  cf.br ^bb1
+^bb1:
+  // CHECK-NOT: memref.load
+  %1 = memref.load %arg0[%arg1] : memref<?xi32>
+  // CHECK: return %[[V]], %[[V]]
+  return %0, %1 : i32, i32
+}
+
+// -----
+
+/// A write on the path between the two reads blocks cross-block CSE.
+// CHECK-LABEL: @cross_block_write_blocks
+func.func @cross_block_write_blocks(%arg0: memref<?xi32>, %arg1: index,
+                                    %v: i32) -> (i32, i32) {
+  // CHECK: %[[V0:.*]] = memref.load
+  %0 = memref.load %arg0[%arg1] : memref<?xi32>
+  cf.br ^bb1
+^bb1:
+  memref.store %v, %arg0[%arg1] : memref<?xi32>
+  // CHECK: %[[V1:.*]] = memref.load
+  %1 = memref.load %arg0[%arg1] : memref<?xi32>
+  // CHECK: return %[[V0]], %[[V1]]
+  return %0, %1 : i32, i32
+}
+
+// -----
+
+/// A write inside the loop after the read reaches the next occurrence of the
+/// read through the back edge, so the loop read is not CSE'd with the read
+/// dominating the loop.
+// CHECK-LABEL: @cross_block_loop_write_blocks
+func.func @cross_block_loop_write_blocks(%arg0: memref<?xi32>, %arg1: index,
+                                         %v: i32, %n: index) -> (i32, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[V0:.*]] = memref.load
+  %0 = memref.load %arg0[%arg1] : memref<?xi32>
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  // CHECK: %[[V1:.*]] = memref.load
+  %1 = memref.load %arg0[%arg1] : memref<?xi32>
+  memref.store %v, %arg0[%arg1] : memref<?xi32>
+  %next = arith.addi %i, %c1 : index
+  %cmp = arith.cmpi slt, %next, %n : index
+  cf.cond_br %cmp, ^bb1(%next : index), ^bb2
+^bb2:
+  // CHECK: return %[[V0]], %[[V1]]
+  return %0, %1 : i32, i32
+}
