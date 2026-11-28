@@ -440,3 +440,77 @@ define <vscale x 4 x i32> @vadd_vx_of_sext_add(<vscale x 4 x i16> %x, <vscale x 
   %r = add <vscale x 4 x i32> %ab, %splat
   ret <vscale x 4 x i32> %r
 }
+
+define i32 @add_zext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
+; CHECK-LABEL: add_zext_mismatch_type:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v11, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v12, v8, v9
+; CHECK-NEXT:    vwaddu.wv v12, v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwredsumu.vs v8, v12, v11
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: add_zext_mismatch_type:
+; ZVABD:       # %bb.0: # %entry
+; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVABD-NEXT:    vmv.s.x v11, zero
+; ZVABD-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; ZVABD-NEXT:    vwaddu.vv v12, v8, v9
+; ZVABD-NEXT:    vwaddu.wv v12, v12, v10
+; ZVABD-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVABD-NEXT:    vwredsumu.vs v8, v12, v11
+; ZVABD-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; ZVABD-NEXT:    vmv.x.s a0, v8
+; ZVABD-NEXT:    ret
+entry:
+  %1 = zext <4 x i8> %a to <4 x i16>
+  %2 = zext <4 x i8> %b to <4 x i16>
+  %3 = add <4 x i16> %1, %2
+  %4 = zext <4 x i16> %3 to <4 x i32>
+  %5 = zext <4 x i8> %c to <4 x i32>
+  %6 = add <4 x i32> %4, %5
+  %7 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
+  ret i32 %7
+}
+
+define i32 @add_sext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
+; CHECK-LABEL: add_sext_mismatch_type:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v11, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vwadd.vv v12, v8, v9
+; CHECK-NEXT:    vwadd.wv v12, v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwredsum.vs v8, v12, v11
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: add_sext_mismatch_type:
+; ZVABD:       # %bb.0: # %entry
+; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVABD-NEXT:    vmv.s.x v11, zero
+; ZVABD-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; ZVABD-NEXT:    vwadd.vv v12, v8, v9
+; ZVABD-NEXT:    vwadd.wv v12, v12, v10
+; ZVABD-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVABD-NEXT:    vwredsum.vs v8, v12, v11
+; ZVABD-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; ZVABD-NEXT:    vmv.x.s a0, v8
+; ZVABD-NEXT:    ret
+entry:
+  %1 = sext <4 x i8> %a to <4 x i16>
+  %2 = sext <4 x i8> %b to <4 x i16>
+  %3 = add <4 x i16> %1, %2
+  %4 = sext <4 x i16> %3 to <4 x i32>
+  %5 = sext <4 x i8> %c to <4 x i32>
+  %6 = add <4 x i32> %4, %5
+  %7 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
+  ret i32 %7
+}

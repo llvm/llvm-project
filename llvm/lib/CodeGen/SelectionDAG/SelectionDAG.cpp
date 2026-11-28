@@ -4650,9 +4650,21 @@ SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
+  EVT N0VT = N0.getValueType();
+  EVT N1VT = N1.getValueType();
+  bool ExtendN0 = false, ExtendN1 = false;
+  if (N0VT != N1VT) {
+    if (N0VT.getScalarSizeInBits() < N1VT.getScalarSizeInBits()) {
+      ExtendN0 = true;
+    } else {
+      ExtendN1 = true;
+    }
+  }
+
   // If both operands each have at least two sign bits, the addition
   // cannot overflow.
-  if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
+  if ((ExtendN0 || ComputeNumSignBits(N0) > 1) &&
+      (ExtendN1 || ComputeNumSignBits(N1) > 1))
     return OFK_Never;
 
   // TODO: Add ConstantRange::signedAddMayOverflow handling.
@@ -4679,6 +4691,17 @@ SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
   // Fallback to ConstantRange::unsignedAddMayOverflow handling.
   ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
   ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+
+  EVT N0VT = N0.getValueType();
+  EVT N1VT = N1.getValueType();
+  if (N0VT != N1VT) {
+    if (N0VT.getScalarSizeInBits() < N1VT.getScalarSizeInBits()) {
+      N0Range = N0Range.zeroExtend(N1VT.getScalarSizeInBits());
+    } else {
+      N1Range = N1Range.zeroExtend(N0VT.getScalarSizeInBits());
+    }
+  }
+
   return mapOverflowResult(N0Range.unsignedAddMayOverflow(N1Range));
 }
 
