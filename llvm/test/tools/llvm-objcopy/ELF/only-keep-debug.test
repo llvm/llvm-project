@@ -395,3 +395,63 @@ Sections:
       - Name:            qux
       - Name:            .shstrtab
       - Name:            .strtab
+
+## Check that a program header table located after compacted section data is
+## retained in the output.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: %python -c "import struct; p = '%/t7'; d = bytearray(open(p, 'rb').read()); n = struct.unpack_from('<H', d, 56)[0]; z = struct.unpack_from('<H', d, 54)[0]; h = d[64:64+n*z]; d.extend(bytes(max(0, 0x1000 + len(h) - len(d)))); d[0x1000:0x1000+len(h)] = h; struct.pack_into('<Q', d, 32, 0x1000); open(p, 'wb').write(d)"
+# RUN: llvm-objcopy --only-keep-debug %t7 %t7.dbg
+# RUN: llvm-readobj --file-headers --program-headers --sections %t7.dbg | FileCheck --check-prefix=CHECK7 %s
+# RUN: llvm-readelf -x .note %t7.dbg | FileCheck --check-prefix=CHECK7-NOTE %s
+
+# CHECK7:      ProgramHeaderOffset: 0x1000
+# CHECK7:      SectionHeaderOffset: 0x10A8
+# CHECK7:      ProgramHeaderCount: 3
+# CHECK7:      Name: .note
+# CHECK7:      Offset: 0x100
+# CHECK7:      ProgramHeaders [
+# CHECK7:        ProgramHeader {
+# CHECK7-NEXT:     Type: PT_PHDR
+# CHECK7-NEXT:     Offset: 0x1000
+
+# CHECK7-NOTE: Hex dump of section '.note':
+# CHECK7-NOTE: 0x00000100 04000000 04000000 01000000 474e5500
+# CHECK7-NOTE: 0x00000110 01020304
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x100
+    Offset:       0x100
+    Content:      040000000400000001000000474e550001020304
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: '00'
+ProgramHeaders:
+  - Type:     PT_PHDR
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FileSize: 0xa8
+    MemSize:  0xa8
+    Align:    8
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0
+    Align:    0x1000
+    FirstSec: .note
+    LastSec:  .note
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FileSize: 0xa8
+    MemSize:  0xa8
+    Align:    0x1000
