@@ -7,14 +7,21 @@ define double @lane1_times_lane2(ptr %a, ptr %b, ptr %out) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A0P:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[A2P:%.*]] = getelementptr double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[B0P:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[B2P:%.*]] = getelementptr double, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A0P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[B0P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr [[O0]], align 8
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x double> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP2]], i64 2
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A0P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B0P]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[A2P]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[B2P]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[O0]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[X1]], [[TMP3]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;

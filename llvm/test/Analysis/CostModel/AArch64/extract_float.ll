@@ -218,4 +218,36 @@ entry:
   ret double %res
 }
 
+; The indices are outside the bounds of the vector. This doesn't affect what we
+; think the cost is.
+define double @extract_index_outside_vector(<2 x double> %a) {
+; CHECK-LABEL: 'extract_index_outside_vector'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %0 = extractelement <2 x double> %a, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %1 = extractelement <2 x double> %a, i32 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = fmul double %0, %1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %res
+;
+entry:
+  %1 = extractelement <2 x double> %a, i32 2
+  %2 = extractelement <2 x double> %a, i32 3
+  %res = fmul double %1, %2
+  ret double %res
+}
+
+; The indices have values that don't fit into an i64. We don't handle this case
+; and assume the extract is not free.
+define double @extract_index_too_large(<2 x double> %a) {
+; CHECK-LABEL: 'extract_index_too_large'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %0 = extractelement <2 x double> %a, i128 18446744073709551616
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = extractelement <2 x double> %a, i128 18446744073709551617
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = fmul double %0, %1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %res
+;
+entry:
+  %1 = extractelement <2 x double> %a, i128 18446744073709551616
+  %2 = extractelement <2 x double> %a, i128 18446744073709551617
+  %res = fmul double %1, %2
+  ret double %res
+}
+
 declare void @foo(double)

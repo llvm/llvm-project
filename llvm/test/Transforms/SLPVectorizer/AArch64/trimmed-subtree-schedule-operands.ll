@@ -27,10 +27,12 @@ define void @test(ptr %srcGrid, ptr %dstGrid, i64 %iv) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x double> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast double 0.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[MOMENTUM_Z:%.*]] = fsub fast double 0.000000e+00, [[TMP7]]
-; CHECK-NEXT:    [[ARRAYIDX675:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[DSTGRID]], i64 [[IV]]
-; CHECK-NEXT:    [[ARRAYIDX787:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX675]], i64 32216
 ; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX148]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX144]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd fast <2 x double> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[ARRAYIDX675:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[DSTGRID]], i64 [[IV]]
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARRAYIDX675]], align 8
+; CHECK-NEXT:    [[ARRAYIDX787:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX675]], i64 32216
 ; CHECK-NEXT:    [[RHO:%.*]] = fadd fast double 1.000000e+00, [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[RHO]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = fdiv fast <2 x double> [[TMP6]], [[TMP13]]
@@ -56,9 +58,7 @@ define void @test(ptr %srcGrid, ptr %dstGrid, i64 %iv) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x double> poison, double [[MUL348]], i64 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP21]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = fmul fast <2 x double> [[TMP20]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = fadd fast <2 x double> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fmul fast <2 x double> [[TMP24]], zeroinitializer
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARRAYIDX675]], align 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = fsub fast <2 x double> [[TMP25]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul fast <2 x double> [[TMP26]], <double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <2 x double> [[TMP27]], zeroinitializer
