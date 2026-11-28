@@ -8936,6 +8936,30 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
                                           : LHSKnown | RHSKnown;
     return Changed;
   }
+
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB: {
+    // The low bits of a sum or a difference only depend on the low bits of the
+    // operands, as carries and borrows only propagate upwards.
+    APInt OpDemand = APInt::getLowBitsSet(BW, Demanded.getActiveBits());
+    KnownBits LHSKnown(BW), RHSKnown(BW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, OpDemand,
+                                            LHSKnown, Depth + 1, DoRewrite);
+    Changed |= simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, OpDemand, RHSKnown,
+                                        Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
+    // Changing an operand drops the flags, so only use them if nothing changed.
+    bool NSW = !Changed && DefMI->getFlag(MachineInstr::NoSWrap);
+    bool NUW = !Changed && DefMI->getFlag(MachineInstr::NoUWrap);
+    Known = Opcode == TargetOpcode::G_ADD
+                ? KnownBits::add(LHSKnown, RHSKnown, NSW, NUW)
+                : KnownBits::sub(LHSKnown, RHSKnown, NSW, NUW);
+    return Changed;
+  }
+
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR: {

@@ -13,15 +13,14 @@ define i8 @rotl_i8(i8 %a, i8 %c) {
 ;
 ; CHECK-GI-LABEL: rotl_i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:    neg w9, w1
+; CHECK-GI-NEXT:    neg w8, w1
 ; CHECK-GI-NEXT:    and w10, w0, #0xff
-; CHECK-GI-NEXT:    sub x8, x8, w9, uxtb
-; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    lsr w9, w10, w9
+; CHECK-GI-NEXT:    neg x9, x8
 ; CHECK-GI-NEXT:    and x8, x8, #0x7
-; CHECK-GI-NEXT:    lsl w8, w0, w8
-; CHECK-GI-NEXT:    orr w0, w9, w8
+; CHECK-GI-NEXT:    and x9, x9, #0x7
+; CHECK-GI-NEXT:    lsr w8, w10, w8
+; CHECK-GI-NEXT:    lsl w9, w0, w9
+; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = call i8 @llvm.fshl(i8 %a, i8 %a, i8 %c)
@@ -42,13 +41,12 @@ define i8 @rotr_i8(i8 %a, i8 %c) {
 ;
 ; CHECK-GI-LABEL: rotr_i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    neg x8, x1
 ; CHECK-GI-NEXT:    and x9, x1, #0x7
 ; CHECK-GI-NEXT:    and w10, w0, #0xff
-; CHECK-GI-NEXT:    sub x8, x8, w1, uxtb
-; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    lsl w8, w0, w8
 ; CHECK-GI-NEXT:    orr w0, w9, w8
 ; CHECK-GI-NEXT:    ret
@@ -68,15 +66,14 @@ define i16 @rotl_i16(i16 %a, i16 %c) {
 ;
 ; CHECK-GI-LABEL: rotl_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:    neg w9, w1
+; CHECK-GI-NEXT:    neg w8, w1
 ; CHECK-GI-NEXT:    and w10, w0, #0xffff
-; CHECK-GI-NEXT:    sub x8, x8, w9, uxth
-; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    lsr w9, w10, w9
+; CHECK-GI-NEXT:    neg x9, x8
 ; CHECK-GI-NEXT:    and x8, x8, #0xf
-; CHECK-GI-NEXT:    lsl w8, w0, w8
-; CHECK-GI-NEXT:    orr w0, w9, w8
+; CHECK-GI-NEXT:    and x9, x9, #0xf
+; CHECK-GI-NEXT:    lsr w8, w10, w8
+; CHECK-GI-NEXT:    lsl w9, w0, w9
+; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = call i16 @llvm.fshl(i16 %a, i16 %a, i16 %c)
@@ -97,13 +94,12 @@ define i16 @rotr_i16(i16 %a, i16 %c) {
 ;
 ; CHECK-GI-LABEL: rotr_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    neg x8, x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xf
 ; CHECK-GI-NEXT:    and w10, w0, #0xffff
-; CHECK-GI-NEXT:    sub x8, x8, w1, uxth
-; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0xf
+; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    lsl w8, w0, w8
 ; CHECK-GI-NEXT:    orr w0, w9, w8
 ; CHECK-GI-NEXT:    ret
