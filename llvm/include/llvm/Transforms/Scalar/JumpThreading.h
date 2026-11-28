@@ -165,6 +165,7 @@ public:
 
   LLVM_ABI bool processBranchOnPHI(PHINode *PN);
   LLVM_ABI bool processBranchOnXOR(BinaryOperator *BO);
+  LLVM_ABI bool processBranchOnAndOr(BinaryOperator *BO);
   LLVM_ABI bool processImpliedCondition(BasicBlock *BB);
 
   LLVM_ABI bool simplifyPartiallyRedundantLoad(LoadInst *LI);
