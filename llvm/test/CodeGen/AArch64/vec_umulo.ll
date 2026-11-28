@@ -231,18 +231,16 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    fmov x12, d0
 ; CHECK-NEXT:    umulh x10, x9, x8
 ; CHECK-NEXT:    umulh x13, x12, x11
-; CHECK-NEXT:    mul x11, x12, x11
+; CHECK-NEXT:    mul x8, x9, x8
 ; CHECK-NEXT:    cmp xzr, x10
 ; CHECK-NEXT:    csetm x10, ne
-; CHECK-NEXT:    mul x8, x9, x8
+; CHECK-NEXT:    mul x9, x12, x11
 ; CHECK-NEXT:    cmp xzr, x13
 ; CHECK-NEXT:    csetm x13, ne
 ; CHECK-NEXT:    fmov d0, x13
-; CHECK-NEXT:    fmov d1, x11
+; CHECK-NEXT:    stp x9, x8, [x0]
 ; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x8
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0

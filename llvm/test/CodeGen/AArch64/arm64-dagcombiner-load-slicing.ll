@@ -42,13 +42,11 @@ define void @test_int(ptr nocapture %out, i64 %out_start) {
 ; CHECK-LABEL: test_int:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    add x8, x0, x1, lsl #3
-; CHECK-NEXT:    ldp w9, w12, [x8, #64]
-; CHECK-NEXT:    ldp w10, w11, [x8]
-; CHECK-NEXT:    add w9, w9, w10
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    add w9, w12, w11
-; CHECK-NEXT:    mov.s v0[1], w9
-; CHECK-NEXT:    str d0, [x8]
+; CHECK-NEXT:    ldp w12, w9, [x8]
+; CHECK-NEXT:    ldp w11, w10, [x8, #64]
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    add w10, w11, w12
+; CHECK-NEXT:    stp w10, w9, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds %class.Complex_int, ptr %out, i64 %out_start
@@ -75,13 +73,11 @@ define void @test_long(ptr nocapture %out, i64 %out_start) {
 ; CHECK-LABEL: test_long:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    add x8, x0, x1, lsl #4
-; CHECK-NEXT:    ldp x9, x12, [x8, #128]
-; CHECK-NEXT:    ldp x10, x11, [x8]
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    add x9, x12, x11
-; CHECK-NEXT:    mov.d v0[1], x9
-; CHECK-NEXT:    str q0, [x8]
+; CHECK-NEXT:    ldp x12, x9, [x8]
+; CHECK-NEXT:    ldp x11, x10, [x8, #128]
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    add x10, x11, x12
+; CHECK-NEXT:    stp x10, x9, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds %class.Complex_long, ptr %out, i64 %out_start
