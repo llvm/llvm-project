@@ -14674,6 +14674,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);
 
+  if (VDecl->isFileVarDecl())
+    AnalysisWarnings.IssueWarningsForFileScopeInitializer(VDecl);
+
   if (LangOpts.OpenACC && !InitType.isNull())
     OpenACC().ActOnVariableInit(VDecl, InitType);
 }
