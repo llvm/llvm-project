@@ -18,9 +18,12 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/MathExtras.h"
 #include <mutex>
 
 using namespace lldb;
@@ -103,7 +106,7 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
   }
 
   // Parse the offload bundle (helper keeps this separate from the caching).
-  auto parse = [&path]() -> std::vector<Entry> {
+  auto parse = [&path, &file]() -> std::vector<Entry> {
     std::vector<Entry> result;
     auto obj_or_err = llvm::object::ObjectFile::createObjectFile(path);
     if (!obj_or_err) {
@@ -115,7 +118,6 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
     if (auto err = llvm::object::extractOffloadBundleFatBinary(
             *obj_or_err->getBinary(), bundles)) {
       llvm::consumeError(std::move(err));
-      return result;
     }
 
     for (auto &bundle : bundles) {
@@ -151,6 +153,80 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
           result.push_back(std::move(entry));
       }
     }
+
+    // Fall back to scanning .llvm.offloading ELF sections for embedded
+    // ELF or OffloadBinary device images.
+    if (result.empty() && obj_or_err->getBinary()->isELF()) {
+      const llvm::object::ObjectFile &obj = *obj_or_err->getBinary();
+      for (const llvm::object::SectionRef &sec : obj.sections()) {
+        llvm::Expected<llvm::StringRef> name = sec.getName();
+        if (!name) {
+          llvm::consumeError(name.takeError());
+          continue;
+        }
+        if (*name != ".llvm.offloading")
+          continue;
+
+        uint64_t sec_offset = llvm::object::ELFSectionRef(sec).getOffset();
+        uint64_t sec_size = sec.getSize();
+        ModuleSpecList specs =
+            ObjectFile::GetModuleSpecifications(file, sec_offset, sec_size);
+        for (const ModuleSpec &spec : specs.ModuleSpecs())
+          result.push_back({spec.GetArchitecture(), sec_offset, sec_size, {}});
+        if (!result.empty())
+          continue;
+
+        llvm::Expected<llvm::StringRef> contents = sec.getContents();
+        if (!contents) {
+          llvm::consumeError(contents.takeError());
+          continue;
+        }
+        uint64_t offset = 0;
+        while (offset < contents->size()) {
+          llvm::MemoryBufferRef buf(contents->drop_front(offset), path);
+          auto header_or_err = llvm::object::OffloadBinary::extractHeader(buf);
+          if (!header_or_err) {
+            llvm::consumeError(header_or_err.takeError());
+            break;
+          }
+          const llvm::object::OffloadBinary::Header *header = *header_or_err;
+          const bool is_compressed =
+              header->Version >= 3 && header->InflatedSize != 0;
+          uint64_t blob_size = header->Size;
+          auto binaries_or_err = llvm::object::OffloadBinary::create(buf);
+          if (!binaries_or_err || binaries_or_err->empty()) {
+            if (!binaries_or_err)
+              llvm::consumeError(binaries_or_err.takeError());
+            break;
+          }
+          for (const auto &binary_up : *binaries_or_err) {
+            if (!binary_up->getImage().empty()) {
+              Entry entry;
+              entry.arch = ArchSpec(binary_up->getTriple());
+              entry.size = binary_up->getImage().size();
+              if (is_compressed) {
+                auto entry_data_sp = std::make_shared<DataBufferHeap>(
+                    binary_up->getImage().data(), binary_up->getImage().size());
+                entry.extractor_sp =
+                    std::make_shared<DataExtractor>(entry_data_sp);
+                entry.offset = 0;
+              } else {
+                entry.offset =
+                    sec_offset + offset +
+                    (binary_up->getImage().data() -
+                     binary_up->getMemoryBufferRef().getBufferStart());
+              }
+              if (entry.arch.IsValid())
+                result.push_back(std::move(entry));
+            }
+          }
+          if (blob_size == 0)
+            break;
+          offset = llvm::alignTo(offset + blob_size,
+                                 llvm::object::OffloadBinary::getAlignment());
+        }
+      }
+    }
     return result;
   };
 
@@ -171,7 +247,9 @@ ObjectContainer *ObjectContainerClangOffloadBundle::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
     lldb::offset_t data_offset, const FileSpec *file,
     lldb::offset_t file_offset, lldb::offset_t length) {
-  if (!data_sp || !file)
+  // Do not re-parse inner slices at non-zero file offsets as outer offload
+  // containers.
+  if (!data_sp || !file || file_offset != 0)
     return nullptr;
 
   DataExtractor data;
@@ -209,8 +287,10 @@ bool ObjectContainerClangOffloadBundle::GetArchitectureAtIndex(
 
 ModuleSpecList ObjectContainerClangOffloadBundle::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp,
-    lldb::offset_t /*file_offset*/, lldb::offset_t /*file_size*/) {
-  if (!extractor_sp || !MagicBytesMatch(*extractor_sp))
+    lldb::offset_t file_offset, lldb::offset_t /*file_size*/) {
+  // Do not re-parse inner slices at non-zero file offsets as outer offload
+  // containers.
+  if (!extractor_sp || file_offset != 0 || !MagicBytesMatch(*extractor_sp))
     return {};
 
   std::vector<Entry> entries;
