@@ -69,10 +69,22 @@ module;
 """
             )
 
+        module_declaration = f"export module {module};"
+        if module in ("std", "std.compat"):
+            module_declaration = f"""\
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-module-identifier"
+#endif
+{module_declaration}
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#pragma clang diagnostic pop
+#endif"""
+
         module_cpp_in.write(
             f"""#endif // _WIN32
 
-export module {module};
+{module_declaration}
 {'export import std;' if module == 'std.compat' else ''}
 
 {'@LIBCXX_MODULE_STD_INCLUDE_SOURCES@' if module == 'std' else ''}
