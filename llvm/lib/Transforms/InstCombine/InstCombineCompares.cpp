@@ -3534,8 +3534,13 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
 
       // icmp slt (bitcast (sitofp X)), 1 --> icmp slt X, 1
-      if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_One()))
+      // For i1 (and <N x i1>), signed 1 is not possible because both possible
+      // values (0 and -1) are < 1, so the comparison is always true.
+      if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_One())) {
+        if (X->getType()->getScalarSizeInBits() == 1)
+          return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
         return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), 1));
+      }
 
       // icmp sgt (bitcast (sitofp X)), -1 --> icmp sgt X, -1
       if (Pred == ICmpInst::ICMP_SGT && match(Op1, m_AllOnes()))
