@@ -1169,6 +1169,17 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
   let VaryingLongVector = 1;
 }
 
+def hlsl_isnormal : HLSLOneArgBuiltin<"isnormal", "__builtin_hlsl_elementwise_isnormal"> {
+  let Doc = [{
+\fn T isnormal(T x)
+\brief Returns true for each component of \a x that is a normal floating-point number.
+\param x The value to classify.
+}];
+  let ReturnType = VaryingShape<BoolTy>;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
+}
+
 // Returns the result of multiplying the specified value by two raised
 // to the power of the specified exponent.
 def hlsl_ldexp : HLSLBuiltin<"ldexp"> {

@@ -5200,7 +5200,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_elementwise_isfinite:
   case Builtin::BI__builtin_hlsl_elementwise_isinf:
-  case Builtin::BI__builtin_hlsl_elementwise_isnan: {
+  case Builtin::BI__builtin_hlsl_elementwise_isnan:
+  case Builtin::BI__builtin_hlsl_elementwise_isnormal: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,

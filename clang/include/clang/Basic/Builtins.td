@@ -5963,6 +5963,12 @@ def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsnormal : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isnormal"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mad"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

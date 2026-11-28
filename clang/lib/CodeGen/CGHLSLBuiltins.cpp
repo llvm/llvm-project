@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/MatrixUtils.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/DXILABI.h"
@@ -1354,6 +1355,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         retType, CGM.getHLSLRuntime().getIsNaNIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isnan");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_isnormal:
+    return Builder.createIsFPClass(EmitScalarExpr(E->getArg(0)),
+                                   FPClassTest::fcNormal);
   case Builtin::BI__builtin_hlsl_mad: {
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));
