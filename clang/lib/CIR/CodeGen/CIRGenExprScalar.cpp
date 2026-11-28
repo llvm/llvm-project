@@ -647,9 +647,8 @@ public:
       bool isInc = e->isIncrementOp();
       bool isPre = e->isPrefix();
 
-      // Bools are always set-to-true, as decrement isn't legal on bools.
-      if (valType->isBooleanType()) {
-        assert(isInc);
+      // Increment of a bool-like value is always true.
+      if (isInc && valType->hasBooleanConversionSemantics()) {
         // Atomic operations require an integer type; reinterpret the bool
         // pointer as a pointer to its underlying storage integer type.
         cir::IntType intTy = builder.getBoolMemoryTy();
@@ -742,7 +741,7 @@ public:
     //          -> bool = ((int)bool + 1 != 0)
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
-    if (e->isIncrementOp() && type->isBooleanType()) {
+    if (e->isIncrementOp() && type->hasBooleanConversionSemantics()) {
       value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
@@ -1069,7 +1068,7 @@ public:
     // integers, we do not want to follow any logic that assumes they should be
     // treated as integers.
     if (srcType->isFixedPointType()) {
-      if (dstType->isBooleanType()) {
+      if (dstType->hasBooleanConversionSemantics()) {
         cir::BoolType boolTy = builder.getBoolTy();
         return cir::CastOp::create(builder, cgf.getLoc(loc), boolTy,
                                    cir::CastKind::int_to_bool, src);
@@ -2943,7 +2942,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   case CK_FixedPointToBoolean:
     assert(subExpr->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
-    assert(destTy->isBooleanType() && "Expected dest type to be boolean type");
+    assert(destTy->hasBooleanConversionSemantics() &&
+           "Expected dest type to be boolean type");
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());
 

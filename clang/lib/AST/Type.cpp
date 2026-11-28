@@ -2571,6 +2571,13 @@ bool Type::isArithmeticType() const {
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
+bool Type::hasBooleanConversionSemantics() const {
+  if (const auto *ED = getAsEnumDecl())
+    return ED->isComplete() && ED->isFixed() &&
+           ED->getIntegerType()->isBooleanType();
+  return isBooleanType();
+}
+
 bool Type::hasBooleanRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isBooleanType();
@@ -2606,11 +2613,10 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   } else if (isa<MemberPointerType>(T)) {
     return STK_MemberPointer;
   } else if (isa<EnumType>(T)) {
-    const EnumDecl *ED = T->castAsEnumDecl();
-    assert(ED->isComplete());
+    assert(T->castAsEnumDecl()->isComplete());
     // C23 6.7.3.3p16: conversion to an enumerated type with a fixed underlying
     // type has the same semantics as conversion to the underlying type.
-    if (ED->isFixed() && ED->getIntegerType()->isBooleanType())
+    if (hasBooleanConversionSemantics())
       return STK_Bool;
     return STK_Integral;
   } else if (const auto *CT = dyn_cast<ComplexType>(T)) {
