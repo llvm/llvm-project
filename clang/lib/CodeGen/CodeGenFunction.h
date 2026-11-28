@@ -5690,8 +5690,9 @@ private:
                                         unsigned Type,
                                         llvm::IntegerType *ResType);
 
-  void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
-                                       Address Loc);
+  void
+  emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D, Address Loc,
+                                  LangOptions::TrivialAutoVarInitKind Kind);
   LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
                                                          const VarDecl &D);
 
