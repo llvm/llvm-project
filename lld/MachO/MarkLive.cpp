@@ -39,8 +39,16 @@ public:
   // These add roots to worklist `shard`. We have one shard per thread.
   virtual void enqueue(InputSection *isec, uint64_t off, size_t shard = 0) = 0;
   virtual void addSym(Symbol *s, size_t shard = 0) = 0;
+  // Live-support sections are also collected per thread.
+  void addLiveSupport(ConcatInputSection *isec, size_t shard) {
+    liveSupport[shard].push_back(isec);
+  }
   virtual void markTransitively() = 0;
   virtual ~MarkLive() = default;
+
+protected:
+  const size_t numThreads = parallel::getThreadCount();
+  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupport{numThreads};
 };
 
 // Sets `flag` and returns true if no other thread set it first.
@@ -67,6 +75,18 @@ static void parallelForChunks(ArrayRef<T> items, size_t chunkSize, Fn fn) {
          begin = next.fetch_add(chunkSize, std::memory_order_relaxed))
       fn(worker, items.drop_front(begin).take_front(chunkSize));
   });
+}
+
+// Splits each of `shards` into chunks of at most `chunkSize` items.
+template <class T>
+static SmallVector<ArrayRef<T>, 0>
+splitIntoChunks(const std::vector<SmallVector<T, 0>> &shards,
+                size_t chunkSize) {
+  SmallVector<ArrayRef<T>, 0> chunks;
+  for (ArrayRef<T> shard : shards)
+    for (size_t begin = 0; begin < shard.size(); begin += chunkSize)
+      chunks.push_back(shard.drop_front(begin).take_front(chunkSize));
+  return chunks;
 }
 
 // Marks liveness on as many threads as are available. -why_live output is
@@ -102,10 +122,10 @@ private:
                    Worklist &worklist) const;
   void visit(WorklistEntry *entry, Worklist &worklist) const;
   void drain();
+  void markLiveSupport();
   const InputSection *getInputSection(const WorklistEntry *) const;
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
-  const size_t numThreads = parallel::getThreadCount();
   // Sections that have been marked live and that the next level of drain() will
   // visit. Literal sections cannot contain references to other sections, so we
   // only store ConcatInputSections here. Each thread appends to its own shard,
@@ -210,16 +230,13 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
   // overhead.
   constexpr size_t minVisitsPerLevel = 256;
   std::vector<Worklist> level(numThreads);
-  SmallVector<ArrayRef<WorklistEntry *>, 0> chunks;
   while (size_t levelSize = nextLevelSize()) {
     std::swap(level, nextLevel);
     for (Worklist &shard : nextLevel)
       shard.clear();
     size_t chunkSize = std::clamp<size_t>(levelSize / (4 * numThreads), 1, 64);
-    chunks.clear();
-    for (ArrayRef<WorklistEntry *> shard : level)
-      for (size_t begin = 0; begin < shard.size(); begin += chunkSize)
-        chunks.push_back(shard.drop_front(begin).take_front(chunkSize));
+    SmallVector<ArrayRef<WorklistEntry *>, 0> chunks =
+        splitIntoChunks(level, chunkSize);
     std::atomic<bool> anyWorkerIdle{false};
     // Each worker starts with the chunk at its own index and then claims the
     // chunks after the first numThreads.
@@ -242,6 +259,36 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
       anyWorkerIdle.store(true, std::memory_order_relaxed);
     });
   }
+}
+
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::markLiveSupport() {
+  SmallVector<ArrayRef<ConcatInputSection *>, 0> chunks =
+      splitIntoChunks(liveSupport, 256);
+  parallelForChunks(ArrayRef(chunks), 1, [&](size_t shard, auto batch) {
+    for (ArrayRef<ConcatInputSection *> chunk : batch) {
+      for (ConcatInputSection *isec : chunk) {
+        if (isec->isLive(0))
+          continue;
+
+        for (const Relocation &r : isec->relocs) {
+          InputSection *referentIsec = nullptr;
+          if (auto *s = dyn_cast<Symbol *>(r.referent)) {
+            if (!s->isLive())
+              continue;
+            if (auto *d = dyn_cast<Defined>(s))
+              referentIsec = d->isec();
+          } else {
+            referentIsec = cast<InputSection *>(r.referent);
+            if (!referentIsec->isLive(r.getAddend()))
+              continue;
+          }
+          enqueue(isec, 0, makeEntry(referentIsec, nullptr), nextLevel[shard]);
+          break;
+        }
+      }
+    }
+  });
 }
 
 template <bool RecordWhyLive>
@@ -277,38 +324,10 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live
     // section. Process them in a second pass.
-    parallelForChunks(
-        ArrayRef(inputSections), 256,
-        [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
-          Worklist &worklist = nextLevel[shard];
-          for (ConcatInputSection *isec : chunk) {
-            // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
-            // separate vector and only walking that here is faster.
-            if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->isLive(0))
-              continue;
-
-            for (const Relocation &r : isec->relocs) {
-              InputSection *referentIsec = nullptr;
-              if (auto *s = dyn_cast<Symbol *>(r.referent)) {
-                if (!s->isLive())
-                  continue;
-                if (auto *d = dyn_cast<Defined>(s))
-                  referentIsec = d->isec();
-              } else {
-                referentIsec = cast<InputSection *>(r.referent);
-                if (!referentIsec->isLive(r.getAddend()))
-                  continue;
-              }
-              enqueue(isec, 0, makeEntry(referentIsec, nullptr), worklist);
-              break;
-            }
-          }
-        });
+    markLiveSupport();
 
     // S_ATTR_LIVE_SUPPORT could have marked additional sections live,
     // which in turn could mark additional S_ATTR_LIVE_SUPPORT sections live.
-    // Iterate. In practice, the second iteration won't mark additional
-    // S_ATTR_LIVE_SUPPORT sections live.
   } while (nextLevelSize() != 0);
 }
 
@@ -383,6 +402,9 @@ void markLive() {
       ArrayRef(inputSections), 256,
       [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
         for (ConcatInputSection *isec : chunk) {
+          if (isec->getFlags() & S_ATTR_LIVE_SUPPORT)
+            marker->addLiveSupport(isec, shard);
+
           // Sections marked no_dead_strip
           if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
             marker->enqueue(isec, 0, shard);
