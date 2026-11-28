@@ -3612,9 +3612,8 @@ static bool handleUncountableExitsWithSideEffects(
   if (VPValue *AnyExit = skipAccessesIfAnyLaneExits(HeaderVPBB, LatchVPBB,
                                                     InsertIt, Config, ORE)) {
     // The scalar loop re-executes the whole vector iteration if any lane exits.
-    NumCompletedLanes =
-        MiddleBuilder.createSelect(AnyExit, Plan.getZero(TCTy),
-                                   &Plan.getVFxUF());
+    NumCompletedLanes = MiddleBuilder.createSelect(AnyExit, Plan.getZero(TCTy),
+                                                   &Plan.getVFxUF());
   } else {
     // Create a mask to represent all lanes that fully execute in the vector
     // loop, stopping short of any early exit.
