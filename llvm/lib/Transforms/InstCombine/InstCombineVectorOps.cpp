@@ -30,6 +30,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -2654,7 +2655,11 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   // sel NarrowCond, (shuf X, poison, NarrowMask), (shuf Y, poison, NarrowMask)
   Value *NarrowX = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
   Value *NarrowY = Builder.CreateShuffleVector(Y, Shuf.getShuffleMask());
-  return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
+  auto *WideSelect = cast<SelectInst>(Shuf.getOperand(0));
+  return SelectInst::Create(NarrowCond, NarrowX, NarrowY, "",
+                            /*InsertBefore=*/nullptr,
+                            ProfcheckDisableMetadataFixes ? nullptr
+                                                          : WideSelect);
 }
 
 /// Canonicalize FP negate/abs after shuffle.
