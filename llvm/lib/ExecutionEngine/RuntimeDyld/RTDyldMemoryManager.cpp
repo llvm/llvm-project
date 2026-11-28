@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 #include <cstdlib>
 
 #ifdef __linux__
@@ -33,7 +34,22 @@ RTDyldMemoryManager::~RTDyldMemoryManager() = default;
     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
 extern "C" void __register_frame(void *);
 extern "C" void __deregister_frame(void *);
+#if defined(__ELF__) && LLVM_HAS_ATTRIBUTE_WEAK
+#define LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION 1
+// LLVM's libunwind exports section-level registration entry points alongside
+// __unw_add_dynamic_fde, whereas its __register_frame only accepts a single FDE
+// rather than a null-terminated .eh_frame section. Detect them dynamically via
+// weak references (matching compiler-rt's elfnix_platform) and fall back to
+// __register_frame (e.g. libgcc) otherwise.
+extern "C" LLVM_ATTRIBUTE_WEAK void
+__unw_add_dynamic_eh_frame_section(uintptr_t);
+extern "C" LLVM_ATTRIBUTE_WEAK void
+__unw_remove_dynamic_eh_frame_section(uintptr_t);
 #else
+#define LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION 0
+#endif
+#else
+#define LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION 0
 // The building compiler does not have __(de)register_frame but
 // it may be found at runtime in a dynamically-loaded library.
 // For example, this happens when building LLVM with Visual C++
@@ -65,9 +81,12 @@ static void __deregister_frame(void *p) {
 }
 #endif
 
-/* libgcc and libunwind __register_frame behave differently. We use the presence
- * of __unw_add_dynamic_fde to detect libunwind. */
-#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+/* libgcc and libunwind __register_frame behave differently. On ELF targets with
+ * weak symbol support, we dynamically prefer libunwind's section-level entry
+ * points below; elsewhere we use HAVE_UNW_ADD_DYNAMIC_FDE or __APPLE__ to
+ * detect per-FDE registration. */
+#if (defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)) &&               \
+    !LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION
 
 static const char *processFDE(const char *Entry, bool isDeregister) {
   const char *P = Entry;
@@ -109,6 +128,14 @@ void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
 
 void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
                                                     size_t Size) {
+  (void)Size;
+#if LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION
+  if (&__unw_add_dynamic_eh_frame_section &&
+      &__unw_remove_dynamic_eh_frame_section) {
+    __unw_add_dynamic_eh_frame_section(reinterpret_cast<uintptr_t>(Addr));
+    return;
+  }
+#endif
   // On Linux __register_frame takes a single argument:
   // a pointer to the start of the .eh_frame section.
 
@@ -119,10 +146,20 @@ void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
 
 void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
                                                       size_t Size) {
+  (void)Size;
+#if LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION
+  if (&__unw_add_dynamic_eh_frame_section &&
+      &__unw_remove_dynamic_eh_frame_section) {
+    __unw_remove_dynamic_eh_frame_section(reinterpret_cast<uintptr_t>(Addr));
+    return;
+  }
+#endif
   __deregister_frame(Addr);
 }
 
 #endif
+
+#undef LLVM_RTDYLD_DYNAMIC_ELF_EH_FRAME_REGISTRATION
 
 void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                                           size_t Size) {
