@@ -1,6 +1,14 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":clang-ssaf-src-edit-merge" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("clang-ssaf-src-edit-merge") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/lib/AST",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Option",
