@@ -2088,8 +2088,10 @@ static const char BugReportMsg[] =
 void Driver::generateCompilationDiagnostics(
     Compilation &C, const Command &FailingCommand,
     StringRef AdditionalInformation, CompilationDiagnosticReport *Report) {
-  if (C.getArgs().hasArg(options::OPT_fno_crash_diagnostics))
-    return;
+  // -fno-crash-diagnostics is mapped to -gen-reproducer=off.
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_gen_reproducer_eq))
+    if (StringRef val = A->getValue(); val == "off")
+      return;
 
   bool HasCrashTar = C.getArgs().hasArg(options::OPT_fcrash_diagnostics_tar);
 
