@@ -1509,9 +1509,31 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                           ConstantInt::get(V->getType(), 1));
   }
 
-  // TODO: Handle non-equality predicates.
   Value *Y;
   const APInt *Pow2;
+  // The truncated value is a single set bit that Y moves up from log2(Pow2):
+  // it is positive while the bit stays below the sign bit, the minimum signed
+  // value once it reaches the sign bit, and zero after it is shifted out. A
+  // signed compare against a constant in [0, Pow2] therefore only asks
+  // whether the value is positive:
+  // (trunc (Pow2 << Y) to iN) s> C --> Y u< N - log2(Pow2) - 1, 0 <= C <  Pow2
+  // (trunc (Pow2 << Y) to iN) s< C --> Y u> N - log2(Pow2) - 2, 0 <  C <= Pow2
+  // iff N > log2(Pow2) + 1
+  // TODO: Handle the remaining non-equality predicates and constants.
+  if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT) &&
+      match(X, m_Shl(m_Power2(Pow2), m_Value(Y))) &&
+      DstBits > Pow2->logBase2() + 1) {
+    unsigned Log2 = Pow2->logBase2();
+    if (Pred == ICmpInst::ICMP_SGT && C.isNonNegative() &&
+        C.getActiveBits() <= Log2)
+      return new ICmpInst(ICmpInst::ICMP_ULT, Y,
+                          ConstantInt::get(SrcTy, DstBits - Log2 - 1));
+    if (Pred == ICmpInst::ICMP_SLT && C.isStrictlyPositive() &&
+        (C - 1).getActiveBits() <= Log2)
+      return new ICmpInst(ICmpInst::ICMP_UGT, Y,
+                          ConstantInt::get(SrcTy, DstBits - Log2 - 2));
+  }
+
   if (Cmp.isEquality() && match(X, m_Shl(m_Power2(Pow2), m_Value(Y))) &&
       DstBits > Pow2->logBase2()) {
     // (trunc (Pow2 << Y) to iN) == 0 --> Y u>= N - log2(Pow2)

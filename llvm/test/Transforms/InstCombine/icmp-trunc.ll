@@ -464,18 +464,218 @@ define i1 @shl5_trunc_ne0(i9 %a) {
   ret i1 %r
 }
 
-; TODO: A < 5
-
 define i1 @shl1_trunc_sgt0(i9 %a) {
 ; CHECK-LABEL: @shl1_trunc_sgt0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i9 1, [[A:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i6 [[T]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i9 [[A:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i9 1, %a
   %t = trunc i9 %shl to i6
   %r = icmp sgt i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_slt1(i32 %a) {
+; CHECK-LABEL: @shl1_trunc_slt1(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[A:%.*]], 6
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 1, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp slt i8 %t, 1
+  ret i1 %r
+}
+
+define i1 @shl1_nuw_trunc_sgt0(i32 %a) {
+; CHECK-LABEL: @shl1_nuw_trunc_sgt0(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[A:%.*]], 7
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl nuw i32 1, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp sgt i8 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl1_nsw_trunc_slt1(i32 %a) {
+; CHECK-LABEL: @shl1_nsw_trunc_slt1(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[A:%.*]], 6
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl nsw i32 1, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp slt i8 %t, 1
+  ret i1 %r
+}
+
+define <2 x i1> @shl4_trunc_sgt0_vec(<2 x i8> %a) {
+; CHECK-LABEL: @shl4_trunc_sgt0_vec(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[A:%.*]], splat (i8 2)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %shl = shl <2 x i8> <i8 4, i8 poison>, %a
+  %t = trunc <2 x i8> %shl to <2 x i5>
+  %r = icmp sgt <2 x i5> %t, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @shl1_trunc_slt1_vec(<2 x i16> %a) {
+; CHECK-LABEL: @shl1_trunc_slt1_vec(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i16> [[A:%.*]], splat (i16 6)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %shl = shl <2 x i16> splat (i16 1), %a
+  %t = trunc <2 x i16> %shl to <2 x i8>
+  %r = icmp slt <2 x i8> %t, splat (i8 1)
+  ret <2 x i1> %r
+}
+
+; The largest constant that still only tests for a positive value is Pow2 - 1.
+
+define i1 @shl4_trunc_sgt3(i32 %a) {
+; CHECK-LABEL: @shl4_trunc_sgt3(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[A:%.*]], 5
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 4, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp sgt i8 %t, 3
+  ret i1 %r
+}
+
+; The largest constant that still only tests for a non-positive value is Pow2.
+
+define i1 @shl4_trunc_slt4(i32 %a) {
+; CHECK-LABEL: @shl4_trunc_slt4(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[A:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 4, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp slt i8 %t, 4
+  ret i1 %r
+}
+
+; Extra uses are fine, the fold does not create new instructions.
+
+define i1 @shl1_trunc_sgt0_use(i32 %a) {
+; CHECK-LABEL: @shl1_trunc_sgt0_use(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    call void @use(i8 [[T]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[A]], 7
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 1, %a
+  %t = trunc i32 %shl to i8
+  call void @use(i8 %t)
+  %r = icmp sgt i8 %t, 0
+  ret i1 %r
+}
+
+; Only one positive value is left: 16 << 0.
+
+define i1 @shl16_trunc_sgt0(i9 %a) {
+; CHECK-LABEL: @shl16_trunc_sgt0(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i9 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 16, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp sgt i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl16_trunc_slt1(i9 %a) {
+; CHECK-LABEL: @shl16_trunc_slt1(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i9 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 16, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp slt i6 %t, 1
+  ret i1 %r
+}
+
+; The bit starts at the sign bit, so the value is never positive.
+
+define i1 @shl32_trunc_sgt0(i9 %a) {
+; CHECK-LABEL: @shl32_trunc_sgt0(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl i9 32, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp sgt i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl32_trunc_slt1(i9 %a) {
+; CHECK-LABEL: @shl32_trunc_slt1(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl i9 32, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp slt i6 %t, 1
+  ret i1 %r
+}
+
+; negative test - 4 << 0 is not greater than 4
+
+define i1 @neg_shl4_trunc_sgt4(i32 %a) {
+; CHECK-LABEL: @neg_shl4_trunc_sgt4(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 4, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[T]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 4, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp sgt i8 %t, 4
+  ret i1 %r
+}
+
+; negative test - 4 << 0 is less than 5
+
+define i1 @neg_shl4_trunc_slt5(i32 %a) {
+; CHECK-LABEL: @neg_shl4_trunc_slt5(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 4, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[T]], 5
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 4, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp slt i8 %t, 5
+  ret i1 %r
+}
+
+; negative test - the shifted constant must be a power of 2
+
+define i1 @neg_shl3_trunc_sgt0(i32 %a) {
+; CHECK-LABEL: @neg_shl3_trunc_sgt0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 3, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 3, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp sgt i8 %t, 0
+  ret i1 %r
+}
+
+; negative test - not a shift of a constant
+
+define i1 @neg_shl_var_trunc_sgt0(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_shl_var_trunc_sgt0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 %b, %a
+  %t = trunc i32 %shl to i8
+  %r = icmp sgt i8 %t, 0
   ret i1 %r
 }
 
