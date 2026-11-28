@@ -6456,7 +6456,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   VPCostContext CostCtx(*TLI, *Plan, PlanCM, Config);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CostCtx);
+                 RecipeBuilder, CostCtx, *DT, Legal->getAssumptionCache());
 
   // Form interleave groups before scalarization decisions, so those see the
   // group's single address use.
