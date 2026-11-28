@@ -63,7 +63,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "3.1.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "3.2.0"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -114,6 +114,8 @@ void renderBranch(json::OStream &JOS, const coverage::CountedRegion &Region) {
     JOS.value(Region.ColumnEnd);
     JOS.value(clamp_uint64_to_int64(Region.ExecutionCount));
     JOS.value(clamp_uint64_to_int64(Region.FalseExecutionCount));
+    JOS.value(Region.TrueFolded);
+    JOS.value(Region.FalseFolded);
     JOS.value(Region.FileID);
     JOS.value(Region.ExpandedFileID);
     JOS.value(int64_t(Region.Kind));
