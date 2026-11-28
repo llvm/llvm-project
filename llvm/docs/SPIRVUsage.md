@@ -185,6 +185,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds instructions and decorations to specify memory access aliasing, similar to alias.scope and noalias LLVM metadata.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
+   * - ``SPV_INTEL_sigmoid``
+     - Adds an instruction to compute the sigmoid function of a floating-point value.
    * - ``SPV_INTEL_split_barrier``
      - Adds SPIR-V instructions to split a control barrier into two separate operations: the first indicates that an invocation has "arrived" at the barrier but should continue executing, and the second indicates that an invocation should "wait" for other invocations to arrive at the barrier before executing further.
    * - ``SPV_INTEL_subgroups``
