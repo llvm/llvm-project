@@ -1,5 +1,72 @@
 // RUN: mlir-opt %s -linalg-fuse-elementwise-ops -split-input-file | FileCheck %s
 
+// CHECK-LABEL: @output_operand_producer_fusion
+//       CHECK:   %[[FUSED:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%{{.+}}, %{{.+}} : tensor<8xf32>, tensor<8xf32>)
+//       CHECK:     %[[PRODUCED:.+]] = arith.mulf
+//       CHECK:     %[[CONSUMED:.+]] = arith.addf %{{.+}}, %[[PRODUCED]]
+//       CHECK:     linalg.yield %[[CONSUMED]]
+//   CHECK-NOT:   linalg.generic
+//       CHECK:   return %[[FUSED]]
+func.func @output_operand_producer_fusion(
+    %arg0: tensor<8xf32>, %arg1: tensor<8xf32>,
+    %init: tensor<8xf32>) -> tensor<8xf32> {
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>,
+                       affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<8xf32>) outs(%init : tensor<8xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %product = arith.mulf %in, %in : f32
+      linalg.yield %product : f32
+  } -> tensor<8xf32>
+  %consumer = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>,
+                       affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg1 : tensor<8xf32>) outs(%producer : tensor<8xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %sum = arith.addf %in, %out : f32
+      linalg.yield %sum : f32
+  } -> tensor<8xf32>
+  return %consumer : tensor<8xf32>
+}
+
+// -----
+
+// A producer cannot be fused into a reduction init because it would change
+// which value initializes the reduction.
+// CHECK-LABEL: @do_not_fuse_reduction_output_operand
+//       CHECK:   %[[PRODUCER:.+]] = linalg.generic
+//       CHECK:   %[[CONSUMER:.+]] = linalg.generic
+//  CHECK-SAME:       outs(%[[PRODUCER]] : tensor<4xf32>)
+//       CHECK:   return %[[CONSUMER]]
+func.func @do_not_fuse_reduction_output_operand(
+    %arg0: tensor<4xf32>, %arg1: tensor<4x8xf32>,
+    %init: tensor<4xf32>) -> tensor<4xf32> {
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>,
+                       affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<4xf32>) outs(%init : tensor<4xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %product = arith.mulf %in, %in : f32
+      linalg.yield %product : f32
+  } -> tensor<4xf32>
+  %consumer = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg1 : tensor<4x8xf32>) outs(%producer : tensor<4xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %sum = arith.addf %in, %out : f32
+      linalg.yield %sum : f32
+  } -> tensor<4xf32>
+  return %consumer : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-DAG: [[$MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 
