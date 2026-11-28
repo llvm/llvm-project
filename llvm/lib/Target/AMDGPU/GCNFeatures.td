@@ -1321,6 +1321,11 @@ defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-c
   /*GenPredicate=*/0
 >;
 
+defm CoExecWindowModel : AMDGPUSubtargetFeature<"coexec-window-model",
+  "Co-execution slot patterns use GFX1250SpeedModel WMMA latencies",
+  /*GenPredicate=*/0
+>;
+
 defm VPermPk16Hazard : AMDGPUSubtargetFeature<"vperm-pk16-hazard",
   "V_PERM_PK16 must be immediately followed by a safe VALU (or an inserted V_NOP)",
   /*GenPredicate=*/0
@@ -2639,6 +2644,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
+   FeatureCoExecWindowModel,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2681,6 +2687,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
+   FeatureCoExecWindowModel,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
