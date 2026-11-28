@@ -48,6 +48,21 @@ const MCExpr *
 MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                        unsigned Encoding,
                                        MCStreamer &Streamer) const {
+  if (DwarfPersonalitySymbolSpec) {
+    MCContext &Context = Streamer.getContext();
+    const MCExpr *Res =
+        MCSymbolRefExpr::create(Sym, DwarfPersonalitySymbolSpec, Context);
+    if (DwarfPersonalitySymbolsAbsOff) {
+      const MCExpr *Off =
+          MCConstantExpr::create(DwarfPersonalitySymbolsAbsOff, Context);
+      return MCBinaryExpr::createAdd(Res, Off, Context);
+    }
+
+    MCSymbol *PCSym = Context.createTempSymbol();
+    Streamer.emitLabel(PCSym);
+    const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
+    return MCBinaryExpr::createSub(Res, PC, Context);
+  }
   return getExprForFDESymbol(Sym, Encoding, Streamer);
 }
 

@@ -90,7 +90,10 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
 
 X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple,
                                              const MCTargetOptions &Options)
-    : X86MCAsmInfoDarwin(Triple, Options) {}
+    : X86MCAsmInfoDarwin(Triple, Options) {
+  DwarfPersonalitySymbolSpec = X86::S_GOTPCREL;
+  DwarfPersonalitySymbolsAbsOff = 4;
+}
 
 void X86ELFMCAsmInfo::anchor() { }
 
@@ -117,16 +120,6 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
 
   // .bss is supported without .section.
   SectionDirectives.insert(".bss");
-}
-
-const MCExpr *
-X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
-                                                   unsigned Encoding,
-                                                   MCStreamer &Streamer) const {
-  MCContext &Context = Streamer.getContext();
-  const MCExpr *Res = MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, Context);
-  const MCExpr *Four = MCConstantExpr::create(4, Context);
-  return MCBinaryExpr::createAdd(Res, Four, Context);
 }
 
 void X86MCAsmInfoMicrosoft::anchor() { }

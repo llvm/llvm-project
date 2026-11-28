@@ -149,6 +149,12 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
 
+  // On Darwin, we can reference dwarf symbols with foo@GOT-., which
+  // is an indirect pc-relative reference. The default implementation
+  // won't reference using the GOT, so we need this target-specific
+  // version.
+  DwarfPersonalitySymbolSpec = AArch64::S_MACHO_GOT;
+
   initializeAtSpecifiers(MachOAtSpecifiers);
   UseAtForSpecifier = false;
 
@@ -160,21 +166,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
     MAI.printExpr(OS, *Expr.getSubExpr());
   };
   SpecifierExprEvaluateFn = evaluate;
-}
-
-const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
-    const MCSymbol *Sym, unsigned Encoding, MCStreamer &Streamer) const {
-  // On Darwin, we can reference dwarf symbols with foo@GOT-., which
-  // is an indirect pc-relative reference. The default implementation
-  // won't reference using the GOT, so we need this target-specific
-  // version.
-  MCContext &Context = Streamer.getContext();
-  const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64::S_MACHO_GOT, Context);
-  MCSymbol *PCSym = Context.createTempSymbol();
-  Streamer.emitLabel(PCSym);
-  const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
-  return MCBinaryExpr::createSub(Res, PC, Context);
 }
 
 void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
