@@ -2270,6 +2270,12 @@ public:
   void analyzedBundle(ArrayRef<Value *> VL) {
     AnalyzedBundles.insert(hash_value(VL));
   }
+  /// Returns the roots of the separate trees with their sibling loops, saved
+  /// for the operands gathered from these loops, and forgets them.
+  SmallVector<std::pair<const Loop *, SmallVector<Value *>>>
+  takeSiblingLoopRoots() {
+    return std::exchange(Shared.SiblingLoopRoots, {});
+  }
   /// Clear the list of the analyzed reduction root instructions.
   void clearReductionData() {
     AnalyzedReductionsRoots.clear();
@@ -3755,6 +3761,11 @@ private:
     /// without users, consumed after the tree vectorization; must not be
     /// collected as dead operands of the erased scalars.
     SmallPtrSet<Value *, 4> ExternalUseReplacements;
+
+    /// The instructions of the operands, gathered from the sibling loops with
+    /// different trip counts, with these loops, the roots of the separate
+    /// trees. Kept across the candidates.
+    SmallVector<std::pair<const Loop *, SmallVector<Value *>>> SiblingLoopRoots;
 
     /// Clear shared observers before destroying the current candidate.
     void clear() {
@@ -12992,6 +13003,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         auto BailOutToGather = [&]() {
           LLVM_DEBUG(dbgs()
                      << "SLP: Sibling loops have different trip counts.\n");
+          // The PHIs are the seeds of their block, tried before the root is.
+          if (!isa<PHINode>(S.getMainOp()))
+            Shared.SiblingLoopRoots.emplace_back(
+                NewLoopNest[CommonLen],
+                make_filter_range(VL, IsaPred<Instruction>));
           newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
         };
         if (Shared.CurrentLoopNest.empty()) {
@@ -31184,11 +31200,41 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   auto IsVisitable = [](BasicBlock *BB) {
     return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
   };
-  for (BasicBlock *BB : make_filter_range(POT, IsVisitable)) {
+  // The roots, gathered from the sibling loops, are the seeds of these loops,
+  // vectorized as the separate trees after the other seeds of these loops, not
+  // to preempt their wider trees. These trees may save the new roots. Many
+  // trees gather the same values, so each root is tried once.
+  SmallDenseMap<const Loop *, unsigned> PendingLoopBlocks;
+  for (BasicBlock *BB : make_filter_range(POT, IsVisitable))
+    for (const Loop *L = LI->getLoopFor(BB); L; L = L->getParentLoop())
+      ++PendingLoopBlocks[L];
+  SmallVector<std::pair<const Loop *, SmallVector<Value *>>> SiblingLoopRoots;
+  SmallDenseSet<size_t> SavedSiblingLoopRoots;
+  auto VectorizeSiblingLoopRoots = [&]() {
+    while (true) {
+      for (auto &Root : R.takeSiblingLoopRoots())
+        if (SavedSiblingLoopRoots.insert(hash_value(ArrayRef(Root.second)))
+                .second)
+          SiblingLoopRoots.push_back(std::move(Root));
+      auto *It = find_if(SiblingLoopRoots, [&](const auto &Root) {
+        return !PendingLoopBlocks.lookup(Root.first);
+      });
+      if (It == SiblingLoopRoots.end())
+        return;
+      SmallVector<Value *> VL = std::move(It->second);
+      SiblingLoopRoots.erase(It);
+      if (none_of(VL, [&](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return R.isDeleted(I) || R.isScalarFallbackBlock(I->getParent());
+          }))
+        Changed |= tryToVectorizeList(VL, R, /*MaxVFOnly=*/true);
+    }
+  };
+  auto VectorizeBlock = [&](BasicBlock *BB) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
     if (R.isScalarFallbackBlock(BB))
-      continue;
+      return;
 
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
@@ -31214,19 +31260,55 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                         << " underlying objects.\n");
       Changed |= vectorizeGEPIndices(BB, R);
     }
-  }
+    for (const Loop *L = LI->getLoopFor(BB); L; L = L->getParentLoop())
+      --PendingLoopBlocks[L];
+    VectorizeSiblingLoopRoots();
+  };
 
   // Vectorized on their own, the FMA candidates lose the fusion with their fmul
   // operands. They are retried after all the blocks, not to preempt the trees
   // of the blocks processed later, e.g. the store chains of a loop body,
   // processed after the latch PHIs reaching the same instructions.
-  R.clearReductionData();
-  SmallSetVector<Instruction *, 8> Empty;
-  for (Instruction *I : make_filter_range(
-           FMACandidates, [&](Instruction *I) { return !R.isDeleted(I); }))
-    Changed |= tryToVectorize(I, R, Empty, /*AllowFMACandidates=*/true);
-  assert(Empty.empty() &&
-         "No new FMA candidates expected during AllowFMACandidates retry.");
+  auto VectorizeFMACandidates = [&]() {
+    R.clearReductionData();
+    SmallSetVector<Instruction *, 8> Empty;
+    for (Instruction *I : make_filter_range(
+             FMACandidates, [&](Instruction *I) { return !R.isDeleted(I); }))
+      Changed |= tryToVectorize(I, R, Empty, /*AllowFMACandidates=*/true);
+    assert(Empty.empty() &&
+           "No new FMA candidates expected during AllowFMACandidates retry.");
+    FMACandidates.clear();
+    VectorizeSiblingLoopRoots();
+  };
+  // The trees, which reach a sibling loop with a different trip count, gather
+  // its values. The producer region of such a loop, with its own FMA
+  // candidates, is visited before its consumer region, so these trees see the
+  // vectorized values of the producer loop.
+  SmallVector<SiblingLoopRegions> AllSiblingLoopRegions =
+      collectSiblingLoopRegions(*LI, *SE);
+  SmallPtrSet<BasicBlock *, 16> VisitedBlocks;
+  auto VisitBlock = [&](auto &Self, BasicBlock *BB) -> void {
+    if (!IsVisitable(BB) || !VisitedBlocks.insert(BB).second)
+      return;
+    for (SiblingLoopRegions &Regions : AllSiblingLoopRegions) {
+      if (Regions.Producer.empty() || !Regions.Consumer.test(BB->getNumber()))
+        continue;
+      // The producer region is visited once.
+      SmallBitVector Producer = std::exchange(Regions.Producer, {});
+      SmallSetVector<Instruction *, 8> OtherFMACandidates =
+          std::exchange(FMACandidates, {});
+      for (BasicBlock *ProducerBB : POT)
+        if (Producer.test(ProducerBB->getNumber()))
+          Self(Self, ProducerBB);
+      VectorizeFMACandidates();
+      FMACandidates = std::move(OtherFMACandidates);
+    }
+    VectorizeBlock(BB);
+  };
+  // Scan the blocks in the function in post order.
+  for (BasicBlock *BB : POT)
+    VisitBlock(VisitBlock, BB);
+  VectorizeFMACandidates();
 
   // Instructions with the single user require just one extract per lane, so
   // they are used as the seeds for the very last attempt, after all the other
@@ -31240,6 +31322,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
          })) {
       R.clearReductionData();
       Changed |= vectorizeOnceUsedSeeds(BB, R);
+      VectorizeSiblingLoopRoots();
     }
   }
 

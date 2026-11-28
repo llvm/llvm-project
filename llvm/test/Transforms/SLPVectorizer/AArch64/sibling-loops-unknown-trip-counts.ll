@@ -2,8 +2,8 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
 
 ; The tail loop operands come from a sibling loop without a proven equal trip
-; count and are gathered. The sibling loop is vectorized after the tail tree is
-; rejected, so the tail tree must be retried to use the vector live-outs.
+; count and are gathered. The sibling loop is visited before the tail loop, so
+; the tail tree uses the vector live-outs.
 
 define i32 @test(ptr %p, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define i32 @test(
@@ -16,23 +16,18 @@ define i32 @test(ptr %p, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[TAIL_LOOP]] ], [ [[TMP2]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -70,7 +65,7 @@ exit:
   ret i32 %res
 }
 
-; Each retry vectorizes the next loop in the chain of the sibling loops.
+; The chain of the sibling loops is visited from its first loop.
 define i32 @three_sibling_loops(ptr %p, ptr %q, ptr %out2, i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: define i32 @three_sibling_loops(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[OUT2:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) {
@@ -82,41 +77,29 @@ define i32 @three_sibling_loops(ptr %p, ptr %q, ptr %out2, i1 %c1, i1 %c2, i1 %c
 ; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[PH2:.*]], label %[[LOOP1]]
 ; CHECK:       [[PH2]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP2]]:
-; CHECK-NEXT:    [[A2:%.*]] = phi i32 [ [[A2_NEXT:%.*]], %[[LOOP2]] ], [ [[TMP3]], %[[PH2]] ]
-; CHECK-NEXT:    [[B2:%.*]] = phi i32 [ [[B2_NEXT:%.*]], %[[LOOP2]] ], [ [[TMP4]], %[[PH2]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[B2_NEXT]] = or i32 [[B2]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[A2_NEXT]] = or i32 [[A2]], [[Z1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[LOOP2]] ], [ [[TMP2]], %[[PH2]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[PH3:.*]], label %[[LOOP2]]
 ; CHECK:       [[PH3]]:
-; CHECK-NEXT:    [[A2_REM:%.*]] = urem i32 [[A2_NEXT]], 65521
-; CHECK-NEXT:    [[B2_REM:%.*]] = urem i32 [[B2_NEXT]], 65521
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds i32, ptr [[OUT2]], i64 1
-; CHECK-NEXT:    store i32 [[A2_REM]], ptr [[OUT2]], align 4
-; CHECK-NEXT:    store i32 [[B2_REM]], ptr [[O1]], align 4
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[Y0:%.*]] = load i8, ptr [[Q]], align 1
-; CHECK-NEXT:    [[Y1:%.*]] = load i8, ptr [[Q1]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
+; CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[OUT2]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i8>, ptr [[Q]], align 1
 ; CHECK-NEXT:    br label %[[LOOP3:.*]]
 ; CHECK:       [[LOOP3]]:
-; CHECK-NEXT:    [[A3:%.*]] = phi i32 [ [[A3_NEXT:%.*]], %[[LOOP3]] ], [ [[A2_NEXT]], %[[PH3]] ]
-; CHECK-NEXT:    [[B3:%.*]] = phi i32 [ [[B3_NEXT:%.*]], %[[LOOP3]] ], [ [[B2_NEXT]], %[[PH3]] ]
-; CHECK-NEXT:    [[W0:%.*]] = zext i8 [[Y0]] to i32
-; CHECK-NEXT:    [[B3_NEXT]] = or i32 [[B3]], [[W0]]
-; CHECK-NEXT:    [[W1:%.*]] = zext i8 [[Y1]] to i32
-; CHECK-NEXT:    [[A3_NEXT]] = or i32 [[A3]], [[W1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP13:%.*]], %[[LOOP3]] ], [ [[TMP7]], %[[PH3]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i8> [[TMP9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP13]] = or <2 x i32> [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[C3]], label %[[EXIT:.*]], label %[[LOOP3]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = urem i32 [[A3_NEXT]], 65521
-; CHECK-NEXT:    [[TMP16:%.*]] = urem i32 [[B3_NEXT]], 65521
+; CHECK-NEXT:    [[TMP14:%.*]] = urem <2 x i32> [[TMP13]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP14]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -182,23 +165,19 @@ define void @outer_loop_sibling_after_main(ptr %p, ptr %q, ptr %out0, ptr %out2,
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TA_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[OB:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TB_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[Y0:%.*]] = load i8, ptr [[Q]], align 1
-; CHECK-NEXT:    [[Y1:%.*]] = load i8, ptr [[Q1]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP16:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[Q]], align 1
 ; CHECK-NEXT:    br label %[[LOOP0:.*]]
 ; CHECK:       [[LOOP0]]:
-; CHECK-NEXT:    [[LA:%.*]] = phi i32 [ [[LA_NEXT:%.*]], %[[LOOP0]] ], [ [[OA]], %[[OUTER_HEADER]] ]
-; CHECK-NEXT:    [[LB:%.*]] = phi i32 [ [[LB_NEXT:%.*]], %[[LOOP0]] ], [ [[OB]], %[[OUTER_HEADER]] ]
-; CHECK-NEXT:    [[YZ0:%.*]] = zext i8 [[Y0]] to i32
-; CHECK-NEXT:    [[LB_NEXT]] = or i32 [[LB]], [[YZ0]]
-; CHECK-NEXT:    [[YZ1:%.*]] = zext i8 [[Y1]] to i32
-; CHECK-NEXT:    [[LA_NEXT]] = or i32 [[LA]], [[YZ1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ [[TMP5:%.*]], %[[LOOP0]] ], [ [[TMP0]], %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5]] = or <2 x i32> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[LOOP0_EXIT:.*]], label %[[LOOP0]]
 ; CHECK:       [[LOOP0_EXIT]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = urem i32 [[LA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP8:%.*]] = urem i32 [[LB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP6:%.*]] = urem <2 x i32> [[TMP5]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[L0RES:%.*]] = or i32 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    store i32 [[L0RES]], ptr [[OUT0]], align 4
 ; CHECK-NEXT:    br label %[[MAIN_LOOP:.*]]
@@ -208,26 +187,17 @@ define void @outer_loop_sibling_after_main(ptr %p, ptr %q, ptr %out0, ptr %out2,
 ; CHECK-NEXT:    [[TMP11]] = urem <2 x i32> [[TMP10]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP16]], %[[TAIL_LOOP]] ], [ [[TMP11]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <2 x i8> [[TMP12]] to <2 x i32>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP16]] = or <2 x i32> [[TMP13]], [[TMP15]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[OUTER_LATCH]], label %[[TAIL_LOOP]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[LA_REM:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[LB_REM:%.*]] = urem i32 [[TB_NEXT]], 65521
-; CHECK-NEXT:    [[O2P:%.*]] = getelementptr inbounds i32, ptr [[OUT2]], i64 1
-; CHECK-NEXT:    store i32 [[LA_REM]], ptr [[OUT2]], align 4
-; CHECK-NEXT:    store i32 [[LB_REM]], ptr [[O2P]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = urem <2 x i32> [[TMP16]], splat (i32 65521)
+; CHECK-NEXT:    store <2 x i32> [[TMP17]], ptr [[OUT2]], align 4
 ; CHECK-NEXT:    br i1 [[C3]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -314,25 +284,19 @@ define double @fma_producer(ptr %p, ptr %in, ptr %out, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[I0:%.*]] = fptosi double [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    [[I1:%.*]] = fptosi double [[TMP7]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i8>, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fptosi <2 x double> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[I0]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[I1]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP11:%.*]], %[[TAIL_LOOP]] ], [ [[TMP7]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i8> [[TMP6]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP11]] = or <2 x i32> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP14:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP12:%.*]] = urem <2 x i32> [[TMP11]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[RF:%.*]] = sitofp i32 [[RES]] to double
 ; CHECK-NEXT:    ret double [[RF]]
@@ -384,7 +348,8 @@ exit:
   ret double %rf
 }
 
-; The sibling loop is vectorized only with the single-user seeds.
+; The sibling loop is vectorized only with the single-user seeds. These seeds
+; go after the trees of the tail loop, so the tail loop stays scalar.
 define i32 @once_used_producer(ptr %p, ptr %in, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define i32 @once_used_producer(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -472,29 +437,23 @@ define i32 @same_block_two_roots(ptr %p, ptr %out, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[TAIL_LOOP]] ], [ [[TMP2]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TA_REM:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TB_REM:%.*]] = urem i32 [[TB_NEXT]], 65521
-; CHECK-NEXT:    [[RES1:%.*]] = or i32 [[TA_REM]], [[TB_REM]]
-; CHECK-NEXT:    store i32 [[RES1]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <2 x i32> [[TMP2]], <i32 7, i32 9>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = or <2 x i32> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
+; CHECK-NEXT:    store i32 [[TMP13]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
 ; CHECK-NEXT:    ret i32 [[TMP14]]
 ;
 entry:
@@ -535,8 +494,7 @@ exit:
   ret i32 %m.res
 }
 
-; The block with the gathering tree is versioned for the runtime alias checks
-; before the retry.
+; The block with the gathering tree is versioned for the runtime alias checks.
 define void @runtime_alias_split_exit(ptr %p, ptr %a, ptr %b, ptr noalias %out, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define void @runtime_alias_split_exit(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr noalias [[OUT:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -550,19 +508,13 @@ define void @runtime_alias_split_exit(ptr %p, ptr %a, ptr %b, ptr noalias %out, 
 ; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TMP14:%.*]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TMP15:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TMP15]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TMP14]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[TAIL_LOOP]] ], [ [[TMP2]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[A4]], 16
@@ -573,19 +525,17 @@ define void @runtime_alias_split_exit(ptr %p, ptr %a, ptr %b, ptr noalias %out, 
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
 ; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[EXIT_RTSCALAR:.*]], label %[[EXIT_RTVEC:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[EXIT_RTVEC]]:
-; CHECK-NEXT:    [[TA_REM:%.*]] = urem i32 [[TMP14]], 65521
-; CHECK-NEXT:    [[TB_REM:%.*]] = urem i32 [[TMP15]], 65521
-; CHECK-NEXT:    [[TA_X:%.*]] = xor i32 [[TA_REM]], 3
-; CHECK-NEXT:    [[TB_X:%.*]] = xor i32 [[TB_REM]], 5
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store i32 [[TA_X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    store i32 [[TB_X]], ptr [[O1]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i32> [[TMP10]], <i32 3, i32 5>
+; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP12]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[EXIT_RTCONT:.*]]
 ; CHECK:       [[EXIT_RTSCALAR]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TA_REM_SCALAR:%.*]] = urem i32 [[TMP14]], 65521
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TB_REM_SCALAR:%.*]] = urem i32 [[TMP15]], 65521
 ; CHECK-NEXT:    [[TA_X_SCALAR:%.*]] = xor i32 [[TA_REM_SCALAR]], 3
 ; CHECK-NEXT:    [[TB_X_SCALAR:%.*]] = xor i32 [[TB_REM_SCALAR]], 5
@@ -673,7 +623,8 @@ exit:
 declare void @use1(i32)
 declare void @use2(i32)
 
-; The gathering tree is built from the single-user seeds.
+; The gathering tree is built from the single-user seeds, before the single-user
+; seeds of the sibling loop, so the tail loop stays scalar.
 define void @once_used_both(ptr %p, ptr %in, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define void @once_used_both(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -772,7 +723,7 @@ exit:
 }
 
 ; The reduction in the exit block takes its reduced values from the outer loop
-; header. The retry rebuilds the reduction, not only the header trees.
+; header, so the exit block is visited after the first inner loop.
 define i32 @outer_backedge_reduction(ptr %p, ptr %q, i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: define i32 @outer_backedge_reduction(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) {
@@ -785,10 +736,6 @@ define i32 @outer_backedge_reduction(ptr %p, ptr %q, i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-NEXT:    [[Y1:%.*]] = load i8, ptr [[Q1]], align 1
 ; CHECK-NEXT:    [[YZ0:%.*]] = zext i8 [[Y0]] to i32
 ; CHECK-NEXT:    [[YZ1:%.*]] = zext i8 [[Y1]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
-; CHECK-NEXT:    [[OA1:%.*]] = or i32 [[TMP10]], [[YZ0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
-; CHECK-NEXT:    [[OB1:%.*]] = or i32 [[TMP11]], [[YZ1]]
 ; CHECK-NEXT:    br label %[[MAIN_LOOP:.*]]
 ; CHECK:       [[MAIN_LOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[OUTER_HEADER]] ], [ [[TMP3:%.*]], %[[MAIN_LOOP]] ]
@@ -808,7 +755,9 @@ define i32 @outer_backedge_reduction(ptr %p, ptr %q, i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-NEXT:    [[TMP9]] = urem <2 x i32> [[TMP8]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C3]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[OA1]], [[OB1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP10]], [[YZ0]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[OP_RDX]], [[YZ1]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX1]]
 ;
 entry:
@@ -861,7 +810,6 @@ exit:
 }
 
 ; The FMA candidate in the tail loop is deferred by the PHI in the exit block.
-; The retry of the exit block defers it again.
 define double @fma_phi_incoming(ptr %p, ptr %in, ptr %out, i1 %c0, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define double @fma_phi_incoming(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]], ptr [[OUT:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -885,20 +833,17 @@ define double @fma_phi_incoming(ptr %p, ptr %in, ptr %out, i1 %c0, i1 %c1, i1 %c
 ; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[FX0:%.*]] = sitofp i8 [[X0]] to double
 ; CHECK-NEXT:    [[FX1:%.*]] = sitofp i8 [[X1]] to double
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[FX0]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[FX1]], i64 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi double [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP6]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi double [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP7]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TA_NEXT]] = fadd double [[TA]], [[FX0]]
-; CHECK-NEXT:    [[TB_NEXT]] = fadd double [[TB]], [[FX1]]
-; CHECK-NEXT:    [[TM0:%.*]] = fmul contract double [[TA_NEXT]], 3.000000e+00
-; CHECK-NEXT:    [[TM1:%.*]] = fmul contract double [[TB_NEXT]], 5.000000e+00
-; CHECK-NEXT:    [[TR:%.*]] = fadd contract double [[TM0]], [[TM1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP9:%.*]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP9]] = fadd <2 x double> [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract <2 x double> [[TMP9]], <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP11:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP10]])
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TR]], %[[TAIL_LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP11]], %[[TAIL_LOOP]] ]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 entry:
@@ -947,7 +892,7 @@ exit:
 }
 
 ; The subtree with the operands, gathered from the sibling loop, is trimmed from
-; the vectorized tree and still waits for the sibling loop.
+; the vectorized tree.
 define i32 @trimmed_subtree_in_exit(ptr %p, ptr %q0, ptr %q1, ptr %q2, ptr %q3, ptr %base, ptr %out1, ptr %out2, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define i32 @trimmed_subtree_in_exit(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q0:%.*]], ptr [[Q1:%.*]], ptr [[Q2:%.*]], ptr [[Q3:%.*]], ptr [[BASE:%.*]], ptr [[OUT1:%.*]], ptr [[OUT2:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -959,26 +904,19 @@ define i32 @trimmed_subtree_in_exit(ptr %p, ptr %q0, ptr %q1, ptr %q2, ptr %q3, 
 ; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[TAIL_PH]] ], [ [[IV_NEXT:%.*]], %[[TAIL_LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P0]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P0]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_0:%.*]] = or i32 [[TMP4]], [[Z0]]
-; CHECK-NEXT:    [[TB_NEXT:%.*]] = xor i32 [[TB_0]], 17
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_0:%.*]] = or i32 [[TMP3]], [[Z1]]
-; CHECK-NEXT:    [[TA_NEXT:%.*]] = xor i32 [[TA_0]], 19
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P0]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <2 x i32> [[TMP6]], <i32 19, i32 17>
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TA_NEXT]], 31
-; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TB_NEXT]], 37
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[TMP7]], <i32 31, i32 37>
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[Q0]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x i32>, ptr [[Q1]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x i32>, ptr [[Q2]], align 4
@@ -995,8 +933,6 @@ define i32 @trimmed_subtree_in_exit(ptr %p, ptr %q0, ptr %q1, ptr %q2, ptr %q3, 
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <2 x i32> [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = add <2 x i32> [[TMP20]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = sub <2 x i32> [[TMP22]], [[TMP23]]
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> poison, i32 [[TMP28]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP30]], i32 [[TMP29]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = xor <2 x i32> [[TMP24]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i32> [[TMP25]], i64 0
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[TMP26]]
@@ -1005,8 +941,10 @@ define i32 @trimmed_subtree_in_exit(ptr %p, ptr %q0, ptr %q1, ptr %q2, ptr %q3, 
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[G0]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[G1]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i32> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[TMP28]] to i64
 ; CHECK-NEXT:    store volatile i64 [[Z]], ptr [[OUT1]], align 8
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[TMP29]] to i16
 ; CHECK-NEXT:    store volatile i16 [[T]], ptr [[OUT2]], align 2
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -1094,7 +1032,7 @@ exit:
   ret i32 %res
 }
 
-; The retried store tree goes before the FMA candidate, so the scalar fma stays.
+; The store tree goes before the FMA candidate, so the scalar fma stays.
 define double @fma_preempt_order(ptr %p, ptr %out, double %x0, double %x1, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define double @fma_preempt_order(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], double [[X0:%.*]], double [[X1:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -1116,22 +1054,16 @@ define double @fma_preempt_order(ptr %p, ptr %out, double %x0, double %x1, i1 %c
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i32> [[TMP8]] to <2 x double>
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[X1]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul contract <2 x double> [[TMP9]], [[TMP14]]
-; CHECK-NEXT:    [[F:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP12]])
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
-; CHECK-NEXT:    [[D2:%.*]] = fadd double [[TMP10]], 1.000000e+00
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
-; CHECK-NEXT:    [[D3:%.*]] = fadd double [[TMP11]], 2.000000e+00
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 1
 ; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
-; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store double [[TMP10]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store double [[TMP11]], ptr [[O1]], align 8
-; CHECK-NEXT:    store double [[D2]], ptr [[O2]], align 8
-; CHECK-NEXT:    store double [[D3]], ptr [[O3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i32> [[TMP8]] to <2 x double>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract double [[TMP10]], [[X0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract double [[TMP11]], [[X1]]
+; CHECK-NEXT:    [[F:%.*]] = fadd contract double [[M0]], [[M1]]
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP9]], <double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    store <2 x double> [[TMP12]], ptr [[O2]], align 8
 ; CHECK-NEXT:    ret double [[F]]
 ;
 entry:
@@ -1195,25 +1127,19 @@ define i32 @guarded_sibling_loops(ptr %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_CHECK]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_CHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2]], %[[MAIN_LOOP]] ]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br i1 [[C2]], label %[[TAIL_LOOP:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_CHECK]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP5]], %[[TAIL_CHECK]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], %[[TAIL_LOOP]] ], [ [[TMP3]], %[[TAIL_CHECK]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i8> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP8]] = or <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[C3]], label %[[EXIT]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[EA:%.*]] = phi i32 [ [[TMP4]], %[[TAIL_CHECK]] ], [ [[TA_NEXT]], %[[TAIL_LOOP]] ]
-; CHECK-NEXT:    [[EB:%.*]] = phi i32 [ [[TMP5]], %[[TAIL_CHECK]] ], [ [[TB_NEXT]], %[[TAIL_LOOP]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = urem i32 [[EA]], 65521
-; CHECK-NEXT:    [[TMP12:%.*]] = urem i32 [[EB]], 65521
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP3]], %[[TAIL_CHECK]] ], [ [[TMP8]], %[[TAIL_LOOP]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <2 x i32> [[TMP9]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -1275,23 +1201,18 @@ define void @outer_loop_iv(ptr %p, ptr %out, i64 %n, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_PH]]:
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P0]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P0]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i8>, ptr [[P0]], align 1
 ; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP5]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP6]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP9:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i8> [[TMP5]] to <2 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP9]] = or <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[OUTER_LATCH]], label %[[TAIL_LOOP]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP12:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <2 x i32> [[TMP9]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[OP:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[RES]], ptr [[OP]], align 4
@@ -1386,18 +1307,15 @@ define double @fma_candidate_other_region(ptr %a, ptr %h, ptr %out, ptr %q, i64 
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ zeroinitializer, %[[MID]] ], [ [[TMP12:%.*]], %[[MAIN_LOOP]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP12]] = urem <2 x i32> [[TMP11]], splat (i32 65521)
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
 ; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_LOOP:.*]], label %[[MAIN_LOOP]]
 ; CHECK:       [[TAIL_LOOP]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP13]], %[[MAIN_LOOP]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP14]], %[[MAIN_LOOP]] ]
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], 3
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], 5
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP14:%.*]], %[[TAIL_LOOP]] ], [ [[TMP12]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[TMP14]] = or <2 x i32> [[TMP13]], <i32 3, i32 5>
 ; CHECK-NEXT:    br i1 [[C2]], label %[[END2:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[END2]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP17:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP15:%.*]] = urem <2 x i32> [[TMP14]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[URES:%.*]] = or i32 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[DRES:%.*]] = sitofp i32 [[URES]] to double
 ; CHECK-NEXT:    ret double [[DRES]]
@@ -1531,12 +1449,16 @@ define void @versioned_sibling_root(ptr noalias %dst, ptr %a, ptr %b, i64 %n, i6
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[B]], align 4
 ; CHECK-NEXT:    [[TC:%.*]] = trunc i64 [[JC]] to i32
-; CHECK-NEXT:    [[C0A:%.*]] = or i32 [[TC]], [[X0]]
-; CHECK-NEXT:    [[C1A:%.*]] = or i32 [[TC]], [[X1]]
-; CHECK-NEXT:    [[C0:%.*]] = urem i32 [[C0A]], 65521
-; CHECK-NEXT:    [[C1:%.*]] = urem i32 [[C1A]], 65521
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TC]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = urem <2 x i32> [[TMP8]], splat (i32 65521)
 ; CHECK-NEXT:    [[JC_NEXT:%.*]] = add i64 [[JC]], 1
 ; CHECK-NEXT:    [[CC:%.*]] = icmp ult i64 [[JC_NEXT]], [[M]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP9]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP_C_RTCONT]]
 ; CHECK:       [[LOOP_C_RTSCALAR]]:
 ; CHECK-NEXT:    [[A0_SCALAR:%.*]] = load i32, ptr [[A]], align 4
@@ -1566,8 +1488,8 @@ define void @versioned_sibling_root(ptr noalias %dst, ptr %a, ptr %b, i64 %n, i6
 ; CHECK-NEXT:    [[CC_SCALAR:%.*]] = icmp ult i64 [[JC_NEXT_SCALAR]], [[M]]
 ; CHECK-NEXT:    br label %[[LOOP_C_RTCONT]]
 ; CHECK:       [[LOOP_C_RTCONT]]:
-; CHECK-NEXT:    [[C0_RTMERGE]] = phi i32 [ [[C0]], %[[LOOP_C_RTVEC]] ], [ [[C0_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
-; CHECK-NEXT:    [[C1_RTMERGE]] = phi i32 [ [[C1]], %[[LOOP_C_RTVEC]] ], [ [[C1_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    [[C0_RTMERGE]] = phi i32 [ [[TMP10]], %[[LOOP_C_RTVEC]] ], [ [[C0_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    [[C1_RTMERGE]] = phi i32 [ [[TMP11]], %[[LOOP_C_RTVEC]] ], [ [[C1_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
 ; CHECK-NEXT:    [[JC_NEXT_RTMERGE]] = phi i64 [ [[JC_NEXT]], %[[LOOP_C_RTVEC]] ], [ [[JC_NEXT_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
 ; CHECK-NEXT:    [[CC_RTMERGE:%.*]] = phi i1 [ [[CC]], %[[LOOP_C_RTVEC]] ], [ [[CC_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
 ; CHECK-NEXT:    br i1 [[CC_RTMERGE]], label %[[LOOP_C]], label %[[MERGE]]
@@ -1658,23 +1580,18 @@ define i32 @equal_trip_count_middle_loop(ptr %p, ptr %out, i64 %n, i1 %c2) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[I2_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[L2]], label %[[TAIL_PH:.*]]
 ; CHECK:       [[TAIL_PH]]:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[L3:.*]]
 ; CHECK:       [[L3]]:
-; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[L3]] ], [ [[TMP3]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[L3]] ], [ [[TMP4]], %[[TAIL_PH]] ]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
-; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
-; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[L3]] ], [ [[TMP2]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[L3]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 [[TA_NEXT]], 65521
-; CHECK-NEXT:    [[TMP10:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[TMP8:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

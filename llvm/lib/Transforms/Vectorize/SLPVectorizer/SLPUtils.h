@@ -44,6 +44,7 @@ class Instruction;
 class IRBuilderBase;
 class LoadInst;
 class Loop;
+class LoopInfo;
 class PHINode;
 class ScalarEvolution;
 class SelectInst;
@@ -571,6 +572,22 @@ const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
 /// \p LoopAwareTripCount. Returns 1 when the budget is 0.
 unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
                           unsigned LoopAwareTripCount);
+
+/// The regions of a sibling loop (the producer) and of the sibling loops after
+/// it without the proven equal trip counts (the consumers), which use the
+/// producer values. The trees, which reach the producer through the consumers,
+/// gather the producer values.
+struct SiblingLoopRegions {
+  /// The producer loop and the blocks after it up to the consumer loops, by
+  /// the block numbers.
+  SmallBitVector Producer;
+  /// The consumer loops and the blocks after them, by the block numbers.
+  SmallBitVector Consumer;
+};
+
+/// \returns the regions of the sibling loops in \p LI, see SiblingLoopRegions.
+SmallVector<SiblingLoopRegions> collectSiblingLoopRegions(const LoopInfo &LI,
+                                                          ScalarEvolution &SE);
 
 /// Check if two insertelement instructions are from the same buildvector.
 bool areTwoInsertFromSameBuildVector(
