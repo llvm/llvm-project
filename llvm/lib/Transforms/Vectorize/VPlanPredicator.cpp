@@ -411,11 +411,30 @@ void VPPredicator::run() {
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
 
+  // Predicate and linearize the single-entry single-exit region from Entry to
+  // Exit, by default the whole loop body. A uniform branch on !AnyOf in the
+  // header is kept, branching directly to the latch if any lane is set and
+  // bypassing the region in between.
+  VPBasicBlock *Entry = Header;
+  VPBasicBlock *Exit = Blocks.back();
+  if (Header->getNumSuccessors() == 2 &&
+      match(Header->getTerminator(), m_BranchOnCond(m_Not(m_AnyOf())))) {
+    VPBasicBlock *Latch = Exit;
+    assert(Header->getSuccessors()[1] == Latch &&
+           Latch->getNumPredecessors() == 2 &&
+           Latch->getPredecessors()[0] == Header && Latch->phis().empty() &&
+           "Kept branch must skip to the latch, which must not have phis");
+    Entry = cast<VPBasicBlock>(Header->getSuccessors()[0]);
+    Exit = cast<VPBasicBlock>(Latch->getPredecessors()[1]);
+  }
+  auto Region = to_vector(make_filter_range(Blocks, [&](VPBasicBlock *VPBB) {
+    return VPDT.dominates(Entry, VPBB) && VPPDT.dominates(Exit, VPBB);
+  }));
+
   for (VPBasicBlock *VPBB : Blocks) {
-    // Introduce the mask for VPBB, which may introduce needed edge masks, and
-    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
-    // header.
-    if (VPBB != Header)
+    // Introduce the mask for VPBB, which may introduce needed edge masks,
+    // unless VPBB is the header or region entry.
+    if (VPBB != Header && VPBB != Entry)
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
@@ -444,14 +463,15 @@ void VPPredicator::run() {
     }
   }
 
-  for (VPBasicBlock *VPBB : reverse(Blocks))
-    if (VPBB != Header)
-      convertPhisToBlends(VPBB);
+  for (VPBasicBlock *VPBB : reverse(drop_begin(Region)))
+    convertPhisToBlends(VPBB);
 
-  // Linearize the blocks of the loop into one serial chain.
+  // Linearize the blocks of the region into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : Blocks) {
+  for (VPBasicBlock *VPBB : Region) {
     auto Successors = to_vector(VPBB->getSuccessors());
+    if (VPBB == Exit)
+      Successors.clear();
     if (Successors.size() > 1)
       VPBB->getTerminator()->eraseFromParent();
 

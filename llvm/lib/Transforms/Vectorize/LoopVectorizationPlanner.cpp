@@ -113,6 +113,32 @@ bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                  : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
+bool VFSelectionContext::canMaskAccess(bool IsLoad, Type *ScalarTy,
+                                       Align Alignment, unsigned AddressSpace,
+                                       bool IsConsecutive, bool IsCompressed,
+                                       ElementCount VF) const {
+  return IsCompressed ||
+         (IsConsecutive && isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
+                                                    AddressSpace)) ||
+         isLegalGatherOrScatter(IsLoad, ScalarTy, Alignment, VF);
+}
+
+bool VFSelectionContext::canMaskAccess(const VPInstruction &MemI) const {
+  bool IsLoad = MemI.getOpcode() == Instruction::Load;
+  VPValue *Addr = MemI.getOperand(IsLoad ? 0 : 1);
+  Type *ScalarTy =
+      IsLoad ? MemI.getScalarType() : MemI.getOperand(0)->getScalarType();
+  if (hasIrregularType(ScalarTy, MemI.getParent()->getPlan()->getDataLayout()))
+    return false;
+  std::optional<int64_t> Stride =
+      vputils::getConstantStride(Addr, ScalarTy, PSE, TheLoop);
+  return canMaskAccess(IsLoad, ScalarTy,
+                       getLoadStoreAlignment(MemI.getUnderlyingInstr()),
+                       Addr->getScalarType()->getPointerAddressSpace(),
+                       Stride == 1 || Stride == -1, /*IsCompressed=*/false,
+                       ElementCount::getFixed(1));
+}
+
 bool VFSelectionContext::supportsScalableVectors() const {
   return TTI.supportsScalableVectors() ||
          Opts.force_target_supports_scalable_vectors ||

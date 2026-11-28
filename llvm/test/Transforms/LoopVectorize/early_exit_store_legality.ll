@@ -749,7 +749,9 @@ exit:
 define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Loads with users outside the skipped code cannot be skipped if any lane exits early; masking memory operations with the early-exit mask instead %data = load i16, ptr %st.addr, align 2
 ; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+; CHECK-REMARK:      remark: <unknown>:0:0: Loads with users outside the skipped code cannot be skipped if any lane exits early; masking memory operations with the early-exit mask instead
 entry:
   br label %for.body
 
@@ -771,6 +773,39 @@ for.inc:
 
 exit:
   ret i16 %data
+}
+
+define void @uncountable_exit_with_internal_control_flow(ptr noalias %a, ptr align 2 dereferenceable(40) %pred, i1 %c) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_internal_control_flow'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Internal control flow prevents bailing to scalar on early exit; masking instead
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+; CHECK-REMARK:      remark: <unknown>:0:0: Internal control flow prevents bailing to scalar on early exit; masking instead
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %a.addr = getelementptr inbounds nuw i16, ptr %a, i64 %iv
+  store i16 0, ptr %a.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %if.check
+
+if.check:
+  br i1 %c, label %if.then, label %loop.latch
+
+if.then:
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %loop.header
+
+exit:
+  ret void
 }
 
 ; Vectorizeable, requires improvements in dereferenceability checks

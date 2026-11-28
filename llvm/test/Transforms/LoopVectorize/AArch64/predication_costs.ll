@@ -1,6 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt -force-vplan-cost-model=true < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,VPLAN
-; RUN: opt -force-vplan-cost-model=false < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,DEFAULT
+; RUN: opt -force-vplan-cost-model=true < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize \
+; RUN:   -enable-early-exit-vectorization-with-side-effects -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,VPLAN
+; RUN: opt -force-vplan-cost-model=false < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize \
+; RUN:   -enable-early-exit-vectorization-with-side-effects -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,DEFAULT
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -330,6 +332,41 @@ then:
 loop.latch:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: early_exit_store_trunc
+;
+; The store runs unmasked (skipped if any lane exits), so it is widened despite
+; NEON lacking masked i16 stores.
+;
+; CHECK-NOT: profitable to scalarize
+; CHECK: Precomputed costs for VF 2: 0
+; CHECK: Cost of 1 for VF 2: ir<%iv>.1 = WIDEN-INDUCTION ir<%x>, ir<1>, vp<{{.+}}> (truncated to i16)
+; CHECK: Cost of 4 for VF 2: WIDEN store vp<{{.+}}>, ir<%iv>.1, align 2
+; CHECK: Cost for VF 2: 12
+;
+define void @early_exit_store_trunc(ptr noalias %dst, ptr align 4 dereferenceable(4000) %src, i64 %x) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.src = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %ee.cond = icmp sgt i32 %l, 500
+  br i1 %ee.cond, label %exit, label %loop.latch
+
+loop.latch:
+  %add = add i64 %iv, %x
+  %add.trunc = trunc i64 %add to i16
+  %gep.dst = getelementptr inbounds nuw i16, ptr %dst, i64 %iv
+  store i16 %add.trunc, ptr %gep.dst, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
   br i1 %ec, label %exit, label %loop.header
 
 exit:
