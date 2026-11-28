@@ -141,6 +141,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "spirv64";
   case systemz:
     return "s390x";
+  case systemz32:
+    return "s390";
   case tce:
     return "tce";
   case tcele:
@@ -316,6 +318,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
     return "sparc";
 
   case systemz:
+  case systemz32:
     return "s390";
 
   case x86:
@@ -497,7 +500,9 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("sparcel", sparcel)
       .Case("sparcv9", sparcv9)
       .Case("s390x", systemz)
+      .Case("s390", systemz32)
       .Case("systemz", systemz)
+      .Case("systemz32", systemz32)
       .Case("tce", tce)
       .Case("tcele", tcele)
       .Case("tcele64", tcele64)
@@ -648,6 +653,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Case("riscv64be", Triple::riscv64be)
           .Case("hexagon", Triple::hexagon)
           .Cases({"s390x", "systemz"}, Triple::systemz)
+          .Cases({"s390", "systemz32"}, Triple::systemz32)
           .Case("sparc", Triple::sparc)
           .Case("sparcel", Triple::sparcel)
           .Cases({"sparcv9", "sparc64"}, Triple::sparcv9)
@@ -1038,6 +1044,11 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     if (T.isOSzOS())
       return Triple::GOFF;
     return Triple::ELF;
+
+  case Triple::systemz32:
+    if (T.isOSzOS())
+      return Triple::GOFF;
+    return Triple::UnknownObjectFormat;
 
   case Triple::wasm32:
   case Triple::wasm64:
@@ -1780,6 +1791,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::sparcel:
   case llvm::Triple::spir:
   case llvm::Triple::spirv32:
+  case llvm::Triple::systemz32:
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
   case llvm::Triple::thumb:
@@ -1859,7 +1871,6 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::bpfeb:
   case Triple::bpfel:
   case Triple::msp430:
-  case Triple::systemz:
   case Triple::ve:
     T.setArch(UnknownArch);
     break;
@@ -1892,6 +1903,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::sparcel:
   case Triple::spir:
   case Triple::spirv32:
+  case Triple::systemz32:
   case Triple::tce:
   case Triple::tcele:
   case Triple::thumb:
@@ -1944,6 +1956,12 @@ Triple Triple::get32BitArchVariant() const {
     break;
   case Triple::sparcv9:
     T.setArch(Triple::sparc);
+    break;
+  case Triple::systemz:
+    if (isOSzOS())
+      T.setArch(Triple::systemz32);
+    else
+      T.setArch(UnknownArch);
     break;
   case Triple::spir64:
     T.setArch(Triple::spir);
@@ -2063,6 +2081,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::spir:
     T.setArch(Triple::spir64);
     break;
+  case Triple::systemz32:
+    T.setArch(Triple::systemz);
+    break;
   case Triple::spirv:
   case Triple::spirv32:
     T.setArch(Triple::spirv64, getSubArch());
@@ -2180,6 +2201,7 @@ Triple Triple::getLittleEndianArchVariant() const {
   case Triple::lanai:
   case Triple::sparcv9:
   case Triple::systemz:
+  case Triple::systemz32:
   case Triple::m68k:
 
   // ARM is intentionally unsupported here, changing the architecture would

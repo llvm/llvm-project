@@ -330,8 +330,14 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 
   // Special features for z/OS.
   if (TT.isOSzOS()) {
-    // Custom address space for ptr32.
-    Ret += "-p1:32:32";
+    if (TT.isArch64Bit()) {
+      // Custom address space for ptr32.
+      Ret += "-p1:32:32";
+    }
+    if (TT.isArch32Bit()) {
+      // Use 32 bit pointers in 32 bit mode.
+      Ret += "-p:32:32";
+    }
   }
 
   // Make sure that global data has at least 16 bits of alignment by
@@ -532,6 +538,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::sparcel:
     return computeSparcDataLayout(*this);
   case Triple::systemz:
+  case Triple::systemz32:
     return computeSystemZDataLayout(*this);
   case Triple::tce:
     return "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"

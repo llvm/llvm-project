@@ -85,6 +85,7 @@ public:
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
     systemz,     // SystemZ: s390x
+    systemz32,   // SystemZ32: s390
     // OpenASIP (http://openasip.org) / big endian 32b targets: tce
     tce,
     // OpenASIP (http://openasip.org) / little endian 32b targets: tcele
