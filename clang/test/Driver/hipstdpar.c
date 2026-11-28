@@ -60,3 +60,12 @@
 // RUN:   -flto -nogpulib %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=NO-HIPSTDPAR %s
 // NO-HIPSTDPAR-NOT: "-amdgpu-enable-hipstdpar"
+
+// Check that <rocm>/include/hipccl is searched before <rocm>/include, and that
+// its hipstdpar header directory is searched before the legacy one.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --hipstdpar \
+// RUN:   --rocm-path=%S/Inputs/rocm -nogpulib --compile %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=HIPSTDPAR-HIPCCL %s
+// HIPSTDPAR-HIPCCL: "-idirafter" "[[INC:[^"]*Inputs[/\\]rocm[/\\]include]]{{/|\\\\}}hipccl" "-idirafter" "[[INC]]"
+// HIPSTDPAR-HIPCCL-SAME: "-idirafter" "[[INC]]{{/|\\\\}}hipccl/thrust/system/hip/hipstdpar" "-idirafter" "[[INC]]/thrust/system/hip/hipstdpar"
+// HIPSTDPAR-HIPCCL-SAME: "-include" "hipstdpar_lib.hpp"
