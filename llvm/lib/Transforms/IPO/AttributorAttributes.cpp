@@ -12416,6 +12416,10 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     // Special handling for the single callee case.
     if (AllCalleesKnown && AssumedCallees.size() == 1) {
       auto *NewCallee = AssumedCallees.front();
+      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
+                                               /*NumAssumedCallees=*/1))
+        return ChangeStatus::UNCHANGED;
+
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
         NumIndirectCallsPromoted++;
