@@ -55,13 +55,13 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_x_write.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["x"].value, "2")
-        self.assertEqual(top_frame.locals["i"].value, "1")
+        self.assertEqual(top_frame.find_variable("i").value, "1")
 
         # Hit the write watchpoint on `arr[2]` at i == 2.
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_arr_2.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["arr"]["[2]"].value, "42")
-        self.assertEqual(top_frame.locals["i"].value, "2")
+        self.assertEqual(top_frame.find_variable("i").value, "2")
 
         session.set_data_breakpoints([])
         session.continue_to_exit()
@@ -100,12 +100,12 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_x.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["x"].value, "2")
-        self.assertEqual(top_frame.locals["i"].value, "1")
+        self.assertEqual(top_frame.find_variable("i").value, "1")
 
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_arr_2.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["arr"]["[2]"].value, "42")
-        self.assertEqual(top_frame.locals["i"].value, "2")
+        self.assertEqual(top_frame.find_variable("i").value, "2")
 
         session.set_data_breakpoints([])
         session.continue_to_exit()
@@ -149,12 +149,12 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_x.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["x"].value, "2")
-        self.assertEqual(top_frame.locals["i"].value, "1")
+        self.assertEqual(top_frame.find_variable("i").value, "1")
 
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_arr_2.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["arr"]["[2]"].value, "42")
-        self.assertEqual(top_frame.locals["i"].value, "2")
+        self.assertEqual(top_frame.find_variable("i").value, "2")
 
         session.set_data_breakpoints([])
 
@@ -416,12 +416,12 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_x.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["x"].value, "2")
-        self.assertEqual(top_frame.locals["i"].value, "1")
+        self.assertEqual(top_frame.find_variable("i").value, "1")
 
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_arr_2.id))
         top_frame = session.top_frame_from(stop_event)
         self.assertEqual(top_frame.locals["arr"]["[2]"].value, "42")
-        self.assertEqual(top_frame.locals["i"].value, "2")
+        self.assertEqual(top_frame.find_variable("i").value, "2")
 
         session.set_data_breakpoints([])
         session.continue_to_exit()

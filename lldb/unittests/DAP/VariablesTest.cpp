@@ -160,13 +160,18 @@ TEST_F(VariablesTest, VariablesStore) {
 
   std::vector<protocol::Scope> scopes = vars.Insert(frame);
 
-  const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
+  const protocol::Scope *locals_scope = FindScope(scopes, "Locals: frame_area");
   const protocol::Scope *globals_scope = FindScope(scopes, "Globals");
   const protocol::Scope *registers_scope = FindScope(scopes, "Registers");
 
   ASSERT_NE(locals_scope, nullptr);
   ASSERT_NE(globals_scope, nullptr);
   ASSERT_NE(registers_scope, nullptr);
+  EXPECT_EQ(locals_scope->presentationHint,
+            protocol::Scope::eScopePresentationHintLocals);
+  EXPECT_FALSE(locals_scope->expensive);
+  EXPECT_TRUE(globals_scope->expensive);
+  EXPECT_TRUE(registers_scope->expensive);
 
   auto *locals_store = vars.GetVariableStore(locals_scope->variablesReference);
   auto *globals_store =

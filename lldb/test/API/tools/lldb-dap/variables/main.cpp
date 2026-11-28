@@ -15,6 +15,7 @@ int test_return_variable();
 int test_anonymous_types();
 int test_anonymous_fields();
 void test_unnamed_bitfields();
+void test_block_scopes();
 
 int main(int argc, char const *argv[]) {
   static float s_local = 2.25;
@@ -38,6 +39,7 @@ int main(int argc, char const *argv[]) {
   test_anonymous_types();
   test_anonymous_fields();
   test_unnamed_bitfields();
+  test_block_scopes();
   return test_indexedVariables(); // breakpoint 3
 }
 
@@ -87,4 +89,32 @@ void test_unnamed_bitfields() {
   };
   example e = {0xA, 0xB};
   printf("lo: %u, hi: %u\n", e.lo, e.hi); // breakpoint 8
+}
+
+__attribute__((always_inline)) inline int
+inlined_block_helper(int inlined_arg) {
+  int inlined_local = inlined_arg + 1;
+  {
+    int inlined_inner = inlined_local + 1;
+    if (inlined_inner > 0) {
+      printf("inlined: %d\n", inlined_inner); // breakpoint 9
+    }
+  }
+  return inlined_local;
+}
+
+void test_block_scopes() {
+  int func_local = 10;
+  {
+    int outer_block_var = 20;
+    if (func_local > 0) {
+      // Empty block with no variable declarations should be omitted.
+      outer_block_var += inlined_block_helper(outer_block_var);
+    }
+  }
+  if (func_local > 0) {
+    // Stepping out of test_return_variable() into an empty block should place
+    // (Return Value) in the topmost emitted scope (Locals: test_block_scopes).
+    func_local += test_return_variable(); // breakpoint 10
+  }
 }

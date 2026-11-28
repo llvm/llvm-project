@@ -320,7 +320,7 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
 
         # Make sure i is zero at first breakpoint.
         thread_ctx = session.thread_context_from(stop_event)
-        i_var = thread_ctx.top_frame().locals["i"]
+        i_var = thread_ctx.top_frame().find_variable("i")
         self.assertEqual(i_var.value_as_int, 0, "i != 0 after hitting breakpoint")
 
         # Update the condition on our breakpoint.
@@ -335,7 +335,7 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
 
         stop_event = session.continue_to_breakpoint(loop_bp)
         thread_ctx = session.thread_context_from(stop_event)
-        i_var = thread_ctx.top_frame().locals["i"]
+        i_var = thread_ctx.top_frame().find_variable("i")
         self.assertEqual(i_var.value_as_int, 4, "i != 4 showing conditional works")
 
         # Update the hitCondition on our breakpoint.
@@ -350,13 +350,13 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
 
         # Continue with a hitCondition of 2 and expect it to skip 1 value.
         stop_event = session.continue_to_breakpoint(loop_bp)
-        i_var = thread_ctx.top_frame().locals["i"]
+        i_var = thread_ctx.top_frame().find_variable("i")
         self.assertEqual(i_var.value_as_int, 6, "i != 6 showing hitCondition works")
 
         # Continue after hitting our hitCondition and make sure it only goes
         # up by 1.
         stop_event = session.continue_to_breakpoint(loop_bp)
-        i_var = thread_ctx.top_frame().locals["i"]
+        i_var = thread_ctx.top_frame().find_variable("i")
         self.assertEqual(
             i_var.value_as_int, 7, "i != 7 showing post hitCondition hits every time"
         )
@@ -400,7 +400,7 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
         # Check that the updated breakpoint stops at the next iteration.
         stop_event = session.continue_to_breakpoint(loop_bp)
         thread_ctx = session.thread_context_from(stop_event)
-        i_var = thread_ctx.top_frame().locals["i"]
+        i_var = thread_ctx.top_frame().find_variable("i")
         self.assertEqual(i_var.value_as_int, 1, "i != 1 after removing hitCondition")
 
         # Clear breakpoints and exit.
