@@ -2,6 +2,7 @@
 
 define void @isr_sw0() #0 {
 ; CHECK-LABEL: isr_sw0:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, [[R1:[0-9]+]]($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -72,6 +73,7 @@ declare void @write(...)
 
 define void @isr_sw1() #2 {
 ; CHECK-LABEL: isr_sw1:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -92,6 +94,7 @@ define void @isr_sw1() #2 {
 
 define void @isr_hw0() #3 {
 ; CHECK-LABEL: isr_hw0:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -112,6 +115,7 @@ define void @isr_hw0() #3 {
 
 define void @isr_hw1() #4 {
 ; CHECK-LABEL: isr_hw1:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -133,6 +137,7 @@ define void @isr_hw1() #4 {
 
 define void @isr_hw2() #5 {
 ; CHECK-LABEL: isr_hw2:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -153,6 +158,7 @@ define void @isr_hw2() #5 {
 
 define void @isr_hw3() #6 {
 ; CHECK-LABEL: isr_hw3:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -173,6 +179,7 @@ define void @isr_hw3() #6 {
 
 define void @isr_hw4() #7 {
 ; CHECK-LABEL: isr_hw4:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -193,6 +200,7 @@ define void @isr_hw4() #7 {
 
 define void @isr_hw5() #8 {
 ; CHECK-LABEL: isr_hw5:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $27, $14, 0
 ; CHECK: sw     $27, {{[0-9]+}}($sp)
 ; CHECK: mfc0   $27, $12, 0
@@ -213,6 +221,7 @@ define void @isr_hw5() #8 {
 
 define void @isr_eic() #9 {
 ; CHECK-LABEL: isr_eic:
+; CHECK:       addiu  $sp, $sp, -{{[0-9]+}}
 ; CHECK: mfc0   $26, $13, 0
 ; CHECK: ext    $26, $26, 10, 6
 ; CHECK: mfc0   $27, $14, 0

@@ -430,8 +430,10 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
   CFIBuilder.buildDefCFAOffset(StackSize);
 
+  // The ISR stub spills to stack slots, so it must come after the stack
+  // adjustment.
   if (MF.getFunction().hasFnAttribute("interrupt"))
-    emitInterruptPrologueStub(MF, MBB);
+    emitInterruptPrologueStub(MF, MBB, MBBI);
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
@@ -526,9 +528,9 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 }
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(
-    MachineFunction &MF, MachineBasicBlock &MBB) const {
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI) const {
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
-  MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Report an error the target doesn't support Mips32r2 or later.

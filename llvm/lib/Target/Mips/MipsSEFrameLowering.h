@@ -42,8 +42,8 @@ public:
 private:
   void emitInterruptEpilogueStub(MachineFunction &MF,
                                  MachineBasicBlock &MBB) const;
-  void emitInterruptPrologueStub(MachineFunction &MF,
-                                 MachineBasicBlock &MBB) const;
+  void emitInterruptPrologueStub(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI) const;
 };
 
 } // end namespace llvm
