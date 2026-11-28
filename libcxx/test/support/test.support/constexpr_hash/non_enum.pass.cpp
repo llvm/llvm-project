@@ -20,24 +20,16 @@
 
 struct X {};
 
-constexpr bool test_with_hash() {
+template <class T>
+void test() {
   using H = support::constexpr_hash<X>;
-
-  static_assert(!std::is_default_constructible<H>::value, "");
-  static_assert(!std::is_copy_constructible<H>::value, "");
-  static_assert(!std::is_move_constructible<H>::value, "");
-  static_assert(!std::is_copy_assignable<H>::value, "");
-  static_assert(!std::is_move_assignable<H>::value, "");
-
-  static_assert(!std::is_invocable<H, X&>::value, "");
-  static_assert(!std::is_invocable<H, X const&>::value, "");
-
-  return true;
+  static_assert(!std::is_default_constructible_v<H>);
+  static_assert(!std::is_copy_constructible_v<H>);
+  static_assert(!std::is_move_constructible_v<H>);
+  static_assert(!std::is_copy_assignable_v<H>);
+  static_assert(!std::is_move_assignable_v<H>);
+  static_assert(!std::is_invocable_v<H, X&>);
+  static_assert(!std::is_invocable_v<H, X const&>);
 }
 
-int main(int, char**) {
-  test_with_hash();
-  static_assert(test_with_hash());
-
-  return 0;
-}
+void test() { test<X>(); }
