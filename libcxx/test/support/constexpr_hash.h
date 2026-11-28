@@ -99,22 +99,20 @@ struct constexpr_hash<Key> {
       }
 #  endif
 
-      if constexpr (std::is_same_v<Key, long double>) {
-        // long double can have padding on certain platforms which are uninitialized, and hence, can't be used during constant evaluation
-        // to get around that we break it down to 2 double (which have all bits initialized).
+      // a `long double` is x87 format when mantissa is 64 digits
+      constexpr bool is_x87_ld = std::is_same_v<Key, long double> && std::numeric_limits<long double>::digits == 64;
 
-        double hi = static_cast<double>(key);
-        double lo = static_cast<double>(key - static_cast<long double>(hi));
+      if constexpr (is_x87_ld) {
+        // x87 has padding on last 6 bytes which can be uninitialized and hence, can't be used during constant evaluation
+        struct alignas(long double) IntelLongDoubleRep {
+          std::array<std::byte, 10> value_bytes;
+        };
+        auto [value_bytes] = std::bit_cast<IntelLongDoubleRep>(key);
 
-        struct Pair {
-          double hi, low;
-        } pair = {hi, lo};
-
-        return array_hash(std::bit_cast<std::array<std::byte, sizeof(Pair)>>(pair));
+        return array_hash(std::bit_cast<std::array<std::byte, sizeof(value_bytes)>>(value_bytes));
       }
 
       return array_hash(std::bit_cast<std::array<std::byte, sizeof(Key)>>(key));
-
     } else if constexpr (std::is_enum_v<Key>) {
       using underlying_type = std::underlying_type_t<Key>;
       return constexpr_hash<underlying_type>()(static_cast<underlying_type>(key));
