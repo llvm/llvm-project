@@ -18,6 +18,10 @@ int main(void) {
   if (__builtin_cpu_supports(str)) // expected-error {{expression is not a string literal}}
     a(str);
 
+  (void)__builtin_cpu_supports(L"wide"); // expected-error {{incompatible pointer types}}
+
+  (void)__builtin_cpu_is(L"wide"); // expected-error {{incompatible pointer types}}
+
   if (__builtin_cpu_is("int")) // expected-error {{invalid cpu name for builtin}}
     a("intel");
 
