@@ -249,6 +249,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
     if (Feature == "+mmx") {
       HasMMX = true;
+    } else if (Feature == "+soft-float") {
+      HasSoftFloat = true;
     } else if (Feature == "+aes") {
       HasAES = true;
     } else if (Feature == "+vaes") {

@@ -5,6 +5,30 @@
 // RUN: %clang_cc1 -fexperimental-strict-floating-point \
 // RUN: -triple i386-pc-windows -target-cpu pentium4 \
 // RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
+//
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple i386-pc-windows -target-cpu pentium4 -target-feature -sse \
+// RUN: -target-feature +soft-float \
+// RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
+//
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple i386-pc-windows -target-cpu pentium4 -target-feature -sse \
+// RUN: -target-feature -x87 \
+// RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
+//
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple i386-pc-windows -target-cpu pentium4 \
+// RUN: -target-feature +general-regs-only \
+// RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
+//
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-none-none -target-feature -sse \
+// RUN: -target-feature +soft-float \
+// RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
+//
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-none-none -target-feature -sse -target-feature -x87 \
+// RUN: -emit-llvm -ffp-eval-method=source  -o - -verify=no-warn %s
 
 // no-warn-no-diagnostics
 

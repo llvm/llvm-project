@@ -148,6 +148,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasUINTR = false;
   bool HasCRC32 = false;
   bool HasX87 = false;
+  bool HasSoftFloat = false;
   bool HasEGPR = false;
   bool HasPush2Pop2 = false;
   bool HasPPX = false;
@@ -186,13 +187,18 @@ public:
   }
 
   LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    // X87 evaluates with 80 bits "long double" precision.
-    return SSELevel == NoSSE ? LangOptions::FPEvalMethodKind::FEM_Extended
-                             : LangOptions::FPEvalMethodKind::FEM_Source;
+    // Without SSE, float and double are evaluated in 80-bit x87 registers,
+    // unless x87 is disabled or soft-float is set. Each operation is then a
+    // library call that rounds to its own type.
+    if (SSELevel == NoSSE && HasX87 && !HasSoftFloat)
+      return LangOptions::FPEvalMethodKind::FEM_Extended;
+    return LangOptions::FPEvalMethodKind::FEM_Source;
   }
 
-  // EvalMethod `source` is not supported for targets with `NoSSE` feature.
-  bool supportSourceEvalMethod() const override { return SSELevel > NoSSE; }
+  // EvalMethod `source` is not supported when x87 evaluates float and double.
+  bool supportSourceEvalMethod() const override {
+    return getFPEvalMethod() != LangOptions::FPEvalMethodKind::FEM_Extended;
+  }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
