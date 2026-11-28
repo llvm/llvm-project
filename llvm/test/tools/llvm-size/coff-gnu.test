@@ -1,0 +1,59 @@
+## Verify GNU output format (-G / --format=gnu) on COFF objects, including
+## excluding debug sections (.debug$S, .debug$T, .debug_info) and linker info
+## sections (.drectve) from data.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-size -G %t.o | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size --format=gnu -t %t.o %t.o | FileCheck %s --check-prefix=TOTALS --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size -G -x %t.o | FileCheck %s --check-prefix=HEX --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size -G -o %t.o | FileCheck %s --check-prefix=OCT --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+
+## text  = .text (4)
+## data  = .rdata (8) + .data (16) = 24
+## bss   = .bss (32)
+## total = 4 + 24 + 32 = 60 (0x3c, 074)
+## ignored: .debug$S, .debug$T, .debug_info, .drectve
+#      CHECK:      text       data        bss      total filename
+# CHECK-NEXT:         4         24         32         60 [[FILE]]
+
+#      TOTALS:      text       data        bss      total filename
+# TOTALS-NEXT:         4         24         32         60 [[FILE]]
+# TOTALS-NEXT:         4         24         32         60 [[FILE]]
+# TOTALS-NEXT:         8         48         64        120 (TOTALS)
+
+#      HEX:      text       data        bss      total filename
+# HEX-NEXT:       0x4       0x18       0x20       0x3c [[FILE]]
+
+#      OCT:      text       data        bss      total filename
+# OCT-NEXT:        04        030        040        074 [[FILE]]
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    SectionData:     00010203
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData:     0001020304050607
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    SectionData:     000102030405060708090a0b0c0d0e0f
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    SizeOfRawData:   32
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     000102030405060708090a0b0c0d0e0f
+  - Name:            .debug_info
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     000102030405060708090a0b0c0d0e0f
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    SectionData:     20202020
+symbols: []

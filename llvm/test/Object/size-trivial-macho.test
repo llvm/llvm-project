@@ -2,22 +2,32 @@ RUN: llvm-size -A %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix A
 RUN: llvm-size -B %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix B
+RUN: llvm-size -G %p/Inputs/macho-text-data-bss.macho-x86_64 \
+RUN:         | FileCheck %s -check-prefix G --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 RUN: llvm-size --format=darwin %p/Inputs/macho-text-data-bss.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix m
 RUN: llvm-size %p/Inputs/macho-archive-x86_64.a \
 RUN:         | FileCheck %s -check-prefix AR
+RUN: llvm-size -G %p/Inputs/macho-archive-x86_64.a \
+RUN:         | FileCheck %s -check-prefix GAR --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 RUN: llvm-size --format=darwin %p/Inputs/macho-archive-x86_64.a \
 RUN:         | FileCheck %s -check-prefix mAR
 RUN: llvm-size -m -x -l %p/Inputs/hello-world.macho-x86_64 \
 RUN:         | FileCheck %s -check-prefix mxl
 RUN: llvm-size --arch all %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix u
+RUN: llvm-size -G --arch all %p/Inputs/macho-universal.x86_64.i386 \
+RUN:         | FileCheck %s -check-prefix Gu --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 RUN: llvm-size --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix u-i386
 RUN: llvm-size --arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix uAR
+RUN: llvm-size -G --arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN:         | FileCheck %s -check-prefix GuAR --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 RUN: llvm-size --arch x86_64 %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix uAR-x86_64
+RUN: llvm-size -G --arch x86_64 %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN:         | FileCheck %s -check-prefix GuAR-x86_64 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 A: section              size   addr
 A: __text                 12      0
@@ -87,3 +97,21 @@ uAR: 5	4	0	0	9	9	{{.*}}/macho-universal-archive.x86_64.i386(foo.o) (for architec
 
 uAR-x86_64: __TEXT	__DATA	__OBJC	others	dec	hex
 uAR-x86_64: 136	0	0	32	168	a8	{{.*}}/macho-universal-archive.x86_64.i386(hello.o)
+
+     G:      text       data        bss      total filename
+G-NEXT:        12        100          4        116 {{.*}}/macho-text-data-bss.macho-x86_64
+
+     GAR:      text       data        bss      total filename
+GAR-NEXT:         6         96          0        102 foo.o (ex {{.*}}/macho-archive-x86_64.a)
+GAR-NEXT:         0          4          0          4 bar.o (ex {{.*}}/macho-archive-x86_64.a)
+
+     Gu:      text       data        bss      total filename
+Gu-NEXT:        18        136          0        154 {{.*}}/macho-universal.x86_64.i386 (for architecture x86_64)
+Gu-NEXT:        21         72          0         93 {{.*}}/macho-universal.x86_64.i386 (for architecture i386)
+
+     GuAR:      text       data        bss      total filename
+GuAR-NEXT:        59        109          0        168 hello.o (ex {{.*}}/macho-universal-archive.x86_64.i386) (for architecture x86_64)
+GuAR-NEXT:         5          4          0          9 foo.o (ex {{.*}}/macho-universal-archive.x86_64.i386) (for architecture i386)
+
+     GuAR-x86_64:      text       data        bss      total filename
+GuAR-x86_64-NEXT:        59        109          0        168 hello.o (ex {{.*}}/macho-universal-archive.x86_64.i386)

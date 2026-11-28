@@ -2,7 +2,8 @@
 ## format. It also shows that the formatting is correct (including using tabs as
 ## field separators).
 
-# RUN: yaml2obj %s -o %t.o
+# RUN: yaml2obj --docnum=1 %s -o %t.o
+# RUN: yaml2obj --docnum=2 %s -o %t.wide.o
 
 # RUN: llvm-size -B %t.o \
 # RUN:   | FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t.o --implicit-check-not={{.}}
@@ -13,6 +14,14 @@
 # RUN: llvm-size %t.o \
 # RUN:   | FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t.o --implicit-check-not={{.}}
 
+## Verify that values overflowing the 7-character column width are printed cleanly.
+# RUN: llvm-size -B %t.wide.o \
+# RUN:   | FileCheck %s --check-prefix=DECWIDE --match-full-lines --strict-whitespace -DFILE=%t.wide.o --implicit-check-not={{.}}
+# RUN: llvm-size -B -x %t.wide.o \
+# RUN:   | FileCheck %s --check-prefix=HEXWIDE --match-full-lines --strict-whitespace -DFILE=%t.wide.o --implicit-check-not={{.}}
+# RUN: llvm-size -B -o %t.wide.o \
+# RUN:   | FileCheck %s --check-prefix=OCTWIDE --match-full-lines --strict-whitespace -DFILE=%t.wide.o --implicit-check-not={{.}}
+
 ## text is .text, .eh_frame, .unusual_name_for_code: 2 + 4 + 64 = 70
 ## data is .data, .init_array, .moar_stuff: 8 + 32 + 128 = 168
 ## bss is .bss: 1
@@ -21,7 +30,16 @@
 #      CHECK:   text	   data	    bss	    dec	    hex	filename
 # CHECK-NEXT:     70	    168	      1	    239	     ef	[[FILE]]
 
-!ELF
+#      DECWIDE:   text	   data	    bss	    dec	    hex	filename
+# DECWIDE-NEXT:     66	      0	114837876754	114837876820	1abcdef054	[[FILE]]
+
+#      HEXWIDE:   text	   data	    bss	    dec	    hex	filename
+# HEXWIDE-NEXT:   0x42	      0	0x1abcdef012	114837876820	1abcdef054	[[FILE]]
+
+#      OCTWIDE:   text	   data	    bss	    oct	    hex	filename
+# OCTWIDE-NEXT:   0102	      0	01527467570022	1527467570124	1abcdef054	[[FILE]]
+
+--- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
@@ -64,3 +82,18 @@ Sections:
     Type:  SHT_INIT_ARRAY
     Flags: [ SHF_ALLOC, SHF_WRITE ]
     Size:  32
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  66
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Size:  0x1abcdef012

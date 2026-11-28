@@ -1,0 +1,97 @@
+## Verify GNU output format (-G / --format=gnu), including SHF_EXECINSTR
+## classification into text (even when SHT_NOBITS), remaining SHT_NOBITS into
+## bss, remaining SHF_ALLOC into data, hex/octal radixes (including zero
+## prefixes '0x0' / '00' and >10-column values), and --totals.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.o
+# RUN: yaml2obj --docnum=2 %s -o %t.wide.o
+# RUN: llvm-size -G %t.o | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size --format=gnu -t %t.o %t.o | FileCheck %s --check-prefix=TOTALS --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size -G -x %t.o | FileCheck %s --check-prefix=HEX --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size -G -o %t.o | FileCheck %s --check-prefix=OCT --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size -G %t.wide.o | FileCheck %s --check-prefix=DECWIDE --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.wide.o
+# RUN: llvm-size -G -x %t.wide.o | FileCheck %s --check-prefix=HEXWIDE --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.wide.o
+# RUN: llvm-size -G -o %t.wide.o | FileCheck %s --check-prefix=OCTWIDE --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.wide.o
+
+## text  = .text (66) + .exec_nobits (10) = 76 (0x4c, 0114)
+## data  = .rodata (4) + .data (136) = 140 (0x8c, 0214)
+## bss   = .bss (1) + .ro_nobits_slack (1000) = 1001 (0x3e9, 01751)
+## total = 76 + 140 + 1001 = 1217 (0x4c1, 02301)
+## ignored (no SHF_ALLOC): .nonalloc_exec, .debug_info
+#      CHECK:      text       data        bss      total filename
+# CHECK-NEXT:        76        140       1001       1217 [[FILE]]
+
+#      TOTALS:      text       data        bss      total filename
+# TOTALS-NEXT:        76        140       1001       1217 [[FILE]]
+# TOTALS-NEXT:        76        140       1001       1217 [[FILE]]
+# TOTALS-NEXT:       152        280       2002       2434 (TOTALS)
+
+#      HEX:      text       data        bss      total filename
+# HEX-NEXT:      0x4c       0x8c      0x3e9      0x4c1 [[FILE]]
+
+#      OCT:      text       data        bss      total filename
+# OCT-NEXT:      0114       0214      01751      02301 [[FILE]]
+
+#      DECWIDE:      text       data        bss      total filename
+# DECWIDE-NEXT:        66          0 114837876754 114837876820 [[FILE]]
+
+#      HEXWIDE:      text       data        bss      total filename
+# HEXWIDE-NEXT:      0x42        0x0 0x1abcdef012 0x1abcdef054 [[FILE]]
+
+#      OCTWIDE:      text       data        bss      total filename
+# OCTWIDE-NEXT:      0102         00 01527467570022 01527467570124 [[FILE]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  66
+  - Name:  .exec_nobits
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  10
+  - Name:  .rodata
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  4
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Size:  136
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Size:  1
+  - Name:  .ro_nobits_slack
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  1000
+  - Name:  .nonalloc_exec
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_EXECINSTR ]
+    Size:  256
+  - Name:  .debug_info
+    Type:  SHT_PROGBITS
+    Flags: [ ]
+    Size:  512
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  66
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Size:  0x1abcdef012
