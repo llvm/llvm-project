@@ -51,10 +51,8 @@ public:
   /// anything to increase the size of the file, so having an Error returned if
   /// it were to happen would catch a programming error
   ///
-  /// \returns an llvm::Error representing whether the operation succeeded or
-  /// failed.  Currently the only way this can fail is if an invalid block size
-  /// is specified, or `MinBlockCount` does not leave enough room for the
-  /// mandatory reserved blocks required by an MSF file.
+  /// \returns an llvm::Error if the block size is invalid or the initial block
+  /// count, including any reserved Free Page Map blocks, is too large.
   LLVM_ABI static Expected<MSFBuilder> create(BumpPtrAllocator &Allocator,
                                               uint32_t BlockSize,
                                               uint32_t MinBlockCount = 0,
@@ -122,9 +120,10 @@ public:
   BumpPtrAllocator &getAllocator() { return Allocator; }
 
 private:
-  MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
-             BumpPtrAllocator &Allocator);
+  MSFBuilder(uint32_t BlockSize, bool CanGrow, BumpPtrAllocator &Allocator);
 
+  // Grow to the requested size and leave at least MinNewFreeBlocks newly free.
+  Error growFreeBlocks(uint64_t MinBlockCount, uint32_t MinNewFreeBlocks = 0);
   Error allocateBlocks(uint32_t NumBlocks, MutableArrayRef<uint32_t> Blocks);
   uint32_t computeDirectoryByteSize() const;
 
