@@ -256,6 +256,10 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
     return NumBytes;
   }
 
+  // Windows unwind directives describe the code but emit no bytes.
+  if (isSEHInstruction(MI))
+    return 0;
+
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
   // Specific cases handle instructions of variable sizes
