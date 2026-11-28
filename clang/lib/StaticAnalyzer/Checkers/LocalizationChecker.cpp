@@ -641,9 +641,8 @@ bool NonLocalizedStringChecker::isAnnotatedAsReturningLocalized(
     const Decl *D) const {
   if (!D)
     return false;
-  return std::any_of(
-      D->specific_attr_begin<AnnotateAttr>(),
-      D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
+  return llvm::any_of(
+      D->specific_attrs<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
         return Ann->getAnnotation() == "returns_localized_nsstring";
       });
 }
@@ -654,9 +653,8 @@ bool NonLocalizedStringChecker::isAnnotatedAsTakingLocalized(
     const Decl *D) const {
   if (!D)
     return false;
-  return std::any_of(
-      D->specific_attr_begin<AnnotateAttr>(),
-      D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
+  return llvm::any_of(
+      D->specific_attrs<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
         return Ann->getAnnotation() == "takes_localized_nsstring";
       });
 }

@@ -80,11 +80,9 @@ class IvarInvalidationCheckerImpl {
     bool hasMethod(const ObjCMethodDecl *MD) {
       if (IsInvalidated)
         return true;
-      for (const ObjCMethodDecl *Curr : InvalidationMethods) {
-        if (Curr == MD) {
-          IsInvalidated = true;
-          return true;
-        }
+      if (llvm::is_contained(InvalidationMethods, MD)) {
+        IsInvalidated = true;
+        return true;
       }
       return false;
     }
@@ -223,15 +221,13 @@ public:
 };
 
 static bool isInvalidationMethod(const ObjCMethodDecl *M, bool LookForPartial) {
-  for (const auto *Ann : M->specific_attrs<AnnotateAttr>()) {
-    if (!LookForPartial &&
-        Ann->getAnnotation() == "objc_instance_variable_invalidator")
-      return true;
-    if (LookForPartial &&
-        Ann->getAnnotation() == "objc_instance_variable_invalidator_partial")
-      return true;
-  }
-  return false;
+  StringRef Wanted = LookForPartial
+                         ? "objc_instance_variable_invalidator_partial"
+                         : "objc_instance_variable_invalidator";
+  auto IsWantedAnnotation = [Wanted](const AnnotateAttr *Ann) {
+    return Ann->getAnnotation() == Wanted;
+  };
+  return llvm::any_of(M->specific_attrs<AnnotateAttr>(), IsWantedAnnotation);
 }
 
 void IvarInvalidationCheckerImpl::containsInvalidationMethod(
