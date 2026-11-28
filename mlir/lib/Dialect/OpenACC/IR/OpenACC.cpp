@@ -13,7 +13,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -130,19 +129,6 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
 //===----------------------------------------------------------------------===//
 
 void OpenACCDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
-      >();
-
   PrivateType::attachInterface<PrivateTypePointerLikeModel>(*getContext());
 }
 

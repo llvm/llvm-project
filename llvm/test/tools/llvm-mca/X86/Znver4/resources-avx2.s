@@ -485,13 +485,13 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpabsw	%ymm0, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpabsw	(%rax), %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackssdw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackssdw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackssdw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpacksswb	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpacksswb	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpacksswb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackusdw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackusdw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackusdw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackuswb	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackuswb	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackuswb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpaddb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpaddb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpaddd	%ymm0, %ymm1, %ymm2
@@ -667,7 +667,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpor	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.50                        vpsadbw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      10    0.50    *                   vpsadbw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpshufb	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  1      1     0.50                        vpshufb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpshufb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpshufd	$1, %ymm0, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpshufd	$1, (%rax), %ymm2
@@ -789,7 +789,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 6.67   6.67   6.67    -      -      -      -      -     93.75  128.75 92.25  36.25  80.50  80.50  29.00  52.33  52.33  52.33  50.67  50.67  50.67  2.50   2.50
+# CHECK-NEXT: 6.67   6.67   6.67    -      -      -      -      -     92.75  128.25 92.75  36.25  80.50  80.50  29.00  52.33  52.33  52.33  50.67  50.67  50.67  2.50   2.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -1000,7 +1000,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpor	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpsadbw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpsadbw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpshufb	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpshufb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpshufb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpshufd	$1, %ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpshufd	$1, (%rax), %ymm2

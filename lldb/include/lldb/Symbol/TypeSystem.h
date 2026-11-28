@@ -88,6 +88,10 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
+  /// Called on a target's scratch type systems when the target loads the
+  /// modules in \p module_list.
+  virtual void ModulesDidLoad(ModuleList &module_list) {}
+
   virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
 
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
@@ -207,6 +211,13 @@ public:
     return false;
   }
 
+  /// Returns the target address space of \p type,
+  /// or std::nullopt if it lives in the default address space.
+  virtual std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const {
+    return std::nullopt;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
@@ -308,6 +319,10 @@ public:
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
 
+  virtual CompilerType
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          uint32_t address_space);
+
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
@@ -323,6 +338,12 @@ public:
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
+
+  /// Return the distance in bytes between consecutive elements of this type
+  /// when stored in contiguous storage (e.g. array), or std::nullopt if it
+  /// cannot be determined.
+  virtual std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) = 0;
 
@@ -377,14 +398,12 @@ public:
                       uint32_t &deref_byte_size, int32_t &deref_byte_offset,
                       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
-      lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
-      bool transparent_pointers, bool omit_empty_base_classes,
-      bool ignore_array_bounds, std::string &child_name,
-      uint32_t &child_byte_size, int32_t &child_byte_offset,
-      uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-      bool &child_is_base_class, bool &child_is_deref_of_parent,
-      ValueObject *valobj, uint64_t &language_flags) = 0;
+  /// Get the child at \p idx, such as a field, a base class or a pointee.
+  virtual llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                  size_t idx, bool transparent_pointers,
+                  bool omit_empty_base_classes, bool ignore_array_bounds,
+                  ValueObject *valobj) = 0;
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.

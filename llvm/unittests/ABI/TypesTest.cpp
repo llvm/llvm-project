@@ -47,6 +47,31 @@ protected:
   }
 };
 
+TEST_F(ABITypesTest, OpaqueFloat8Properties) {
+  const llvm::abi::OpaqueFloat8Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
+
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getKind(), llvm::abi::TypeKind::OpaqueFloat8);
+  EXPECT_EQ(MFP8->getSizeInBits(), TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getABISizeInBits(), 8u);
+  EXPECT_EQ(MFP8->getAlignment(), Align(1));
+  EXPECT_TRUE(llvm::isa<llvm::abi::OpaqueFloat8Type>(MFP8));
+}
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+TEST_F(ABITypesTest, OpaqueFloat8IsNotAVectorElement) {
+  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
+  EXPECT_DEATH(
+      (void)TB.getVectorType(MFP8, ElementCount::getFixed(16), Align(16)),
+      "opaque 8-bit float is not a valid vector element type");
+  EXPECT_DEATH((void)VectorType(MFP8, ElementCount::getFixed(16), Align(16)),
+               "opaque 8-bit float is not a valid vector element type");
+}
+#endif
+
 TEST_F(ABITypesTest, AtomicTypeProperties) {
   const llvm::abi::Type *Value =
       TB.getIntegerType(24, Align(1), /*Signed=*/false);
@@ -307,17 +332,17 @@ TEST_F(ABITypesTest, SVEPredicateVector) {
   EXPECT_EQ(SVBool->getAlignment(), Align(2));
 }
 
-TEST_F(ABITypesTest, SVECount) {
-  const VectorType *SVCount =
-      TB.getScalablePredicateOrCountVectorType(Align(2), VectorKind::SVECount);
+TEST_F(ABITypesTest, SveCount) {
+  const llvm::abi::SveCountType *SVCount = TB.getSveCountType(Align(2));
 
-  EXPECT_TRUE(SVCount->isSVECount());
-  EXPECT_TRUE(SVCount->isSVEType());
-  EXPECT_TRUE(SVCount->isSVESizelessType());
-  EXPECT_FALSE(SVCount->isSVEPredicate());
-  EXPECT_TRUE(SVCount->isScalable());
+  EXPECT_TRUE(SVCount->isSveCount());
+  EXPECT_EQ(SVCount->getKind(), llvm::abi::TypeKind::SveCount);
+  EXPECT_TRUE(llvm::isa<llvm::abi::SveCountType>(SVCount));
+  EXPECT_FALSE(SVCount->isVector());
   EXPECT_FALSE(SVCount->isTuple());
+  EXPECT_TRUE(SVCount->isSVESizelessType());
   EXPECT_EQ(SVCount->getSizeInBits(), TypeSize::getScalable(16));
+  EXPECT_EQ(SVCount->getAlignment(), Align(2));
 }
 
 // Scalable vectors have no fixed size, so isZeroSize() must not query one.

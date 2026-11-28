@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
-; RUN: not llvm-as < %t/parse-error-1.ll -o /dev/null 2>&1 | FileCheck --check-prefix=PARSE-ERROR-1 %s
-; RUN: not llvm-as < %t/parse-error-2.ll -o /dev/null 2>&1 | FileCheck --check-prefix=PARSE-ERROR-2 %s
-; RUN: not llvm-as < %t/parse-error-3.ll -o /dev/null 2>&1 | FileCheck --check-prefix=PARSE-ERROR-3 %s
-; RUN: not llvm-as < %t/parse-error-4.ll -o /dev/null 2>&1 | FileCheck --check-prefix=PARSE-ERROR-4 %s
-; RUN: not llvm-as < %t/end-not-larger-start.ll -o /dev/null 2>&1 | FileCheck --check-prefix=END-NOT-LARGER-START %s
+; RUN: not llvm-as < %t/parse-error-1.ll -disable-output 2>&1 | FileCheck --check-prefix=PARSE-ERROR-1 %s
+; RUN: not llvm-as < %t/parse-error-2.ll -disable-output 2>&1 | FileCheck --check-prefix=PARSE-ERROR-2 %s
+; RUN: not llvm-as < %t/parse-error-3.ll -disable-output 2>&1 | FileCheck --check-prefix=PARSE-ERROR-3 %s
+; RUN: not llvm-as < %t/parse-error-4.ll -disable-output 2>&1 | FileCheck --check-prefix=PARSE-ERROR-4 %s
+; RUN: not llvm-as < %t/end-not-larger-start.ll -disable-output 2>&1 | FileCheck --check-prefix=END-NOT-LARGER-START %s
 
 ;--- parse-error-1.ll
 

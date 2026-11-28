@@ -302,6 +302,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned PrintSupportedCPUs : 1;
 
+  /// Print the supported tuning cpus for the current target.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PrintSupportedTuneCPUs : 1;
+
   /// Print the supported extensions for the current target.
   LLVM_PREFERRED_TYPE(bool)
   unsigned PrintSupportedExtensions : 1;

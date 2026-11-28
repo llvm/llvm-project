@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "ARMMCTargetDesc.h"
 #include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -71,7 +73,7 @@ void ARMELFMCAsmInfo::anchor() { }
 
 ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -91,16 +93,19 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
-}
 
-void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
-  UseIntegratedAssembler = Value;
-  if (!UseIntegratedAssembler) {
-    // gas doesn't handle VFP register names in cfi directives,
-    // so don't use register names with external assembler.
+  if (!binutilsIsAtLeast(2, 25)) {
+    // gas doesn't handle VFP register names in cfi directives. As we don't know
+    // at this point whether the integrated assembler is used, don't use
+    // register names if we are not sure that the assembler supports then.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
     DwarfRegNumForCFI = true;
   }
+}
+
+bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // Thumb encoding uses compressed instruction byte-order
+  return STI.hasFeature(ARM::ModeThumb);
 }
 
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }

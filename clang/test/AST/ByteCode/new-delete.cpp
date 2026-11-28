@@ -1322,6 +1322,17 @@ namespace ZeroSizeElems {
   static_assert(foo());
 }
 
+namespace NonNumber {
+  constexpr int m() { // both-error {{never produces a constant expression}}
+    int baz;
+    int *p = new int [(__UINTPTR_TYPE__)&baz]; // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}} \
+                                               // both-note {{subexpression not valid in a constant expression}}
+    return 0;
+  }
+  static_assert(m() == 0); // both-error {{not an integral constant expression}} \
+                           // both-note {{in call to}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

@@ -25,7 +25,7 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
                                          const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
@@ -57,6 +57,15 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+}
+
+const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
+    const MCSymbol *Sym, uint64_t Offset, MCContext &Ctx) const {
+  const MCExpr *Expr = MCSpecifierExpr::create(Sym, SystemZ::S_QCon, Ctx);
+  if (Offset)
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  return Expr;
 }
 
 void SystemZMCAsmInfoGOFF::printSpecifierExpr(

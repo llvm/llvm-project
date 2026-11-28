@@ -548,7 +548,15 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
 }
 
 ASTContext &Decl::getASTContext() const {
-  return getTranslationUnitDecl()->getASTContext();
+  if (const auto *TUD = dyn_cast<TranslationUnitDecl>(this))
+    return TUD->getASTContext();
+
+  // This is called a lot, e.g. by every DeclContext::lookup(). Only walk up to
+  // the TranslationUnitDecl once per DeclContext.
+  const DeclContext *DC = getDeclContext();
+  if (!DC->CachedASTContext)
+    DC->CachedASTContext = &getTranslationUnitDecl()->getASTContext();
+  return *DC->CachedASTContext;
 }
 
 /// Helper to get the language options from the ASTContext.
@@ -1789,12 +1797,20 @@ void DeclContext::removeDecl(Decl *D) {
       StoredDeclsMap *Map = DC->getPrimaryContext()->LookupPtr;
       if (Map) {
         StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
-        assert(Pos != Map->end() && "no lookup entry for decl");
-        StoredDeclsList &List = Pos->second;
-        List.remove(ND);
-        // Clean up the entry if there are no more decls.
-        if (List.isNull())
-          Map->erase(Pos);
+        // In C, the lookup table of the translation unit can miss a declaration
+        // that was declared outside of it, like a structure declared in
+        // another one (see makeDeclVisibleInContextWithFlags).
+        assert((Pos != Map->end() ||
+                (DC->isTranslationUnit() &&
+                 !getParentASTContext().getLangOpts().CPlusPlus)) &&
+               "no lookup entry for decl");
+        if (Pos != Map->end()) {
+          StoredDeclsList &List = Pos->second;
+          List.remove(ND);
+          // Clean up the entry if there are no more decls.
+          if (List.isNull())
+            Map->erase(Pos);
+        }
       }
     } while (DC->isTransparentContext() && (DC = DC->getParent()));
   }

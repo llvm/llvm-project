@@ -1252,6 +1252,9 @@ llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
 // CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
 llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
+// CHECK-LABEL: declare void @noextattr_decl(i32 noext)
+llvm.func @noextattr_decl(i32 {llvm.noext})
+
 // CHECK-LABEL: declare void @alignattr_decl(ptr align 64)
 llvm.func @alignattr_decl(!llvm.ptr {llvm.align = 64 : i64})
 
@@ -1340,6 +1343,9 @@ llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
 
 // CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
 llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
+
+// CHECK-LABEL: declare noext i32 @noextattr_ret_decl()
+llvm.func @noextattr_ret_decl() -> (i32 {llvm.noext})
 
 // CHECK-LABEL: declare nonnull ptr @nonnullattr_ret_decl()
 llvm.func @nonnullattr_ret_decl() -> (!llvm.ptr {llvm.nonnull})
@@ -1926,7 +1932,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"]]} {
   llvm.return
 }
 
@@ -1934,7 +1940,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
-// CHECK-DAG: "llvm.assume"="omp_no_openmp"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"
 
 // -----
 
@@ -2249,6 +2255,9 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
 
   // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
   %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
+  // CHECK-NEXT:  call void asm "", "*m"(ptr elementtype(ptr) %1) #[[$CONVERGENT]]
+  llvm.inline_asm convergent operand_attrs = [{elementtype = !llvm.ptr}] "", "*m" %arg1 : (!llvm.ptr) -> !llvm.void
 
   llvm.return
 }
@@ -2821,6 +2830,17 @@ llvm.func @willreturn() attributes { will_return } {
 
 // -----
 
+// CHECK-LABEL: @strictfp_function
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @strictfp_function() attributes { strictfp } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: strictfp
+
+// -----
+
 // CHECK-LABEL: @noreturn
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @noreturn() attributes { noreturn } {
@@ -3326,6 +3346,46 @@ llvm.func @willreturn_call() {
 // -----
 
 llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @strictfp_calls
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+// CHECK: call void asm sideeffect "", ""() #[[ATTRS]]
+// CHECK: call void @llvm.donothing() #[[ATTRS]]
+// CHECK: invoke void @f() #[[ATTRS]]
+llvm.func @strictfp_calls() attributes {personality = @__gxx_personality_v0, strictfp} {
+  llvm.call @f() {strictfp} : () -> ()
+  llvm.inline_asm has_side_effects strictfp "", "" : () -> ()
+  llvm.call_intrinsic "llvm.donothing"() {strictfp} : () -> ()
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {strictfp} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTRS]] = { strictfp }
+
+// -----
+
+llvm.func @f()
+
+// The call-site attribute does not depend on the enclosing function.
+// CHECK-LABEL: @strictfp_call_in_plain_function
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+// CHECK: call void @f(){{$}}
+llvm.func @strictfp_call_in_plain_function() {
+  llvm.call @f() {strictfp} : () -> ()
+  llvm.call @f() : () -> ()
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTRS]] = { strictfp }
+
+// -----
+
+llvm.func @f()
 
 // CHECK-LABEL: @noreturn_call
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
@@ -3437,14 +3497,32 @@ llvm.func @vec_type_hint_bfloat_vec() attributes {vec_type_hint = #llvm.vec_type
 // CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT:]] void @work_group_size_hint()
 llvm.func @work_group_size_hint() attributes {work_group_size_hint = array<i32: 128, 128, 128>}
 
+// Preserve signed i32 boundary values while keeping the dimension product within 64 bits.
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT_SIGNED_BOUNDARY:]] void @work_group_size_hint_signed_boundary()
+llvm.func @work_group_size_hint_signed_boundary() attributes {work_group_size_hint = array<i32: 2147483647, -2147483648, 1>}
+
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT_UNSIGNED_MAX:]] void @work_group_size_hint_unsigned_max()
+llvm.func @work_group_size_hint_unsigned_max() attributes {work_group_size_hint = array<i32: 1, 1, -1>}
+
 // CHECK: ![[#WORK_GROUP_SIZE_HINT]] = !{i32 128, i32 128, i32 128}
+// CHECK: ![[#WORK_GROUP_SIZE_HINT_SIGNED_BOUNDARY]] = !{i32 2147483647, i32 -2147483648, i32 1}
+// CHECK: ![[#WORK_GROUP_SIZE_HINT_UNSIGNED_MAX]] = !{i32 1, i32 1, i32 -1}
 
 // -----
 
 // CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE:]] void @reqd_work_group_size()
 llvm.func @reqd_work_group_size() attributes {reqd_work_group_size = array<i32: 128, 256, 128>}
 
+// Preserve signed i32 boundary values while keeping the dimension product within 64 bits.
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE_SIGNED_BOUNDARY:]] void @reqd_work_group_size_signed_boundary()
+llvm.func @reqd_work_group_size_signed_boundary() attributes {reqd_work_group_size = array<i32: 2147483647, -2147483648, 1>}
+
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE_UNSIGNED_MAX:]] void @reqd_work_group_size_unsigned_max()
+llvm.func @reqd_work_group_size_unsigned_max() attributes {reqd_work_group_size = array<i32: 1, 1, -1>}
+
 // CHECK: ![[#REQD_WORK_GROUP_SIZE]] = !{i32 128, i32 256, i32 128}
+// CHECK: ![[#REQD_WORK_GROUP_SIZE_SIGNED_BOUNDARY]] = !{i32 2147483647, i32 -2147483648, i32 1}
+// CHECK: ![[#REQD_WORK_GROUP_SIZE_UNSIGNED_MAX]] = !{i32 1, i32 1, i32 -1}
 
 // -----
 

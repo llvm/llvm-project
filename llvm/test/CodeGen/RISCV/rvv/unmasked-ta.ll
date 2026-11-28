@@ -200,8 +200,8 @@ define <vscale x 1 x i64>  @intrinsic_vmacc_vx_nxv1i64_i64_nxv1i64(<vscale x 1 x
 ; RV32-LABEL: intrinsic_vmacc_vx_nxv1i64_i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -228,8 +228,8 @@ define <vscale x 1 x i64>  @intrinsic_vmadd_vx_nxv1i64_i64_nxv1i64(<vscale x 1 x
 ; RV32-LABEL: intrinsic_vmadd_vx_nxv1i64_i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -256,8 +256,8 @@ define <vscale x 1 x i64>  @intrinsic_vnmsac_vx_nxv1i64_i64_nxv1i64(<vscale x 1 
 ; RV32-LABEL: intrinsic_vnmsac_vx_nxv1i64_i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -284,8 +284,8 @@ define <vscale x 1 x i64>  @intrinsic_vnmsub_vx_nxv1i64_i64_nxv1i64(<vscale x 1 
 ; RV32-LABEL: intrinsic_vnmsub_vx_nxv1i64_i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero

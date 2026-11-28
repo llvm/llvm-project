@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-FAKE16 %s
 
-; FIXME: This should be merged with uint_to_fp.ll, but s_uint_to_fp_v2i64 crashes on r600
-
 define amdgpu_kernel void @s_uint_to_fp_i64_to_f16(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX6-LABEL: s_uint_to_fp_i64_to_f16:
 ; GFX6:       ; %bb.0:

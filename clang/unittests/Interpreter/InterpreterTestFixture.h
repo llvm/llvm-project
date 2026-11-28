@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 #define LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
+
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gtest/gtest.h"
@@ -53,18 +55,6 @@ protected:
   static void SetUpTestSuite() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
-  }
-
-  static void TearDownTestSuite() {
-    // llvm_shutdown() cleans up JIT (LLJIT/ORC) state between test suites.
-    // On Emscripten, WasmIncrementalExecutor is used instead of LLJIT, so
-    // there is no JIT state to tear down. Calling llvm_shutdown() here would
-    // destroy the ManagedStatic<CommandLineParser> global, permanently
-    // deregistering all cl::opt options (wasm-enable-eh, etc.) since their
-    // constructors already ran and will not fire again after the reset.
-#ifndef __EMSCRIPTEN__
-    llvm::llvm_shutdown();
-#endif
   }
 };
 

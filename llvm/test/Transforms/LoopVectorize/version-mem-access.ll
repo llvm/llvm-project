@@ -128,8 +128,15 @@ define void @stride_poison(ptr %dst) mustprogress {
 ; CHECK-LABEL: define void @stride_poison(
 ; CHECK-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 poison
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 99, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP3]], 1
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], poison
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -140,10 +147,11 @@ define void @stride_poison(ptr %dst) mustprogress {
 ; CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], poison
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 poison, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -202,6 +210,56 @@ loop:
   %gep.dst = getelementptr double, ptr %dst, i64 %iv
   store double %doubled, ptr %gep.dst, align 8
   %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Make sure we do not crash when the stride is a cast of poison.
+define void @stride_sext_poison(ptr %dst, i64 %n) {
+; CHECK-LABEL: define void @stride_sext_poison(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[STRIDE:%.*]] = sext i32 poison to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[STRIDE]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    store i8 0, ptr [[TMP3]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  %stride = sext i32 poison to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %offset = mul i64 %iv, %stride
+  %gep.dst = getelementptr i8, ptr %dst, i64 %offset
+  store i8 0, ptr %gep.dst, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
   br i1 %ec, label %exit, label %loop
 

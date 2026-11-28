@@ -130,8 +130,8 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
-    FeaturePPX | FeatureNDD | FeatureNF | FeatureJMPABS | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8;
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureJMPABS |
+    FeatureMOVRS | FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -166,7 +166,7 @@ constexpr FeatureBitset FeaturesPantherlake =
 constexpr FeatureBitset FeaturesNovalake =
     FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
     FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
-    FeatureNDD | FeatureNF | FeatureJMPABS;
+    FeatureNDD | FeatureNF | FeatureCF | FeatureJMPABS;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -640,6 +640,9 @@ constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
+
+// ACE v1 Features
+constexpr FeatureBitset ImpliedFeaturesACEV1 = FeatureAVX10_1;
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
 constexpr FeatureBitset ImpliedFeaturesCMPCCXADD = {};

@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
@@ -190,7 +191,7 @@ static bool isOrHasPtr(const Descriptor *D) {
 }
 
 static void collectBlocks(PtrView Ptr,
-                          llvm::SmallPtrSet<const Block *, 4> &Blocks,
+                          llvm::SmallSetVector<const Block *, 4> &Blocks,
                           bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
@@ -270,7 +271,7 @@ bool EvaluationResult::checkDynamicAllocations(InterpState &S,
 
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
-  llvm::SmallPtrSet<const Block *, 4> Blocks;
+  llvm::SmallSetVector<const Block *, 4> Blocks;
 
   collectBlocks(Ptr.view(), Blocks);
 
@@ -455,6 +456,7 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
                        QualType PtrType, SourceInfo Info,
                        ConstantExprKind ConstexprKind,
                        llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  assert(Ptr.isLive());
   const Descriptor *FieldDesc = Ptr.getFieldDesc();
   if (const Record *R = Ptr.getRecord()) {
     if (!R->hasPtrField())
@@ -476,9 +478,6 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
         continue;
 
       if (F.Desc->isPrimitive() && F.Desc->getPrimType() == PT_Ptr) {
-        if (!FieldPtr.isLive())
-          return false;
-
         Pointer Pointee = FieldPtr.deref<Pointer>();
         if (!Pointee.isBlockPointer() ||
             CheckedBlocks.insert(Pointee.block()).second) {
@@ -507,8 +506,6 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
 
   if (FieldDesc->isPrimitiveArray() && FieldDesc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
-      if (!Ptr.isLive())
-        return false;
       Pointer Pointee = Ptr.elem<Pointer>(I);
 
       if (!Pointee.isBlockPointer() ||

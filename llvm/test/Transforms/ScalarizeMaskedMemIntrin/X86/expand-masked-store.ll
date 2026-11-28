@@ -74,4 +74,21 @@ define void @scalarize_v2i64_splat_mask(ptr %p, <2 x i64> %data, i1 %mask) {
   ret void
 }
 
+; A select with a scalar condition between two splats is also a splat mask.
+define void @scalarize_v2i64_select_splat_mask(ptr %p, <2 x i64> %data, i1 %c) {
+; CHECK-LABEL: @scalarize_v2i64_select_splat_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[C:%.*]], <2 x i1> splat (i1 true), <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[MASK_FIRST:%.*]] = extractelement <2 x i1> [[MASK]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_FIRST]], label [[COND_STORE:%.*]], label [[TMP1:%.*]]
+; CHECK:       cond.store:
+; CHECK-NEXT:    store <2 x i64> [[DATA:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    br label [[TMP1]]
+; CHECK:       1:
+; CHECK-NEXT:    ret void
+;
+  %mask = select i1 %c, <2 x i1> splat (i1 true), <2 x i1> zeroinitializer
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %data, ptr %p, i32 8, <2 x i1> %mask)
+  ret void
+}
+
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)

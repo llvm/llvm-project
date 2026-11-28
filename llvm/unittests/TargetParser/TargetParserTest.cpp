@@ -1208,6 +1208,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
                       AArch64CPUTestParams("apple-m5", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m6", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1316,24 +1317,25 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
-    ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
-                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
-                      AArch64CPUAliasTestParams({"apple-a7", "cyclone",
-                                                 "apple-a8", "apple-a9"}),
-                      AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
-                                                 "apple-s5"}),
-                      AArch64CPUAliasTestParams({"apple-a13", "apple-s6",
-                                                 "apple-s7", "apple-s8"}),
-                      AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
-                      AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
-                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
-                                                 "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
-                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
+    ::testing::Values(
+        AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+        AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
+        AArch64CPUAliasTestParams({"apple-a7", "cyclone", "apple-a8",
+                                   "apple-a9"}),
+        AArch64CPUAliasTestParams({"apple-a12", "apple-s4", "apple-s5"}),
+        AArch64CPUAliasTestParams({"apple-a13", "apple-s6", "apple-s7",
+                                   "apple-s8"}),
+        AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
+        AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
+        AArch64CPUAliasTestParams({"apple-a16", "apple-m3", "apple-s9",
+                                   "apple-s10"}),
+        AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+        AArch64CPUAliasTestParams({"apple-m5", "apple-a19"}),
+        AArch64CPUAliasTestParams({"apple-m6", "apple-a20", "apple-s11"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 103;
+static constexpr unsigned NumAArch64CPUArchs = 106;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2788,72 +2790,6 @@ TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
   EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic-hsa"));
 }
 
-TEST(TargetParserTest, testAMDGPUparseArchR600) {
-  // Canonical R600 GPU names map to their own GPUKind and round-trip through
-  // getArchNameR600.
-  struct CanonicalGPU {
-    StringRef Name;
-    AMDGPU::GPUKind Kind;
-    bool HasFMA;
-  };
-  static const CanonicalGPU Canonicals[] = {
-      {"r600", AMDGPU::GK_R600, false},
-      {"r630", AMDGPU::GK_R630, false},
-      {"rs880", AMDGPU::GK_RS880, false},
-      {"rv670", AMDGPU::GK_RV670, false},
-      {"rv710", AMDGPU::GK_RV710, false},
-      {"rv730", AMDGPU::GK_RV730, false},
-      {"rv770", AMDGPU::GK_RV770, false},
-      {"cedar", AMDGPU::GK_CEDAR, false},
-      {"cypress", AMDGPU::GK_CYPRESS, true},
-      {"juniper", AMDGPU::GK_JUNIPER, false},
-      {"redwood", AMDGPU::GK_REDWOOD, false},
-      {"sumo", AMDGPU::GK_SUMO, false},
-      {"barts", AMDGPU::GK_BARTS, false},
-      {"caicos", AMDGPU::GK_CAICOS, false},
-      {"cayman", AMDGPU::GK_CAYMAN, true},
-      {"turks", AMDGPU::GK_TURKS, false},
-  };
-  for (const CanonicalGPU &G : Canonicals) {
-    EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
-    EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
-    EXPECT_EQ(AMDGPU::getFeatureBitsetR600(G.Kind).test(AMDGPU::R600_FEAT_FMAF),
-              G.HasFMA)
-        << G.Name;
-  }
-
-  // Aliases resolve to the canonical GPUKind but are not returned by
-  // getArchNameR600.
-  struct AliasGPU {
-    StringRef Alias;
-    AMDGPU::GPUKind Kind;
-  };
-  static const AliasGPU Aliases[] = {
-      {"rv630", AMDGPU::GK_R600},  {"rv635", AMDGPU::GK_R600},
-      {"rs780", AMDGPU::GK_RS880}, {"rv610", AMDGPU::GK_RS880},
-      {"rv620", AMDGPU::GK_RS880}, {"rv740", AMDGPU::GK_RV770},
-      {"palm", AMDGPU::GK_CEDAR},  {"hemlock", AMDGPU::GK_CYPRESS},
-      {"sumo2", AMDGPU::GK_SUMO},  {"aruba", AMDGPU::GK_CAYMAN},
-  };
-  for (const AliasGPU &A : Aliases) {
-    EXPECT_EQ(AMDGPU::parseArchR600(A.Alias), A.Kind) << A.Alias;
-    EXPECT_NE(AMDGPU::getArchNameR600(A.Kind), A.Alias) << A.Alias;
-  }
-
-  // Unknown and AMDGCN names do not parse as R600 GPUs.
-  EXPECT_EQ(AMDGPU::parseArchR600(""), AMDGPU::GK_NONE);
-  EXPECT_EQ(AMDGPU::parseArchR600("not-a-cpu"), AMDGPU::GK_NONE);
-  EXPECT_EQ(AMDGPU::parseArchR600("gfx900"), AMDGPU::GK_NONE);
-
-  // All canonical and alias names appear in the valid-arch list.
-  SmallVector<StringRef, 0> Values;
-  AMDGPU::fillValidArchListR600(Values);
-  for (const CanonicalGPU &G : Canonicals)
-    EXPECT_TRUE(llvm::is_contained(Values, G.Name)) << G.Name;
-  for (const AliasGPU &A : Aliases)
-    EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
-}
-
 TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
   auto HasFeature = [](StringRef GPU, StringRef Feature) {
     StringMap<bool> Features;
@@ -2931,6 +2867,14 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
 
   // An unknown kind yields an empty bitset.
   EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
+
+  // The subarch overload returns the bitset of the subarch's GPU.
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch900), GFX900);
+  EXPECT_TRUE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1250)
+                  .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_FALSE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1251)
+                   .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::NoSubArch).count(), 0u);
 
   // getFeatureNames maps the set bits back to their SubtargetFeature names, one
   // per set bit.
@@ -3385,8 +3329,6 @@ TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
 
   EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_NONE),
             std::nullopt);
-  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_R600),
-            std::nullopt);
 
   EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(Triple::NoSubArch),
             std::nullopt);
@@ -3696,9 +3638,6 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx600:xnack+").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx900:").has_value());
-  // A non-AMDGCN triple has no target-id features.
-  EXPECT_FALSE(
-      TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
 }
 
 TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {

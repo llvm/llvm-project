@@ -57,7 +57,7 @@ static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
 static cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
-                           cl::init(false));
+                           cl::init(true));
 
 static cl::opt<bool>
     EnableMergeBaseOffset("loongarch-enable-merge-offset",
@@ -161,8 +161,8 @@ public:
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
   bool addILPOpts() override;
-  bool addRegAssignAndRewriteFast() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteOptimized() override;
   void addMachineLateOptimization() override;
 };
 } // end namespace
@@ -234,18 +234,18 @@ bool LoongArchPassConfig::addILPOpts() {
   return true;
 }
 
-bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
+void LoongArchPassConfig::addRegAssignAndRewriteFast() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
-  return TargetPassConfig::addRegAssignAndRewriteFast();
+  TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
-bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
+void LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
-  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+  TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 void LoongArchPassConfig::addMachineLateOptimization() {

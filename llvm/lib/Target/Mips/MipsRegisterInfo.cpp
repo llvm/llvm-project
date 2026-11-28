@@ -38,8 +38,7 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
-    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
+MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {
   MIPS_MC::initLLVMToCVRegMapping(this);
 }
 
@@ -110,6 +109,10 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return GPIsGlobal ? CSR_N32_NoGP_SaveList : CSR_N32_SaveList;
   }
 
+  // P32 ABI
+  if (Subtarget.isABI_P32())
+    return CSR_P32_SaveList;
+
   // O32 ABI
   if (Subtarget.isSingleFloat())
     return CSR_O32_SingleFloat_SaveList;
@@ -142,6 +145,10 @@ MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
     return CSR_N32_RegMask;
   }
+
+  // P32 ABI
+  if (Subtarget.isABI_P32())
+    return CSR_P32_RegMask;
 
   // O32 ABI
   if (Subtarget.isSingleFloat())
@@ -176,6 +183,10 @@ getReservedRegs(const MachineFunction &MF) const {
 
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
+
+  // Reserve AT if ABI is P32.
+  if (Subtarget.isABI_P32())
+    Reserved.set(Mips::R1);
 
   // Static JIT code uses t9 in RuntimeDyld stubs for R_MIPS_26 relocations,
   // including jumps within a function. Keep it out of register allocation.

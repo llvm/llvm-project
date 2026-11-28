@@ -9,11 +9,11 @@ int f19(void) {
   return ({ 3;;4; });
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
-// LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
+// LLVM-DAG: @[[TEST3_S:.*]] = private unnamed_addr constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
@@ -64,7 +64,7 @@ int nested(void) {
 }
 
 // CIR: cir.func {{.*}} @nested() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[TMP_OUTER:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C123_OUTER:.+]] = cir.const #cir.int<123> : !s32i
@@ -100,7 +100,7 @@ int nested(void) {
 // CIR:     cir.return %[[RES]] : !s32i
 // CIR:   }
 // CIR:   %[[FINAL_RES:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[FINAL_RES]] : !s32i
+// CIR:   cir.return implicit %[[FINAL_RES]] : !s32i
 
 // LLVM: define dso_local i32 @nested()
 // LLVM:   %[[VAR6:.+]] = alloca i32, 
@@ -118,8 +118,6 @@ int nested(void) {
 // LLVM:     br label %[[LBL10:.+]]
 // LLVM: [[LBL10]]:
 // LLVM:     store i32 987, ptr %[[VAR1]]
-// LLVM:     br label %[[LBL11:.+]]
-// LLVM: [[LBL11]]:
 // LLVM:     br label %[[LBL12:.+]]
 // LLVM: [[LBL12]]:
 // LLVM:     store i32 123, ptr %[[VAR5]]
@@ -229,7 +227,7 @@ void test2() { ({int x = 3; x; }); }
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR: cir.func {{.*}} @test3() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.scope {

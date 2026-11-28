@@ -30,9 +30,11 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Recycler.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -47,7 +49,6 @@ class MachineInstr;
 class MachineRegisterInfo;
 class ProfileSummaryInfo;
 class raw_ostream;
-class TargetInstrInfo;
 class VirtRegMap;
 
 class LiveIntervals {
@@ -57,7 +58,6 @@ class LiveIntervals {
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   std::unique_ptr<LiveIntervalCalc> LICalc;
@@ -65,16 +65,30 @@ class LiveIntervals {
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   VNInfo::Allocator VNInfoAllocator;
 
+  BumpPtrAllocator RangeAllocator;
+  Recycler<LiveInterval> IntervalRecycler;
+  Recycler<LiveRange> RegUnitRangeRecycler;
+
   /// Live interval pointers for all the virtual registers.
   IndexedMap<LiveInterval *, VirtReg2IndexFunctor> VirtRegIntervals;
 
-  /// Indexed by block number. A block has been queued as live-out by the
-  /// current extendSegmentsToUses call iff its entry equals LiveOutTag.
-  SmallVector<unsigned, 0> LiveOutTags;
+  /// Per-block state for the current extendSegmentsToUses call. A tag is
+  /// current iff it equals ShrinkTag.
+  struct ShrinkBlockState {
+    /// Current if the block has been queued as live-out.
+    unsigned LiveOutTag = 0;
+    /// Current if LiveIn is valid.
+    unsigned LiveInTag = 0;
+    /// Index of the block's pending live-in segment.
+    unsigned LiveIn = 0;
+  };
+
+  /// Indexed by block number.
+  SmallVector<ShrinkBlockState, 0> ShrinkBlocks;
 
   /// Tag for the current extendSegmentsToUses call, incremented on each call
-  /// so stale LiveOutTags entries never need clearing.
-  unsigned LiveOutTag = 0;
+  /// so stale ShrinkBlocks entries never need clearing.
+  unsigned ShrinkTag = 0;
 
   /// Sorted list of instructions with register mask operands. Always use the
   /// 'r' slot, RegMasks are normal clobbers, not early clobbers.
@@ -192,8 +206,10 @@ public:
 
   /// Interval removal.
   void removeInterval(Register Reg) {
-    auto &Interval = VirtRegIntervals[Reg];
-    delete Interval;
+    LiveInterval *&Interval = VirtRegIntervals[Reg];
+    assert(Interval && "removing a nonexistent interval");
+    Interval->~LiveInterval();
+    IntervalRecycler.Deallocate(RangeAllocator, Interval);
     Interval = nullptr;
   }
 
@@ -207,9 +223,11 @@ public:
   /// uses, and it doesn't remove dead defs.
   /// Dead PHIDef values are marked as unused. New dead machine instructions
   /// are added to the dead vector. Returns true if the interval may have been
-  /// separated into multiple connected components.
+  /// separated into multiple connected components. Only the subranges
+  /// overlapping \p SubRangeMask are shrunk.
   LLVM_ABI bool shrinkToUses(LiveInterval *li,
-                             SmallVectorImpl<MachineInstr *> *dead = nullptr);
+                             SmallVectorImpl<MachineInstr *> *dead = nullptr,
+                             LaneBitmask SubRangeMask = LaneBitmask::getAll());
 
   /// Specialized version of
   /// shrinkToUses(LiveInterval *li, SmallVectorImpl<MachineInstr*> *dead)
@@ -468,8 +486,12 @@ public:
   /// Remove computed live range for register unit \p Unit. Subsequent uses
   /// should rely on on-demand recomputation.
   void removeRegUnit(MCRegUnit Unit) {
-    delete RegUnitRanges[static_cast<unsigned>(Unit)];
-    RegUnitRanges[static_cast<unsigned>(Unit)] = nullptr;
+    LiveRange *&LR = RegUnitRanges[static_cast<unsigned>(Unit)];
+    if (!LR)
+      return;
+    LR->~LiveRange();
+    RegUnitRangeRecycler.Deallocate(RangeAllocator, LR);
+    LR = nullptr;
   }
 
   /// Remove associated live ranges for the register units associated with \p
@@ -527,8 +549,8 @@ private:
   bool computeDeadValues(LiveInterval &LI,
                          SmallVectorImpl<MachineInstr *> *dead);
 
-  LLVM_ABI static LiveInterval *createInterval(Register Reg);
-  LLVM_ABI static LiveRange *createRegUnitRange();
+  LLVM_ABI LiveInterval *createInterval(Register Reg);
+  LLVM_ABI LiveRange *createRegUnitRange();
 
   void printInstrs(raw_ostream &O) const;
   void dumpInstrs() const;
@@ -540,6 +562,12 @@ private:
   using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo *>, 16>;
   void extendSegmentsToUses(LiveRange &Segments, ShrinkToUsesWorkList &WorkList,
                             Register Reg, LaneBitmask LaneMask);
+
+  using SubRangeUse = std::pair<SlotIndex, LaneBitmask>;
+  using SubRangeUseList = SmallVector<SubRangeUse, 16>;
+  void collectSubRangeUses(Register Reg, SubRangeUseList &Uses) const;
+  void shrinkSubRangeToUses(LiveInterval::SubRange &SR, Register Reg,
+                            ArrayRef<SubRangeUse> Uses);
 
   /// Helper function for repairIntervalsInRange(), walks backwards and
   /// creates/modifies live segments in \p LR to match the operands found.

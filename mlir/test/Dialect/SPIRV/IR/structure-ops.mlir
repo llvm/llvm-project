@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --allow-unregistered-dialect --split-input-file --verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.mlir.addressof
@@ -95,6 +95,37 @@ func.func @const() -> () {
 func.func @unaccepted_std_attr() -> () {
   // expected-error @+1 {{cannot have attribute: unit}}
   %0 = spirv.Constant unit : none
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @null_const
+func.func @null_const() -> () {
+  // CHECK: spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  %0 = spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  // CHECK: spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  %1 = spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  // CHECK: spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  %2 = spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  // CHECK: spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  %3 = spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  return
+}
+
+// -----
+
+func.func @null_const_scalar() -> () {
+  // expected-error @+1 {{must have spirv.ptr, spirv.array or spirv.struct result type for null value}}
+  %0 = spirv.Constant #spirv.null : i32
+  return
+}
+
+// -----
+
+func.func @null_const_type_mismatch() -> () {
+  // expected-error @+1 {{result type ('!spirv.ptr<i32, Function>') does not match value type ('!spirv.ptr<f32, Function>')}}
+  %0 = "spirv.Constant"() <{value = #spirv.null : !spirv.ptr<f32, Function>}> : () -> !spirv.ptr<i32, Function>
   return
 }
 
@@ -200,7 +231,7 @@ func.func @coop_matrix_const_wrong_type() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @ccr_result_not_composite() -> () {
-  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or Float4E2M1 or Float6E2M3 or Float6E3M2 or Float8UnsignedE8M0 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
   return
 }

@@ -508,7 +508,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
     // Suppose we have a pair of files foo.cpp / foo.h.
     // Our build system may want to verify that foo.cpp only uses things
     // declared in the implementation_deps of foo, while foo.h only uses things
-    // declared in interface_deps. This requires them to be two seperate
+    // declared in interface_deps. This requires them to be two separate
     // modules, foo_Private and foo. This check is required to ensure that foo.h
     // is still checked. Otherwise, foo.h would never be checked, since it will
     // never be the top-level module.
@@ -1325,7 +1325,6 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   Result->ShadowingModule = ShadowingModule;
   Result->markUnavailable(/*Unimportable*/true);
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
-  ShadowModules.push_back(Result);
 
   return Result;
 }
@@ -1436,7 +1435,7 @@ void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
 void ModuleMap::resolveHeaderDirectives(
     Module *Mod, std::optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
-  SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
+  SmallVector<Module::UnresolvedHeaderDirective, 0> NewHeaders;
   const auto Size = File ? (*File)->getSize() : 0;
   const auto ModTime = File ? (*File)->getModificationTime() : 0;
 

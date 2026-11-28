@@ -57,3 +57,69 @@ define i32 @pow2_zero_variable_shift(i16 zeroext %a, i16 zeroext %b, i16 zeroext
   %or.rdx2 = or i32 %or.rdx0, %or.rdx1
   ret i32 %or.rdx2
 }
+
+define <4 x float> @select_trunc_as_icmp_eq_and_splat_arms(i32 %flags, float %a) {
+; CHECK-LABEL: define <4 x float> @select_trunc_as_icmp_eq_and_splat_arms(
+; CHECK-SAME: i32 [[FLAGS:%.*]], float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[FLAGS]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 1, i32 2, i32 4, i32 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[TMP3]], <i32 1, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[TMP6]], <4 x float> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[TMP7]]
+;
+  %c0 = trunc i32 %flags to i1
+  %s0 = select i1 %c0, float %a, float 0.0
+  %m1 = and i32 %flags, 2
+  %c1 = icmp eq i32 %m1, 0
+  %s1 = select i1 %c1, float %a, float 0.0
+  %m2 = and i32 %flags, 4
+  %c2 = icmp eq i32 %m2, 0
+  %s2 = select i1 %c2, float %a, float 0.0
+  %m3 = and i32 %flags, 8
+  %c3 = icmp eq i32 %m3, 0
+  %s3 = select i1 %c3, float %a, float 0.0
+  %v0 = insertelement <4 x float> poison, float %s0, i64 0
+  %v1 = insertelement <4 x float> %v0, float %s1, i64 1
+  %v2 = insertelement <4 x float> %v1, float %s2, i64 2
+  %v3 = insertelement <4 x float> %v2, float %s3, i64 3
+  ret <4 x float> %v3
+}
+
+define <4 x float> @select_trunc_as_icmp_eq_and_strided_loads(i32 %flags, ptr %p) {
+; CHECK-LABEL: define <4 x float> @select_trunc_as_icmp_eq_and_strided_loads(
+; CHECK-SAME: i32 [[FLAGS:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.experimental.vp.strided.load.v4f32.p0.i64(ptr align 4 [[P]], i64 8, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[FLAGS]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i32> [[TMP4]], <i32 1, i32 2, i32 4, i32 8>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[TMP5]], <i32 1, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP2]], <4 x float> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[TMP7]]
+;
+  %p2 = getelementptr inbounds float, ptr %p, i64 2
+  %p4 = getelementptr inbounds float, ptr %p, i64 4
+  %p6 = getelementptr inbounds float, ptr %p, i64 6
+  %l0 = load float, ptr %p, align 4
+  %l1 = load float, ptr %p2, align 4
+  %l2 = load float, ptr %p4, align 4
+  %l3 = load float, ptr %p6, align 4
+  %c0 = trunc i32 %flags to i1
+  %s0 = select i1 %c0, float %l0, float 0.0
+  %m1 = and i32 %flags, 2
+  %c1 = icmp eq i32 %m1, 0
+  %s1 = select i1 %c1, float %l1, float 0.0
+  %m2 = and i32 %flags, 4
+  %c2 = icmp eq i32 %m2, 0
+  %s2 = select i1 %c2, float %l2, float 0.0
+  %m3 = and i32 %flags, 8
+  %c3 = icmp eq i32 %m3, 0
+  %s3 = select i1 %c3, float %l3, float 0.0
+  %v0 = insertelement <4 x float> poison, float %s0, i64 0
+  %v1 = insertelement <4 x float> %v0, float %s1, i64 1
+  %v2 = insertelement <4 x float> %v1, float %s2, i64 2
+  %v3 = insertelement <4 x float> %v2, float %s3, i64 3
+  ret <4 x float> %v3
+}

@@ -11,34 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
-
-//===----------------------------------------------------------------------===//
-// Pointer dialect
-//===----------------------------------------------------------------------===//
-
-void PtrDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
-      >();
-}
 
 //===----------------------------------------------------------------------===//
 // Common helper functions.

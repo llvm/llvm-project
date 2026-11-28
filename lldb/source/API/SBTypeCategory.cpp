@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeFilter.h"
@@ -73,7 +74,7 @@ const char *SBTypeCategory::GetName() {
 
   if (!IsValid())
     return nullptr;
-  return ConstString(m_opaque_sp->GetName()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
 }
 
 lldb::LanguageType SBTypeCategory::GetLanguageAtIndex(uint32_t idx) {
@@ -254,16 +255,7 @@ SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
 
   if (!IsValid())
     return SBTypeFilter();
-  lldb::SyntheticChildrenSP children_sp =
-      m_opaque_sp->GetSyntheticAtIndex((index));
-
-  if (!children_sp.get())
-    return lldb::SBTypeFilter();
-
-  TypeFilterImplSP filter_sp =
-      std::static_pointer_cast<TypeFilterImpl>(children_sp);
-
-  return lldb::SBTypeFilter(filter_sp);
+  return SBTypeFilter(m_opaque_sp->GetFilterAtIndex(index));
 }
 
 SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {

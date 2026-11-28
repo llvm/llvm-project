@@ -4,16 +4,20 @@
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; Texture load and sample operations with non-constant (programmable) offsets
-; require the AdvancedTextureOps shader feature flag.
+; require the AdvancedTextureOps shader feature flag. The non-constant LOD
+; clamps in sample_clamp_dynamic_offset and samplegrad_clamp_dynamic_offset
+; also require TiledResources under validator 1.8.
 
 ; CHECK-OBJ: - Name: SFI0
 ; CHECK-OBJ:   Flags:
+; CHECK-OBJ:     TiledResources: true
 ; CHECK-OBJ:     AdvancedTextureOps: true
 
 ; CHECK:      Combined Shader Flags for Module
-; CHECK-NEXT: Shader Flags Value: 0x400000000
+; CHECK-NEXT: Shader Flags Value: 0x400001000
 
 ; CHECK: Note: shader requires additional functionality:
+; CHECK:       Tiled resources
 ; CHECK:       Advanced Texture Ops
 
 ; CHECK: Function textureload_dynamic_offset : 0x400000000
@@ -49,7 +53,7 @@ define void @sample_dynamic_offset(<2 x float> %coords, <2 x i32> %offsets) #0 {
   ret void
 }
 
-; CHECK: Function sample_clamp_dynamic_offset : 0x400000000
+; CHECK: Function sample_clamp_dynamic_offset : 0x400001000
 define void @sample_clamp_dynamic_offset(<2 x float> %coords, <2 x i32> %offsets,
                                          float %clamp) #0 {
   %texture = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
@@ -145,7 +149,7 @@ define void @samplegrad_dynamic_offset(<2 x float> %coords, <2 x float> %ddx,
   ret void
 }
 
-; CHECK: Function samplegrad_clamp_dynamic_offset : 0x400000000
+; CHECK: Function samplegrad_clamp_dynamic_offset : 0x400001000
 define void @samplegrad_clamp_dynamic_offset(<2 x float> %coords,
                                              <2 x float> %ddx, <2 x float> %ddy,
                                              <2 x i32> %offsets,
