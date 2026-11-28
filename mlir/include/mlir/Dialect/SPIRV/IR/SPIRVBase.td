@@ -346,6 +346,7 @@ def SPV_KHR_cooperative_matrix               : I32EnumAttrCase<"SPV_KHR_cooperat
 def SPV_KHR_bfloat16                         : I32EnumAttrCase<"SPV_KHR_bfloat16", 32>;
 def SPV_KHR_untyped_pointers                 : I32EnumAttrCase<"SPV_KHR_untyped_pointers", 33>;
 def SPV_KHR_abort                            : I32EnumAttrCase<"SPV_KHR_abort", 34>;
+def SPV_KHR_maximal_reconvergence            : I32EnumAttrCase<"SPV_KHR_maximal_reconvergence", 35>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -448,7 +449,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
       SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
       SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16, SPV_KHR_untyped_pointers,
-      SPV_KHR_abort,
+      SPV_KHR_abort, SPV_KHR_maximal_reconvergence,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -3212,6 +3213,12 @@ def SPIRV_EM_SchedulerTargetFmaxMhzINTEL      : I32EnumAttrCase<"SchedulerTarget
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
   ];
 }
+def SPIRV_EM_MaximallyReconvergesKHR          : I32EnumAttrCase<"MaximallyReconvergesKHR", 6023> {
+  list<Availability> availability = [
+    Extension<[SPV_KHR_maximal_reconvergence]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+}
 def SPIRV_EM_StreamingInterfaceINTEL          : I32EnumAttrCase<"StreamingInterfaceINTEL", 6154> {
   list<Availability> availability = [
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
@@ -3254,8 +3261,8 @@ def SPIRV_ExecutionModeAttr :
       SPIRV_EM_FloatingPointModeALTINTEL, SPIRV_EM_FloatingPointModeIEEEINTEL,
       SPIRV_EM_MaxWorkgroupSizeINTEL, SPIRV_EM_MaxWorkDimINTEL,
       SPIRV_EM_NoGlobalOffsetINTEL, SPIRV_EM_NumSIMDWorkitemsINTEL,
-      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_StreamingInterfaceINTEL,
-      SPIRV_EM_NamedBarrierCountINTEL
+      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_MaximallyReconvergesKHR,
+      SPIRV_EM_StreamingInterfaceINTEL, SPIRV_EM_NamedBarrierCountINTEL
     ]>;
 
 def SPIRV_EM_Vertex                 : I32EnumAttrCase<"Vertex", 0> {
