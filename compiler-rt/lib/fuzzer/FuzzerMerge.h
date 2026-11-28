@@ -43,6 +43,7 @@
 #include "FuzzerDefs.h"
 #include "FuzzerIO.h"
 
+#include <functional>
 #include <istream>
 #include <ostream>
 #include <set>
@@ -86,7 +87,8 @@ void CrashResistantMerge(const std::vector<std::string> &Args,
                          std::set<uint32_t> *NewFeatures,
                          const std::set<uint32_t> &InitialCov,
                          std::set<uint32_t> *NewCov, const std::string &CFPath,
-                         bool Verbose, bool IsSetCoverMerge);
+                         bool Verbose, bool IsSetCoverMerge,
+                         std::function<bool(int)> OnFailure = nullptr);
 
 }  // namespace fuzzer
 

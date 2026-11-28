@@ -1,0 +1,9 @@
+# UNSUPPORTED: darwin, target={{.*freebsd.*}}, target=aarch64{{.*}}
+RUN: %cpp_compiler %S/ForkSeedCrashTest.cpp -o %t-ForkSeedCrashTest
+RUN: rm -rf %t-corpus
+RUN: mkdir %t-corpus
+RUN: printf X > %t-corpus/seed
+RUN: not %run %t-ForkSeedCrashTest -fork=1 -artifact_prefix=%t- %t-corpus 2>&1 | FileCheck %s
+
+CHECK: INFO: -fork=1: seed input failed with exit code 77
+CHECK: INFO: exiting: 77 time:
