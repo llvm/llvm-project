@@ -54,7 +54,8 @@ struct FixupTy {
     ReturnType,
     Split,
     Trailing,
-    TrailingCharProc
+    TrailingCharProc,
+    TrailingDropped
   };
 
   FixupTy(Codes code, std::size_t index, std::size_t second = 0)
@@ -437,6 +438,22 @@ public:
               // should just be a requirement of the pass.
               TODO(loc, "ABI of fir.dispatch with character arguments");
             }
+            // BIND(C): the C function has no hidden length argument (the
+            // length of an interoperable CHARACTER dummy comes from its
+            // declaration; assumed length is passed by descriptor).
+            bool dropLen = false;
+            if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+              // A direct call follows the callee, whose signature is
+              // converted the same way (the call may also have lost its
+              // procedure attributes in an earlier rewrite of the result);
+              // an indirect call follows its own procedure attributes.
+              mlir::func::FuncOp callee;
+              if (callOp.getCallee())
+                callee = getModule().lookupSymbol<mlir::func::FuncOp>(
+                    *callOp.getCallee());
+              dropLen = callee ? fir::hasBindcAttr(callee.getOperation())
+                               : fir::hasBindcAttr(callOp.getOperation());
+            }
             auto m = specifics->boxcharArgumentType(boxTy.getEleTy());
             auto unbox = fir::UnboxCharOp::create(
                 *rewriter, loc, std::get<mlir::Type>(m[0]),
@@ -448,6 +465,8 @@ public:
                   std::get<fir::CodeGenSpecifics::Attributes>(e.value());
               auto argTy = std::get<mlir::Type>(e.value());
               if (attr.isAppend()) {
+                if (dropLen)
+                  continue;
                 trailingInTys.push_back(argTy);
                 trailingOpers.push_back(unbox.getResult(idx));
               } else {
@@ -706,6 +725,12 @@ public:
   void convertAddrOp(fir::AddrOfOp addrOp) {
     rewriter->setInsertionPoint(addrOp);
     auto addrTy = mlir::cast<mlir::FunctionType>(addrOp.getType());
+    // address of a BIND(C) function: no hidden CHARACTER lengths, as in
+    // convertSignature
+    bool dropLen = false;
+    if (auto callee =
+            getModule().lookupSymbol<mlir::func::FuncOp>(addrOp.getSymbol()))
+      dropLen = fir::hasBindcAttr(callee.getOperation());
     fir::CodeGenSpecifics::Marshalling newInTyAndAttrs;
     llvm::SmallVector<mlir::Type> newResTys;
     auto loc = addrOp.getLoc();
@@ -730,10 +755,12 @@ public:
               for (auto &tup : specifics->boxcharArgumentType(box.getEleTy())) {
                 auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
                 auto argTy = std::get<mlir::Type>(tup);
-                if (attr.isAppend())
-                  trailingInTys.push_back(argTy);
-                else
+                if (attr.isAppend()) {
+                  if (!dropLen)
+                    trailingInTys.push_back(argTy);
+                } else {
                   newInTyAndAttrs.push_back(tup);
+                }
               }
             }
           })
@@ -923,6 +950,8 @@ public:
 
     // Convert arguments
     llvm::SmallVector<mlir::Type> trailingTys;
+    // BIND(C): CHARACTER dummies without the hidden length argument
+    const bool dropLen = fir::hasBindcAttr(func.getOperation());
     for (auto e : llvm::enumerate(funcTy.getInputs())) {
       auto ty = e.value();
       unsigned index = e.index();
@@ -941,9 +970,11 @@ public:
                 auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
                 auto argTy = std::get<mlir::Type>(tup);
                 if (attr.isAppend()) {
-                  trailingTys.push_back(argTy);
+                  if (!dropLen)
+                    trailingTys.push_back(argTy);
                 } else {
-                  fixups.emplace_back(FixupTy::Codes::Trailing,
+                  fixups.emplace_back(dropLen ? FixupTy::Codes::TrailingDropped
+                                              : FixupTy::Codes::Trailing,
                                       newInTyAndAttrs.size(),
                                       trailingTys.size());
                   newInTyAndAttrs.push_back(tup);
@@ -1150,6 +1181,20 @@ public:
           rewriter->setInsertionPointToStart(&func.front());
           auto box = fir::EmboxCharOp::create(*rewriter, loc, boxTy, newBufArg,
                                               newLenArg);
+          func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
+          func.front().eraseArgument(fixup.index + 1);
+        } break;
+        case FixupTy::Codes::TrailingDropped: {
+          // BIND(C) CHARACTER dummy: only the address is passed. The body
+          // takes the length from the declaration, never from the boxchar.
+          auto newBufArg =
+              func.front().insertArgument(fixup.index, fixupType, loc);
+          auto boxTy = oldArgTys[fixup.index - offset];
+          rewriter->setInsertionPointToStart(&func.front());
+          auto len =
+              fir::UndefOp::create(*rewriter, loc, rewriter->getIndexType());
+          auto box =
+              fir::EmboxCharOp::create(*rewriter, loc, boxTy, newBufArg, len);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
           func.front().eraseArgument(fixup.index + 1);
         } break;
