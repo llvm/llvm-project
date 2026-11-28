@@ -21,13 +21,16 @@
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -67,6 +70,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -566,6 +570,92 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   SequentialLoops++;
 }
 
+namespace {
+/// One dimension of the original nest, before flattening its iteration space.
+struct CollapsedLoop {
+  isl::ast_node_for Node;
+  int64_t LowerBound;
+  int64_t Stride;
+  uint64_t TripCount;
+};
+
+struct CollapsedLoopNest {
+  SmallVector<CollapsedLoop> Loops;
+  uint64_t TripCount = 1;
+};
+} // namespace
+
+/// Describe a rectangular loop whose iteration count can be decided at compile
+/// time. Use arbitrary-precision arithmetic before checking the runtime width.
+static std::optional<CollapsedLoop> getCollapsibleLoop(isl::ast_node_for For) {
+  IslAstInfo::IslAstUserPayload *Payload = IslAstInfo::getNodePayload(For);
+  // isParallel() only reports outermost and innermost parallel loops. The
+  // payload also records independence for intermediate dimensions.
+  if (!Payload || !Payload->IsParallel || Payload->IsReductionParallel)
+    return std::nullopt;
+
+  isl::ast_expr Lower = For.init();
+  isl::ast_expr Step = For.inc();
+  isl::ast_expr Cond = For.cond();
+  isl::ast_expr Upper = Cond.get_op_arg(1);
+  isl_ast_expr_op_type Predicate = isl_ast_expr_get_op_type(Cond.get());
+  if (!Lower.isa<isl::ast_expr_int>() || !Step.isa<isl::ast_expr_int>() ||
+      !Upper.isa<isl::ast_expr_int>() ||
+      (Predicate != isl_ast_op_lt && Predicate != isl_ast_op_le))
+    return std::nullopt;
+
+  isl::val LowerVal = Lower.get_val();
+  isl::val StepVal = Step.get_val();
+  isl::val UpperVal = Upper.get_val();
+  if (!StepVal.is_pos().is_true() || !APIntFromVal(LowerVal).isSignedIntN(64) ||
+      !APIntFromVal(StepVal).isSignedIntN(64) ||
+      !APIntFromVal(UpperVal).isSignedIntN(64))
+    return std::nullopt;
+
+  if (Predicate == isl_ast_op_lt)
+    UpperVal = UpperVal.sub(isl::val(For.ctx(), 1));
+  isl::val Count =
+      UpperVal.sub(LowerVal).div(StepVal).floor().add(isl::val(For.ctx(), 1));
+  if (!Count.is_pos().is_true())
+    return std::nullopt;
+  APInt CountInt = APIntFromVal(Count);
+  if (CountInt.getActiveBits() > 63)
+    return std::nullopt;
+
+  return CollapsedLoop{For, APIntFromVal(LowerVal).getSExtValue(),
+                       APIntFromVal(StepVal).getSExtValue(),
+                       CountInt.getZExtValue()};
+}
+
+/// Collect a perfect parallel prefix, stopping once it can fill the team.
+/// Return an empty plan when fewer than two loops can be combined.
+static CollapsedLoopNest getLoopsToCollapse(isl::ast_node Node,
+                                            unsigned IndexBits) {
+  if (PollyNumThreads <= 1)
+    return {};
+
+  // The OpenMP counter and its exclusive upper bound must fit a signed index.
+  uint64_t MaxTripCount =
+      APInt::getSignedMaxValue(std::min(64u, IndexBits)).getZExtValue();
+  CollapsedLoopNest Nest;
+  while (Nest.TripCount < unsigned(PollyNumThreads)) {
+    if (!Node.isa<isl::ast_node_for>())
+      break;
+
+    std::optional<CollapsedLoop> Loop =
+        getCollapsibleLoop(Node.as<isl::ast_node_for>());
+    if (!Loop || Loop->TripCount > MaxTripCount / Nest.TripCount)
+      break;
+
+    Nest.TripCount *= Loop->TripCount;
+    Nest.Loops.push_back(*Loop);
+    Node = Loop->Node.body();
+  }
+  if (Nest.Loops.size() < 2)
+    return {};
+  return Nest;
+}
+
 void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   isl_ast_node *Body;
   isl_ast_expr *Init, *Inc, *Iterator, *UB;
@@ -618,10 +708,25 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
       fitsInTy(ValueInc, IntPtrTy))
     MaxType = IntPtrTy;
 
-  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
-  ValueLB = castToType(Builder, ValueLB, MaxType);
-  ValueUB = castToType(Builder, ValueUB, MaxType);
-  ValueInc = castToType(Builder, ValueInc, MaxType);
+  CollapsedLoopNest Collapse =
+      getLoopsToCollapse(isl::manage_copy(For), DL.getPointerSizeInBits());
+  if (Collapse.Loops.empty()) {
+    // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+    ValueLB = castToType(Builder, ValueLB, MaxType);
+    ValueUB = castToType(Builder, ValueUB, MaxType);
+    ValueInc = castToType(Builder, ValueInc, MaxType);
+  } else {
+    // Collapse the loop by removing the old body and replace it with the body
+    // of the innermost loop in the collapsed nest. The induction variables of
+    // the loop nest will be replaced with a single induction variable that is
+    // later used to recompute the original induction variables. The order of
+    // operations is preserved.
+    isl_ast_node_free(Body);
+    Body = Collapse.Loops.back().Node.body().release();
+    ValueLB = ConstantInt::get(MaxType, 0);
+    ValueUB = ConstantInt::get(MaxType, Collapse.TripCount - 1);
+    ValueInc = ConstantInt::get(MaxType, 1);
+  }
 
   BasicBlock::iterator LoopBody;
 
@@ -727,6 +832,20 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
     assert(NewVal);
   }
   IDToValue[IteratorID] = IV;
+  // Decode the flat index from innermost to outermost: coordinate = index % N,
+  // then index /= N. Restore each loop's original lower bound and stride.
+  Value *Index = IV;
+  for (const auto &Loop : llvm::reverse(Collapse.Loops)) {
+    Constant *Count = ConstantInt::get(IV->getType(), Loop.TripCount);
+    Value *Coordinate = Builder.CreateURem(Index, Count, "polly.collapse.rem");
+    Coordinate = Builder.CreateMul(
+        Coordinate, ConstantInt::getSigned(IV->getType(), Loop.Stride));
+    Coordinate = Builder.CreateAdd(
+        Coordinate, ConstantInt::getSigned(IV->getType(), Loop.LowerBound),
+        "polly.collapse.iv");
+    IDToValue[Loop.Node.iterator().get_id().get()] = Coordinate;
+    Index = Builder.CreateUDiv(Index, Count, "polly.collapse.div");
+  }
 
   // Also update OutsideLoopIterations to use values from the subfunction.
   // SCEVExpander may fold identity operations (e.g. x+0 -> x), returning the
