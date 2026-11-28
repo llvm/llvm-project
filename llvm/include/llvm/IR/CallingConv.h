@@ -297,6 +297,9 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// x86 wincall for APX to fix calling convention issues for Windows
+    X86_WinCall = 128,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };
