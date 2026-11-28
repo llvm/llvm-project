@@ -12,12 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CodeGenCommonISel.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 
@@ -245,12 +247,46 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
-static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
-                                            MachineInstr &MI,
-                                            SmallVectorImpl<uint64_t> &Ops) {
+static MachineOperand *
+getSalvageOpsForAdd(const MachineRegisterInfo &MRI, MachineInstr &Add,
+                    uint64_t CurrentLocOps, SmallVectorImpl<uint64_t> &Ops,
+                    SmallVectorImpl<Register> &AdditionalRegs) {
+  assert((Add.getOpcode() == TargetOpcode::G_ADD ||
+          Add.getOpcode() == TargetOpcode::G_PTR_ADD) &&
+         "Must be a G_ADD or G_PTR_ADD");
+
+  if (MRI.getType(Add.getOperand(0).getReg()).isVector())
+    return nullptr;
+
+  Register RHS = Add.getOperand(2).getReg();
+  const MachineInstr *RHSDef = MRI.getVRegDef(RHS);
+  if (RHSDef && RHSDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    const APInt &Val = RHSDef->getOperand(1).getCImm()->getValue();
+    if (Val.getBitWidth() > 64)
+      return nullptr;
+    DIExpression::appendOffset(Ops, Val.getSExtValue());
+    return &Add.getOperand(1);
+  }
+
+  if (!CurrentLocOps) {
+    Ops.append({dwarf::DW_OP_LLVM_arg, 0});
+    CurrentLocOps = 1;
+  }
+  Ops.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps, dwarf::DW_OP_plus});
+  AdditionalRegs.push_back(RHS);
+  return &Add.getOperand(1);
+}
+
+static MachineOperand *
+salvageDebugInfoImpl(const MachineRegisterInfo &MRI, MachineInstr &MI,
+                     uint64_t CurrentLocOps, SmallVectorImpl<uint64_t> &Ops,
+                     SmallVectorImpl<Register> &AdditionalRegs) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_PTR_ADD:
+    return getSalvageOpsForAdd(MRI, MI, CurrentLocOps, Ops, AdditionalRegs);
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
@@ -310,20 +346,23 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
+  const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
 
-  SmallPtrSet<MachineInstr *, 4> Visited;
-  for (auto *DefMO : DbgUsers) {
-    MachineInstr *DbgMI = DefMO->getParent();
-    // A DBG_VALUE_LIST may use the salvaged register in several location
-    // operands; all of them are rewritten the first time it is seen.
-    if (!Visited.insert(DbgMI).second)
-      continue;
+  if (DbgUsers.empty())
+    return;
+  Register Reg = DbgUsers.front()->getReg();
+
+  // Collect the users up front: salvaging may add operands to or replace them.
+  SmallSetVector<MachineInstr *, 4> DbgMIs;
+  for (auto *DefMO : DbgUsers)
+    DbgMIs.insert(DefMO->getParent());
+
+  for (MachineInstr *DbgMI : DbgMIs) {
     if (DbgMI->isIndirectDebugValue()) {
       continue;
     }
 
-    Register Reg = DefMO->getReg();
     assert(DbgMI->hasDebugOperandForReg(Reg) &&
            "Must use salvaged instruction as its location");
 
@@ -335,28 +374,53 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     }
 
     const DIExpression *SalvagedExpr = DbgMI->getDebugExpression();
-
-    SmallVector<uint64_t, 16> Ops;
-    auto Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
-    if (!Op0)
-      continue;
+    SmallVector<Register, 2> AdditionalRegs;
+    MachineOperand *Op0 = nullptr;
 
     SmallVector<MachineOperand *, 2> LocMOs(
         make_pointer_range(DbgMI->getDebugOperandsForReg(Reg)));
-    for (MachineOperand *LocMO : LocMOs)
+    for (MachineOperand *LocMO : LocMOs) {
+      SmallVector<uint64_t, 16> Ops;
+      Op0 = salvageDebugInfoImpl(
+          MRI, MI, SalvagedExpr->getNumLocationOperands(), Ops, AdditionalRegs);
+      if (!Op0)
+        break;
       SalvagedExpr = DIExpression::appendOpsToArg(
           SalvagedExpr, Ops, DbgMI->getDebugOperandIndex(LocMO), true);
-
-    bool IsValidSalvageExpr =
-        SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (IsValidSalvageExpr) {
-      for (MachineOperand *LocMO : LocMOs) {
-        LocMO->setReg(Op0->getReg());
-        LocMO->setSubReg(Op0->getSubReg());
-      }
-      DbgMI->getDebugExpressionOp().setMetadata(SalvagedExpr);
-
-      LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');
     }
+    if (!Op0)
+      continue;
+
+    if (SalvagedExpr->getNumElements() > MaxExpressionSize ||
+        DbgMI->getNumDebugOperands() + AdditionalRegs.size() > MaxDebugArgs)
+      continue;
+
+    for (MachineOperand *LocMO : LocMOs) {
+      LocMO->setReg(Op0->getReg());
+      LocMO->setSubReg(Op0->getSubReg());
+    }
+
+    if (AdditionalRegs.empty() || DbgMI->isDebugValueList()) {
+      DbgMI->getDebugExpressionOp().setMetadata(SalvagedExpr);
+      for (Register AddReg : AdditionalRegs)
+        DbgMI->addOperand(MachineOperand::CreateReg(AddReg, /*isDef=*/false));
+      LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');
+      continue;
+    }
+
+    // Extra location operands require turning the DBG_VALUE into a
+    // DBG_VALUE_LIST.
+    MachineBasicBlock &MBB = *DbgMI->getParent();
+    const TargetInstrInfo &TII =
+        *MBB.getParent()->getSubtarget().getInstrInfo();
+    auto MIB = BuildMI(MBB, DbgMI, DbgMI->getDebugLoc(),
+                       TII.get(TargetOpcode::DBG_VALUE_LIST))
+                   .addMetadata(DbgMI->getDebugVariable())
+                   .addMetadata(SalvagedExpr)
+                   .add(DbgMI->getDebugOperand(0));
+    for (Register AddReg : AdditionalRegs)
+      MIB.addReg(AddReg);
+    LLVM_DEBUG(dbgs() << "SALVAGE: " << *MIB << '\n');
+    DbgMI->eraseFromParent();
   }
 }
