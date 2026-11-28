@@ -905,14 +905,27 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   const Stmt *Else = S.getElse();
 
+  auto EmitArm = [this](const Stmt *Arm) {
+    RunCleanupsScope Scope(*this);
+    CGDebugInfo *DI = getDebugInfo();
+
+    // A compound statement already has its own lexical block, so only add
+    // one here for an unbraced declaration.
+    bool EmitDebugScope = DI && CGM.getCodeGenOpts().hasReducedDebugInfo() &&
+                          isa<DeclStmt>(Arm->stripLabelLikeStatements());
+    if (EmitDebugScope)
+      DI->EmitLexicalBlockStart(Builder, Arm->getBeginLoc());
+    EmitStmt(Arm);
+    if (EmitDebugScope)
+      DI->EmitLexicalBlockEnd(Builder, Arm->getEndLoc());
+  };
+
   // The else branch of a consteval if statement is always the only branch that
   // can be runtime evaluated.
   if (S.isConsteval()) {
     const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : Else;
-    if (Executed) {
-      RunCleanupsScope ExecutedScope(*this);
-      EmitStmt(Executed);
-    }
+    if (Executed)
+      EmitArm(Executed);
     return;
   }
 
@@ -950,8 +963,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
                               /*UseBoth=*/true);
       if (Executed) {
         MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
-        RunCleanupsScope ExecutedScope(*this);
-        EmitStmt(Executed);
+        EmitArm(Executed);
       }
       PGO->markStmtMaybeUsed(Skipped);
       return;
@@ -1002,10 +1014,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
   incrementProfileCounter(UseExecPath, &S);
-  {
-    RunCleanupsScope ThenScope(*this);
-    EmitStmt(S.getThen());
-  }
+  EmitArm(S.getThen());
   EmitBranch(ContBlock);
 
   // Emit the 'else' code if present.
@@ -1018,10 +1027,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     // Add a counter to else block unless it has CounterExpr.
     if (HasSkip)
       incrementProfileCounter(UseSkipPath, &S);
-    {
-      RunCleanupsScope ElseScope(*this);
-      EmitStmt(Else);
-    }
+    EmitArm(Else);
     {
       // There is no need to emit line number for an unconditional branch.
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
