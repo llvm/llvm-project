@@ -1,4 +1,4 @@
-// RUN: mlir-opt --xegpu-propagate-layout %s | FileCheck %s
+// RUN: mlir-opt --xegpu-propagate-layout -split-input-file %s | FileCheck %s
 
 // Regression test for https://github.com/llvm/llvm-project/issues/177846:
 // --xegpu-propagate-layout must not crash when the module contains an
@@ -11,3 +11,19 @@
 module {
   llvm.func @some_function()
 }
+
+// -----
+
+// CHECK-LABEL: transform.named_sequence @callee(!transform.any_op {transform.readonly})
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @callee(!transform.any_op {transform.readonly})
+  transform.named_sequence @caller(%arg0: !transform.any_op {transform.readonly}) {
+    transform.include @callee failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func private @declaration(i32) -> i32
+func.func private @declaration(i32) -> i32

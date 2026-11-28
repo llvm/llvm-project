@@ -1998,6 +1998,8 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
   // calling setType(FunctionType{}) on them would corrupt their type.
   if (!isa<FunctionType>(funcOp.getFunctionType()))
     return success();
+  if (funcOp.isExternal())
+    return success();
   SmallVector<Type> newArgTypes;
   // Update the function arguments.
   for (BlockArgument arg : funcOp.getArguments()) {
