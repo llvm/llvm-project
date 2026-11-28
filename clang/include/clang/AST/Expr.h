@@ -4655,6 +4655,57 @@ public:
   }
 };
 
+/// OverflowGotoExpr - The __builtin_overflow_goto(expr, label) builtin. A
+/// failed trap overflow behavior type check within \c expr branches to
+/// \c label instead of to the enclosing overflow handler. The value, type,
+/// and value kind are those of \c expr.
+class OverflowGotoExpr : public Expr {
+  Stmt *SubExpr;
+  LabelDecl *Label;
+  SourceLocation BuiltinLoc, LabelLoc, RParenLoc;
+
+public:
+  OverflowGotoExpr(Expr *E, LabelDecl *L, SourceLocation BuiltinLoc,
+                   SourceLocation LabelLoc, SourceLocation RParenLoc)
+      : Expr(OverflowGotoExprClass, E->getType(), E->getValueKind(),
+             E->getObjectKind()),
+        SubExpr(E), Label(L), BuiltinLoc(BuiltinLoc), LabelLoc(LabelLoc),
+        RParenLoc(RParenLoc) {
+    setDependence(computeDependence(this));
+  }
+
+  /// Build an empty __builtin_overflow_goto expression.
+  explicit OverflowGotoExpr(EmptyShell Empty)
+      : Expr(OverflowGotoExprClass, Empty) {}
+
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  void setSubExpr(Expr *E) { SubExpr = E; }
+
+  LabelDecl *getLabel() const { return Label; }
+  void setLabel(LabelDecl *L) { Label = L; }
+
+  SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
+  void setBuiltinLoc(SourceLocation L) { BuiltinLoc = L; }
+  SourceLocation getLabelLoc() const { return LabelLoc; }
+  void setLabelLoc(SourceLocation L) { LabelLoc = L; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+  void setRParenLoc(SourceLocation L) { RParenLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OverflowGotoExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
+};
+
 /// StmtExpr - This is the GNU Statement Expression extension: ({int X=4; X;}).
 /// The StmtExpr contains a single CompoundStmt node, which it evaluates and
 /// takes the value of the last subexpression.

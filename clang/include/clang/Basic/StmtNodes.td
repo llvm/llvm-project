@@ -122,6 +122,7 @@ def AtomicExpr : StmtNode<Expr>;
 
 // GNU Extensions.
 def AddrLabelExpr : StmtNode<Expr>;
+def OverflowGotoExpr : StmtNode<Expr>;
 def StmtExpr : StmtNode<Expr>;
 def ChooseExpr : StmtNode<Expr>;
 def GNUNullExpr : StmtNode<Expr>;

@@ -2696,6 +2696,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->
       isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OverflowGotoExprClass:
+    return cast<OverflowGotoExpr>(this)->getSubExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   case UnaryOperatorClass: {
     const UnaryOperator *UO = cast<UnaryOperator>(this);
 
@@ -3876,6 +3879,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case MaterializeTemporaryExprClass:
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
+  case OverflowGotoExprClass:
   case AsTypeExprClass:
   case CXXParenListInitExprClass:
     // These have a side-effect if any subexpression does.
