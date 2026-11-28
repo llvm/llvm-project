@@ -553,6 +553,20 @@ TEST_F(FormatTestJava, FormatsLambdas) {
   verifyFormat("Runnable someLambda =\n"
                "    (int aaaaa) -> DoSomething(aaaaa);",
                getStyleWithColumns(40));
+
+  verifyFormat("@NonNull private Runnable r = state -> {};");
+
+  auto Style = getStyleWithColumns(40);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("Runnable someLambda =\n"
+               "    (int aaaaa, int bbbbb) -> {};",
+               Style);
+
+  Style.BreakAfterJavaFieldAnnotations = true;
+  verifyFormat("@NonNull\n"
+               "private Runnable r = state -> {};",
+               Style);
 }
 
 TEST_F(FormatTestJava, BreaksStringLiterals) {

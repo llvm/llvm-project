@@ -552,7 +552,10 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // `) { }` can only occur in function or method declarations in JS.
           Tok->setBlockKind(BK_Block);
         }
-      } else if (Style.isJava() && PrevTok && PrevTok->is(tok::arrow)) {
+      } else if (Style.isJava() && PrevTok && PrevTok->is(tok::arrow) &&
+                 NextTok->isNot(tok::r_brace)) {
+        // Leave an empty lambda body `-> {}` unknown so that it can still be
+        // kept on one line, e.g. when the line contains a forced break.
         Tok->setBlockKind(BK_Block);
       } else {
         Tok->setBlockKind(BK_Unknown);
