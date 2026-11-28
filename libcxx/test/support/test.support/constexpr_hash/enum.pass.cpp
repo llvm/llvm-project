@@ -42,8 +42,10 @@ constexpr void test() {
   if constexpr (sizeof(T) <= sizeof(std::size_t)) {
     H h1;
     support::constexpr_hash<under_type> h2;
-    for (int i = 0; i <= 5; ++i)
+    for (int i = 0; i <= 5; ++i) {
+      T t(static_cast<T>(i));
       assert(h1(t) == h2(static_cast<under_type>(i)));
+    }
   }
 }
 
