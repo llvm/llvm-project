@@ -7,7 +7,6 @@ define <16 x i8> @sext_mask(i16 %m) nounwind {
 ; LA32-LABEL: sext_mask:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    bstrpick.w $a1, $a0, 1, 1
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    andi $a2, $a0, 1
@@ -53,7 +52,7 @@ define <16 x i8> @sext_mask(i16 %m) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a0, 14, 14
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a1, 14
-; LA32-NEXT:    srli.w $a0, $a0, 15
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 15
 ; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a0, 15
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -62,7 +61,6 @@ define <16 x i8> @sext_mask(i16 %m) nounwind {
 ; LA64-LABEL: sext_mask:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    bstrpick.d $a1, $a0, 1, 1
 ; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    andi $a2, $a0, 1
@@ -108,7 +106,7 @@ define <16 x i8> @sext_mask(i16 %m) nounwind {
 ; LA64-NEXT:    bstrpick.d $a1, $a0, 14, 14
 ; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a1, 14
-; LA64-NEXT:    srli.d $a0, $a0, 15
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 15
 ; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a0, 15
 ; LA64-NEXT:    addi.d $sp, $sp, 16

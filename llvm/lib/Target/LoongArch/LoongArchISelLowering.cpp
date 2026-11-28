@@ -3852,6 +3852,66 @@ static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
   return Vector;
 }
 
+/// Return true if \p V is the GPR mask of a [X]VMSK* node.
+static bool isVMSK(SDValue V) {
+  switch (V.getOpcode()) {
+  default:
+    return false;
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::VMSKGEZ:
+  case LoongArchISD::VMSKEQZ:
+  case LoongArchISD::VMSKNEZ:
+  case LoongArchISD::XVMSKLTZ:
+  case LoongArchISD::XVMSKGEZ:
+  case LoongArchISD::XVMSKEQZ:
+  case LoongArchISD::XVMSKNEZ:
+    return true;
+  }
+}
+
+/// Look through zero-extended bit field extractions of \p V. On return, the low
+/// \p Width bits of the original value are the bits [Lsb, Lsb + Width) of the
+/// returned value, and its higher bits are zero.
+static SDValue peekThroughBitFieldExtract(SDValue V, unsigned &Lsb,
+                                          unsigned &Width) {
+  Lsb = 0;
+
+  while (true) {
+    // V is the bits [Shift, Shift + Len) of its operand 0, zero-extended.
+    unsigned Shift = 0, Len;
+    switch (V.getOpcode()) {
+    default:
+      return V;
+    case ISD::AND: {
+      auto *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      if (!C || !C->getAPIntValue().isMask())
+        return V;
+      Len = C->getAPIntValue().countr_one();
+      break;
+    }
+    case ISD::SRL: {
+      auto *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      if (!C || C->getAPIntValue().uge(V.getScalarValueSizeInBits()))
+        return V;
+      Shift = C->getZExtValue();
+      Len = V.getScalarValueSizeInBits() - Shift;
+      break;
+    }
+    case LoongArchISD::BSTRPICK:
+      Shift = V.getConstantOperandVal(2);
+      Len = V.getConstantOperandVal(1) - Shift + 1;
+      break;
+    }
+
+    // None of the demanded bits come from the operand.
+    if (Lsb >= Len)
+      return V;
+    Width = std::min(Width, Len - Lsb);
+    Lsb += Shift;
+    V = V.getOperand(0);
+  }
+}
+
 SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
@@ -6844,6 +6904,35 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                      DL, VT, X, Shift);
 }
 
+/// Extract the bits [Lsb, Msb] of the BSTRPICK node \p V from its source.
+static SDValue extractFromBSTRPICK(SDValue V, uint64_t Msb, uint64_t Lsb,
+                                   const SDLoc &DL, SelectionDAG &DAG) {
+  // [x]vpickve2gr.{hu/wu} zero-extends for free, so if V has other users, that
+  // would move the vector element to GPR twice.
+  if (V.getOpcode() != LoongArchISD::BSTRPICK ||
+      (!V.hasOneUse() &&
+       V.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT))
+    return SDValue();
+
+  uint64_t SrcMsb = V.getConstantOperandVal(1);
+  uint64_t SrcLsb = V.getConstantOperandVal(2);
+  Msb = std::min(SrcMsb, SrcLsb + Msb);
+  Lsb += SrcLsb;
+  if (Lsb > Msb)
+    return SDValue();
+
+  EVT VT = V.getValueType();
+  // Prefer andi.
+  if (Lsb == 0 && Msb < 12)
+    return DAG.getNode(
+        ISD::AND, DL, VT, V.getOperand(0),
+        DAG.getConstant(maskTrailingOnes<uint64_t>(Msb + 1), DL, VT));
+  EVT IdxVT = V.getOperand(1).getValueType();
+  return DAG.getNode(LoongArchISD::BSTRPICK, DL, VT, V.getOperand(0),
+                     DAG.getConstant(Msb, DL, IdxVT),
+                     DAG.getConstant(Lsb, DL, IdxVT));
+}
+
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
@@ -6872,6 +6961,10 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
   if (!(CN = dyn_cast<ConstantSDNode>(SecondOperand)) ||
       !isShiftedMask_64(CN->getZExtValue(), SMIdx, SMLen))
     return SDValue();
+
+  if (SMIdx == 0)
+    if (SDValue V = extractFromBSTRPICK(FirstOperand, SMLen - 1, 0, DL, DAG))
+      return V;
 
   if (FirstOperandOpc == ISD::SRA || FirstOperandOpc == ISD::SRL) {
     // Pattern match BSTRPICK.
@@ -7084,6 +7177,12 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   MVT GRLenVT = Subtarget.getGRLenVT();
   unsigned MaskIdx, MaskLen;
   uint64_t Shamt;
+
+  CN = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (CN && CN->getAPIntValue().ult(ValTy.getSizeInBits()))
+    if (SDValue V = extractFromBSTRPICK(FirstOperand, ValTy.getSizeInBits() - 1,
+                                        CN->getZExtValue(), DL, DAG))
+      return V;
 
   // The first operand must be an AND and the second operand of the AND must be
   // a shifted mask.
@@ -7660,8 +7759,116 @@ Retry2:
   return SDValue();
 }
 
+/// Return true if \p V is a constant with only the low \p Width bits set, which
+/// doesn't fit in the immediate of xori.
+static bool isLowMaskNotUImm12(SDValue V, unsigned &Width) {
+  auto *C = dyn_cast<ConstantSDNode>(V);
+  if (!C || C->isAllOnes() || !C->getAPIntValue().isMask())
+    return false;
+  Width = C->getAPIntValue().countr_one();
+  return Width > 12;
+}
+
+/// Return the inverse of the mask \p Msk if it is a [X]VMSK* node of \p Width
+/// bits without other users.
+static SDValue invertVMSK(SDValue Msk, unsigned Width, SelectionDAG &DAG) {
+  if (!isVMSK(Msk) || !Msk.hasOneUse())
+    return SDValue();
+
+  SDLoc DL(Msk);
+  SDValue Src = Msk.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  if (SrcVT.getVectorNumElements() != Width)
+    return SDValue();
+
+  unsigned Opc = Msk.getOpcode();
+  switch (Opc) {
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::XVMSKLTZ:
+    // There is only [x]vmskgez.b, invert the source for the wider elements.
+    if (SrcVT.getScalarType() != MVT::i8)
+      Src = DAG.getNOT(DL, Src, SrcVT);
+    else
+      Opc = Opc == LoongArchISD::VMSKLTZ ? LoongArchISD::VMSKGEZ
+                                         : LoongArchISD::XVMSKGEZ;
+    break;
+  case LoongArchISD::VMSKGEZ:
+    Opc = LoongArchISD::VMSKLTZ;
+    break;
+  case LoongArchISD::XVMSKGEZ:
+    Opc = LoongArchISD::XVMSKLTZ;
+    break;
+  case LoongArchISD::VMSKEQZ:
+    Opc = LoongArchISD::VMSKNEZ;
+    break;
+  case LoongArchISD::XVMSKEQZ:
+    Opc = LoongArchISD::XVMSKNEZ;
+    break;
+  case LoongArchISD::VMSKNEZ:
+    Opc = LoongArchISD::VMSKEQZ;
+    break;
+  case LoongArchISD::XVMSKNEZ:
+    Opc = LoongArchISD::XVMSKEQZ;
+    break;
+  }
+  return DAG.getNode(Opc, DL, Msk.getValueType(), Src);
+}
+
+/// Return true if \p V is a bit field of the mask of a [X]VMSK* node, or the OR
+/// of two of them, as generated for the 256-bit vectors without LASX.
+static bool isVMSKBitField(SDValue V) {
+  auto IsMsk = [](SDValue V) {
+    if (V.getOpcode() == ISD::SHL)
+      V = V.getOperand(0);
+    unsigned Lsb, Width = V.getScalarValueSizeInBits();
+    return isVMSK(peekThroughBitFieldExtract(V, Lsb, Width));
+  };
+  if (V.getOpcode() == ISD::OR)
+    return IsMsk(V.getOperand(0)) && IsMsk(V.getOperand(1));
+  return IsMsk(V);
+}
+
+/// Inverting a zero-extended vector mask of more than 12 bits is a XOR with a
+/// constant that has to be materialized. Avoid that by inverting the mask in
+/// the vector, or else with NOR and BSTRPICK.
+static SDValue combineInvertedVMSK(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  SDValue V = N->getOperand(0);
+  unsigned Width;
+  if (N->getValueType(0) != GRLenVT ||
+      !isLowMaskNotUImm12(N->getOperand(1), Width))
+    return SDValue();
+
+  if (SDValue InvMsk = invertVMSK(V, Width, DAG))
+    return InvMsk;
+
+  // BSTRPICK requires the 32S feature.
+  if (!Subtarget.has32S())
+    return SDValue();
+
+  // Don't hide the OR of two masks from the generic combines.
+  if (V.getOpcode() == ISD::OR && !DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  // The bits cleared by BSTRPICK must be zero in V.
+  if (!isVMSKBitField(V) ||
+      !DAG.MaskedValueIsZero(V, ~N->getConstantOperandAPInt(1)))
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(
+      LoongArchISD::BSTRPICK, DL, GRLenVT, DAG.getNOT(DL, V, GRLenVT),
+      DAG.getConstant(Width - 1, DL, GRLenVT), DAG.getConstant(0, DL, GRLenVT));
+}
+
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = combineInvertedVMSK(N, DAG, DCI, Subtarget))
+    return V;
+
   EVT VT = N->getValueType(0);
   // LA64 promotes i32 integer operations to GPR-width operations during
   // legalization. Match the idiom before that promotion as well as after
@@ -7831,6 +8038,15 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = foldVMskZeroTest(N->getOperand(0), N->getOperand(1), CC,
                                      SDLoc(N), DAG, Subtarget))
       return V;
+
+  // Compare the inverted mask with zero instead of materializing a constant.
+  unsigned Width;
+  if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+      isLowMaskNotUImm12(N->getOperand(1), Width))
+    if (SDValue InvMsk = invertVMSK(N->getOperand(0), Width, DAG))
+      return DAG.getSetCC(SDLoc(N), N->getValueType(0), InvMsk,
+                          DAG.getConstant(0, SDLoc(N), InvMsk.getValueType()),
+                          CC);
 
   SDNode *AndNode = N->getOperand(0).getNode();
   if (AndNode->getOpcode() != ISD::AND)
@@ -9824,7 +10040,7 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DAG, Subtarget);
+    return performXORCombine(N, DAG, DCI, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SELECT:
@@ -9850,6 +10066,9 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return performFP_TO_INTCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::BSTRPICK:
+    return extractFromBSTRPICK(N->getOperand(0), N->getConstantOperandVal(1),
+                               N->getConstantOperandVal(2), SDLoc(N), DAG);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
@@ -12767,6 +12986,18 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     Known = Known.extractBits(Msb - Lsb + 1, Lsb).zext(BitWidth);
     break;
   }
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::VMSKGEZ:
+  case LoongArchISD::VMSKEQZ:
+  case LoongArchISD::VMSKNEZ:
+  case LoongArchISD::XVMSKLTZ:
+  case LoongArchISD::XVMSKGEZ:
+  case LoongArchISD::XVMSKEQZ:
+  case LoongArchISD::XVMSKNEZ:
+    // One bit per element, zero-extended to GRLen.
+    Known.Zero.setBitsFrom(
+        Op.getOperand(0).getSimpleValueType().getVectorNumElements());
+    break;
   }
 }
 

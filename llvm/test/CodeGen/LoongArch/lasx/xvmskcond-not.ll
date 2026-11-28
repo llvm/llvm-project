@@ -18,12 +18,10 @@ define i64 @xvmskltz_b_not(<32 x i8> %a) nounwind {
 ;
 ; LA64-LABEL: xvmskltz_b_not:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    xvmskltz.b $xr0, $xr0
+; LA64-NEXT:    xvmskgez.b $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp slt <32 x i8> %a, zeroinitializer
   %m = bitcast <32 x i1> %c to i32
@@ -45,12 +43,10 @@ define i64 @xvmskgez_b_not(<32 x i8> %a) nounwind {
 ;
 ; LA64-LABEL: xvmskgez_b_not:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    xvmskgez.b $xr0, $xr0
+; LA64-NEXT:    xvmskltz.b $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp sgt <32 x i8> %a, splat (i8 -1)
   %m = bitcast <32 x i1> %c to i32
@@ -73,11 +69,10 @@ define i64 @xvmsknez_b_not(<32 x i8> %a) nounwind {
 ; LA64-LABEL: xvmsknez_b_not:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvmsknz.b $xr0, $xr0
+; LA64-NEXT:    xvnor.v $xr0, $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp ne <32 x i8> %a, zeroinitializer
   %m = bitcast <32 x i1> %c to i32
@@ -101,12 +96,9 @@ define i64 @xvmskeqz_b_not(<32 x i8> %a) nounwind {
 ; LA64-LABEL: xvmskeqz_b_not:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvmsknz.b $xr0, $xr0
-; LA64-NEXT:    xvnor.v $xr0, $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp eq <32 x i8> %a, zeroinitializer
   %m = bitcast <32 x i1> %c to i32
@@ -118,23 +110,21 @@ define i64 @xvmskeqz_b_not(<32 x i8> %a) nounwind {
 define i64 @xvmskltz_h_not(<16 x i16> %a) nounwind {
 ; LA32-LABEL: xvmskltz_h_not:
 ; LA32:       # %bb.0:
+; LA32-NEXT:    xvxori.b $xr0, $xr0, 255
 ; LA32-NEXT:    xvmskltz.h $xr0, $xr0
 ; LA32-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA32-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA32-NEXT:    bstrins.w $a0, $a1, 15, 8
-; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvmskltz_h_not:
 ; LA64:       # %bb.0:
+; LA64-NEXT:    xvxori.b $xr0, $xr0, 255
 ; LA64-NEXT:    xvmskltz.h $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 15, 8
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    ret
   %c = icmp slt <16 x i16> %a, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
@@ -158,12 +148,10 @@ define i64 @xvmsk_slt_b_not(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; LA64-LABEL: xvmsk_slt_b_not:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvslt.b $xr0, $xr0, $xr1
-; LA64-NEXT:    xvmskltz.b $xr0, $xr0
+; LA64-NEXT:    xvmskgez.b $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp slt <32 x i8> %a, %b
   %m = bitcast <32 x i1> %c to i32
@@ -189,12 +177,10 @@ define i64 @xvmsk_or_not(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvslt.bu $xr1, $xr1, $xr0
 ; LA64-NEXT:    xvor.v $xr0, $xr1, $xr0
-; LA64-NEXT:    xvmskltz.b $xr0, $xr0
+; LA64-NEXT:    xvmskgez.b $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp ugt <32 x i8> %a, %b
   %d = icmp slt <32 x i8> %a, zeroinitializer
@@ -334,9 +320,9 @@ define i64 @xvmskltz_b_not_multiuse_srl_and(<32 x i8> %a, ptr %p) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a2, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a1, $a2, 31, 16
 ; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    nor $a2, $a1, $zero
-; LA64-NEXT:    bstrpick.d $a1, $a2, 31, 8
-; LA64-NEXT:    bstrpick.d $a2, $a2, 7, 4
+; LA64-NEXT:    nor $a1, $a1, $zero
+; LA64-NEXT:    bstrpick.d $a2, $a1, 7, 4
+; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 8
 ; LA64-NEXT:    st.d $a2, $a0, 8
 ; LA64-NEXT:    move $a0, $a1
 ; LA64-NEXT:    ret
